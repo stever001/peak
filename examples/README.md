@@ -31,6 +31,22 @@ workflow observations locate concrete causes (bin labeling, uncontrolled
 adjustments) → the system profile shows competing sources of truth. This is exactly
 the material an initial management report and next-phase proposal would draw on.
 
+## The engagement packet (Phase 2)
+
+`engagement-packet.example.json` bundles the whole thread into one
+`EngagementPacket` (`pkt_alpha_2026`) for the same fictional engagement: the client
+intake, the inventory system profile, three `EvidenceReference` records, and the
+stakeholder interview, visual observation, and workflow observation.
+
+Because the packet carries its own evidence store, it **resolves the cross-references
+that remain warnings for the standalone examples**: it declares `evid_alpha_001`,
+`evid_alpha_002`, and `evid_alpha_003`, so every nested `evidence_references` id
+resolves inside the packet, and every nested `related_intake_id` matches
+`intake_alpha_2026`. The Phase 2 harness enforces this as a blocking check.
+
+The standalone object examples above intentionally keep their non-blocking
+warnings — they are single objects, not a packaged engagement.
+
 ## Ground rules
 
 - **No real client data or PII.** Organizations and people are anonymized labels

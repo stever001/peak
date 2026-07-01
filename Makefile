@@ -4,15 +4,22 @@
 
 PYTHON ?= python3
 
-.PHONY: help validate install-dev
+.PHONY: help validate validate-phase1 validate-phase2 install-dev
 
 help: ## Show available targets
 	@echo "Targets:"
-	@echo "  make install-dev   Install dev dependencies ($(PYTHON) -m pip install -r requirements-dev.txt)"
-	@echo "  make validate      Run the Phase 1 validation harness ($(PYTHON) tests/validate_phase1.py)"
+	@echo "  make install-dev        Install dev dependencies ($(PYTHON) -m pip install -r requirements-dev.txt)"
+	@echo "  make validate           Run all validation harnesses (Phase 1 + Phase 2)"
+	@echo "  make validate-phase1    Run only the Phase 1 object harness"
+	@echo "  make validate-phase2    Run only the Phase 2 EngagementPacket harness"
 
 install-dev: ## Install development dependencies
 	$(PYTHON) -m pip install -r requirements-dev.txt
 
-validate: ## Run the Phase 1 schema/example validation harness
+validate: validate-phase1 validate-phase2 ## Run all validation harnesses
+
+validate-phase1: ## Run the Phase 1 schema/example validation harness
 	$(PYTHON) tests/validate_phase1.py
+
+validate-phase2: ## Run the Phase 2 EngagementPacket validation harness
+	$(PYTHON) tests/validate_phase2.py

@@ -19,6 +19,28 @@ Phase 1 defines the **first-thread assessment objects**:
 
 Worked, anonymized examples for each live in [`../examples/`](../examples/).
 
+## Scope (Phase 2)
+
+Phase 2 adds the **EngagementPacket** — a single, coherent bundle of one
+engagement's first-thread assessment.
+
+| Schema | Object | Local id prefix |
+| --- | --- | --- |
+| `engagement-packet.schema.json` | `EngagementPacket` | `pkt_` |
+
+The packet **composes** the Phase 1 objects by local relative `$ref`
+(e.g. `"$ref": "client-intake.schema.json"`) rather than redefining them, so the
+Phase 1 schemas remain the single source of truth. Refs resolve **offline**: a
+relative ref resolves against the packet's `$id` base, which yields the sibling
+schema's `$id`. No network or database is required — the validation harness
+supplies a local registry of all schema `$id`s.
+
+A packet is intended to be **self-contained**: every `evidence_references` id used
+by a nested object must resolve to an `EvidenceReference` declared in the packet,
+and every `related_intake_id` must match the packet's
+`client_intake.intake_id`. These are enforced as blocking checks (see
+[`../tests/`](../tests/)).
+
 ## Conventions
 
 - **Draft 2020-12.** Each schema declares `$schema`, a stable `$id`, `title`,

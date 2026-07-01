@@ -20,6 +20,10 @@ Design notes:
 Formalized in Phase 1: `ClientIntake`, `EvidenceReference`, `StakeholderInterview`,
 `VisualObservation`, `WorkflowObservation`, `InventorySystemProfile`.
 
+Formalized in Phase 2: `EngagementPacket` — a composite that bundles the Phase 1
+objects for a single engagement (see the [EngagementPacket](#engagementpacket-formalized-schemasengagement-packetschemajson)
+section below).
+
 ## Object relationship overview
 
 ```
@@ -44,6 +48,29 @@ ClientIntake
                                             │
                                      PhaseTwoOpportunity
 ```
+
+## Composite object
+
+### EngagementPacket  *(formalized: [`schemas/engagement-packet.schema.json`](../schemas/engagement-packet.schema.json))*
+The first practical **operating unit**: one self-contained bundle of an engagement's
+first-thread assessment, which future internal Peak agents will read from and write
+to. It **composes** the Phase 1 objects by local relative `$ref` rather than
+redefining them. Id prefix `pkt_`.
+- `packet_id`, `packet_version`, `created_at`, `updated_at`
+- `engagement_label`, `assessment_stage` (intake … discovery … proposal … complete)
+- `client_intake` (the anchor — its `intake_id` is what nested objects reference)
+- `inventory_system_profile`
+- `evidence_references[]` — the packet's authoritative evidence store
+- `stakeholder_interviews[]`, `visual_observations[]`, `workflow_observations[]`
+- `packet_metadata` (prepared_by, team, confidentiality, provenance)
+- `validation_notes` (human/agent notes about packet state)
+
+**Packet invariants** (enforced as blocking checks by
+[`tests/validate_phase2.py`](../tests/validate_phase2.py)):
+- every `evidence_references` id used by a nested object resolves to an
+  `EvidenceReference` declared in `evidence_references[]`;
+- `inventory_system_profile.related_intake_id` and every interview/observation
+  `related_intake_id` equals `client_intake.intake_id`.
 
 ## Core objects
 

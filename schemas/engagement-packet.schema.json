@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://peak.internal/schemas/v1/engagement-packet.schema.json",
+  "title": "EngagementPacket",
+  "description": "A single, coherent bundle of the first-thread assessment for one engagement: the client intake, the inventory system profile, and the discovery evidence, interviews, and observations that hang off it. The EngagementPacket is the first practical operating unit that future internal Peak agents will read from and write to. It composes the Phase 1 object schemas by local relative $ref, so those definitions stay authoritative and are not duplicated here. Storage-agnostic and offline: $refs resolve against sibling schema files by their $id. Examples must not contain real client PII, and this packet does not imply AgentNet integration (AgentNet grounding remains intended future architecture).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "packet_id",
+    "packet_version",
+    "created_at",
+    "engagement_label",
+    "assessment_stage",
+    "client_intake"
+  ],
+  "properties": {
+    "packet_id": {
+      "type": "string",
+      "description": "Stable local identifier for this packet. Convention: 'pkt_' followed by a short slug, unique within Peak's engagement set.",
+      "pattern": "^pkt_[A-Za-z0-9][A-Za-z0-9_-]*$"
+    },
+    "packet_version": {
+      "type": "string",
+      "description": "Version of this packet's contents (e.g. '1.0.0'). Bumped as the packet is enriched through the assessment. This is packet content versioning, not schema versioning."
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 timestamp of when the packet was first assembled."
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 timestamp of the most recent change to the packet."
+    },
+    "engagement_label": {
+      "type": "string",
+      "description": "Consultant-readable, anonymized label for the engagement (e.g. 'Client Alpha - initial inventory assessment')."
+    },
+    "assessment_stage": {
+      "type": "string",
+      "description": "Where this engagement sits in the first-thread flow at the time of this packet version.",
+      "enum": [
+        "intake",
+        "planning",
+        "discovery",
+        "evidence_normalization",
+        "reporting",
+        "proposal",
+        "qa",
+        "complete"
+      ]
+    },
+    "client_intake": {
+      "description": "The ClientIntake this packet is built around. Its intake_id is the packet's anchor; nested objects reference it via related_intake_id.",
+      "$ref": "client-intake.schema.json"
+    },
+    "inventory_system_profile": {
+      "description": "The InventorySystemProfile for this engagement, if captured.",
+      "$ref": "inventory-system-profile.schema.json"
+    },
+    "evidence_references": {
+      "type": "array",
+      "description": "The full set of EvidenceReference records for this engagement. Within a packet these are the authoritative evidence store: every evidence_references id used by any nested object should resolve to one of these by evidence_id.",
+      "items": { "$ref": "evidence-reference.schema.json" }
+    },
+    "stakeholder_interviews": {
+      "type": "array",
+      "description": "StakeholderInterview records captured during discovery.",
+      "items": { "$ref": "stakeholder-interview.schema.json" }
+    },
+    "visual_observations": {
+      "type": "array",
+      "description": "VisualObservation records from the walk-around.",
+      "items": { "$ref": "visual-observation.schema.json" }
+    },
+    "workflow_observations": {
+      "type": "array",
+      "description": "WorkflowObservation records describing how processes actually run.",
+      "items": { "$ref": "workflow-observation.schema.json" }
+    },
+    "packet_metadata": {
+      "type": "object",
+      "description": "Non-content metadata about the packet itself (who assembled it, confidentiality, provenance). Kept anonymized.",
+      "additionalProperties": false,
+      "properties": {
+        "prepared_by": {
+          "type": "string",
+          "description": "Anonymized label for the consultant/agent that assembled the packet (e.g. 'consultant_a')."
+        },
+        "consultant_team": {
+          "type": "array",
+          "description": "Anonymized labels for consultants involved.",
+          "items": { "type": "string" }
+        },
+        "engagement_start": {
+          "type": "string",
+          "format": "date",
+          "description": "ISO-8601 date the engagement began."
+        },
+        "confidentiality": {
+          "type": "string",
+          "description": "Handling classification for the packet.",
+          "enum": ["internal", "confidential", "restricted"]
+        },
+        "source_note": {
+          "type": "string",
+          "description": "Provenance note (e.g. that this is a fictional, anonymized example)."
+        }
+      }
+    },
+    "validation_notes": {
+      "type": "array",
+      "description": "Human- or agent-authored notes about the packet's validation/quality state. Not a substitute for the automated validation harness.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["note"],
+        "properties": {
+          "note": { "type": "string", "description": "The validation note." },
+          "level": {
+            "type": "string",
+            "description": "Qualitative importance of the note.",
+            "enum": ["info", "warning", "action_required"]
+          }
+        }
+      }
+    }
+  }
+}

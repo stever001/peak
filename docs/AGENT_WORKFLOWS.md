@@ -135,6 +135,20 @@ strengthen over time.
 - **Out:** reusable knowledge entries.
 - **Human role:** consultant/management curate what's worth keeping.
 
+## The operating unit: EngagementPacket
+
+Workflows 1–5 of the first thread all read from and write to a single
+**`EngagementPacket`** — a self-contained bundle of one engagement's intake, system
+profile, evidence, interviews, and observations (see
+[`DATA_OBJECTS.md`](DATA_OBJECTS.md) and
+[`../schemas/engagement-packet.schema.json`](../schemas/engagement-packet.schema.json)).
+It is the practical unit future internal agents will operate on: intake seeds it,
+discovery and evidence normalization enrich it, and reporting/proposal read from it.
+Its packet-level invariants (evidence resolves within the packet; every nested
+object points at the packet's intake) are enforced by the validation harness, giving
+agents a dependable, self-contained input to reason over. AgentNet grounding, when
+integrated, is intended to operate over packets — not yet live.
+
 ## Cross-cutting rules
 
 - **Evidence-first:** every finding, risk, quick win, and recommendation links to

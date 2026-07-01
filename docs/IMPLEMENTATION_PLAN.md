@@ -51,6 +51,22 @@ cross-references are non-blocking warnings in Phase 1.
 
 **Goal:** prove the end-to-end thread with agent-assisted drafting, run manually.
 
+**Groundwork done — the operating unit:**
+
+- [x] `EngagementPacket` schema ([`schemas/engagement-packet.schema.json`](../schemas/engagement-packet.schema.json))
+  and worked example: one self-contained bundle of an engagement's first-thread
+  assessment (intake, system profile, evidence, interviews, observations), composing
+  the Phase 1 objects by local relative `$ref`. This is the practical unit future
+  agents will read from and write to.
+- [x] Packet-level validation ([`tests/validate_phase2.py`](../tests/validate_phase2.py)):
+  offline `$ref` resolution, packet conformance, and **blocking** referential
+  integrity (evidence resolves within the packet; nested `related_intake_id`s match
+  the packet's intake). Run via `make validate`.
+
+No agent logic yet — the packet is the data contract that agent work will build on.
+
+**Still to do:**
+
 - Implement prompt building blocks in `prompts/` for the first thread:
   intake → assessment planning → discovery structuring → evidence normalization →
   initial report → next-phase proposal.

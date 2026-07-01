@@ -31,6 +31,11 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCHEMA_DIR = os.path.join(REPO_ROOT, "schemas")
 EXAMPLE_DIR = os.path.join(REPO_ROOT, "examples")
 
+# Composite examples that compose Phase 1 schemas via $ref. These are handled by
+# tests/validate_phase2.py (offline $ref resolution + packet-level lint), so the
+# per-object Phase 1 harness skips them.
+COMPOSITE_EXAMPLES = {"engagement-packet.example.json"}
+
 # Known local-id prefixes and the object each denotes.
 KNOWN_PREFIXES = {
     "intake_": "ClientIntake",
@@ -181,6 +186,13 @@ def check_examples(
         return examples
     for path in paths:
         name = os.path.basename(path)
+        # Composite examples that compose other schemas via $ref (e.g. the
+        # EngagementPacket) need offline ref resolution and their own
+        # packet-level referential lint; they are validated by
+        # tests/validate_phase2.py, not here.
+        if name in COMPOSITE_EXAMPLES:
+            print(f"  [SKIP] {name}: composite packet, validated by validate_phase2.py")
+            continue
         try:
             doc = load_json(path)
         except (OSError, json.JSONDecodeError) as exc:
