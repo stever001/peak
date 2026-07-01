@@ -41,9 +41,9 @@ worked examples.
   `requirements-dev.txt`.
 
 **Exit criteria:** every first-thread object has a schema, at least one example, and
-a passing validation test. Still no live agents. — **Met.** Run
-`python tests/validate_phase1.py` (exits 0 on pass; unresolved cross-references are
-non-blocking warnings in Phase 1).
+a passing validation test. Still no live agents. — **Met.** Run `make validate`
+(or `python3 tests/validate_phase1.py`); exits 0 on pass, and unresolved
+cross-references are non-blocking warnings in Phase 1.
 
 ---
 

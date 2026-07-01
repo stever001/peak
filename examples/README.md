@@ -37,6 +37,7 @@ the material an initial management report and next-phase proposal would draw on.
   (`client_alpha`, `stakeholder_2`, `consultant_a`). Reported figures are
   illustrative.
 - **Validated.** Each example validates against its schema under JSON Schema draft
-  2020-12.
+  2020-12. Run `make validate` (or `python3 tests/validate_phase1.py`) from the repo
+  root to check.
 - **Not exhaustive.** Examples show representative, not maximal, records. Optional
   fields are intentionally left out in places to reflect realistic partial capture.

@@ -57,6 +57,10 @@ architecture (see [`../docs/OPERATING_MODEL.md`](../docs/OPERATING_MODEL.md)).
 ## Validation
 
 The examples in [`../examples/`](../examples/) validate against these schemas under
-draft 2020-12. A committed validation test harness is the recommended next step (see
-[`../docs/IMPLEMENTATION_PLAN.md`](../docs/IMPLEMENTATION_PLAN.md) and
-[`../tests/`](../tests/)).
+draft 2020-12, checked by the harness in [`../tests/`](../tests/). From the repo
+root (this machine uses `python3`):
+
+```bash
+make install-dev   # one-time: python3 -m pip install -r requirements-dev.txt
+make validate      # python3 tests/validate_phase1.py
+```

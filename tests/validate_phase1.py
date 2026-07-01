@@ -305,7 +305,8 @@ def main() -> int:
         print(
             "\nERROR: the 'jsonschema' package is required.\n"
             "Install dev dependencies:\n"
-            "    python -m pip install -r requirements-dev.txt\n",
+            "    make install-dev\n"
+            "    (or: python3 -m pip install -r requirements-dev.txt)\n",
             file=sys.stderr,
         )
         return 2

@@ -29,12 +29,20 @@ a blocking check in a later phase once full engagement packets exist.
 
 ## Running
 
+This machine uses `python3` (there is no bare `python`). From the repo root:
+
 ```bash
 # one-time: install the dev dependency
-python -m pip install -r ../requirements-dev.txt
+make install-dev          # == python3 -m pip install -r requirements-dev.txt
 
-# from the repo root
-python tests/validate_phase1.py
+# run the harness
+make validate             # == python3 tests/validate_phase1.py
+```
+
+Or invoke it directly, without the Makefile:
+
+```bash
+python3 tests/validate_phase1.py
 ```
 
 ## Exit codes

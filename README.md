@@ -66,11 +66,26 @@ peak/
 │   ├── proposal/                 # Quick wins + next-phase proposals
 │   ├── qa/                       # Internal QA / governance review
 │   └── learning/                 # Reusable knowledge capture
-├── schemas/                      # Data object schemas (to be defined)
-├── examples/                     # Worked examples and sample records
+├── schemas/                      # Data object schemas (JSON Schema, draft 2020-12)
+├── examples/                     # Worked, anonymized example records
 ├── prompts/                      # Reusable prompt building blocks
-└── tests/                        # Tests for schemas and workflows
+├── tests/                        # Validation harness for schemas and examples
+├── Makefile                      # Convenience commands (validate, install-dev)
+└── requirements-dev.txt          # Dev-only dependencies (validation harness)
 ```
+
+## Validating the schemas
+
+The Phase 1 schemas and examples ship with a lightweight validation harness. This
+machine uses `python3` (there is no bare `python`):
+
+```bash
+make install-dev   # install dev deps (python3 -m pip install -r requirements-dev.txt)
+make validate      # run the harness (python3 tests/validate_phase1.py)
+```
+
+`make validate` exits 0 on success; unresolved cross-references are reported as
+non-blocking warnings in Phase 1. See [`tests/README.md`](tests/README.md).
 
 ## AgentNet grounding (intended architecture)
 
