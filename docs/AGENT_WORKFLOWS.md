@@ -20,6 +20,26 @@ and to trace to evidence.
 | 9 | Internal QA / governance review | `qa/` | QA findings, sign-off record |
 | 10 | Engagement learning / reusable knowledge capture | `learning/` | Reusable knowledge entries |
 
+## Prompt contracts (Phase 3)
+
+Before any autonomous agent runtime exists, each workflow is operated by a **prompt
+contract** in [`../prompts/`](../prompts/): a markdown file a consultant copies into an
+LLM, with a fixed structure (purpose, inputs, grounding/evidence rules, non-goals,
+output format, quality checks, and a reusable body). Most operate on an
+`EngagementPacket` and require the model to cite packet `evid_` ids. They are
+**internal operating prompts**, human-run and human-owned — not agents, and not
+client-facing.
+
+| Workflow(s) | Prompt contract |
+| --- | --- |
+| 1 | `prompts/intake/normalize-client-intake.prompt.md` |
+| 2–4 | `prompts/discovery/generate-discovery-plan.prompt.md` |
+| 5 | `prompts/evidence/extract-evidence-findings.prompt.md` |
+| 6–7 | `prompts/reporting/draft-initial-assessment-report.prompt.md` |
+| 8 | `prompts/proposal/generate-next-phase-proposal.prompt.md` |
+| 9 | `prompts/qa/review-assessment-packet.prompt.md` |
+| 10 | `prompts/learning/extract-engagement-lessons.prompt.md` |
+
 ## The first end-to-end thread
 
 The initial priority is one clean, connected path from a new client through to a

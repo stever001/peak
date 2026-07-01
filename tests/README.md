@@ -4,10 +4,11 @@ Validation for the assessment schemas and examples. Deliberately dependency-ligh
 Python standard library plus `jsonschema` (which brings `referencing`). No pytest,
 no database, no API server, no network.
 
-Two harnesses, run together by `make validate`:
+Three harnesses, run together by `make validate`:
 
 - `validate_phase1.py` — the six standalone Phase 1 objects.
 - `validate_phase2.py` — the composite `EngagementPacket`.
+- `validate_phase3_prompts.py` — the Phase 3 prompt-contract inventory (stdlib-only).
 
 ## `validate_phase1.py`
 
@@ -53,6 +54,17 @@ registry from every schema's `$id`, so no network or database is touched.
      `related_intake_id` equals `client_intake.intake_id`;
    - ids use their expected prefixes.
 
+## `validate_phase3_prompts.py`
+
+A lightweight, **stdlib-only** inventory check for the Phase 3 prompt contracts in
+[`../prompts/`](../prompts/). It confirms that every required contract file exists and
+contains all ten required section headings (Purpose, Intended user, Required input,
+Expected output, Grounding rules, Evidence rules, Non-goals, Output format, Quality
+checks, Reusable prompt body) plus a fenced code block for the reusable body.
+
+It is a structural/inventory check only — it does **not** judge prompt quality or run
+any model. No dependencies; safe to run anywhere `python3` exists.
+
 ## Running
 
 This machine uses `python3` (there is no bare `python`). From the repo root:
@@ -61,12 +73,13 @@ This machine uses `python3` (there is no bare `python`). From the repo root:
 # one-time: install the dev dependency
 make install-dev          # == python3 -m pip install -r requirements-dev.txt
 
-# run both harnesses
-make validate             # == validate_phase1.py + validate_phase2.py
+# run all harnesses
+make validate             # == validate_phase1.py + validate_phase2.py + validate_phase3_prompts.py
 
 # or run one at a time
 make validate-phase1
 make validate-phase2
+make validate-phase3
 ```
 
 Or invoke them directly, without the Makefile:
@@ -74,11 +87,12 @@ Or invoke them directly, without the Makefile:
 ```bash
 python3 tests/validate_phase1.py
 python3 tests/validate_phase2.py
+python3 tests/validate_phase3_prompts.py   # stdlib-only, no dependency needed
 ```
 
 ## Exit codes
 
-Both harnesses share the same convention:
+All three harnesses share the same convention:
 
 | Code | Meaning |
 | --- | --- |

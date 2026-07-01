@@ -61,6 +61,13 @@ capability, if pursued, is a later phase that would build on a proven internal c
 | **Agents** | Draft, structure, normalize, cross-reference, and check consistency. Never the final decision-maker. |
 | **AgentNet (intended)** | Grounds and resolves agent output against Peak methodology, prior engagements, and evidence standards. |
 
+**How "agents" work today:** there is no autonomous agent runtime yet. The agent role
+is currently fulfilled by **prompt contracts** ([`../prompts/`](../prompts/)) — fixed,
+reviewed instructions a consultant copies into an LLM, operating on an
+`EngagementPacket` and required to cite evidence. This keeps a human in the loop while
+Peak proves the workflow, and the contracts double as the specification for any future
+agents.
+
 ## AgentNet as grounding architecture (intended)
 
 AgentNet is referenced as the **intended grounding and resolution layer**. Its role

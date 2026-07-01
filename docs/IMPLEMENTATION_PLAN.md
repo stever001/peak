@@ -65,14 +65,25 @@ cross-references are non-blocking warnings in Phase 1.
 
 No agent logic yet — the packet is the data contract that agent work will build on.
 
+**Prompt contracts done — the operating instructions:**
+
+- [x] Reusable **prompt contracts** in [`../prompts/`](../prompts/) for the whole
+  first thread — intake, discovery planning, evidence findings, initial report,
+  next-phase proposal, QA review, and engagement lessons. Each is a markdown contract
+  (purpose, inputs, grounding/evidence rules, non-goals, output format, quality
+  checks, reusable body) that a consultant copies into an LLM. Most operate on an
+  `EngagementPacket` and require citing packet `evid_` ids.
+- [x] Prompt-inventory check ([`tests/validate_phase3_prompts.py`](../tests/validate_phase3_prompts.py),
+  stdlib-only) wired into `make validate`.
+
+These are **human-run prompt contracts, not autonomous agents**, and are internal-only.
+
 **Still to do:**
 
-- Implement prompt building blocks in `prompts/` for the first thread:
-  intake → assessment planning → discovery structuring → evidence normalization →
-  initial report → next-phase proposal.
 - Implement lightweight agents in `agents/intake/`, `agents/discovery/`,
   `agents/evidence/`, `agents/reporting/`, `agents/proposal/` that take structured
-  input and produce structured output conforming to the schemas.
+  input and produce structured output conforming to the schemas (the prompt contracts
+  above are the specification for that behavior).
 - Keep everything file-based and consultant-run; **no database, no frontend.**
 - Enforce evidence-first: agent outputs must cite `EvidenceReference`s.
 
@@ -84,6 +95,17 @@ thread end-to-end and get a reviewable draft report and proposal.
 ## Phase 3 — QA / governance and learning capture
 
 **Goal:** close the loop with quality gating and reusable knowledge.
+
+**Prompt contracts done (groundwork):**
+
+- [x] `prompts/qa/review-assessment-packet.prompt.md` — strict QA of a packet and any
+  draft report/proposal (unsupported claims, missing evidence, contradictions,
+  readiness score, required fixes).
+- [x] `prompts/learning/extract-engagement-lessons.prompt.md` — reusable lessons and
+  **draft** candidate knowledge capsules (explicitly not yet grounded/published to
+  AgentNet).
+
+**Still to do:**
 
 - Implement `agents/qa/`: checks for evidence traceability, consistency, and
   completeness; produces QA findings and a sign-off record.
