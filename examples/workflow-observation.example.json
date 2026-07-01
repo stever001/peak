@@ -1,0 +1,17 @@
+{
+  "observation_id": "wobs_alpha_adjustments",
+  "related_intake_id": "intake_alpha_2026",
+  "observed_at": "2026-06-18T15:00:00Z",
+  "observed_by": "consultant_a",
+  "workflow_area": "adjustment",
+  "current_state": "When a cycle count disagrees with the ERP, staff adjust the ERP on-hand quantity to match the count directly, with no approval step and no recorded reason code.",
+  "observed_gap": "Inventory adjustments lack review, reason codes, and root-cause analysis, so recurring accuracy problems are masked rather than corrected.",
+  "business_impact": "Persistent record inaccuracy drives stockouts on fast movers and undermines trust in ERP stock figures for purchasing and finance.",
+  "control_risk": {
+    "description": "Unrestricted, unreviewed adjustments are a segregation-of-duties and shrink-concealment risk.",
+    "severity": "high"
+  },
+  "potential_quick_win": true,
+  "evidence_references": ["evid_alpha_002"],
+  "consultant_notes": "Introducing an approval threshold and mandatory reason codes is a plausible quick win; confirm ERP supports reason codes."
+}

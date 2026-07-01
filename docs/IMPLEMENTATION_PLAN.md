@@ -30,15 +30,20 @@ understand what Peak is building and why. No agent logic yet.
 **Goal:** turn the candidate data objects into concrete, portable schemas with
 worked examples.
 
-- Define schemas under `schemas/` (portable, serialization-neutral — e.g. JSON
-  Schema or an equivalent that avoids vendor lock-in).
-- Start with the first-thread objects: `ClientIntake`, `EvidenceReference`,
-  `StakeholderInterview`, `VisualObservation`, `WorkflowObservation`.
-- Add anonymized worked examples under `examples/`.
-- Add schema validation tests under `tests/`.
+- [x] Define schemas under `schemas/` (portable, serialization-neutral JSON Schema
+  draft 2020-12, no vendor lock-in).
+- [x] First-thread objects defined: `ClientIntake`, `EvidenceReference`,
+  `StakeholderInterview`, `VisualObservation`, `WorkflowObservation`,
+  `InventorySystemProfile`.
+- [x] Anonymized worked examples added under `examples/` (one coherent engagement).
+- [x] Validation harness added under `tests/` (`validate_phase1.py`): schema
+  self-check, example conformance, and referential lint. Dev dependency pinned in
+  `requirements-dev.txt`.
 
 **Exit criteria:** every first-thread object has a schema, at least one example, and
-a passing validation test. Still no live agents.
+a passing validation test. Still no live agents. — **Met.** Run
+`python tests/validate_phase1.py` (exits 0 on pass; unresolved cross-references are
+non-blocking warnings in Phase 1).
 
 ---
 

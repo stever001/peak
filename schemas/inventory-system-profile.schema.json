@@ -1,0 +1,159 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://peak.internal/schemas/v1/inventory-system-profile.schema.json",
+  "title": "InventorySystemProfile",
+  "description": "A profile of the client's inventory systems, records, and data environment, built up during assessment planning and discovery. Captures the source of truth for inventory records, integrations, manual workarounds, reporting outputs, data quality concerns, and access status, with links to EvidenceReference records. Described generically to avoid vendor lock-in framing.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["system_profile_id", "related_intake_id"],
+  "properties": {
+    "system_profile_id": {
+      "type": "string",
+      "description": "Stable local identifier. Convention: 'isp_' followed by a short slug, unique within an engagement.",
+      "pattern": "^isp_[A-Za-z0-9][A-Za-z0-9_-]*$"
+    },
+    "related_intake_id": {
+      "type": "string",
+      "description": "The ClientIntake this profile belongs to.",
+      "pattern": "^intake_[A-Za-z0-9][A-Za-z0-9_-]*$"
+    },
+    "known_systems": {
+      "type": "array",
+      "description": "Systems involved in inventory management, described generically.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string", "description": "System name or generic label." },
+          "category": {
+            "type": "string",
+            "description": "System category.",
+            "enum": ["ERP", "WMS", "inventory_module", "spreadsheet", "manual_process", "other"]
+          },
+          "role": { "type": "string", "description": "What the system does in the inventory process." },
+          "notes": { "type": "string", "description": "Consultant notes about this system." }
+        }
+      }
+    },
+    "records_source_of_truth": {
+      "type": "object",
+      "description": "Where the authoritative inventory record is considered to live, and how confident that is.",
+      "additionalProperties": false,
+      "properties": {
+        "system_name": { "type": "string", "description": "The system treated as source of truth (generic label)." },
+        "confidence": {
+          "type": "string",
+          "description": "How confident the consultant is that this truly is the source of truth.",
+          "enum": ["low", "medium", "high", "unknown"]
+        },
+        "notes": { "type": "string", "description": "Notes on ambiguity or competing sources of truth." }
+      }
+    },
+    "integrations": {
+      "type": "array",
+      "description": "Integrations or interfaces between systems relevant to inventory data flow.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["description"],
+        "properties": {
+          "description": { "type": "string", "description": "What connects to what, and how (e.g. 'nightly batch', 'manual export')." },
+          "integration_type": {
+            "type": "string",
+            "description": "Nature of the integration.",
+            "enum": ["real_time", "batch", "manual", "none", "unknown"]
+          },
+          "reliability": {
+            "type": "string",
+            "description": "Qualitative reliability of the integration.",
+            "enum": ["low", "medium", "high", "unknown"]
+          }
+        }
+      }
+    },
+    "manual_workarounds": {
+      "type": "array",
+      "description": "Manual workarounds people use to bridge system gaps.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["description"],
+        "properties": {
+          "description": { "type": "string", "description": "The workaround." },
+          "workflow_area": {
+            "type": "string",
+            "description": "Workflow area the workaround relates to.",
+            "enum": ["receiving", "putaway", "picking", "cycle_count", "replenishment", "returns", "adjustment", "reporting", "other"]
+          },
+          "evidence_references": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^evid_[A-Za-z0-9][A-Za-z0-9_-]*$" }
+          }
+        }
+      }
+    },
+    "reporting_outputs": {
+      "type": "array",
+      "description": "Reports or outputs the client relies on for inventory decisions.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string", "description": "Report/output name or generic label." },
+          "purpose": { "type": "string", "description": "What decision it supports." },
+          "source_system": { "type": "string", "description": "Where the report comes from (generic label)." }
+        }
+      }
+    },
+    "data_quality_concerns": {
+      "type": "array",
+      "description": "Early concerns about inventory data quality. Formal DataQualityIssue objects are derived later in evidence normalization.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["description"],
+        "properties": {
+          "description": { "type": "string", "description": "The concern." },
+          "data_domain": {
+            "type": "string",
+            "description": "Domain affected.",
+            "enum": ["counts", "valuation", "master_data", "transactions", "locations", "other"]
+          },
+          "severity": {
+            "type": "string",
+            "description": "Qualitative severity indicator.",
+            "enum": ["low", "medium", "high", "critical"]
+          },
+          "evidence_references": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^evid_[A-Za-z0-9][A-Za-z0-9_-]*$" }
+          }
+        }
+      }
+    },
+    "access_status": {
+      "type": "object",
+      "description": "Whether and how Peak can access these systems and data for the assessment.",
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "type": "string",
+          "description": "Overall access status.",
+          "enum": ["granted", "partial", "requested", "denied", "unknown"]
+        },
+        "notes": { "type": "string", "description": "Notes on access constraints or pending approvals." }
+      }
+    },
+    "evidence_references": {
+      "type": "array",
+      "description": "EvidenceReference ids for this system profile overall.",
+      "items": { "type": "string", "pattern": "^evid_[A-Za-z0-9][A-Za-z0-9_-]*$" }
+    },
+    "consultant_notes": {
+      "type": "string",
+      "description": "Free-text consultant notes about this profile."
+    }
+  }
+}

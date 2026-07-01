@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://peak.internal/schemas/v1/visual-observation.schema.json",
+  "title": "VisualObservation",
+  "description": "A single structured observation from the on-site walk-around (visual inspection). Captures what was seen, what it implies operationally, how severe it appears, and what to follow up on, with links to EvidenceReference records such as photographs or consultant notes.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["observation_id", "related_intake_id", "description"],
+  "properties": {
+    "observation_id": {
+      "type": "string",
+      "description": "Stable local identifier. Convention: 'vobs_' followed by a short slug, unique within an engagement.",
+      "pattern": "^vobs_[A-Za-z0-9][A-Za-z0-9_-]*$"
+    },
+    "related_intake_id": {
+      "type": "string",
+      "description": "The ClientIntake this observation belongs to.",
+      "pattern": "^intake_[A-Za-z0-9][A-Za-z0-9_-]*$"
+    },
+    "observed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 date/time the observation was made."
+    },
+    "observed_by": {
+      "type": "string",
+      "description": "Anonymized label for the observing consultant (e.g. 'consultant_a')."
+    },
+    "site_area": {
+      "type": "string",
+      "description": "Area of the site where the observation was made (e.g. 'receiving_dock', 'bulk_storage', 'pick_face')."
+    },
+    "observation_type": {
+      "type": "string",
+      "description": "Category of what was observed.",
+      "enum": [
+        "storage",
+        "labeling",
+        "organization",
+        "safety",
+        "housekeeping",
+        "equipment",
+        "signage",
+        "space_utilization",
+        "damage",
+        "security",
+        "other"
+      ]
+    },
+    "description": {
+      "type": "string",
+      "description": "Consultant-readable description of what was seen. Non-sensitive."
+    },
+    "operational_implication": {
+      "type": "string",
+      "description": "What this observation may mean for inventory operations (accuracy, cost, service, safety)."
+    },
+    "severity": {
+      "type": "string",
+      "description": "Qualitative severity indicator. Avoids false-precision scoring at this stage.",
+      "enum": ["low", "medium", "high", "critical"]
+    },
+    "suggested_follow_up": {
+      "type": "string",
+      "description": "Recommended next step to confirm or address the observation."
+    },
+    "evidence_references": {
+      "type": "array",
+      "description": "EvidenceReference ids for this observation (e.g. photographs, consultant notes).",
+      "items": { "type": "string", "pattern": "^evid_[A-Za-z0-9][A-Za-z0-9_-]*$" }
+    },
+    "consultant_notes": {
+      "type": "string",
+      "description": "Free-text consultant notes about this observation."
+    }
+  }
+}

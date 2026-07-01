@@ -1,0 +1,8 @@
+# Development-only dependencies for Peak's internal AI operating system.
+# Runtime code has no dependencies yet; this file supports the validation harness.
+#
+# Install with:
+#     python -m pip install -r requirements-dev.txt
+
+# JSON Schema validation (draft 2020-12) for tests/validate_phase1.py
+jsonschema>=4.18

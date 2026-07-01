@@ -1,0 +1,243 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://peak.internal/schemas/v1/client-intake.schema.json",
+  "title": "ClientIntake",
+  "description": "Structured capture of a new client and engagement context. ClientIntake seeds the first-thread assessment workflow (intake -> assessment planning -> discovery -> report -> proposal). It is intended to be consultant-readable, agent-usable, and, in future, groundable by AgentNet. Examples must not contain real client PII.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["intake_id", "client_profile", "stated_pain_points"],
+  "properties": {
+    "intake_id": {
+      "type": "string",
+      "description": "Stable local identifier for this intake. Convention: 'intake_' followed by a short slug, unique within Peak's engagement set.",
+      "pattern": "^intake_[A-Za-z0-9][A-Za-z0-9_-]*$"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 timestamp of when the intake was created."
+    },
+    "created_by": {
+      "type": "string",
+      "description": "Anonymized label for the consultant capturing the intake (e.g. 'consultant_a'). No PII in examples."
+    },
+    "client_profile": {
+      "type": "object",
+      "description": "High-level profile of the client organization. Names are anonymized in examples.",
+      "additionalProperties": false,
+      "required": ["organization_label"],
+      "properties": {
+        "organization_label": {
+          "type": "string",
+          "description": "Anonymized label for the client organization (e.g. 'client_alpha')."
+        },
+        "organization_type": {
+          "type": "string",
+          "description": "Generic organization type (e.g. 'distributor', 'manufacturer', 'retailer', '3PL')."
+        },
+        "size_indicator": {
+          "type": "string",
+          "description": "Qualitative size indicator rather than a precise figure.",
+          "enum": ["small", "medium", "large", "enterprise", "unknown"]
+        },
+        "locations_count_indicator": {
+          "type": "string",
+          "description": "Qualitative indicator of number of sites (e.g. 'single', 'few', 'many')."
+        },
+        "geographies": {
+          "type": "array",
+          "description": "Generic geographic scope (e.g. regions or countries) without identifying a specific client.",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "industry": {
+      "type": "string",
+      "description": "Client industry or sector."
+    },
+    "operating_model": {
+      "type": "string",
+      "description": "How the client operates its inventory-relevant business (e.g. 'make-to-stock distribution', 'make-to-order manufacturing')."
+    },
+    "inventory_environment": {
+      "type": "object",
+      "description": "High-level description of the client's inventory environment.",
+      "additionalProperties": false,
+      "properties": {
+        "product_categories": {
+          "type": "array",
+          "description": "Generic product categories handled.",
+          "items": { "type": "string" }
+        },
+        "storage_types": {
+          "type": "array",
+          "description": "Storage/handling types (e.g. 'racked', 'bulk', 'cold chain', 'hazmat').",
+          "items": { "type": "string" }
+        },
+        "sku_count_indicator": {
+          "type": "string",
+          "description": "Qualitative SKU-count indicator (e.g. 'hundreds', 'thousands', 'tens_of_thousands')."
+        },
+        "throughput_indicator": {
+          "type": "string",
+          "description": "Qualitative throughput/velocity indicator."
+        },
+        "inventory_value_indicator": {
+          "type": "string",
+          "description": "Qualitative indicator of inventory value materiality (e.g. 'low', 'moderate', 'high')."
+        }
+      }
+    },
+    "known_systems": {
+      "type": "array",
+      "description": "Systems the client is known to use for inventory-relevant work. Described generically to avoid vendor lock-in framing.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "System name or generic label (e.g. 'ERP', 'WMS', 'spreadsheets')."
+          },
+          "category": {
+            "type": "string",
+            "description": "System category.",
+            "enum": ["ERP", "WMS", "inventory_module", "spreadsheet", "manual_process", "other"]
+          },
+          "role": {
+            "type": "string",
+            "description": "What the system is used for in the inventory process."
+          },
+          "notes": {
+            "type": "string",
+            "description": "Consultant notes about this system."
+          }
+        }
+      }
+    },
+    "stated_pain_points": {
+      "type": "array",
+      "description": "Pain points the client has stated, in the client's own framing.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["description"],
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "The pain point as stated."
+          },
+          "impact_indicator": {
+            "type": "string",
+            "description": "Qualitative indicator of stated impact.",
+            "enum": ["low", "medium", "high", "unknown"]
+          },
+          "evidence_references": {
+            "type": "array",
+            "description": "EvidenceReference ids supporting this pain point, where available.",
+            "items": { "type": "string", "pattern": "^evid_[A-Za-z0-9][A-Za-z0-9_-]*$" }
+          }
+        }
+      }
+    },
+    "stakeholders": {
+      "type": "array",
+      "description": "Stakeholders or roles relevant to the engagement. Anonymized in examples.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["role"],
+        "properties": {
+          "role": {
+            "type": "string",
+            "description": "Stakeholder role (e.g. 'operations_manager', 'warehouse_lead', 'finance_controller')."
+          },
+          "anonymized_label": {
+            "type": "string",
+            "description": "Anonymized reference label for this stakeholder (e.g. 'stakeholder_1')."
+          },
+          "involvement": {
+            "type": "string",
+            "description": "Nature/degree of involvement in the engagement."
+          }
+        }
+      }
+    },
+    "urgency": {
+      "type": "object",
+      "description": "Why now — the business trigger and its urgency.",
+      "additionalProperties": false,
+      "properties": {
+        "level": {
+          "type": "string",
+          "description": "Qualitative urgency level.",
+          "enum": ["low", "medium", "high", "critical", "unknown"]
+        },
+        "business_trigger": {
+          "type": "string",
+          "description": "The event or condition prompting the engagement (e.g. 'failed audit', 'stockouts', 'growth')."
+        }
+      }
+    },
+    "available_data_sources": {
+      "type": "array",
+      "description": "Data sources the client may make available for the assessment.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string", "description": "Data source name or generic label." },
+          "type": {
+            "type": "string",
+            "description": "Kind of data source (e.g. 'system_export', 'report', 'spreadsheet', 'document')."
+          },
+          "availability": {
+            "type": "string",
+            "description": "Availability status.",
+            "enum": ["available", "on_request", "restricted", "unavailable", "unknown"]
+          }
+        }
+      }
+    },
+    "initial_scope_hypothesis": {
+      "type": "string",
+      "description": "The consultant's early hypothesis about where the assessment should focus. Explicitly a hypothesis, not a conclusion."
+    },
+    "first_billing_tranche_objective": {
+      "type": "string",
+      "description": "The commercial objective of the first billing tranche (the initial assessment), phrased so it can inform a later next-phase proposal."
+    },
+    "assessment_readiness": {
+      "type": "object",
+      "description": "How ready the engagement is to proceed to assessment.",
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "type": "string",
+          "description": "Overall readiness status.",
+          "enum": ["not_ready", "partially_ready", "ready", "unknown"]
+        },
+        "blockers": {
+          "type": "array",
+          "description": "Known blockers to starting the assessment.",
+          "items": { "type": "string" }
+        },
+        "notes": {
+          "type": "string",
+          "description": "Consultant notes on readiness."
+        }
+      }
+    },
+    "evidence_references": {
+      "type": "array",
+      "description": "EvidenceReference ids supporting this intake overall.",
+      "items": { "type": "string", "pattern": "^evid_[A-Za-z0-9][A-Za-z0-9_-]*$" }
+    },
+    "consultant_notes": {
+      "type": "string",
+      "description": "Free-text consultant notes about this intake."
+    }
+  }
+}

@@ -1,0 +1,143 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://peak.internal/schemas/v1/stakeholder-interview.schema.json",
+  "title": "StakeholderInterview",
+  "description": "A structured record of one interview with a client stakeholder during discovery. Captures what was claimed, what impacts were quantified (if any), and what needs following up, with links back to EvidenceReference records. Stakeholder identity is anonymized in examples.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["interview_id", "related_intake_id", "stakeholder_role"],
+  "properties": {
+    "interview_id": {
+      "type": "string",
+      "description": "Stable local identifier. Convention: 'intv_' followed by a short slug, unique within an engagement.",
+      "pattern": "^intv_[A-Za-z0-9][A-Za-z0-9_-]*$"
+    },
+    "related_intake_id": {
+      "type": "string",
+      "description": "The ClientIntake this interview belongs to.",
+      "pattern": "^intake_[A-Za-z0-9][A-Za-z0-9_-]*$"
+    },
+    "stakeholder_role": {
+      "type": "string",
+      "description": "Role of the interviewee (e.g. 'operations_manager', 'warehouse_lead')."
+    },
+    "stakeholder_label": {
+      "type": "string",
+      "description": "Anonymized reference label for the interviewee (e.g. 'stakeholder_1'). No PII in examples."
+    },
+    "interviewed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 date/time of the interview."
+    },
+    "interviewer": {
+      "type": "string",
+      "description": "Anonymized label for the interviewing consultant (e.g. 'consultant_a')."
+    },
+    "topics_covered": {
+      "type": "array",
+      "description": "Topics addressed in the interview.",
+      "items": { "type": "string" }
+    },
+    "stated_pain_points": {
+      "type": "array",
+      "description": "Pain points as expressed by the stakeholder.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["description"],
+        "properties": {
+          "description": { "type": "string", "description": "The pain point as stated." },
+          "evidence_references": {
+            "type": "array",
+            "description": "EvidenceReference ids for this statement.",
+            "items": { "type": "string", "pattern": "^evid_[A-Za-z0-9][A-Za-z0-9_-]*$" }
+          }
+        }
+      }
+    },
+    "process_claims": {
+      "type": "array",
+      "description": "Claims the stakeholder made about how processes work. Recorded as claims to be validated, not as established fact.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["claim"],
+        "properties": {
+          "claim": { "type": "string", "description": "The process claim." },
+          "workflow_area": {
+            "type": "string",
+            "description": "Optional workflow area the claim relates to (e.g. 'receiving', 'picking').",
+            "enum": ["receiving", "putaway", "picking", "cycle_count", "replenishment", "returns", "adjustment", "reporting", "other"]
+          },
+          "evidence_references": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^evid_[A-Za-z0-9][A-Za-z0-9_-]*$" }
+          }
+        }
+      }
+    },
+    "system_claims": {
+      "type": "array",
+      "description": "Claims the stakeholder made about systems and their behavior.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["claim"],
+        "properties": {
+          "claim": { "type": "string", "description": "The system claim." },
+          "system_name": { "type": "string", "description": "System the claim relates to (generic label)." },
+          "evidence_references": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^evid_[A-Za-z0-9][A-Za-z0-9_-]*$" }
+          }
+        }
+      }
+    },
+    "quantified_impacts": {
+      "type": "array",
+      "description": "Impacts the stakeholder quantified, if any. Values are recorded as reported, with units, not independently verified here.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["description"],
+        "properties": {
+          "description": { "type": "string", "description": "What the impact is." },
+          "metric": { "type": "string", "description": "The metric named (e.g. 'stockout_rate', 'hours_per_week')." },
+          "reported_value": { "type": "string", "description": "The value as reported, kept as a string to preserve ranges/qualifiers." },
+          "unit": { "type": "string", "description": "Unit of the reported value." },
+          "evidence_references": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^evid_[A-Za-z0-9][A-Za-z0-9_-]*$" }
+          }
+        }
+      }
+    },
+    "contradictions_or_followups": {
+      "type": "array",
+      "description": "Contradictions noted (internally or against other evidence) and follow-up questions to resolve them.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["description"],
+        "properties": {
+          "description": { "type": "string", "description": "The contradiction or open question." },
+          "type": {
+            "type": "string",
+            "description": "Whether this is a contradiction to resolve or a follow-up to pursue.",
+            "enum": ["contradiction", "follow_up"]
+          }
+        }
+      }
+    },
+    "evidence_references": {
+      "type": "array",
+      "description": "EvidenceReference ids for the interview as a whole.",
+      "items": { "type": "string", "pattern": "^evid_[A-Za-z0-9][A-Za-z0-9_-]*$" }
+    },
+    "consultant_notes": {
+      "type": "string",
+      "description": "Free-text consultant notes about this interview."
+    }
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://peak.internal/schemas/v1/evidence-reference.schema.json",
+  "title": "EvidenceReference",
+  "description": "The traceability primitive for Peak's internal assessment work. Any finding, claim, observation, or recommendation should point back to one or more EvidenceReference records so that agent and consultant output remains evidence-first and, in future, groundable by AgentNet. This object records where a piece of evidence came from and how much it can be relied upon; it does not store the sensitive content itself.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["evidence_id", "evidence_type", "source_type", "summary"],
+  "properties": {
+    "evidence_id": {
+      "type": "string",
+      "description": "Stable local identifier for this evidence item. Convention: 'evid_' followed by a short slug or number, unique within an engagement.",
+      "pattern": "^evid_[A-Za-z0-9][A-Za-z0-9_-]*$"
+    },
+    "evidence_type": {
+      "type": "string",
+      "description": "The nature of the evidence captured.",
+      "enum": [
+        "interview_statement",
+        "visual_observation",
+        "workflow_observation",
+        "document",
+        "system_export",
+        "photograph",
+        "measurement",
+        "consultant_note",
+        "other"
+      ]
+    },
+    "source_type": {
+      "type": "string",
+      "description": "Where the evidence originated.",
+      "enum": ["stakeholder", "site_walk", "system", "document", "consultant", "other"]
+    },
+    "collection_method": {
+      "type": "string",
+      "description": "How the evidence was collected.",
+      "enum": [
+        "interview",
+        "observation",
+        "document_review",
+        "system_export",
+        "photograph",
+        "measurement",
+        "other"
+      ]
+    },
+    "collected_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 timestamp of when the evidence was collected."
+    },
+    "collected_by": {
+      "type": "string",
+      "description": "Anonymized label for the consultant or agent that captured the evidence (e.g. 'consultant_a'). No PII in examples."
+    },
+    "related_object_ids": {
+      "type": "array",
+      "description": "Local identifiers of objects this evidence supports or was derived from (e.g. an intake_id, intv_ interview id, or a derived finding id).",
+      "items": {
+        "type": "string",
+        "description": "A stable local identifier of a related object."
+      }
+    },
+    "summary": {
+      "type": "string",
+      "description": "Consultant-readable, non-sensitive summary or excerpt of the evidence. Do not place raw sensitive content here."
+    },
+    "reliability": {
+      "type": "string",
+      "description": "How dependable this evidence is considered to be.",
+      "enum": ["low", "medium", "high"]
+    },
+    "confidence_notes": {
+      "type": "string",
+      "description": "Optional qualitative note explaining the reliability rating or remaining uncertainty."
+    },
+    "access_notes": {
+      "type": "string",
+      "description": "Notes on how/whether this evidence can be accessed again (e.g. 'verbal only', 'screenshot retained by consultant')."
+    },
+    "retention_notes": {
+      "type": "string",
+      "description": "Notes on retention expectations or handling. A formal retention policy is deferred to a later phase."
+    },
+    "sensitive_data_flag": {
+      "type": "boolean",
+      "description": "True if the underlying evidence contains sensitive or confidential data. This record must still avoid embedding that content directly."
+    },
+    "consultant_notes": {
+      "type": "string",
+      "description": "Free-text consultant notes about this evidence item."
+    }
+  }
+}

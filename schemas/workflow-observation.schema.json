@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://peak.internal/schemas/v1/workflow-observation.schema.json",
+  "title": "WorkflowObservation",
+  "description": "An observation about how an inventory-related process actually runs in practice, as opposed to how it is documented or claimed. Captures the current state, the observed gap, business impact and control risk, and whether it may represent a quick win, with links to EvidenceReference records.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["observation_id", "related_intake_id", "workflow_area", "current_state"],
+  "properties": {
+    "observation_id": {
+      "type": "string",
+      "description": "Stable local identifier. Convention: 'wobs_' followed by a short slug, unique within an engagement.",
+      "pattern": "^wobs_[A-Za-z0-9][A-Za-z0-9_-]*$"
+    },
+    "related_intake_id": {
+      "type": "string",
+      "description": "The ClientIntake this observation belongs to.",
+      "pattern": "^intake_[A-Za-z0-9][A-Za-z0-9_-]*$"
+    },
+    "observed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 date/time the observation was made."
+    },
+    "observed_by": {
+      "type": "string",
+      "description": "Anonymized label for the observing consultant (e.g. 'consultant_a')."
+    },
+    "workflow_area": {
+      "type": "string",
+      "description": "The inventory workflow this observation concerns.",
+      "enum": [
+        "receiving",
+        "putaway",
+        "picking",
+        "cycle_count",
+        "replenishment",
+        "returns",
+        "adjustment",
+        "reporting",
+        "other"
+      ]
+    },
+    "current_state": {
+      "type": "string",
+      "description": "How the workflow is currently observed to operate."
+    },
+    "observed_gap": {
+      "type": "string",
+      "description": "The gap between observed practice and good practice or documented process."
+    },
+    "business_impact": {
+      "type": "string",
+      "description": "The impact of the gap on cost, accuracy, service, or compliance."
+    },
+    "control_risk": {
+      "type": "object",
+      "description": "Any internal-control risk implied by the gap.",
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "type": "string",
+          "description": "The control weakness or exposure."
+        },
+        "severity": {
+          "type": "string",
+          "description": "Qualitative severity of the control risk.",
+          "enum": ["low", "medium", "high", "critical"]
+        }
+      }
+    },
+    "potential_quick_win": {
+      "type": "boolean",
+      "description": "Flag indicating this observation may translate into a low-effort, high-value quick win. Confirmation happens later in the proposal workflow."
+    },
+    "evidence_references": {
+      "type": "array",
+      "description": "EvidenceReference ids for this observation.",
+      "items": { "type": "string", "pattern": "^evid_[A-Za-z0-9][A-Za-z0-9_-]*$" }
+    },
+    "consultant_notes": {
+      "type": "string",
+      "description": "Free-text consultant notes about this observation."
+    }
+  }
+}
