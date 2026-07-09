@@ -68,24 +68,38 @@ peak/
 │   └── learning/                 # Reusable knowledge capture
 ├── schemas/                      # Data object schemas (JSON Schema, draft 2020-12)
 ├── examples/                     # Worked, anonymized example records
-├── prompts/                      # Reusable prompt building blocks
-├── tests/                        # Validation harness for schemas and examples
-├── Makefile                      # Convenience commands (validate, install-dev)
+│   └── outputs/                  # Sample prompt-contract run artifacts
+├── prompts/                      # Prompt contracts (one per workflow)
+├── tools/                        # Local human-in-the-loop helpers (no LLM/API)
+├── tests/                        # Validation harnesses for schemas/examples/prompts
+├── Makefile                      # Convenience commands (validate, packet-summary)
 └── requirements-dev.txt          # Dev-only dependencies (validation harness)
 ```
 
 ## Validating the schemas
 
-The Phase 1 schemas and examples ship with a lightweight validation harness. This
-machine uses `python3` (there is no bare `python`):
+The schemas, examples, prompts, and outputs ship with lightweight validation
+harnesses. This machine uses `python3` (there is no bare `python`):
 
 ```bash
 make install-dev   # install dev deps (python3 -m pip install -r requirements-dev.txt)
-make validate      # run the harness (python3 tests/validate_phase1.py)
+make validate      # run all harnesses (Phase 1–5)
 ```
 
 `make validate` exits 0 on success; unresolved cross-references are reported as
 non-blocking warnings in Phase 1. See [`tests/README.md`](tests/README.md).
+
+## Using a packet (human-in-the-loop)
+
+A read-only helper summarizes an `EngagementPacket` and points you to the right
+prompt contracts. It makes **no LLM, API, database, AgentNet, or network call** — the
+consultant runs the LLM by hand and owns the output.
+
+```bash
+make packet-summary   # == python3 tools/packet_runner.py --packet examples/engagement-packet.example.json
+```
+
+See [`tools/README.md`](tools/README.md).
 
 ## AgentNet grounding (intended architecture)
 

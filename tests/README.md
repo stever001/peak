@@ -4,12 +4,13 @@ Validation for the assessment schemas and examples. Deliberately dependency-ligh
 Python standard library plus `jsonschema` (which brings `referencing`). No pytest,
 no database, no API server, no network.
 
-Four harnesses, run together by `make validate`:
+Five harnesses, run together by `make validate`:
 
 - `validate_phase1.py` — the six standalone Phase 1 objects.
 - `validate_phase2.py` — the composite `EngagementPacket`.
 - `validate_phase3_prompts.py` — the Phase 3 prompt-contract inventory (stdlib-only).
 - `validate_phase4_outputs.py` — the Phase 4 example-output inventory (stdlib-only).
+- `validate_phase5_runner.py` — the Phase 5 packet-runner smoke check (stdlib-only).
 
 ## `validate_phase1.py`
 
@@ -77,6 +78,18 @@ one packet evidence id (`evid_alpha_...`).
 Structural only — it does **not** judge report quality or semantics. That remains a
 human judgement for now.
 
+## `validate_phase5_runner.py`
+
+A lightweight, **stdlib-only** smoke check for the human-in-the-loop packet runner
+([`../tools/packet_runner.py`](../tools/packet_runner.py)). It runs the runner as a
+subprocess against the example packet and confirms: the file exists, the documented
+example command exits 0, and the output contains the `packet_id`, the
+`engagement_label`, the prompt-contract list, and the no-LLM / no-AgentNet /
+no-client-facing disclaimers.
+
+It asserts the runner stays honest about making no model/API/network call. No
+dependencies.
+
 ## Running
 
 This machine uses `python3` (there is no bare `python`). From the repo root:
@@ -86,13 +99,14 @@ This machine uses `python3` (there is no bare `python`). From the repo root:
 make install-dev          # == python3 -m pip install -r requirements-dev.txt
 
 # run all harnesses
-make validate             # == phase1 + phase2 + phase3 + phase4
+make validate             # == phase1 + phase2 + phase3 + phase4 + phase5
 
 # or run one at a time
 make validate-phase1
 make validate-phase2
 make validate-phase3
 make validate-phase4
+make validate-phase5
 ```
 
 Or invoke them directly, without the Makefile:
@@ -102,11 +116,12 @@ python3 tests/validate_phase1.py
 python3 tests/validate_phase2.py
 python3 tests/validate_phase3_prompts.py   # stdlib-only, no dependency needed
 python3 tests/validate_phase4_outputs.py   # stdlib-only, no dependency needed
+python3 tests/validate_phase5_runner.py    # stdlib-only, no dependency needed
 ```
 
 ## Exit codes
 
-All four harnesses share the same convention:
+All five harnesses share the same convention:
 
 | Code | Meaning |
 | --- | --- |

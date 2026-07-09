@@ -90,13 +90,23 @@ These are **human-run prompt contracts, not autonomous agents**, and are interna
 - [x] Presence/heading check ([`../tests/validate_phase4_outputs.py`](../tests/validate_phase4_outputs.py),
   stdlib-only) wired into `make validate`. Structural only — no quality judgement.
 
+**Local runner — human-in-the-loop helper:**
+
+- [x] [`../tools/packet_runner.py`](../tools/packet_runner.py) (`make packet-summary`):
+  a read-only helper that summarizes an `EngagementPacket` and points a consultant at
+  the right prompt contract and output target. Makes **no** LLM/API/database/AgentNet/
+  network call — deliberately not an agent runtime. Smoke-tested by
+  [`../tests/validate_phase5_runner.py`](../tests/validate_phase5_runner.py) in
+  `make validate`.
+
 **Still to do:**
 
 - Implement lightweight agents in `agents/intake/`, `agents/discovery/`,
   `agents/evidence/`, `agents/reporting/`, `agents/proposal/` that take structured
   input and produce structured output conforming to the schemas (the prompt contracts
   above are the specification for that behavior, and the sample outputs are a target
-  for what "good" looks like).
+  for what "good" looks like). The runner is the manual precursor: it orients the
+  consultant without automating the LLM step.
 - Keep everything file-based and consultant-run; **no database, no frontend.**
 - Enforce evidence-first: agent outputs must cite `EvidenceReference`s.
 

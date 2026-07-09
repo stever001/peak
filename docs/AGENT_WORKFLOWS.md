@@ -45,6 +45,12 @@ run against `examples/engagement-packet.example.json`, producing a discovery pla
 evidence findings, an initial report, a next-phase proposal, a QA review, and
 engagement lessons. These are illustrative human-reviewable drafts, not automation.
 
+**Runner (human-in-the-loop).** [`../tools/packet_runner.py`](../tools/packet_runner.py)
+(`make packet-summary`) is a read-only helper: given a packet, it prints a summary and
+points the consultant at the right contract and output target. It runs **no** LLM, API,
+database, AgentNet, or network call — the consultant does the LLM step by hand and owns
+the result. It is not an agent runtime.
+
 ## The first end-to-end thread
 
 The initial priority is one clean, connected path from a new client through to a
