@@ -53,7 +53,10 @@ application.
 Step by step:
 
 1. **Capture messy intake notes** — call notes, emails, questionnaire answers. Raw text
-   is fine.
+   is fine **locally**, but **redact before anything enters this repo or an LLM** —
+   see [`DATA_HANDLING_POLICY.md`](DATA_HANDLING_POLICY.md) and
+   [`REDACTION_GUIDE.md`](REDACTION_GUIDE.md), with worked examples in
+   [`../examples/redacted/`](../examples/redacted/).
 2. **Normalize into `ClientIntake`** — run
    `prompts/intake/normalize-client-intake.prompt.md`. It returns a `ClientIntake`
    draft plus a missing-information list and confidence notes. Do not invent fields.
@@ -139,6 +142,10 @@ These are non-negotiable for internal quality and honesty:
 - **Avoid real sensitive data in examples.** Use anonymized labels
   (`client_alpha`, `stakeholder_1`, `consultant_a`). `EvidenceReference` records the
   fact of sensitive evidence via `sensitive_data_flag`; it never embeds the content.
+- **Redact before the repo or any LLM.** Real client material must be redacted per
+  [`DATA_HANDLING_POLICY.md`](DATA_HANDLING_POLICY.md) and
+  [`REDACTION_GUIDE.md`](REDACTION_GUIDE.md) *before* it is committed or pasted into a
+  third-party tool. Keep unredacted working files outside the repo.
 
 ## 6. QA gate
 
@@ -182,19 +189,23 @@ Emphasis:
 
 - Human-in-the-loop packet and prompt workflows: structured data objects, a validated
   `EngagementPacket`, prompt contracts, a read-only packet summarizer, and validation.
+- An initial, internal **data-handling and redaction policy**
+  ([`DATA_HANDLING_POLICY.md`](DATA_HANDLING_POLICY.md),
+  [`REDACTION_GUIDE.md`](REDACTION_GUIDE.md)) — pre-legal, human-enforced.
 
 **Not yet (deliberately out of scope):**
 
 - It does **not** execute prompts automatically (no agent runtime, no LLM calls).
 - It does **not** integrate with AgentNet (intended future grounding/resolution only).
-- It does **not** store real client data (no database; a retention/redaction policy is
-  still to be defined).
+- It does **not** store real client data (no database). The data-handling policy
+  exists, but a formal retention schedule, secure storage, and redaction *tooling* are
+  still to be defined; redaction is currently a human discipline.
 - No frontend, API, or client-facing functionality.
 
 **Possible future phases** (not promises): guarded runners that assist without
-automating judgment, packet manifests, a redaction/retention policy for real data, and
-eventual AgentNet grounding of methodology capsules — each added only when the
-human-in-the-loop core is proven.
+automating judgment, packet manifests, a formal retention schedule and redaction
+tooling on top of today's policy, and eventual AgentNet grounding of methodology
+capsules — each added only when the human-in-the-loop core is proven.
 
 ---
 

@@ -213,6 +213,12 @@ prefix `evid_`.
 - **Indicators**, not scores. Early objects use qualitative indicators
   (e.g. low/medium/high) rather than false-precision numeric scores.
 - **Redactable identity.** Personal names are optional and redactable to respect
-  client sensitivities.
-- **No PII strategy yet.** A privacy/retention model is deferred to a later phase
-  and must be defined before any client data is stored persistently.
+  client sensitivities. See [`REDACTION_GUIDE.md`](REDACTION_GUIDE.md) for how raw
+  material is anonymized before it enters the repo.
+- **Data handling.** An initial internal policy governs what may enter the repo and
+  how real material is handled — see [`DATA_HANDLING_POLICY.md`](DATA_HANDLING_POLICY.md).
+  `EvidenceReference.sensitive_data_flag` records the fact of sensitive evidence
+  without embedding it.
+- **No persistence/retention model yet.** A formal retention schedule and secure
+  storage are still to be defined (with legal review) before any real client data is
+  stored persistently; today the repo holds only fictional examples.

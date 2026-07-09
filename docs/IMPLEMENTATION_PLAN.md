@@ -109,6 +109,18 @@ These are **human-run prompt contracts, not autonomous agents**, and are interna
   [`../tests/validate_phase6_docs.py`](../tests/validate_phase6_docs.py) in
   `make validate`. Documentation only — no new runtime.
 
+**Data-handling policy (first, pre-legal):**
+
+- [x] [`DATA_HANDLING_POLICY.md`](DATA_HANDLING_POLICY.md) and
+  [`REDACTION_GUIDE.md`](REDACTION_GUIDE.md): an initial internal policy for what may
+  enter the repo, how to redact real material, retention assumptions, human-review and
+  LLM-usage cautions, and AgentNet status — plus worked redacted examples in
+  [`../examples/redacted/`](../examples/redacted/). Doc-checked by
+  [`../tests/validate_phase7_policy.py`](../tests/validate_phase7_policy.py) in
+  `make validate`. Operational first policy, suitable for later legal review — does
+  **not** claim legal compliance. This is the prerequisite that Phase 5 (hardening)
+  named for storing any real client data.
+
 **Still to do:**
 
 - Implement lightweight agents in `agents/intake/`, `agents/discovery/`,

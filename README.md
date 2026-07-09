@@ -58,6 +58,8 @@ peak/
 │   ├── AGENT_WORKFLOWS.md
 │   ├── DATA_OBJECTS.md
 │   ├── CONSULTANT_WORKFLOW.md    # How a consultant uses this repo, step by step
+│   ├── DATA_HANDLING_POLICY.md   # What may/may not enter the repo (internal, pre-legal)
+│   ├── REDACTION_GUIDE.md        # How to convert raw notes into safe examples
 │   └── IMPLEMENTATION_PLAN.md
 ├── agents/                       # One folder per agent capability group
 │   ├── intake/                   # New client intake
@@ -69,7 +71,8 @@ peak/
 │   └── learning/                 # Reusable knowledge capture
 ├── schemas/                      # Data object schemas (JSON Schema, draft 2020-12)
 ├── examples/                     # Worked, anonymized example records
-│   └── outputs/                  # Sample prompt-contract run artifacts
+│   ├── outputs/                  # Sample prompt-contract run artifacts
+│   └── redacted/                 # Redacted raw-note examples (safe target state)
 ├── prompts/                      # Prompt contracts (one per workflow)
 ├── tools/                        # Local human-in-the-loop helpers (no LLM/API)
 ├── tests/                        # Validation harnesses for schemas/examples/prompts
@@ -103,6 +106,21 @@ make packet-summary   # == python3 tools/packet_runner.py --packet examples/enga
 See [`tools/README.md`](tools/README.md). For the full step-by-step consultant
 process — from messy intake notes to reviewed work product — see
 [`docs/CONSULTANT_WORKFLOW.md`](docs/CONSULTANT_WORKFLOW.md).
+
+## Data handling (read before using real material)
+
+Everything committed here is **fictional and anonymized**. Real client data must be
+redacted **before** it enters the repo or any tool. This is an internal, pre-legal
+operational policy — it does not claim legal compliance, and it does not permit any
+real data to reach AgentNet.
+
+- [`docs/DATA_HANDLING_POLICY.md`](docs/DATA_HANDLING_POLICY.md) — what may/may not
+  enter the repo; secrets, PII, exports, pricing, retention, human review, AgentNet
+  status, and LLM-usage caution.
+- [`docs/REDACTION_GUIDE.md`](docs/REDACTION_GUIDE.md) — redaction patterns, before/
+  after examples, and a checklist.
+- [`examples/redacted/`](examples/redacted/) — worked redacted notes (the safe target
+  state).
 
 ## AgentNet grounding (intended architecture)
 

@@ -4,7 +4,7 @@ Validation for the assessment schemas and examples. Deliberately dependency-ligh
 Python standard library plus `jsonschema` (which brings `referencing`). No pytest,
 no database, no API server, no network.
 
-Six harnesses, run together by `make validate`:
+Seven harnesses, run together by `make validate`:
 
 - `validate_phase1.py` — the six standalone Phase 1 objects.
 - `validate_phase2.py` — the composite `EngagementPacket`.
@@ -12,6 +12,7 @@ Six harnesses, run together by `make validate`:
 - `validate_phase4_outputs.py` — the Phase 4 example-output inventory (stdlib-only).
 - `validate_phase5_runner.py` — the Phase 5 packet-runner smoke check (stdlib-only).
 - `validate_phase6_docs.py` — the Phase 6 consultant-guide doc check (stdlib-only).
+- `validate_phase7_policy.py` — the Phase 7 data-handling policy doc check (stdlib-only).
 
 ## `validate_phase1.py`
 
@@ -100,6 +101,18 @@ workflow, commands, file map, consultant rules, QA gate, lessons capture, phase
 boundary) plus the honesty/scope phrases. Presence/structure only — it does not judge
 the prose.
 
+## `validate_phase7_policy.py`
+
+A lightweight, **stdlib-only** doc check for the data-handling policy
+([`../docs/DATA_HANDLING_POLICY.md`](../docs/DATA_HANDLING_POLICY.md)),
+[`../docs/REDACTION_GUIDE.md`](../docs/REDACTION_GUIDE.md), and the redacted examples
+under [`../examples/redacted/`](../examples/redacted/). It confirms each file exists and
+contains its required section headings / markers (e.g. `client_alpha`, `vendor_alpha`,
+`[REDACTED_PRICING]`, retention, AgentNet status).
+
+Presence/structure only — it does **not** try to detect real client data. Keeping real
+data out of the repo is a human discipline enforced by the policy, not by this check.
+
 ## Running
 
 This machine uses `python3` (there is no bare `python`). From the repo root:
@@ -109,7 +122,7 @@ This machine uses `python3` (there is no bare `python`). From the repo root:
 make install-dev          # == python3 -m pip install -r requirements-dev.txt
 
 # run all harnesses
-make validate             # == phase1 + phase2 + phase3 + phase4 + phase5 + phase6
+make validate             # == phase1 + phase2 + phase3 + phase4 + phase5 + phase6 + phase7
 
 # or run one at a time
 make validate-phase1
@@ -118,6 +131,7 @@ make validate-phase3
 make validate-phase4
 make validate-phase5
 make validate-phase6
+make validate-phase7
 ```
 
 Or invoke them directly, without the Makefile:
@@ -129,11 +143,12 @@ python3 tests/validate_phase3_prompts.py   # stdlib-only, no dependency needed
 python3 tests/validate_phase4_outputs.py   # stdlib-only, no dependency needed
 python3 tests/validate_phase5_runner.py    # stdlib-only, no dependency needed
 python3 tests/validate_phase6_docs.py      # stdlib-only, no dependency needed
+python3 tests/validate_phase7_policy.py    # stdlib-only, no dependency needed
 ```
 
 ## Exit codes
 
-All six harnesses share the same convention:
+All seven harnesses share the same convention:
 
 | Code | Meaning |
 | --- | --- |
