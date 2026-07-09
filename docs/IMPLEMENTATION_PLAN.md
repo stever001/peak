@@ -99,6 +99,16 @@ These are **human-run prompt contracts, not autonomous agents**, and are interna
   [`../tests/validate_phase5_runner.py`](../tests/validate_phase5_runner.py) in
   `make validate`.
 
+**Consultant operating guide:**
+
+- [x] [`CONSULTANT_WORKFLOW.md`](CONSULTANT_WORKFLOW.md): the end-to-end
+  human-in-the-loop process a consultant follows (notes → intake → evidence/profile/
+  interviews/observations → packet → summary → prompt contract → QA → save → lessons),
+  with consultant rules, the QA readiness ladder, the command reference, a file map,
+  and an explicit statement of the current phase boundary. Doc-checked by
+  [`../tests/validate_phase6_docs.py`](../tests/validate_phase6_docs.py) in
+  `make validate`. Documentation only — no new runtime.
+
 **Still to do:**
 
 - Implement lightweight agents in `agents/intake/`, `agents/discovery/`,

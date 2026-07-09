@@ -51,6 +51,12 @@ points the consultant at the right contract and output target. It runs **no** LL
 database, AgentNet, or network call — the consultant does the LLM step by hand and owns
 the result. It is not an agent runtime.
 
+**Step-by-step consultant process.** [`CONSULTANT_WORKFLOW.md`](CONSULTANT_WORKFLOW.md)
+walks the whole flow — capture notes → normalize intake → add evidence/profile/
+interviews/observations → bundle a packet → summarize → run a contract → QA → save →
+capture lessons — with the consultant rules, the QA readiness ladder, and the current
+phase boundary.
+
 ## The first end-to-end thread
 
 The initial priority is one clean, connected path from a new client through to a

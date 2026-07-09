@@ -57,6 +57,7 @@ peak/
 │   ├── OPERATING_MODEL.md
 │   ├── AGENT_WORKFLOWS.md
 │   ├── DATA_OBJECTS.md
+│   ├── CONSULTANT_WORKFLOW.md    # How a consultant uses this repo, step by step
 │   └── IMPLEMENTATION_PLAN.md
 ├── agents/                       # One folder per agent capability group
 │   ├── intake/                   # New client intake
@@ -99,7 +100,9 @@ consultant runs the LLM by hand and owns the output.
 make packet-summary   # == python3 tools/packet_runner.py --packet examples/engagement-packet.example.json
 ```
 
-See [`tools/README.md`](tools/README.md).
+See [`tools/README.md`](tools/README.md). For the full step-by-step consultant
+process — from messy intake notes to reviewed work product — see
+[`docs/CONSULTANT_WORKFLOW.md`](docs/CONSULTANT_WORKFLOW.md).
 
 ## AgentNet grounding (intended architecture)
 
