@@ -47,6 +47,15 @@ resolves inside the packet, and every nested `related_intake_id` matches
 The standalone object examples above intentionally keep their non-blocking
 warnings — they are single objects, not a packaged engagement.
 
+## Sample run outputs (Phase 4)
+
+[`outputs/`](outputs/) contains **human-reviewable sample artifacts** that demonstrate
+the Phase 3 prompt contracts producing Peak internal work product from
+`engagement-packet.example.json` — a discovery plan, evidence findings, an initial
+assessment report, a next-phase proposal, a QA review, and engagement lessons. These
+are illustrative drafts, **not** automation output: no agent runtime, API, or database
+is involved. See [`outputs/README.md`](outputs/README.md).
+
 ## Ground rules
 
 - **No real client data or PII.** Organizations and people are anonymized labels

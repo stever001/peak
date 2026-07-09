@@ -78,12 +78,25 @@ No agent logic yet — the packet is the data contract that agent work will buil
 
 These are **human-run prompt contracts, not autonomous agents**, and are internal-only.
 
+**Worked example run — the contracts demonstrated end-to-end:**
+
+- [x] Sample run artifacts in [`../examples/outputs/`](../examples/outputs/): a
+  discovery plan, evidence findings, initial assessment report, next-phase proposal,
+  QA review, and engagement lessons, all produced from
+  `examples/engagement-packet.example.json`. These show what each contract yields on
+  one coherent engagement, with evidence cited and the observed/claim/interpretation/
+  follow-up separation preserved. **Illustrative human-reviewable examples — not
+  automation output.**
+- [x] Presence/heading check ([`../tests/validate_phase4_outputs.py`](../tests/validate_phase4_outputs.py),
+  stdlib-only) wired into `make validate`. Structural only — no quality judgement.
+
 **Still to do:**
 
 - Implement lightweight agents in `agents/intake/`, `agents/discovery/`,
   `agents/evidence/`, `agents/reporting/`, `agents/proposal/` that take structured
   input and produce structured output conforming to the schemas (the prompt contracts
-  above are the specification for that behavior).
+  above are the specification for that behavior, and the sample outputs are a target
+  for what "good" looks like).
 - Keep everything file-based and consultant-run; **no database, no frontend.**
 - Enforce evidence-first: agent outputs must cite `EvidenceReference`s.
 

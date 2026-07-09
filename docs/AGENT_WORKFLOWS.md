@@ -40,6 +40,11 @@ client-facing.
 | 9 | `prompts/qa/review-assessment-packet.prompt.md` |
 | 10 | `prompts/learning/extract-engagement-lessons.prompt.md` |
 
+**Worked example.** [`../examples/outputs/`](../examples/outputs/) shows each contract
+run against `examples/engagement-packet.example.json`, producing a discovery plan,
+evidence findings, an initial report, a next-phase proposal, a QA review, and
+engagement lessons. These are illustrative human-reviewable drafts, not automation.
+
 ## The first end-to-end thread
 
 The initial priority is one clean, connected path from a new client through to a
