@@ -188,6 +188,17 @@ object points at the packet's intake) are enforced by the validation harness, gi
 agents a dependable, self-contained input to reason over. AgentNet grounding, when
 integrated, is intended to operate over packets — not yet live.
 
+## Where the data lives
+
+Agents and workflows operate on `EngagementPacket`s and related records held in Peak's
+**controlled engagement storage** and, for grounding, **private resolver capsules** —
+never on committed repo data (there is none). Agent/AI workflows consume authorized data
+through controlled access paths. See
+[`CONTROLLED_DATA_ARCHITECTURE.md`](CONTROLLED_DATA_ARCHITECTURE.md),
+[`ENGAGEMENT_DATA_MODEL.md`](ENGAGEMENT_DATA_MODEL.md), and
+[`RESOLVER_CAPSULE_ARCHITECTURE.md`](RESOLVER_CAPSULE_ARCHITECTURE.md) — all architecture
+only, not implemented.
+
 ## Cross-cutting rules
 
 - **Evidence-first:** every finding, risk, quick win, and recommendation links to

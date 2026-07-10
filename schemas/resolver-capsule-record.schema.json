@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://peak.internal/schemas/v1/resolver-capsule-record.schema.json",
+  "title": "ResolverCapsuleRecord",
+  "description": "Architecture contract for a private resolver capsule — a governed grounding/resolution record. Held in Peak's controlled storage / resolver layer — NOT in this repository — and describes capsule metadata, not the raw client content. No capsule instances are committed to the repo. Resolver/AgentNet integration is intended future architecture, not implemented. No external or cross-client publication of client-derived capsules occurs without explicit governance approval.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["capsule_id", "owner_id", "capsule_scope", "sensitivity_class", "lifecycle_status"],
+  "properties": {
+    "capsule_id": {
+      "type": "string",
+      "description": "Stable identifier. Convention: 'cap_' + slug.",
+      "pattern": "^cap_[A-Za-z0-9][A-Za-z0-9_-]*$"
+    },
+    "owner_id": {
+      "type": "string",
+      "description": "Identifier of the owning party (a Peak team/role, or the governing owner of a client-private capsule)."
+    },
+    "client_id": {
+      "type": "string",
+      "description": "Client this capsule pertains to, where applicable (client-private scope).",
+      "pattern": "^client_[A-Za-z0-9][A-Za-z0-9_-]*$"
+    },
+    "engagement_id": {
+      "type": "string",
+      "description": "Engagement this capsule pertains to, where applicable.",
+      "pattern": "^eng_[A-Za-z0-9][A-Za-z0-9_-]*$"
+    },
+    "capsule_scope": {
+      "type": "string",
+      "description": "Ownership/scoping of the capsule.",
+      "enum": ["peak_methodology", "client_private", "fixture_test"]
+    },
+    "source_reference_ids": {
+      "type": "array",
+      "description": "SourceSystemReference ids the capsule is grounded on.",
+      "items": { "type": "string", "pattern": "^src_[A-Za-z0-9][A-Za-z0-9_-]*$" }
+    },
+    "evidence_ids": {
+      "type": "array",
+      "description": "EvidenceReference ids the capsule is grounded on.",
+      "items": { "type": "string", "pattern": "^evid_[A-Za-z0-9][A-Za-z0-9_-]*$" }
+    },
+    "sensitivity_class": {
+      "type": "string",
+      "description": "Handling sensitivity of the capsule.",
+      "enum": ["internal", "confidential", "restricted"]
+    },
+    "authorization_scope": {
+      "type": "string",
+      "description": "The authorization governing use of this capsule."
+    },
+    "review_status": {
+      "type": "string",
+      "description": "Governance review state.",
+      "enum": ["draft", "in_review", "reviewed", "approved", "rejected"]
+    },
+    "lifecycle_status": {
+      "type": "string",
+      "description": "Lifecycle state of the capsule.",
+      "enum": ["draft", "active", "archived", "retired"]
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 timestamp of creation in controlled storage."
+    },
+    "notes": {
+      "type": "string",
+      "description": "Governance notes."
+    }
+  }
+}

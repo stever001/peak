@@ -43,6 +43,26 @@ and every `related_intake_id` must match the packet's
 `client_intake.intake_id`. These are enforced as blocking checks (see
 [`../tests/`](../tests/)).
 
+## Scope (Phase 8) — controlled-data architecture contracts
+
+Phase 8 adds schemas that describe the **controlled data layer held outside the repo**
+(see [`../docs/CONTROLLED_DATA_ARCHITECTURE.md`](../docs/CONTROLLED_DATA_ARCHITECTURE.md)
+and [`../docs/ENGAGEMENT_DATA_MODEL.md`](../docs/ENGAGEMENT_DATA_MODEL.md)). They are
+**architecture contracts (shapes) only** — **no instances are committed**, and they are
+not database migrations.
+
+| Schema | Object | Local id prefix |
+| --- | --- | --- |
+| `engagement-record.schema.json` | `EngagementRecord` | `eng_` |
+| `financial-impact-estimate.schema.json` | `FinancialImpactEstimate` | `fie_` |
+| `source-system-reference.schema.json` | `SourceSystemReference` | `src_` |
+| `resolver-capsule-record.schema.json` | `ResolverCapsuleRecord` | `cap_` |
+
+These pass the draft 2020-12 schema self-check. They carry **no fixtures** — validation
+does not build synthetic instances for them (they document controlled-storage shapes,
+not repo objects). `FinancialImpactEstimate` supports real numbers **only in controlled
+storage during authorized engagement work** — never as committed repo data.
+
 ## Conventions
 
 - **Draft 2020-12.** Each schema declares `$schema`, a stable `$id`, `title`,

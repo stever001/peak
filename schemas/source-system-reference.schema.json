@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://peak.internal/schemas/v1/source-system-reference.schema.json",
+  "title": "SourceSystemReference",
+  "description": "Architecture contract for a reference to a client source system or source location (an ERP/WMS export, report, telemetry stream, document, etc.) that may become a source input for capsulization. Held in Peak's controlled engagement storage — NOT in this repository, and it references source material without embedding sensitive content. No instances are committed to the repo. See SOURCE_SYSTEM_CAPSULIZATION.md. Capsulization/ingestion is intended future architecture, not implemented.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["source_reference_id", "engagement_id", "source_type"],
+  "properties": {
+    "source_reference_id": {
+      "type": "string",
+      "description": "Stable identifier. Convention: 'src_' + slug.",
+      "pattern": "^src_[A-Za-z0-9][A-Za-z0-9_-]*$"
+    },
+    "engagement_id": {
+      "type": "string",
+      "description": "The engagement this source reference belongs to.",
+      "pattern": "^eng_[A-Za-z0-9][A-Za-z0-9_-]*$"
+    },
+    "source_type": {
+      "type": "string",
+      "description": "Kind of source location/material.",
+      "enum": [
+        "document",
+        "html_page",
+        "telemetry",
+        "inventory_event",
+        "erp_export",
+        "wms_export",
+        "report",
+        "operational_log",
+        "screenshot",
+        "other"
+      ]
+    },
+    "location_descriptor": {
+      "type": "string",
+      "description": "Non-sensitive descriptor of where the source lives in controlled storage (a pointer, not the content)."
+    },
+    "captured_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 timestamp of capture."
+    },
+    "authorization_scope": {
+      "type": "string",
+      "description": "The authorization under which this source was captured and may be used."
+    },
+    "sensitivity_class": {
+      "type": "string",
+      "description": "Handling sensitivity of the source material.",
+      "enum": ["internal", "confidential", "restricted"]
+    },
+    "evidence_ids": {
+      "type": "array",
+      "description": "EvidenceReference ids derived from or pointing at this source.",
+      "items": { "type": "string", "pattern": "^evid_[A-Za-z0-9][A-Za-z0-9_-]*$" }
+    },
+    "review_status": {
+      "type": "string",
+      "description": "Governance review state.",
+      "enum": ["draft", "in_review", "reviewed", "approved", "rejected"]
+    },
+    "notes": {
+      "type": "string",
+      "description": "Consultant/governance notes."
+    }
+  }
+}

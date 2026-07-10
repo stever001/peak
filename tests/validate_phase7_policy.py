@@ -65,6 +65,9 @@ SCAN_EXTS = (".md", ".py", ".json", ".txt", "Makefile")
 # only sanctioned places the word may appear. Everything else must be free of it.
 SCAN_SKIP = {
     os.path.abspath(__file__),
+    # Sibling guard that enforces the same source-only/no-artifact rules and therefore
+    # legitimately names the forbidden paths.
+    os.path.abspath(os.path.join(REPO_ROOT, "tests", "validate_phase8_architecture.py")),
     os.path.abspath(os.path.join(REPO_ROOT, "docs", "DATA_HANDLING_POLICY.md")),
     os.path.abspath(os.path.join(REPO_ROOT, "docs", "FIXTURE_STRATEGY.md")),
 }

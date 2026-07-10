@@ -53,7 +53,11 @@ generated at runtime** in temporary, ignored locations — never committed. See
 Client data belongs in **controlled engagement database/storage** and, where
 appropriate, in **private resolver capsules**. The data layer is that controlled
 storage — **not Git**. Collected client data is **private engagement data by default**;
-it is not public.
+it is not public. The architecture of that data layer is described in
+[`CONTROLLED_DATA_ARCHITECTURE.md`](CONTROLLED_DATA_ARCHITECTURE.md),
+[`ENGAGEMENT_DATA_MODEL.md`](ENGAGEMENT_DATA_MODEL.md), and
+[`RESOLVER_CAPSULE_ARCHITECTURE.md`](RESOLVER_CAPSULE_ARCHITECTURE.md) (architecture only
+— not implemented).
 
 ## 5. Client data is for authorized engagements only
 

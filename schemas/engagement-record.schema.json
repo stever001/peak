@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://peak.internal/schemas/v1/engagement-record.schema.json",
+  "title": "EngagementRecord",
+  "description": "Architecture contract for an Engagement as held in Peak's controlled engagement database/storage (the system of record for live engagement data) — NOT in this repository. This is a portable, storage-agnostic shape, not a database migration and not a stored record. No engagement-record instances are committed to the repo; real engagement records live in controlled storage under authorization. AgentNet grounding of such records is intended future architecture, not implemented.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["engagement_id", "client_id", "data_class"],
+  "properties": {
+    "engagement_id": {
+      "type": "string",
+      "description": "Stable identifier for the engagement in controlled storage. Convention: 'eng_' + slug.",
+      "pattern": "^eng_[A-Za-z0-9][A-Za-z0-9_-]*$"
+    },
+    "client_id": {
+      "type": "string",
+      "description": "Identifier for the client in controlled storage. Convention: 'client_' + slug.",
+      "pattern": "^client_[A-Za-z0-9][A-Za-z0-9_-]*$"
+    },
+    "engagement_label": {
+      "type": "string",
+      "description": "Human-readable engagement label (held in controlled storage, not the repo)."
+    },
+    "status": {
+      "type": "string",
+      "description": "Lifecycle status of the engagement.",
+      "enum": ["prospective", "active", "on_hold", "complete", "closed"]
+    },
+    "data_class": {
+      "type": "string",
+      "description": "Data classification (see CONTROLLED_DATA_ARCHITECTURE.md). An engagement record is live client data.",
+      "enum": ["live_client_data"]
+    },
+    "sensitivity_class": {
+      "type": "string",
+      "description": "Handling sensitivity for the engagement's data.",
+      "enum": ["internal", "confidential", "restricted"]
+    },
+    "authorization_scope": {
+      "type": "string",
+      "description": "What the client engagement authorizes Peak to hold and use (free-text reference to the governing authorization)."
+    },
+    "packet_ids": {
+      "type": "array",
+      "description": "EngagementPacket ids associated with this engagement (held in controlled storage).",
+      "items": { "type": "string", "pattern": "^pkt_[A-Za-z0-9][A-Za-z0-9_-]*$" }
+    },
+    "source_reference_ids": {
+      "type": "array",
+      "description": "SourceSystemReference ids for this engagement.",
+      "items": { "type": "string", "pattern": "^src_[A-Za-z0-9][A-Za-z0-9_-]*$" }
+    },
+    "review_status": {
+      "type": "string",
+      "description": "Governance review state of the engagement record.",
+      "enum": ["draft", "in_review", "reviewed", "approved", "rejected"]
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 timestamp of record creation in controlled storage."
+    },
+    "notes": {
+      "type": "string",
+      "description": "Consultant/governance notes."
+    }
+  }
+}

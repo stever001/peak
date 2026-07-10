@@ -60,6 +60,10 @@ peak/
 │   ├── CONSULTANT_WORKFLOW.md    # How a consultant uses this repo, step by step
 │   ├── DATA_HANDLING_POLICY.md   # Source-assets-only; client data never in the repo
 │   ├── FIXTURE_STRATEGY.md       # Synthetic fixtures at runtime; no stored data
+│   ├── CONTROLLED_DATA_ARCHITECTURE.md   # Where real engagement data lives (not Git)
+│   ├── RESOLVER_CAPSULE_ARCHITECTURE.md  # Private resolver capsules (intended future)
+│   ├── ENGAGEMENT_DATA_MODEL.md          # Controlled-storage data model (architecture)
+│   ├── SOURCE_SYSTEM_CAPSULIZATION.md    # Source→capsule path (intended future)
 │   └── IMPLEMENTATION_PLAN.md
 ├── agents/                       # One folder per agent capability group
 │   ├── intake/                   # New client intake
@@ -130,6 +134,25 @@ claim legal compliance.
   review, AgentNet status, LLM-usage caution.
 - [`docs/FIXTURE_STRATEGY.md`](docs/FIXTURE_STRATEGY.md) — synthetic fixtures at
   runtime; no stored data; real client data never used for fixtures/tests/demos.
+
+## Controlled data architecture (where real data lives)
+
+Real engagement data lives **outside this repo**, in controlled engagement storage and
+private resolver capsules. This is **architecture documentation only** — no database,
+API, resolver, ingestion pipeline, or AgentNet integration is implemented.
+
+- [`docs/CONTROLLED_DATA_ARCHITECTURE.md`](docs/CONTROLLED_DATA_ARCHITECTURE.md) —
+  repo-vs-data layers, the classification model, and the architecture diagram.
+- [`docs/ENGAGEMENT_DATA_MODEL.md`](docs/ENGAGEMENT_DATA_MODEL.md) — the controlled-storage
+  data model (incl. `FinancialImpactEstimate`); architecture, not a DB migration.
+- [`docs/RESOLVER_CAPSULE_ARCHITECTURE.md`](docs/RESOLVER_CAPSULE_ARCHITECTURE.md) —
+  private resolver capsules as the governed grounding layer (intended future).
+- [`docs/SOURCE_SYSTEM_CAPSULIZATION.md`](docs/SOURCE_SYSTEM_CAPSULIZATION.md) — the
+  source→capsule path (intended future).
+
+Architecture-contract schemas (shapes only, no committed instances):
+`engagement-record`, `financial-impact-estimate`, `source-system-reference`,
+`resolver-capsule-record`.
 
 ## AgentNet grounding (intended architecture)
 

@@ -202,7 +202,12 @@ Emphasis:
 - It does **not** integrate with AgentNet (intended future grounding/resolution only).
 - There is **no controlled engagement database/storage or resolver-capsule tooling in
   this repo** (no formal retention schedule, secure storage, or access controls); the
-  data layer lives outside Git and the policy is human-enforced for now.
+  data layer lives outside Git and the policy is human-enforced for now. Its intended
+  shape is documented in
+  [`CONTROLLED_DATA_ARCHITECTURE.md`](CONTROLLED_DATA_ARCHITECTURE.md),
+  [`ENGAGEMENT_DATA_MODEL.md`](ENGAGEMENT_DATA_MODEL.md),
+  [`RESOLVER_CAPSULE_ARCHITECTURE.md`](RESOLVER_CAPSULE_ARCHITECTURE.md), and
+  [`SOURCE_SYSTEM_CAPSULIZATION.md`](SOURCE_SYSTEM_CAPSULIZATION.md) — architecture only.
 - No frontend, API, or client-facing functionality.
 
 **Possible future phases** (not promises): guarded runners that assist without

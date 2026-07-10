@@ -187,8 +187,25 @@ and documentation accurately states integration status.
 
 **Goal:** make the internal system robust enough for routine use across consultants.
 
+**Controlled data architecture defined (groundwork — docs/schemas only):**
+
+- [x] The target data layer that lives **outside** the repo is documented:
+  [`CONTROLLED_DATA_ARCHITECTURE.md`](CONTROLLED_DATA_ARCHITECTURE.md) (repo-vs-data
+  lanes, classification model, diagram), [`ENGAGEMENT_DATA_MODEL.md`](ENGAGEMENT_DATA_MODEL.md)
+  (conceptual model incl. `FinancialImpactEstimate`),
+  [`RESOLVER_CAPSULE_ARCHITECTURE.md`](RESOLVER_CAPSULE_ARCHITECTURE.md) (private resolver
+  capsules), and [`SOURCE_SYSTEM_CAPSULIZATION.md`](SOURCE_SYSTEM_CAPSULIZATION.md)
+  (source→capsule path). Architecture-contract schemas (`engagement-record`,
+  `financial-impact-estimate`, `source-system-reference`, `resolver-capsule-record`) are
+  added as shapes only — **no instances committed**. Doc-checked by
+  [`../tests/validate_phase8_architecture.py`](../tests/validate_phase8_architecture.py).
+  **Architecture/docs/schemas only** — no database, API, resolver, ingestion pipeline, or
+  AgentNet integration is implemented.
+
+**Still to do:**
+
 - Persistence model and data retention/privacy strategy (prerequisite for storing
-  real client data).
+  real client data) — implementing the controlled storage described above.
 - Access control appropriate to client confidentiality.
 - Observability: what each agent produced, from what evidence, reviewed by whom.
 - Broaden coverage across all ten workflows.

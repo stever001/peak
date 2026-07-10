@@ -4,12 +4,12 @@
 
 PYTHON ?= python3
 
-.PHONY: help validate validate-phase1 validate-phase2 validate-phase3 validate-phase4 validate-phase5 validate-phase6 validate-phase7 packet-summary install-dev
+.PHONY: help validate validate-phase1 validate-phase2 validate-phase3 validate-phase4 validate-phase5 validate-phase6 validate-phase7 validate-phase8 packet-summary install-dev
 
 help: ## Show available targets
 	@echo "Targets:"
 	@echo "  make install-dev        Install dev dependencies ($(PYTHON) -m pip install -r requirements-dev.txt)"
-	@echo "  make validate           Run all validation harnesses (Phase 1 + Phase 2 + Phase 3 + Phase 4 + Phase 5 + Phase 6 + Phase 7)"
+	@echo "  make validate           Run all validation harnesses (Phase 1 through Phase 8)"
 	@echo "  make validate-phase1    Run only the Phase 1 object harness"
 	@echo "  make validate-phase2    Run only the Phase 2 EngagementPacket harness"
 	@echo "  make validate-phase3    Run only the Phase 3 prompt-contract inventory check"
@@ -17,12 +17,13 @@ help: ## Show available targets
 	@echo "  make validate-phase5    Run only the Phase 5 packet-runner smoke check"
 	@echo "  make validate-phase6    Run only the Phase 6 consultant-guide doc check"
 	@echo "  make validate-phase7    Run only the Phase 7 repo-hygiene / data-artifact guard"
+	@echo "  make validate-phase8    Run only the Phase 8 controlled-data architecture doc check"
 	@echo "  make packet-summary PACKET=/path/to/packet.json   Summarize a real packet (read-only; no LLM/API)"
 
 install-dev: ## Install development dependencies
 	$(PYTHON) -m pip install -r requirements-dev.txt
 
-validate: validate-phase1 validate-phase2 validate-phase3 validate-phase4 validate-phase5 validate-phase6 validate-phase7 ## Run all validation harnesses
+validate: validate-phase1 validate-phase2 validate-phase3 validate-phase4 validate-phase5 validate-phase6 validate-phase7 validate-phase8 ## Run all validation harnesses
 
 validate-phase1: ## Run the Phase 1 schema/example validation harness
 	$(PYTHON) tests/validate_phase1.py
@@ -44,6 +45,9 @@ validate-phase6: ## Run the Phase 6 consultant-guide doc check (stdlib-only)
 
 validate-phase7: ## Run the Phase 7 repo-hygiene / data-artifact guard (stdlib-only)
 	$(PYTHON) tests/validate_phase7_policy.py
+
+validate-phase8: ## Run the Phase 8 controlled-data architecture doc check (stdlib-only)
+	$(PYTHON) tests/validate_phase8_architecture.py
 
 packet-summary: ## Summarize a real packet: make packet-summary PACKET=/path/to/packet.json
 	@if [ -z "$(PACKET)" ]; then \

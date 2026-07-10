@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://peak.internal/schemas/v1/financial-impact-estimate.schema.json",
+  "title": "FinancialImpactEstimate",
+  "description": "Architecture contract for a financial impact estimate produced during authorized live engagement work and held in Peak's controlled engagement storage — NOT in this repository. Actual financial numbers may be used in live client work when authorized, evidence-linked, source-labeled, access-controlled, and human-reviewed. No FinancialImpactEstimate instances (and no real financial numbers) are committed to the repo. Do not invent ROI. This is a storage-agnostic shape, not a database migration.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["impact_id", "engagement_id", "impact_type"],
+  "properties": {
+    "impact_id": {
+      "type": "string",
+      "description": "Stable identifier. Convention: 'fie_' + slug.",
+      "pattern": "^fie_[A-Za-z0-9][A-Za-z0-9_-]*$"
+    },
+    "engagement_id": {
+      "type": "string",
+      "description": "The engagement this estimate belongs to.",
+      "pattern": "^eng_[A-Za-z0-9][A-Za-z0-9_-]*$"
+    },
+    "related_finding_id": {
+      "type": "string",
+      "description": "Identifier of the finding/recommendation this impact quantifies (e.g. a ControlGap, OperationalRisk, QuickWin, or Recommendation id in controlled storage)."
+    },
+    "impact_type": {
+      "type": "string",
+      "description": "Nature of the financial impact.",
+      "enum": ["cost_savings", "cost_avoidance", "revenue", "working_capital", "risk_reduction", "other"]
+    },
+    "amount_low": {
+      "type": "number",
+      "description": "Low end of the estimated impact (in `currency`). Held only in controlled storage."
+    },
+    "amount_high": {
+      "type": "number",
+      "description": "High end of the estimated impact (in `currency`). Held only in controlled storage."
+    },
+    "currency": {
+      "type": "string",
+      "description": "ISO-4217 currency code (e.g. 'USD')."
+    },
+    "period": {
+      "type": "string",
+      "description": "Time basis for the estimate (e.g. 'annual', 'one_time', 'per_quarter')."
+    },
+    "calculation_basis": {
+      "type": "string",
+      "description": "How the estimate was derived (method/formula/drivers)."
+    },
+    "source_evidence_ids": {
+      "type": "array",
+      "description": "EvidenceReference ids that support this estimate. Every real figure must trace to evidence.",
+      "items": { "type": "string", "pattern": "^evid_[A-Za-z0-9][A-Za-z0-9_-]*$" }
+    },
+    "assumptions": {
+      "type": "array",
+      "description": "Explicit assumptions behind the estimate.",
+      "items": { "type": "string" }
+    },
+    "confidence": {
+      "type": "string",
+      "description": "Qualitative confidence in the estimate.",
+      "enum": ["low", "medium", "high"]
+    },
+    "verification_status": {
+      "type": "string",
+      "description": "Whether the figure is reported (as told) or independently verified against data.",
+      "enum": ["unverified", "reported", "verified"]
+    },
+    "review_status": {
+      "type": "string",
+      "description": "Governance review state of this estimate.",
+      "enum": ["draft", "in_review", "reviewed", "approved", "rejected"]
+    },
+    "client_facing_approved": {
+      "type": "boolean",
+      "description": "True only after explicit human approval to share with the client. Never set automatically."
+    },
+    "notes": {
+      "type": "string",
+      "description": "Consultant/governance notes."
+    }
+  }
+}

@@ -43,7 +43,7 @@ They must never stand in for, or be derived from, real client data.
 - **Real client data is never used for fixtures, examples, tests, demos, or training.**
 - Real client data belongs in **controlled engagement database/storage** and, where
   appropriate, **private resolver capsules** — the data layer is that storage, **not
-  Git**.
+  Git**. See [`CONTROLLED_DATA_ARCHITECTURE.md`](CONTROLLED_DATA_ARCHITECTURE.md).
 - Real client data is only handled for authorized live client engagement work (see
   [`DATA_HANDLING_POLICY.md`](DATA_HANDLING_POLICY.md)).
 

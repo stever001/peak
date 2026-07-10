@@ -10,7 +10,7 @@ objects are needed, the harnesses build **synthetic fixtures at runtime**
 directory that is auto-deleted. Nothing is stored. See
 [`../docs/FIXTURE_STRATEGY.md`](../docs/FIXTURE_STRATEGY.md).
 
-Seven harnesses, run together by `make validate`:
+Eight harnesses, run together by `make validate`:
 
 - `validate_phase1.py` — schemas + synthetic object fixtures.
 - `validate_phase2.py` — schemas + a synthetic `EngagementPacket`.
@@ -19,6 +19,7 @@ Seven harnesses, run together by `make validate`:
 - `validate_phase5_runner.py` — packet-runner smoke check on a temp fixture (stdlib-only).
 - `validate_phase6_docs.py` — consultant-guide doc check (stdlib-only).
 - `validate_phase7_policy.py` — repo-hygiene / data-artifact guard (stdlib-only).
+- `validate_phase8_architecture.py` — controlled-data architecture doc check (stdlib-only).
 
 ## `synthetic_fixtures.py`
 
@@ -92,6 +93,20 @@ This is the guard that keeps the repo clean of data artifacts. It does not attem
 detect real client data inside a supposedly-synthetic file — that remains a human
 discipline plus the "client data never in the repo" policy.
 
+## `validate_phase8_architecture.py`
+
+Doc check for the Phase 8 controlled-data architecture:
+[`../docs/CONTROLLED_DATA_ARCHITECTURE.md`](../docs/CONTROLLED_DATA_ARCHITECTURE.md),
+[`../docs/RESOLVER_CAPSULE_ARCHITECTURE.md`](../docs/RESOLVER_CAPSULE_ARCHITECTURE.md),
+[`../docs/ENGAGEMENT_DATA_MODEL.md`](../docs/ENGAGEMENT_DATA_MODEL.md), and
+[`../docs/SOURCE_SYSTEM_CAPSULIZATION.md`](../docs/SOURCE_SYSTEM_CAPSULIZATION.md). It
+confirms each doc exists with its required markers, re-asserts source-only discipline (no
+`examples/`, no removed redaction guide, no `*.example.*` artifacts), checks the
+source-only phrase in the README, and fails if any file claims AgentNet is *implemented*
+(explicit completion claims; negated policy statements and future-phase descriptions are
+fine). The Phase 8 architecture-contract schemas are covered by the schema self-check in
+phases 1–2; they carry no fixtures.
+
 ## Running
 
 This machine uses `python3` (there is no bare `python`). From the repo root:
@@ -101,7 +116,7 @@ This machine uses `python3` (there is no bare `python`). From the repo root:
 make install-dev          # == python3 -m pip install -r requirements-dev.txt
 
 # run all harnesses
-make validate             # == phase1 + phase2 + phase3 + phase4 + phase5 + phase6 + phase7
+make validate             # == phase1 … phase8
 
 # or run one at a time
 make validate-phase1
@@ -111,6 +126,7 @@ make validate-phase4
 make validate-phase5
 make validate-phase6
 make validate-phase7
+make validate-phase8
 ```
 
 Or invoke them directly, without the Makefile:
@@ -118,16 +134,17 @@ Or invoke them directly, without the Makefile:
 ```bash
 python3 tests/validate_phase1.py
 python3 tests/validate_phase2.py
-python3 tests/validate_phase3_prompts.py   # stdlib-only, no dependency needed
-python3 tests/validate_phase4_outputs.py   # stdlib-only, no dependency needed
-python3 tests/validate_phase5_runner.py    # stdlib-only, no dependency needed
-python3 tests/validate_phase6_docs.py      # stdlib-only, no dependency needed
-python3 tests/validate_phase7_policy.py    # stdlib-only, no dependency needed
+python3 tests/validate_phase3_prompts.py       # stdlib-only, no dependency needed
+python3 tests/validate_phase4_outputs.py       # stdlib-only, no dependency needed
+python3 tests/validate_phase5_runner.py        # stdlib-only, no dependency needed
+python3 tests/validate_phase6_docs.py          # stdlib-only, no dependency needed
+python3 tests/validate_phase7_policy.py        # stdlib-only, no dependency needed
+python3 tests/validate_phase8_architecture.py  # stdlib-only, no dependency needed
 ```
 
 ## Exit codes
 
-All seven harnesses share the same convention:
+All eight harnesses share the same convention:
 
 | Code | Meaning |
 | --- | --- |

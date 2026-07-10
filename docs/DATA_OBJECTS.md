@@ -25,6 +25,13 @@ Formalized in Phase 2: `EngagementPacket` — a composite that bundles the Phase
 objects for a single engagement (see the [EngagementPacket](#engagementpacket-formalized-schemasengagement-packetschemajson)
 section below).
 
+Phase 8 adds **architecture contracts** for the controlled data layer (held outside the
+repo, never as committed instances): `EngagementRecord`, `FinancialImpactEstimate`,
+`SourceSystemReference`, and `ResolverCapsuleRecord`. The controlled-storage data model —
+including the still-candidate `ControlGap`, `OperationalRisk`, `QuickWin`, and
+`Recommendation` — is described in
+[`ENGAGEMENT_DATA_MODEL.md`](ENGAGEMENT_DATA_MODEL.md).
+
 ## Object relationship overview
 
 ```
