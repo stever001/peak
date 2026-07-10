@@ -1,0 +1,17 @@
+# macOS
+.DS_Store
+
+# Editor / OS cruft
+*.swp
+.idea/
+.vscode/
+
+# Environment
+.env
+.env.*
+
+# Generated / local data — never commit data artifacts (see docs/FIXTURE_STRATEGY.md)
+.generated/
+.local/
+tmp/
+local-fixtures/

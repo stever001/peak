@@ -1,117 +1,96 @@
 # Tests
 
-Validation for the assessment schemas and examples. Deliberately dependency-light:
-Python standard library plus `jsonschema` (which brings `referencing`). No pytest,
-no database, no API server, no network.
+Validation for the source assets. Deliberately dependency-light: Python standard
+library plus `jsonschema` (which brings `referencing`). No pytest, no database, no API
+server, no network.
+
+**No committed example data.** The repo stores source assets only. Where representative
+objects are needed, the harnesses build **synthetic fixtures at runtime**
+([`synthetic_fixtures.py`](synthetic_fixtures.py)) and write them to a temporary
+directory that is auto-deleted. Nothing is stored. See
+[`../docs/FIXTURE_STRATEGY.md`](../docs/FIXTURE_STRATEGY.md).
 
 Seven harnesses, run together by `make validate`:
 
-- `validate_phase1.py` — the six standalone Phase 1 objects.
-- `validate_phase2.py` — the composite `EngagementPacket`.
-- `validate_phase3_prompts.py` — the Phase 3 prompt-contract inventory (stdlib-only).
-- `validate_phase4_outputs.py` — the Phase 4 example-output inventory (stdlib-only).
-- `validate_phase5_runner.py` — the Phase 5 packet-runner smoke check (stdlib-only).
-- `validate_phase6_docs.py` — the Phase 6 consultant-guide doc check (stdlib-only).
-- `validate_phase7_policy.py` — the Phase 7 data-handling policy doc check (stdlib-only).
+- `validate_phase1.py` — schemas + synthetic object fixtures.
+- `validate_phase2.py` — schemas + a synthetic `EngagementPacket`.
+- `validate_phase3_prompts.py` — prompt-contract inventory (stdlib-only).
+- `validate_phase4_outputs.py` — output-structure spec, synthetic (stdlib-only).
+- `validate_phase5_runner.py` — packet-runner smoke check on a temp fixture (stdlib-only).
+- `validate_phase6_docs.py` — consultant-guide doc check (stdlib-only).
+- `validate_phase7_policy.py` — repo-hygiene / data-artifact guard (stdlib-only).
+
+## `synthetic_fixtures.py`
+
+Not a test — a **module** that builds clearly-synthetic, schema-conforming objects in
+memory (ids/labels carry a `synthetic` marker). It is code, not stored data, and is
+imported by the phase 1/2 harnesses.
 
 ## `validate_phase1.py`
 
-Runs three checks over [`../schemas/`](../schemas/) and [`../examples/`](../examples/):
-
-1. **Schema self-check** — every `schemas/*.schema.json` is a valid JSON Schema
-   under draft 2020-12 (`check_schema`).
-2. **Example conformance** — every `examples/*.example.json` validates against its
-   matching schema, paired by filename convention
-   (`foo.example.json` → `foo.schema.json`).
-3. **Referential lint** — local ids and cross-references use their expected
-   prefixes (`intake_`, `evid_`, `intv_`, `vobs_`, `wobs_`, `isp_`).
-   `related_intake_id` must use `intake_`, `evidence_references` must use `evid_`,
-   and `related_object_ids` must use one of the known prefixes. References are
-   matched recursively, including those nested inside arrays of objects.
-
-### Unresolved references are warnings, not failures
-
-If a reference points at an id that has no example object in the set (e.g.
-`evid_alpha_003`, which no standalone `*.example.json` declares), it is reported as a
-**warning**. This is intentional for the standalone objects: they are single records,
-not a packaged engagement. The composite `EngagementPacket` is where these references
-are expected to resolve — and there they are checked strictly (below).
-
-The composite `engagement-packet.example.json` is **skipped** by this harness (shown
-as `[SKIP]`) because it composes other schemas via `$ref` and needs offline ref
-resolution plus packet-level linting — that is `validate_phase2.py`'s job.
+1. **Schema self-check** — every `schemas/*.schema.json` is valid draft 2020-12.
+2. **Synthetic fixture conformance** — a synthetic instance of each object is written to
+   a temp dir and validated against its schema.
+3. **Prefix lint** — synthetic ids/references use their expected prefixes
+   (`intake_`, `evid_`, `intv_`, `vobs_`, `wobs_`, `isp_`).
 
 ## `validate_phase2.py`
 
-Validates the `EngagementPacket`, which composes the Phase 1 schemas via local
-relative `$ref`. Refs are resolved **offline**: the harness builds a `referencing`
-registry from every schema's `$id`, so no network or database is touched.
+Validates a **synthetic** `EngagementPacket`, which composes the object schemas via
+local relative `$ref`. Refs are resolved **offline** via a `referencing` registry built
+from every schema's `$id`.
 
 1. **Schema self-check** — all schemas, including `engagement-packet.schema.json`.
-2. **Packet conformance** — `engagement-packet.example.json` validates against the
-   packet schema with `$ref`s resolved.
-3. **Packet referential lint (blocking)** — unlike the Phase 1 standalone lint,
-   these are **failures**, because a packet is meant to be self-contained:
-   - every nested `evidence_references` id resolves to an `EvidenceReference`
-     declared in the packet's `evidence_references[]`;
-   - `inventory_system_profile.related_intake_id` and every interview/observation
-     `related_intake_id` equals `client_intake.intake_id`;
-   - ids use their expected prefixes.
+2. **Packet conformance** — a synthetic packet (temp file, auto-deleted) validates with
+   `$ref`s resolved.
+3. **Packet referential lint (blocking)** — every nested `evidence_references` id
+   resolves within the packet; every nested `related_intake_id` equals
+   `client_intake.intake_id`; ids use expected prefixes.
 
 ## `validate_phase3_prompts.py`
 
-A lightweight, **stdlib-only** inventory check for the Phase 3 prompt contracts in
-[`../prompts/`](../prompts/). It confirms that every required contract file exists and
-contains all ten required section headings (Purpose, Intended user, Required input,
-Expected output, Grounding rules, Evidence rules, Non-goals, Output format, Quality
-checks, Reusable prompt body) plus a fenced code block for the reusable body.
-
-It is a structural/inventory check only — it does **not** judge prompt quality or run
-any model. No dependencies; safe to run anywhere `python3` exists.
+Inventory check for the prompt contracts in [`../prompts/`](../prompts/): every required
+contract exists and contains all ten required section headings plus a fenced reusable
+body. Structure only.
 
 ## `validate_phase4_outputs.py`
 
-A lightweight, **stdlib-only** presence/heading check for the Phase 4 sample outputs in
-[`../examples/outputs/`](../examples/outputs/). It confirms each required artifact
-(discovery plan, evidence findings, initial report, next-phase proposal, QA review,
-engagement lessons) exists, contains its expected section markers, and cites at least
-one packet evidence id (`evid_alpha_...`).
-
-Structural only — it does **not** judge report quality or semantics. That remains a
-human judgement for now.
+Validates the **output-structure contract**. Peak commits no sample outputs, so for each
+artifact type the harness holds the required section spec, **generates a synthetic
+document** into a temp dir, and confirms it contains every required section plus a
+synthetic evidence citation. Structure only.
 
 ## `validate_phase5_runner.py`
 
-A lightweight, **stdlib-only** smoke check for the human-in-the-loop packet runner
-([`../tools/packet_runner.py`](../tools/packet_runner.py)). It runs the runner as a
-subprocess against the example packet and confirms: the file exists, the documented
-example command exits 0, and the output contains the `packet_id`, the
-`engagement_label`, the prompt-contract list, and the no-LLM / no-AgentNet /
-no-client-facing disclaimers.
-
-It asserts the runner stays honest about making no model/API/network call. No
-dependencies.
+Smoke check for the packet runner ([`../tools/packet_runner.py`](../tools/packet_runner.py)).
+The runner has no demo/sample mode, so this test generates a **temporary synthetic
+packet** with `tempfile`, passes it via `--packet`, then deletes it. It confirms the
+runner exists, exits 0, the output contains the fixture `packet_id`, the prompt-contract
+list, and the no-LLM / no-AgentNet / not-stored disclaimers, and that the run **writes
+no files**.
 
 ## `validate_phase6_docs.py`
 
-A lightweight, **stdlib-only** doc check for the consultant guide
-([`../docs/CONSULTANT_WORKFLOW.md`](../docs/CONSULTANT_WORKFLOW.md)). It confirms the
-guide exists and contains its required sections (purpose and scope, end-to-end
-workflow, commands, file map, consultant rules, QA gate, lessons capture, phase
-boundary) plus the honesty/scope phrases. Presence/structure only — it does not judge
-the prose.
+Doc check for the consultant guide
+([`../docs/CONSULTANT_WORKFLOW.md`](../docs/CONSULTANT_WORKFLOW.md)): required sections
+plus honesty/scope phrases. Structure only.
 
-## `validate_phase7_policy.py`
+## `validate_phase7_policy.py` (repo-hygiene / data-artifact guard)
 
-A lightweight, **stdlib-only** doc check for the data-handling policy
-([`../docs/DATA_HANDLING_POLICY.md`](../docs/DATA_HANDLING_POLICY.md)),
-[`../docs/REDACTION_GUIDE.md`](../docs/REDACTION_GUIDE.md), and the redacted examples
-under [`../examples/redacted/`](../examples/redacted/). It confirms each file exists and
-contains its required section headings / markers (e.g. `client_alpha`, `vendor_alpha`,
-`[REDACTED_PRICING]`, retention, AgentNet status).
+Enforces that the repo stores **source assets only**:
 
-Presence/structure only — it does **not** try to detect real client data. Keeping real
-data out of the repo is a human discipline enforced by the policy, not by this check.
+1. **Policy docs present** — [`../docs/DATA_HANDLING_POLICY.md`](../docs/DATA_HANDLING_POLICY.md)
+   and [`../docs/FIXTURE_STRATEGY.md`](../docs/FIXTURE_STRATEGY.md) exist with their
+   required markers.
+2. **No stored data artifacts** — forbidden paths must not exist: `examples/`, the old
+   redaction guide (removed), any `*.example.json` / `*.example.md`, or `redacted`
+   files. The guard fails if they reappear.
+3. **Redaction framing stays removed** — tracked docs/code must not reintroduce it (a
+   historical note in the two policy docs is allowed).
+
+This is the guard that keeps the repo clean of data artifacts. It does not attempt to
+detect real client data inside a supposedly-synthetic file — that remains a human
+discipline plus the "client data never in the repo" policy.
 
 ## Running
 
@@ -152,9 +131,9 @@ All seven harnesses share the same convention:
 
 | Code | Meaning |
 | --- | --- |
-| `0` | All blocking checks passed. Warnings may be present (Phase 1 only). |
-| `1` | A schema, example/packet conformance, or packet-referential check failed. |
+| `0` | All blocking checks passed. |
+| `1` | A schema, fixture/packet conformance, structure, or hygiene check failed. |
 | `2` | A dependency is missing (install `requirements-dev.txt`). |
 
-The nonzero-on-failure / zero-on-warnings-only behavior makes these harnesses safe
-to wire into CI later without additional tooling.
+The nonzero-on-failure behavior makes these harnesses safe to wire into CI later
+without additional tooling.

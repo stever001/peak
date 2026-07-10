@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
-"""Phase 5 packet-runner smoke check.
+"""Phase 5 packet-runner smoke check (temporary synthetic fixture).
 
-Lightweight, stdlib-only. Confirms the human-in-the-loop packet runner works and
-stays honest about what it does NOT do. It runs the runner as a subprocess against
-the example packet and inspects its output.
+Lightweight, stdlib-only. Confirms the human-in-the-loop packet runner works on a
+`--packet` file and stays honest about what it does NOT do. The runner has no demo or
+sample mode; this test generates a **temporary synthetic packet** with `tempfile`,
+passes it to `--packet`, inspects the output, and deletes the temp file afterwards.
+The synthetic packet is a test-only fixture, not a workflow feature and not committed.
 
 Checks:
   * tools/packet_runner.py exists;
-  * the documented example command exits 0;
-  * output contains the packet_id, the engagement_label, the prompt-contract list,
-    and the no-LLM / no-AgentNet disclaimers.
+  * running `--packet <temp fixture>` exits 0;
+  * output contains the fixture's packet_id, the prompt-contract list, and the
+    no-LLM / no-AgentNet / not-stored disclaimers;
+  * the runner writes no files (nothing is stored).
 
 Exit status:
   0  -> all checks passed
@@ -18,24 +21,26 @@ Exit status:
 
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
+import tempfile
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import synthetic_fixtures as sf  # noqa: E402
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RUNNER = os.path.join(REPO_ROOT, "tools", "packet_runner.py")
-PACKET = os.path.join(REPO_ROOT, "examples", "engagement-packet.example.json")
 
-# (label, substring that must appear in stdout)
 REQUIRED_OUTPUT = [
-    ("packet_id", "pkt_alpha_2026"),
-    ("engagement_label", "Client Alpha - initial inventory assessment"),
+    ("synthetic packet_id", "pkt_synthetic_fixture"),
     ("prompt-contract list header", "AVAILABLE PROMPT CONTRACTS"),
     ("intake contract", "prompts/intake/normalize-client-intake.prompt.md"),
     ("learning contract", "prompts/learning/extract-engagement-lessons.prompt.md"),
     ("no-LLM disclaimer", "No LLM call was made"),
     ("no-AgentNet disclaimer", "No AgentNet lookup was made"),
-    ("no client-facing disclaimer", "No client-facing output was generated automatically"),
+    ("not-stored disclaimer", "No packet was written, stored, or committed"),
 ]
 
 PASS = "PASS"
@@ -43,8 +48,8 @@ FAIL = "FAIL"
 
 
 def main() -> int:
-    print("Peak Phase 5 packet-runner smoke check")
-    print("=" * 38)
+    print("Peak Phase 5 packet-runner smoke check (--packet temp fixture)")
+    print("=" * 62)
 
     failures: list[str] = []
 
@@ -54,18 +59,28 @@ def main() -> int:
         return 1
     print(f"  [{PASS}] tools/packet_runner.py exists")
 
-    proc = subprocess.run(
-        [sys.executable, RUNNER, "--packet", PACKET],
-        cwd=REPO_ROOT,
-        capture_output=True,
-        text=True,
-    )
+    # Generate a temporary synthetic packet, run --packet on it, then delete it.
+    # Use a separate empty cwd so we can confirm the runner writes nothing.
+    with tempfile.TemporaryDirectory(prefix="peak-runner-fixture-") as fixture_dir, \
+         tempfile.TemporaryDirectory(prefix="peak-runner-cwd-") as cwd:
+        packet_path = os.path.join(fixture_dir, "engagement-packet.synthetic.json")
+        with open(packet_path, "w", encoding="utf-8") as fh:
+            json.dump(sf.synthetic_engagement_packet(), fh)
+
+        proc = subprocess.run(
+            [sys.executable, RUNNER, "--packet", packet_path],
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+        )
+        wrote_files = sorted(os.listdir(cwd))
+    # (both temp dirs — the fixture and the cwd — are deleted on exit)
 
     if proc.returncode == 0:
-        print(f"  [{PASS}] example command exits 0")
+        print(f"  [{PASS}] --packet <temp fixture> exits 0")
     else:
-        failures.append(f"example command exited {proc.returncode}")
-        print(f"  [{FAIL}] example command exited {proc.returncode}")
+        failures.append(f"runner exited {proc.returncode}")
+        print(f"  [{FAIL}] runner exited {proc.returncode}")
         if proc.stderr.strip():
             print("        stderr:", proc.stderr.strip().splitlines()[-1])
 
@@ -77,7 +92,13 @@ def main() -> int:
             failures.append(f"output missing {label} ('{needle}')")
             print(f"  [{FAIL}] output missing {label} ('{needle}')")
 
-    print("\n" + "=" * 38)
+    if wrote_files:
+        failures.append(f"runner wrote files: {wrote_files}")
+        print(f"  [{FAIL}] runner wrote files to cwd: {wrote_files}")
+    else:
+        print(f"  [{PASS}] runner stored nothing (empty cwd after run)")
+
+    print("\n" + "=" * 62)
     print("Summary")
     print(f"  failures : {len(failures)}")
     if failures:

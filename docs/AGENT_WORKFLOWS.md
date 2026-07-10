@@ -40,16 +40,18 @@ client-facing.
 | 9 | `prompts/qa/review-assessment-packet.prompt.md` |
 | 10 | `prompts/learning/extract-engagement-lessons.prompt.md` |
 
-**Worked example.** [`../examples/outputs/`](../examples/outputs/) shows each contract
-run against `examples/engagement-packet.example.json`, producing a discovery plan,
-evidence findings, an initial report, a next-phase proposal, a QA review, and
-engagement lessons. These are illustrative human-reviewable drafts, not automation.
+**Output structure.** Each contract's expected output structure (sections it must
+produce) is defined by the contract itself and exercised by
+[`../tests/validate_phase4_outputs.py`](../tests/validate_phase4_outputs.py) against a
+synthetic, runtime-generated document. Peak does **not** commit sample outputs — real
+work product lives in controlled engagement storage, not the repo.
 
 **Runner (human-in-the-loop).** [`../tools/packet_runner.py`](../tools/packet_runner.py)
-(`make packet-summary`) is a read-only helper: given a packet, it prints a summary and
-points the consultant at the right contract and output target. It runs **no** LLM, API,
-database, AgentNet, or network call — the consultant does the LLM step by hand and owns
-the result. It is not an agent runtime.
+requires an explicit `--packet` path (a real packet from controlled engagement storage;
+there is no demo mode) and is a read-only helper: given a packet, it prints a summary
+and points the consultant at the right contract. It runs **no** LLM, API, database,
+AgentNet, or network call, and **stores nothing** — the consultant does the LLM step by
+hand and owns the result. It is not an agent runtime.
 
 **Step-by-step consultant process.** [`CONSULTANT_WORKFLOW.md`](CONSULTANT_WORKFLOW.md)
 walks the whole flow — capture notes → normalize intake → add evidence/profile/

@@ -58,8 +58,8 @@ peak/
 │   ├── AGENT_WORKFLOWS.md
 │   ├── DATA_OBJECTS.md
 │   ├── CONSULTANT_WORKFLOW.md    # How a consultant uses this repo, step by step
-│   ├── DATA_HANDLING_POLICY.md   # What may/may not enter the repo (internal, pre-legal)
-│   ├── REDACTION_GUIDE.md        # How to convert raw notes into safe examples
+│   ├── DATA_HANDLING_POLICY.md   # Source-assets-only; client data never in the repo
+│   ├── FIXTURE_STRATEGY.md       # Synthetic fixtures at runtime; no stored data
 │   └── IMPLEMENTATION_PLAN.md
 ├── agents/                       # One folder per agent capability group
 │   ├── intake/                   # New client intake
@@ -70,57 +70,66 @@ peak/
 │   ├── qa/                       # Internal QA / governance review
 │   └── learning/                 # Reusable knowledge capture
 ├── schemas/                      # Data object schemas (JSON Schema, draft 2020-12)
-├── examples/                     # Worked, anonymized example records
-│   ├── outputs/                  # Sample prompt-contract run artifacts
-│   └── redacted/                 # Redacted raw-note examples (safe target state)
 ├── prompts/                      # Prompt contracts (one per workflow)
 ├── tools/                        # Local human-in-the-loop helpers (no LLM/API)
-├── tests/                        # Validation harnesses for schemas/examples/prompts
+├── tests/                        # Validation harnesses (synthetic fixtures, no data)
 ├── Makefile                      # Convenience commands (validate, packet-summary)
 └── requirements-dev.txt          # Dev-only dependencies (validation harness)
 ```
 
-## Validating the schemas
+No `examples/` directory: the repo stores **source assets only** and no data
+artifacts. Validation generates synthetic fixtures at runtime (see
+[`docs/FIXTURE_STRATEGY.md`](docs/FIXTURE_STRATEGY.md)).
 
-The schemas, examples, prompts, and outputs ship with lightweight validation
-harnesses. This machine uses `python3` (there is no bare `python`):
+## Validating
+
+The schemas, prompts, and tools ship with lightweight validation harnesses that build
+**synthetic fixtures at runtime** — no stored example data. This machine uses `python3`
+(there is no bare `python`):
 
 ```bash
 make install-dev   # install dev deps (python3 -m pip install -r requirements-dev.txt)
-make validate      # run all harnesses (Phase 1–5)
+make validate      # run all harnesses
 ```
 
-`make validate` exits 0 on success; unresolved cross-references are reported as
-non-blocking warnings in Phase 1. See [`tests/README.md`](tests/README.md).
+`make validate` exits 0 on success. See [`tests/README.md`](tests/README.md).
 
 ## Using a packet (human-in-the-loop)
 
 A read-only helper summarizes an `EngagementPacket` and points you to the right
-prompt contracts. It makes **no LLM, API, database, AgentNet, or network call** — the
-consultant runs the LLM by hand and owns the output.
+prompt contracts. It makes **no LLM, API, database, AgentNet, or network call**, and
+**stores nothing** — the consultant runs the LLM by hand and owns the output.
 
 ```bash
-make packet-summary   # == python3 tools/packet_runner.py --packet examples/engagement-packet.example.json
+# --packet is required; point it at a real packet in controlled engagement storage:
+python3 tools/packet_runner.py --packet /path/to/engagement-packet.json
+make packet-summary PACKET=/path/to/engagement-packet.json
 ```
 
-See [`tools/README.md`](tools/README.md). For the full step-by-step consultant
-process — from messy intake notes to reviewed work product — see
+There is no demo/sample packet — the repo stores none. See
+[`tools/README.md`](tools/README.md). For the full step-by-step consultant process, see
 [`docs/CONSULTANT_WORKFLOW.md`](docs/CONSULTANT_WORKFLOW.md).
 
 ## Data handling (read before using real material)
 
-Everything committed here is **fictional and anonymized**. Real client data must be
-redacted **before** it enters the repo or any tool. This is an internal, pre-legal
-operational policy — it does not claim legal compliance, and it does not permit any
-real data to reach AgentNet.
+This is a **private, internal Peak project — not open source**, with no outside
+developer access. The repository holds **source assets only** (Peak docs, schemas,
+prompt contracts, tools, tests, policy) — it stores **no data artifacts**: no client
+data, no committed fixtures, no sample packets or outputs. Validation uses **synthetic
+fixtures generated at runtime**.
 
-- [`docs/DATA_HANDLING_POLICY.md`](docs/DATA_HANDLING_POLICY.md) — what may/may not
-  enter the repo; secrets, PII, exports, pricing, retention, human review, AgentNet
-  status, and LLM-usage caution.
-- [`docs/REDACTION_GUIDE.md`](docs/REDACTION_GUIDE.md) — redaction patterns, before/
-  after examples, and a checklist.
-- [`examples/redacted/`](examples/redacted/) — worked redacted notes (the safe target
-  state).
+Collected client data is **private engagement data**, handled only for authorized live
+engagements. It lives in **controlled engagement database/storage and private resolver
+capsules — not Git** — and is never used for examples, fixtures, tests, demos, or
+training. No external publication, cross-client reuse, or AgentNet publication happens
+without explicit governance approval. This is an internal, pre-legal policy; it does not
+claim legal compliance.
+
+- [`docs/DATA_HANDLING_POLICY.md`](docs/DATA_HANDLING_POLICY.md) — source-assets-only
+  rule, controlled engagement storage, resolver capsules, secrets, retention, human
+  review, AgentNet status, LLM-usage caution.
+- [`docs/FIXTURE_STRATEGY.md`](docs/FIXTURE_STRATEGY.md) — synthetic fixtures at
+  runtime; no stored data; real client data never used for fixtures/tests/demos.
 
 ## AgentNet grounding (intended architecture)
 

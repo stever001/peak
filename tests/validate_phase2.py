@@ -1,31 +1,28 @@
 #!/usr/bin/env python3
-"""Phase 2 validation harness: the EngagementPacket.
+"""Phase 2 validation harness: the EngagementPacket (synthetic fixture).
 
-The EngagementPacket composes the Phase 1 object schemas via local relative
-`$ref`. This harness resolves those refs OFFLINE (no network) by building a
-`referencing` registry from the sibling schema files, then runs:
+The EngagementPacket composes the object schemas via local relative `$ref`. This
+harness resolves those refs OFFLINE by building a `referencing` registry from the
+sibling schema files, then validates a **synthetic, generated** packet — no committed
+example data.
 
-  1. Schema self-check     - every schemas/*.schema.json is valid draft 2020-12,
-                             including engagement-packet.schema.json.
-  2. Packet conformance    - examples/engagement-packet.example.json validates
-                             against the packet schema with refs resolved.
-  3. Packet referential lint (BLOCKING) - inside the packet:
-       * every `evidence_references` id (nested anywhere) resolves to an
-         EvidenceReference declared in the packet's top-level
-         evidence_references[] by evidence_id;
-       * inventory_system_profile.related_intake_id, and the related_intake_id
-         of every interview / visual / workflow observation, equals the
-         packet's client_intake.intake_id;
+  1. Schema self-check      - every schemas/*.schema.json is valid draft 2020-12.
+  2. Packet conformance     - a synthetic EngagementPacket (built in memory by
+                              tests/synthetic_fixtures.py, written to a TEMPORARY
+                              directory, then discarded) validates against
+                              engagement-packet.schema.json with refs resolved.
+  3. Packet referential lint (BLOCKING) - inside the synthetic packet:
+       * every nested `evidence_references` id resolves to a declared
+         EvidenceReference;
+       * every nested `related_intake_id` equals client_intake.intake_id;
        * ids use their expected prefixes.
 
-Unlike the Phase 1 standalone lint (where cross-packet references are non-blocking
-warnings), packet-level unresolved references are FAILURES: a packet is meant to be
-self-contained.
+No stored packet artifact is read or required. See docs/FIXTURE_STRATEGY.md.
 
 Exit status:
   0  -> all blocking checks passed
   1  -> a schema, conformance, or packet-referential check failed
-  2  -> a dependency is missing (install requirements-dev.txt)
+  2  -> a dependency is missing
 """
 
 from __future__ import annotations
@@ -34,33 +31,24 @@ import glob
 import json
 import os
 import sys
+import tempfile
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import synthetic_fixtures as sf  # noqa: E402
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCHEMA_DIR = os.path.join(REPO_ROOT, "schemas")
-EXAMPLE_DIR = os.path.join(REPO_ROOT, "examples")
-
 PACKET_SCHEMA = os.path.join(SCHEMA_DIR, "engagement-packet.schema.json")
-PACKET_EXAMPLE = os.path.join(EXAMPLE_DIR, "engagement-packet.example.json")
 
-KNOWN_PREFIXES = {
-    "intake_": "ClientIntake",
-    "evid_": "EvidenceReference",
-    "intv_": "StakeholderInterview",
-    "vobs_": "VisualObservation",
-    "wobs_": "WorkflowObservation",
-    "isp_": "InventorySystemProfile",
-    "pkt_": "EngagementPacket",
-}
+KNOWN_PREFIXES = ("intake_", "evid_", "intv_", "vobs_", "wobs_", "isp_", "pkt_")
 
 PASS = "PASS"
 FAIL = "FAIL"
-WARN = "WARN"
 
 
 class Reporter:
     def __init__(self) -> None:
         self.failures: list[str] = []
-        self.warnings: list[str] = []
         self.checks_run = 0
 
     def ok(self, msg: str) -> None:
@@ -72,26 +60,16 @@ class Reporter:
         self.failures.append(msg)
         print(f"  [{FAIL}] {msg}")
 
-    def warn(self, msg: str) -> None:
-        self.warnings.append(msg)
-        print(f"  [{WARN}] {msg}")
-
     def section(self, title: str) -> None:
         print(f"\n{title}")
 
 
-def load_json(path: str) -> object:
+def load_json(path: str):
     with open(path, "r", encoding="utf-8") as fh:
         return json.load(fh)
 
 
-def build_registry(schemas: dict[str, dict]):
-    """Build an offline referencing registry keyed by each schema's $id.
-
-    The packet's relative $refs (e.g. 'client-intake.schema.json') resolve
-    against the packet $id base, which yields the sibling schema's $id -- so
-    keying by $id is sufficient and requires no network access.
-    """
+def build_registry(schemas):
     from referencing import Registry, Resource
 
     resources = []
@@ -103,7 +81,6 @@ def build_registry(schemas: dict[str, dict]):
 
 
 def walk(node, path=""):
-    """Yield (json_path, key, value) for every key/value in a nested document."""
     if isinstance(node, dict):
         for key, value in node.items():
             here = f"{path}/{key}"
@@ -114,7 +91,7 @@ def walk(node, path=""):
             yield from walk(item, f"{path}/{i}")
 
 
-def as_strings(value) -> list[str]:
+def as_strings(value):
     if isinstance(value, str):
         return [value]
     if isinstance(value, list):
@@ -122,9 +99,9 @@ def as_strings(value) -> list[str]:
     return []
 
 
-def check_schemas(reporter: Reporter, validator_cls) -> dict[str, dict]:
+def check_schemas(reporter, validator_cls):
     reporter.section("1. Schema self-check (draft 2020-12)")
-    schemas: dict[str, dict] = {}
+    schemas = {}
     for path in sorted(glob.glob(os.path.join(SCHEMA_DIR, "*.schema.json"))):
         name = os.path.basename(path)
         try:
@@ -139,31 +116,30 @@ def check_schemas(reporter: Reporter, validator_cls) -> dict[str, dict]:
 
 
 def check_packet_conformance(reporter, schemas, validator_cls, registry):
-    reporter.section("2. Packet conformance (with local $ref resolution)")
+    reporter.section("2. Synthetic packet conformance (offline $ref resolution)")
     if PACKET_SCHEMA not in schemas:
         reporter.fail("engagement-packet.schema.json not found")
         return None
-    try:
-        packet = load_json(PACKET_EXAMPLE)
-    except (OSError, json.JSONDecodeError) as exc:
-        reporter.fail(f"engagement-packet.example.json: {exc}")
-        return None
-
-    validator = validator_cls(schemas[PACKET_SCHEMA], registry=registry)
-    errors = sorted(validator.iter_errors(packet), key=str)
+    with tempfile.TemporaryDirectory(prefix="peak-synthetic-") as tmp:
+        packet = sf.synthetic_engagement_packet()
+        fpath = os.path.join(tmp, "engagement-packet.synthetic.json")
+        with open(fpath, "w", encoding="utf-8") as fh:
+            json.dump(packet, fh)
+        packet = load_json(fpath)
+        validator = validator_cls(schemas[PACKET_SCHEMA], registry=registry)
+        errors = sorted(validator.iter_errors(packet), key=str)
     if errors:
         for err in errors:
             loc = "/".join(str(p) for p in err.path) or "<root>"
-            reporter.fail(f"engagement-packet.example.json: at {loc}: {err.message}")
+            reporter.fail(f"synthetic packet: at {loc}: {err.message}")
         return None
-    reporter.ok("engagement-packet.example.json: conforms to engagement-packet.schema.json")
+    reporter.ok("synthetic packet conforms to engagement-packet.schema.json")
     return packet
 
 
-def check_packet_references(reporter: Reporter, packet: dict) -> None:
+def check_packet_references(reporter, packet):
     reporter.section("3. Packet referential lint (blocking)")
 
-    # Anchor intake id.
     intake = packet.get("client_intake", {})
     anchor = intake.get("intake_id")
     if not isinstance(anchor, str):
@@ -172,58 +148,40 @@ def check_packet_references(reporter: Reporter, packet: dict) -> None:
     if not anchor.startswith("intake_"):
         reporter.fail(f"client_intake.intake_id '{anchor}' should start with 'intake_'")
 
-    # packet_id prefix.
     pkt_id = packet.get("packet_id")
     if isinstance(pkt_id, str) and not pkt_id.startswith("pkt_"):
         reporter.fail(f"packet_id '{pkt_id}' should start with 'pkt_'")
 
-    # Declared evidence ids (the packet's evidence store).
     declared_evidence = {
         e.get("evidence_id")
         for e in packet.get("evidence_references", [])
         if isinstance(e, dict) and isinstance(e.get("evidence_id"), str)
     }
 
-    # 3a. Every nested evidence_references id resolves within the packet.
     unresolved = 0
     bad_prefix = 0
     for jpath, key, value in walk(packet):
         if key != "evidence_references":
             continue
-        # Skip the top-level declaration list of EvidenceReference OBJECTS;
-        # we only lint the string-id usages.
         for ref in as_strings(value):
             if not ref.startswith("evid_"):
                 bad_prefix += 1
                 reporter.fail(f"{jpath}: evidence id '{ref}' should start with 'evid_'")
             elif ref not in declared_evidence:
                 unresolved += 1
-                reporter.fail(
-                    f"{jpath}: evidence_references '{ref}' does not resolve to any "
-                    f"EvidenceReference in the packet"
-                )
+                reporter.fail(f"{jpath}: evidence_references '{ref}' does not resolve in the packet")
     if unresolved == 0 and bad_prefix == 0:
-        reporter.ok(
-            f"all nested evidence_references resolve within the packet "
-            f"({len(declared_evidence)} evidence records declared)"
-        )
+        reporter.ok(f"all nested evidence_references resolve within the packet ({len(declared_evidence)} declared)")
 
-    # 3b. related_intake_id everywhere matches the anchor.
     mismatches = 0
 
     def check_related(obj, label):
         nonlocal mismatches
-        if not isinstance(obj, dict):
-            return
-        rid = obj.get("related_intake_id")
-        if rid is None:
-            return
-        if rid != anchor:
-            mismatches += 1
-            reporter.fail(
-                f"{label}: related_intake_id '{rid}' does not match "
-                f"client_intake.intake_id '{anchor}'"
-            )
+        if isinstance(obj, dict):
+            rid = obj.get("related_intake_id")
+            if rid is not None and rid != anchor:
+                mismatches += 1
+                reporter.fail(f"{label}: related_intake_id '{rid}' does not match '{anchor}'")
 
     check_related(packet.get("inventory_system_profile"), "inventory_system_profile")
     for i, itv in enumerate(packet.get("stakeholder_interviews", [])):
@@ -235,7 +193,6 @@ def check_packet_references(reporter: Reporter, packet: dict) -> None:
     if mismatches == 0:
         reporter.ok(f"all nested related_intake_id values match '{anchor}'")
 
-    # 3c. related_object_ids use known prefixes (advisory prefix check).
     unknown = 0
     for jpath, key, value in walk(packet):
         if key != "related_object_ids":
@@ -249,17 +206,15 @@ def check_packet_references(reporter: Reporter, packet: dict) -> None:
 
 
 def main() -> int:
-    print("Peak Phase 2 validation harness (EngagementPacket)")
-    print("=" * 50)
+    print("Peak Phase 2 validation harness (synthetic EngagementPacket)")
+    print("=" * 60)
 
     try:
         from jsonschema import Draft202012Validator as validator_cls
     except ImportError:
         print(
             "\nERROR: the 'jsonschema' package is required.\n"
-            "Install dev dependencies:\n"
-            "    make install-dev\n"
-            "    (or: python3 -m pip install -r requirements-dev.txt)\n",
+            "    make install-dev\n",
             file=sys.stderr,
         )
         return 2
@@ -271,18 +226,13 @@ def main() -> int:
     if packet is not None:
         check_packet_references(reporter, packet)
 
-    print("\n" + "=" * 50)
+    print("\n" + "=" * 60)
     print("Summary")
     print(f"  checks run : {reporter.checks_run}")
     print(f"  failures   : {len(reporter.failures)}")
-    print(f"  warnings   : {len(reporter.warnings)}")
-
     if reporter.failures:
         print(f"\nRESULT: {FAIL} ({len(reporter.failures)} blocking issue(s))")
         return 1
-    if reporter.warnings:
-        print(f"\nRESULT: {PASS} (with {len(reporter.warnings)} non-blocking warning(s))")
-        return 0
     print(f"\nRESULT: {PASS}")
     return 0
 

@@ -10,10 +10,11 @@ Design notes:
   serialization format is assumed. Field types are conceptual.
 - Every substantive finding links to one or more `EvidenceReference`s. This is the
   backbone of Peak's evidence-first approach.
-- **Status (Phase 1):** the six first-thread assessment objects are now formalized
-  as JSON Schema (draft 2020-12) under [`schemas/`](../schemas/), with worked
-  examples under [`examples/`](../examples/). For those objects, **the schema is the
-  authoritative field-level definition**; the summaries below track it. The
+- **Status (Phase 1):** the six first-thread assessment objects are formalized
+  as JSON Schema (draft 2020-12) under [`schemas/`](../schemas/). For those objects,
+  **the schema is the authoritative field-level definition**; the summaries below track
+  it. No instance data is committed — validation exercises the schemas with **synthetic
+  fixtures generated at runtime** (see [`FIXTURE_STRATEGY.md`](FIXTURE_STRATEGY.md)). The
   remaining objects are still candidates awaiting later phases (see
   [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md)).
 
@@ -212,13 +213,13 @@ prefix `evid_`.
 
 - **Indicators**, not scores. Early objects use qualitative indicators
   (e.g. low/medium/high) rather than false-precision numeric scores.
-- **Redactable identity.** Personal names are optional and redactable to respect
-  client sensitivities. See [`REDACTION_GUIDE.md`](REDACTION_GUIDE.md) for how raw
-  material is anonymized before it enters the repo.
-- **Data handling.** An initial internal policy governs what may enter the repo and
-  how real material is handled — see [`DATA_HANDLING_POLICY.md`](DATA_HANDLING_POLICY.md).
-  `EvidenceReference.sensitive_data_flag` records the fact of sensitive evidence
-  without embedding it.
-- **No persistence/retention model yet.** A formal retention schedule and secure
-  storage are still to be defined (with legal review) before any real client data is
-  stored persistently; today the repo holds only fictional examples.
+- **Optional identity fields.** Personal names are optional; `EvidenceReference`
+  carries a `sensitive_data_flag` to mark sensitive evidence without embedding it.
+- **Source assets only — no stored data.** These objects are a schema/vocabulary;
+  **no instance data is committed to the repo.** Real client records live in controlled
+  engagement storage, and validation uses synthetic runtime fixtures. See
+  [`DATA_HANDLING_POLICY.md`](DATA_HANDLING_POLICY.md) and
+  [`FIXTURE_STRATEGY.md`](FIXTURE_STRATEGY.md).
+- **No persistence/retention model in the repo.** A formal retention schedule and
+  secure storage for controlled engagement data are still to be defined (with legal
+  review); the repository itself stores no client data.

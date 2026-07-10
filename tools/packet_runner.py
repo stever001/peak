@@ -2,23 +2,24 @@
 """Peak EngagementPacket runner (human-in-the-loop helper).
 
 This is NOT an agent runtime. It makes NO LLM call, NO API call, NO database
-query, NO AgentNet lookup, and NO network request. It only reads an
-EngagementPacket JSON file locally and prints:
+query, NO AgentNet lookup, and NO network request. It reads an EngagementPacket JSON
+file provided with --packet and prints:
 
   * a consultant-readable packet summary,
-  * the available Phase 3 prompt contracts by workflow,
-  * suggested sample-output targets, and
+  * the available prompt contracts by workflow, and
   * next-step instructions for a human consultant.
 
-The consultant does the actual LLM work by hand: open a prompt contract, paste
-the packet JSON into its reusable body, review the result, and save it to the
-appropriate target file.
+The runner does not store, write, or commit any packet, and it does not generate demo
+or sample packets. Provide a real packet from controlled engagement storage (an
+authorized engagement workspace) or, in tests only, a temporary fixture file. Real
+engagement packets live in controlled engagement storage, not in this repository (see
+docs/DATA_HANDLING_POLICY.md and docs/FIXTURE_STRATEGY.md).
 
 Usage:
-    python3 tools/packet_runner.py --packet examples/engagement-packet.example.json
+    python3 tools/packet_runner.py --packet /path/to/engagement-packet.json
 
 Exit status:
-  0  -> packet loaded and summarized (structural check passed)
+  0  -> packet loaded/summarized (structural check passed)
   1  -> packet missing / invalid JSON / failed the structural check
   2  -> bad CLI usage
 """
@@ -31,10 +32,8 @@ import os
 import sys
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SCHEMA_DIR = os.path.join(REPO_ROOT, "schemas")
-PACKET_SCHEMA = os.path.join(SCHEMA_DIR, "engagement-packet.schema.json")
 
-# Phase 3 prompt contracts, in first-thread order.
+# Prompt contracts, in first-thread order.
 PROMPT_CONTRACTS = [
     ("intake", "prompts/intake/normalize-client-intake.prompt.md"),
     ("discovery", "prompts/discovery/generate-discovery-plan.prompt.md"),
@@ -45,17 +44,6 @@ PROMPT_CONTRACTS = [
     ("learning", "prompts/learning/extract-engagement-lessons.prompt.md"),
 ]
 
-# Suggested sample-output targets (what a consultant would save reviewed output to).
-OUTPUT_TARGETS = [
-    ("discovery", "examples/outputs/discovery-plan.alpha.example.md"),
-    ("evidence", "examples/outputs/evidence-findings.alpha.example.md"),
-    ("reporting", "examples/outputs/initial-assessment-report.alpha.example.md"),
-    ("proposal", "examples/outputs/next-phase-proposal.alpha.example.md"),
-    ("qa", "examples/outputs/qa-review.alpha.example.md"),
-    ("learning", "examples/outputs/engagement-lessons.alpha.example.md"),
-]
-
-# Minimum structure a packet must have for this helper to be useful.
 REQUIRED_TOP_LEVEL = ["packet_id", "engagement_label", "assessment_stage", "client_intake"]
 
 
@@ -65,12 +53,6 @@ def load_packet(path: str):
 
 
 def structural_check(packet) -> list[str]:
-    """Lightweight, dependency-free structural check.
-
-    If `jsonschema` happens to be installed, additionally validate against the
-    EngagementPacket schema with offline $ref resolution (same approach as
-    tests/validate_phase2.py). Either way, this never touches the network.
-    """
     problems: list[str] = []
     if not isinstance(packet, dict):
         return ["packet is not a JSON object"]
@@ -80,30 +62,6 @@ def structural_check(packet) -> list[str]:
     intake = packet.get("client_intake")
     if isinstance(intake, dict) and not intake.get("intake_id"):
         problems.append("client_intake.intake_id is missing")
-
-    # Optional stronger check when the dependency is available; skipped silently
-    # otherwise so the runner stays usable with the standard library alone.
-    try:
-        from jsonschema import Draft202012Validator
-        from referencing import Registry, Resource
-        import glob
-
-        resources = []
-        for p in glob.glob(os.path.join(SCHEMA_DIR, "*.schema.json")):
-            with open(p, "r", encoding="utf-8") as fh:
-                schema = json.load(fh)
-            if schema.get("$id"):
-                resources.append((schema["$id"], Resource.from_contents(schema)))
-        registry = Registry().with_resources(resources)
-        with open(PACKET_SCHEMA, "r", encoding="utf-8") as fh:
-            packet_schema = json.load(fh)
-        validator = Draft202012Validator(packet_schema, registry=registry)
-        for err in sorted(validator.iter_errors(packet), key=str):
-            loc = "/".join(str(x) for x in err.path) or "<root>"
-            problems.append(f"schema: at {loc}: {err.message}")
-    except ImportError:
-        pass  # stdlib-only mode; structural check above is sufficient.
-
     return problems
 
 
@@ -140,9 +98,7 @@ def print_summary(packet) -> None:
     print("\n  Known systems:")
     if systems:
         for s in systems:
-            name = s.get("name", "(unnamed)")
-            cat = s.get("category", "?")
-            print(f"    - {name} [{cat}]")
+            print(f"    - {s.get('name', '(unnamed)')} [{s.get('category', '?')}]")
     else:
         print("    (none)")
 
@@ -155,32 +111,23 @@ def print_summary(packet) -> None:
 
 def print_contracts() -> None:
     print("\n" + "=" * 66)
-    print("AVAILABLE PROMPT CONTRACTS (Phase 3, by workflow)")
+    print("AVAILABLE PROMPT CONTRACTS (by workflow)")
     print("=" * 66)
     for workflow, path in PROMPT_CONTRACTS:
         exists = "" if os.path.isfile(os.path.join(REPO_ROOT, path)) else "  [MISSING]"
         print(f"  {workflow:<10} {path}{exists}")
 
 
-def print_targets() -> None:
-    print("\n" + "=" * 66)
-    print("SUGGESTED SAMPLE-OUTPUT TARGETS")
-    print("=" * 66)
-    for workflow, path in OUTPUT_TARGETS:
-        print(f"  {workflow:<10} {path}")
-
-
-def print_next_steps(packet_path: str) -> None:
-    rel = os.path.relpath(packet_path, REPO_ROOT)
+def print_next_steps(source_label: str) -> None:
     print("\n" + "=" * 66)
     print("NEXT STEPS (human-in-the-loop)")
     print("=" * 66)
     print("  For each workflow you want to run:")
     print("    1. Open the relevant prompt contract listed above.")
     print("    2. Copy its 'Reusable prompt body' block into your chosen LLM.")
-    print(f"    3. Paste this packet's JSON ({rel}) where the prompt says to.")
+    print(f"    3. Paste this packet's JSON ({source_label}) where the prompt says to.")
     print("    4. Review and edit the output yourself — you own it.")
-    print("    5. Save the reviewed result to the matching sample-output target.")
+    print("    5. Save reviewed output to controlled engagement storage — NOT this repo.")
 
     print("\n" + "-" * 66)
     print("  This runner did NOT do any of the following:")
@@ -189,28 +136,28 @@ def print_next_steps(packet_path: str) -> None:
     print("      grounding architecture, not integrated).")
     print("    * No client-facing output was generated automatically.")
     print("    * No API, database, or network request was made.")
+    print("    * No packet was written, stored, or committed to the repo.")
     print("-" * 66)
 
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(
-        description="Summarize an EngagementPacket and point a consultant to the "
-        "right prompt contracts. Read-only; makes no LLM/API/network call."
+        description="Summarize an EngagementPacket and point a consultant to the right "
+        "prompt contracts. Read-only; makes no LLM/API/network call; stores nothing."
     )
     parser.add_argument(
         "--packet",
         required=True,
-        help="Path to an EngagementPacket JSON file.",
+        help="Path to an EngagementPacket JSON file from controlled engagement storage "
+        "(or a temporary test fixture).",
     )
     args = parser.parse_args(argv)
 
-    packet_path = args.packet
-    if not os.path.isfile(packet_path):
-        print(f"ERROR: packet file not found: {packet_path}", file=sys.stderr)
+    if not os.path.isfile(args.packet):
+        print(f"ERROR: packet file not found: {args.packet}", file=sys.stderr)
         return 1
-
     try:
-        packet = load_packet(packet_path)
+        packet = load_packet(args.packet)
     except (OSError, json.JSONDecodeError) as exc:
         print(f"ERROR: could not read packet JSON: {exc}", file=sys.stderr)
         return 1
@@ -224,8 +171,7 @@ def main(argv=None) -> int:
 
     print_summary(packet)
     print_contracts()
-    print_targets()
-    print_next_steps(packet_path)
+    print_next_steps(args.packet)
     return 0
 
 

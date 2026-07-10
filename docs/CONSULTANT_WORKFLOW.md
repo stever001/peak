@@ -36,7 +36,7 @@ application.
  InventorySystemProfile     │
  StakeholderInterview[]     ├──►  EngagementPacket (JSON)
  VisualObservation[]        │            │
- WorkflowObservation[]      │            │  make packet-summary
+ WorkflowObservation[]      │            │  packet_runner.py --packet
         └───────────────────┘            ▼
                                   pick a prompt contract
                                          │  paste packet JSON into its reusable body
@@ -44,7 +44,7 @@ application.
                                   draft output (LLM, run by you)
                                          │  QA review (qa contract)
                                          ▼
-                                  save reviewed output to examples/outputs/... (or your engagement folder)
+                                  save reviewed output to controlled engagement storage (not this repo)
                                          │
                                          ▼
                                   extract engagement lessons (learning contract)
@@ -52,11 +52,10 @@ application.
 
 Step by step:
 
-1. **Capture messy intake notes** — call notes, emails, questionnaire answers. Raw text
-   is fine **locally**, but **redact before anything enters this repo or an LLM** —
-   see [`DATA_HANDLING_POLICY.md`](DATA_HANDLING_POLICY.md) and
-   [`REDACTION_GUIDE.md`](REDACTION_GUIDE.md), with worked examples in
-   [`../examples/redacted/`](../examples/redacted/).
+1. **Capture messy intake notes** — call notes, emails, questionnaire answers. Real
+   client notes and all engagement records belong in **controlled engagement storage**,
+   never in this repository. Do not paste real client data into an unapproved
+   third-party LLM. See [`DATA_HANDLING_POLICY.md`](DATA_HANDLING_POLICY.md).
 2. **Normalize into `ClientIntake`** — run
    `prompts/intake/normalize-client-intake.prompt.md`. It returns a `ClientIntake`
    draft plus a missing-information list and confidence notes. Do not invent fields.
@@ -75,8 +74,9 @@ Step by step:
    `evidence_references` id must resolve inside the packet, and every nested
    `related_intake_id` must equal the packet's `client_intake.intake_id`.
 9. **Validate** — `make validate` (Phase 2 checks packet integrity as a blocking gate).
-10. **Run the packet summary** — `make packet-summary` orients you: counts, systems,
-    which contracts and output targets apply.
+10. **Run the packet summary** — `python3 tools/packet_runner.py --packet <path>`
+    (or `make packet-summary PACKET=<path>`) on a real packet from controlled storage.
+    It orients you: counts, systems, and which contracts apply.
 11. **Select a prompt contract** — pick the workflow you need (discovery, evidence,
     reporting, proposal, qa, learning).
 12. **Paste packet JSON into the prompt body** — copy the contract's "Reusable prompt
@@ -85,8 +85,8 @@ Step by step:
     deliverable.
 14. **QA review** — run `prompts/qa/review-assessment-packet.prompt.md` against the
     packet and the draft. Fix what it flags.
-15. **Save reviewed output** — write the reviewed result to the matching file under
-    `examples/outputs/` (for the sample engagement) or your real engagement folder.
+15. **Save reviewed output** — write the reviewed result to **controlled engagement
+    storage**, not this repository.
 16. **Extract engagement lessons** — run
     `prompts/learning/extract-engagement-lessons.prompt.md` to capture reusable
     lessons and **draft** knowledge capsules.
@@ -96,16 +96,14 @@ Step by step:
 All commands are read-only or validation-only. This machine uses `python3`.
 
 ```bash
-# Validate everything (schemas, packet integrity, prompt contracts, sample outputs,
-# and the runner). Exits 0 on success.
+# Validate everything (schemas, synthetic packet integrity, prompt contracts, output
+# structure, the runner, and repo hygiene). Exits 0 on success.
 make validate
 
-# Summarize the example packet and see which contracts/targets apply (read-only;
-# no LLM/API/network).
-make packet-summary
-
-# The same summary, invoked directly (point --packet at your own packet file):
-python3 tools/packet_runner.py --packet examples/engagement-packet.example.json
+# Summarize a real packet from controlled engagement storage (--packet required;
+# read-only; no LLM/API/network; stores nothing):
+python3 tools/packet_runner.py --packet /path/to/engagement-packet.json
+make packet-summary PACKET=/path/to/engagement-packet.json
 ```
 
 ## 4. File map
@@ -113,12 +111,14 @@ python3 tools/packet_runner.py --packet examples/engagement-packet.example.json
 | Path | What it holds | You use it to… |
 | --- | --- | --- |
 | `schemas/` | JSON Schema (draft 2020-12) for every data object + the `EngagementPacket` | Know the exact shape each object must take |
-| `examples/` | Anonymized worked example records (one per object) | See a valid, realistic instance of each object |
-| `examples/outputs/` | Sample run artifacts (discovery plan, findings, report, proposal, QA review, lessons) | See what "good" reviewed output looks like |
 | `prompts/` | One prompt contract per workflow (intake → learning) | Copy the reusable body into your LLM |
-| `tools/` | `packet_runner.py` — read-only summarizer/orienter | Run `make packet-summary` on a packet |
-| `tests/` | stdlib + `jsonschema` validation harnesses | Prove the packet and repo are internally consistent |
-| `docs/` | Operating model, workflows, data objects, plan, this guide | Understand the why and the process |
+| `tools/` | `packet_runner.py` — read-only summarizer/orienter (`--packet` required) | Run it on a real packet from controlled storage |
+| `tests/` | stdlib + `jsonschema` harnesses using synthetic fixtures | Prove schemas/packet structure/contracts are consistent |
+| `docs/` | Operating model, workflows, data objects, plan, policy, this guide | Understand the why and the process |
+
+The repo stores **no data artifacts** — there is no `examples/` directory. Real
+engagement records live in controlled engagement storage; validation uses synthetic
+fixtures generated at runtime (see [`FIXTURE_STRATEGY.md`](FIXTURE_STRATEGY.md)).
 
 ## 5. Consultant rules
 
@@ -139,13 +139,17 @@ These are non-negotiable for internal quality and honesty:
   intended future architecture and is not integrated.
 - **Keep outputs internal until reviewed.** Draft output is internal; it becomes
   shareable only after human review and (for client-facing) explicit approval.
-- **Avoid real sensitive data in examples.** Use anonymized labels
-  (`client_alpha`, `stakeholder_1`, `consultant_a`). `EvidenceReference` records the
-  fact of sensitive evidence via `sensitive_data_flag`; it never embeds the content.
-- **Redact before the repo or any LLM.** Real client material must be redacted per
-  [`DATA_HANDLING_POLICY.md`](DATA_HANDLING_POLICY.md) and
-  [`REDACTION_GUIDE.md`](REDACTION_GUIDE.md) *before* it is committed or pasted into a
-  third-party tool. Keep unredacted working files outside the repo.
+- **Never commit client data.** The repo is source assets only. Real engagement data —
+  intake, evidence, packets, deliverables — lives in **controlled engagement storage**,
+  not this repository. `EvidenceReference` records the fact of sensitive evidence via
+  `sensitive_data_flag`; the raw content stays in controlled storage.
+- **Real data is fine for delivery — under control.** Actual client data, including
+  real financial impact numbers, may be used in authorized engagement work when it is
+  evidence-linked, source-labeled (reported vs. verified), and human-reviewed. It is
+  never used for fixtures, tests, or demos. See
+  [`DATA_HANDLING_POLICY.md`](DATA_HANDLING_POLICY.md).
+- **No cross-client reuse or external/AgentNet publication** of private engagement data
+  without explicit governance approval.
 
 ## 6. QA gate
 
@@ -154,9 +158,6 @@ Before any output moves toward a client, run it through the QA gate.
 - **Contract:** `prompts/qa/review-assessment-packet.prompt.md` — strict but fair. It
   surfaces unsupported claims, missing evidence, contradictions, weak recommendations,
   a report-readiness score, and prioritized required fixes.
-- **Worked example:** `examples/outputs/qa-review.alpha.example.md` — shows the gate
-  applied to the sample engagement (it scored the sample a `3/5` client-readiness and
-  listed concrete fixes).
 
 **Readiness categories** (advance only by human decision):
 
@@ -174,7 +175,6 @@ After an engagement, capture what is reusable.
 - **Contract:** `prompts/learning/extract-engagement-lessons.prompt.md` — extracts
   reusable patterns, checklist/prompt improvements, schema gaps, candidate knowledge
   capsules, and follow-up actions.
-- **Worked example:** `examples/outputs/engagement-lessons.alpha.example.md`.
 
 Emphasis:
 
@@ -188,24 +188,27 @@ Emphasis:
 **Supported now:**
 
 - Human-in-the-loop packet and prompt workflows: structured data objects, a validated
-  `EngagementPacket`, prompt contracts, a read-only packet summarizer, and validation.
-- An initial, internal **data-handling and redaction policy**
-  ([`DATA_HANDLING_POLICY.md`](DATA_HANDLING_POLICY.md),
-  [`REDACTION_GUIDE.md`](REDACTION_GUIDE.md)) — pre-legal, human-enforced.
+  `EngagementPacket`, prompt contracts, a read-only packet summarizer, and validation
+  (all on synthetic fixtures — the repo stores no data).
+- An initial, internal **data-handling policy**
+  ([`DATA_HANDLING_POLICY.md`](DATA_HANDLING_POLICY.md)) and fixture strategy
+  ([`FIXTURE_STRATEGY.md`](FIXTURE_STRATEGY.md)) — private/internal, pre-legal,
+  human-enforced: source assets only, client data never in the repo, real client data
+  for authorized engagements handled in controlled storage.
 
 **Not yet (deliberately out of scope):**
 
 - It does **not** execute prompts automatically (no agent runtime, no LLM calls).
 - It does **not** integrate with AgentNet (intended future grounding/resolution only).
-- It does **not** store real client data (no database). The data-handling policy
-  exists, but a formal retention schedule, secure storage, and redaction *tooling* are
-  still to be defined; redaction is currently a human discipline.
+- There is **no controlled engagement database/storage or resolver-capsule tooling in
+  this repo** (no formal retention schedule, secure storage, or access controls); the
+  data layer lives outside Git and the policy is human-enforced for now.
 - No frontend, API, or client-facing functionality.
 
 **Possible future phases** (not promises): guarded runners that assist without
-automating judgment, packet manifests, a formal retention schedule and redaction
-tooling on top of today's policy, and eventual AgentNet grounding of methodology
-capsules — each added only when the human-in-the-loop core is proven.
+automating judgment, packet manifests, controlled engagement storage with a retention
+schedule and access controls, and eventual AgentNet grounding of methodology capsules —
+each added only when the human-in-the-loop core is proven.
 
 ---
 

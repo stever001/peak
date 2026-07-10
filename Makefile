@@ -16,8 +16,8 @@ help: ## Show available targets
 	@echo "  make validate-phase4    Run only the Phase 4 example-output inventory check"
 	@echo "  make validate-phase5    Run only the Phase 5 packet-runner smoke check"
 	@echo "  make validate-phase6    Run only the Phase 6 consultant-guide doc check"
-	@echo "  make validate-phase7    Run only the Phase 7 data-handling policy doc check"
-	@echo "  make packet-summary     Summarize the example EngagementPacket (read-only; no LLM/API)"
+	@echo "  make validate-phase7    Run only the Phase 7 repo-hygiene / data-artifact guard"
+	@echo "  make packet-summary PACKET=/path/to/packet.json   Summarize a real packet (read-only; no LLM/API)"
 
 install-dev: ## Install development dependencies
 	$(PYTHON) -m pip install -r requirements-dev.txt
@@ -42,8 +42,12 @@ validate-phase5: ## Run the Phase 5 packet-runner smoke check (stdlib-only)
 validate-phase6: ## Run the Phase 6 consultant-guide doc check (stdlib-only)
 	$(PYTHON) tests/validate_phase6_docs.py
 
-validate-phase7: ## Run the Phase 7 data-handling policy doc check (stdlib-only)
+validate-phase7: ## Run the Phase 7 repo-hygiene / data-artifact guard (stdlib-only)
 	$(PYTHON) tests/validate_phase7_policy.py
 
-packet-summary: ## Summarize the example EngagementPacket (read-only; no LLM/API/network)
-	$(PYTHON) tools/packet_runner.py --packet examples/engagement-packet.example.json
+packet-summary: ## Summarize a real packet: make packet-summary PACKET=/path/to/packet.json
+	@if [ -z "$(PACKET)" ]; then \
+		echo "Provide PACKET=/path/to/engagement-packet.json from a controlled engagement workspace."; \
+		exit 2; \
+	fi
+	$(PYTHON) tools/packet_runner.py --packet "$(PACKET)"

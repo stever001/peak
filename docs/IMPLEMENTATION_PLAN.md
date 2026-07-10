@@ -13,7 +13,9 @@ adding structure, storage, or automation.
 **Goal:** a clean, understandable repository that defines the operating model,
 workflows, data objects, and plan.
 
-- [x] Repository structure (`agents/`, `schemas/`, `examples/`, `prompts/`, `tests/`).
+- [x] Repository structure (`agents/`, `schemas/`, `prompts/`, `tests/`, `tools/`,
+  `docs/`). *(An early `examples/` tree was later removed — the repo stores no data
+  artifacts; see the repo-cleanup note under the first-workflow phase.)*
 - [x] `README.md` — purpose, internal-vs-client-facing distinction, first workflow.
 - [x] `docs/OPERATING_MODEL.md`
 - [x] `docs/AGENT_WORKFLOWS.md`
@@ -35,13 +37,15 @@ worked examples.
 - [x] First-thread objects defined: `ClientIntake`, `EvidenceReference`,
   `StakeholderInterview`, `VisualObservation`, `WorkflowObservation`,
   `InventorySystemProfile`.
-- [x] Anonymized worked examples added under `examples/` (one coherent engagement).
 - [x] Validation harness added under `tests/` (`validate_phase1.py`): schema
-  self-check, example conformance, and referential lint. Dev dependency pinned in
-  `requirements-dev.txt`.
+  self-check, fixture conformance, and prefix lint. Dev dependency pinned in
+  `requirements-dev.txt`. (Originally validated committed example records; those were
+  later removed and replaced with **synthetic fixtures generated at runtime** — see the
+  repo-cleanup note below.)
 
-**Exit criteria:** every first-thread object has a schema, at least one example, and
-a passing validation test. Still no live agents. — **Met.** Run `make validate`
+**Exit criteria:** every first-thread object has a schema and a passing validation test
+against a representative (now synthetic) instance. Still no live agents. — **Met.** Run
+`make validate`
 (or `python3 tests/validate_phase1.py`); exits 0 on pass, and unresolved
 cross-references are non-blocking warnings in Phase 1.
 
@@ -78,25 +82,23 @@ No agent logic yet — the packet is the data contract that agent work will buil
 
 These are **human-run prompt contracts, not autonomous agents**, and are internal-only.
 
-**Worked example run — the contracts demonstrated end-to-end:**
+**Output structure contract (no committed samples):**
 
-- [x] Sample run artifacts in [`../examples/outputs/`](../examples/outputs/): a
-  discovery plan, evidence findings, initial assessment report, next-phase proposal,
-  QA review, and engagement lessons, all produced from
-  `examples/engagement-packet.example.json`. These show what each contract yields on
-  one coherent engagement, with evidence cited and the observed/claim/interpretation/
-  follow-up separation preserved. **Illustrative human-reviewable examples — not
-  automation output.**
-- [x] Presence/heading check ([`../tests/validate_phase4_outputs.py`](../tests/validate_phase4_outputs.py),
-  stdlib-only) wired into `make validate`. Structural only — no quality judgement.
+- [x] Each contract's expected output structure is exercised by
+  [`../tests/validate_phase4_outputs.py`](../tests/validate_phase4_outputs.py),
+  stdlib-only, which **generates a synthetic document at runtime** and checks its
+  sections. No sample outputs are committed — real work product lives in controlled
+  engagement storage.
 
 **Local runner — human-in-the-loop helper:**
 
-- [x] [`../tools/packet_runner.py`](../tools/packet_runner.py) (`make packet-summary`):
-  a read-only helper that summarizes an `EngagementPacket` and points a consultant at
-  the right prompt contract and output target. Makes **no** LLM/API/database/AgentNet/
-  network call — deliberately not an agent runtime. Smoke-tested by
-  [`../tests/validate_phase5_runner.py`](../tests/validate_phase5_runner.py) in
+- [x] [`../tools/packet_runner.py`](../tools/packet_runner.py) requires an explicit
+  `--packet` path (a real packet from controlled storage; no demo/sample mode): a
+  read-only helper that summarizes an `EngagementPacket` and points a consultant at the
+  right prompt contract. Makes **no** LLM/API/database/AgentNet/network call and
+  **stores nothing** — deliberately not an agent runtime. Smoke-tested by
+  [`../tests/validate_phase5_runner.py`](../tests/validate_phase5_runner.py) (which
+  passes a temporary synthetic fixture via `--packet`, then deletes it) in
   `make validate`.
 
 **Consultant operating guide:**
@@ -109,26 +111,30 @@ These are **human-run prompt contracts, not autonomous agents**, and are interna
   [`../tests/validate_phase6_docs.py`](../tests/validate_phase6_docs.py) in
   `make validate`. Documentation only — no new runtime.
 
-**Data-handling policy (first, pre-legal):**
+**Data-handling policy + repo cleanup (source assets only):**
 
 - [x] [`DATA_HANDLING_POLICY.md`](DATA_HANDLING_POLICY.md) and
-  [`REDACTION_GUIDE.md`](REDACTION_GUIDE.md): an initial internal policy for what may
-  enter the repo, how to redact real material, retention assumptions, human-review and
-  LLM-usage cautions, and AgentNet status — plus worked redacted examples in
-  [`../examples/redacted/`](../examples/redacted/). Doc-checked by
-  [`../tests/validate_phase7_policy.py`](../tests/validate_phase7_policy.py) in
-  `make validate`. Operational first policy, suitable for later legal review — does
-  **not** claim legal compliance. This is the prerequisite that Phase 5 (hardening)
-  named for storing any real client data.
+  [`FIXTURE_STRATEGY.md`](FIXTURE_STRATEGY.md): a policy for a **private, internal**
+  (not open-source) project. The repo holds **source assets only** and stores **no data
+  artifacts**; client data is never committed and lives in controlled engagement
+  storage / private resolver capsules; real client data may be used only for authorized
+  live engagements and never for fixtures/tests/demos. No external publication,
+  cross-client reuse, or AgentNet publication without governance approval.
+- [x] **Cleanup:** the former `examples/` tree (sample packets, sample outputs, and the
+  old redaction guide) was **removed**. Validation now generates **synthetic fixtures at
+  runtime** in temp directories; the packet runner requires an explicit `--packet`
+  (no demo/sample mode). Enforced
+  by [`../tests/validate_phase7_policy.py`](../tests/validate_phase7_policy.py), which
+  fails if data artifacts reappear. Operational first policy, later legal review — does
+  **not** claim legal compliance.
 
 **Still to do:**
 
 - Implement lightweight agents in `agents/intake/`, `agents/discovery/`,
   `agents/evidence/`, `agents/reporting/`, `agents/proposal/` that take structured
   input and produce structured output conforming to the schemas (the prompt contracts
-  above are the specification for that behavior, and the sample outputs are a target
-  for what "good" looks like). The runner is the manual precursor: it orients the
-  consultant without automating the LLM step.
+  above are the specification for that behavior). The runner is the manual precursor: it
+  orients the consultant without automating the LLM step.
 - Keep everything file-based and consultant-run; **no database, no frontend.**
 - Enforce evidence-first: agent outputs must cite `EvidenceReference`s.
 

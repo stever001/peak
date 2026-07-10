@@ -17,7 +17,9 @@ Phase 1 defines the **first-thread assessment objects**:
 | `workflow-observation.schema.json` | `WorkflowObservation` | `wobs_` |
 | `inventory-system-profile.schema.json` | `InventorySystemProfile` | `isp_` |
 
-Worked, anonymized examples for each live in [`../examples/`](../examples/).
+No instance data is committed for these — validation exercises each schema with a
+**synthetic fixture generated at runtime** (see
+[`../docs/FIXTURE_STRATEGY.md`](../docs/FIXTURE_STRATEGY.md)).
 
 ## Scope (Phase 2)
 
@@ -78,11 +80,11 @@ architecture (see [`../docs/OPERATING_MODEL.md`](../docs/OPERATING_MODEL.md)).
 
 ## Validation
 
-The examples in [`../examples/`](../examples/) validate against these schemas under
-draft 2020-12, checked by the harness in [`../tests/`](../tests/). From the repo
-root (this machine uses `python3`):
+**Synthetic fixtures** (generated at runtime, not committed) validate against these
+schemas under draft 2020-12, checked by the harnesses in [`../tests/`](../tests/). From
+the repo root (this machine uses `python3`):
 
 ```bash
 make install-dev   # one-time: python3 -m pip install -r requirements-dev.txt
-make validate      # python3 tests/validate_phase1.py
+make validate      # runs all harnesses
 ```
