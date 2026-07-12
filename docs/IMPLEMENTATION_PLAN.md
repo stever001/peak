@@ -202,6 +202,17 @@ and documentation accurately states integration status.
   **Architecture/docs/schemas only** — no database, API, resolver, ingestion pipeline, or
   AgentNet integration is implemented.
 
+**Governance state contracts defined (groundwork — docs/enum-schemas only):**
+
+- [x] The allowed statuses, transitions, and human-review gates are documented in
+  [`GOVERNANCE_STATES.md`](GOVERNANCE_STATES.md) (eight state families) and
+  [`STATE_TRANSITIONS.md`](STATE_TRANSITIONS.md) (transitions + agent guardrails), with
+  enum contracts `governance-state` (master), `authorization-scope`, `review-status`,
+  `lifecycle-status`. The Phase 8 schemas now `$ref` these canonical enums. Contract-only
+  (no instances, no engine); agent output defaults to `draft`/`needs_review` and agents
+  may never set `client_facing_approved`. Checked by
+  [`../tests/validate_phase9_governance.py`](../tests/validate_phase9_governance.py).
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

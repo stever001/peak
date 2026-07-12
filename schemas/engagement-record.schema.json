@@ -51,9 +51,8 @@
       "items": { "type": "string", "pattern": "^src_[A-Za-z0-9][A-Za-z0-9_-]*$" }
     },
     "review_status": {
-      "type": "string",
-      "description": "Governance review state of the engagement record.",
-      "enum": ["draft", "in_review", "reviewed", "approved", "rejected"]
+      "description": "Governance review state of the engagement record (canonical ReviewStatus).",
+      "$ref": "review-status.schema.json#/$defs/ReviewStatus"
     },
     "created_at": {
       "type": "string",

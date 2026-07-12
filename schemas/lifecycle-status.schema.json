@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://peak.internal/schemas/v1/lifecycle-status.schema.json",
+  "title": "LifecycleStatus",
+  "description": "Enum contract for the lifecycle status of a record. Reusable enum contract, not a stored data instance — no instances are committed to the repo. Storage-agnostic; other schemas reference `#/$defs/LifecycleStatus`. See docs/GOVERNANCE_STATES.md and docs/STATE_TRANSITIONS.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["lifecycle_status"],
+  "properties": {
+    "lifecycle_status": {
+      "description": "The current lifecycle status value.",
+      "$ref": "#/$defs/LifecycleStatus"
+    },
+    "reason": {
+      "type": "string",
+      "description": "Reason for the current lifecycle state (e.g. why superseded/revoked)."
+    },
+    "set_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 timestamp the lifecycle state was set."
+    }
+  },
+  "$defs": {
+    "LifecycleStatus": {
+      "type": "string",
+      "description": "Allowed lifecycle status values. `deleted_reference_only` means the payload is removed and only a governance reference remains.",
+      "enum": [
+        "active",
+        "pending",
+        "draft",
+        "superseded",
+        "revoked",
+        "archived",
+        "deleted_reference_only"
+      ]
+    }
+  }
+}

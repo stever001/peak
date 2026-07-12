@@ -51,14 +51,16 @@
       "description": "The authorization governing use of this capsule."
     },
     "review_status": {
-      "type": "string",
-      "description": "Governance review state.",
-      "enum": ["draft", "in_review", "reviewed", "approved", "rejected"]
+      "description": "Governance review state (canonical ReviewStatus).",
+      "$ref": "review-status.schema.json#/$defs/ReviewStatus"
     },
     "lifecycle_status": {
-      "type": "string",
-      "description": "Lifecycle state of the capsule.",
-      "enum": ["draft", "active", "archived", "retired"]
+      "description": "Lifecycle state of the capsule (canonical LifecycleStatus).",
+      "$ref": "lifecycle-status.schema.json#/$defs/LifecycleStatus"
+    },
+    "capsule_status": {
+      "description": "Resolver-capsule-specific status (ResolverCapsuleStatus). Methodology promotion/activation require governance approval; agents may propose but not approve.",
+      "$ref": "governance-state.schema.json#/$defs/ResolverCapsuleStatus"
     },
     "created_at": {
       "type": "string",

@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://peak.internal/schemas/v1/governance-state.schema.json",
+  "title": "GovernanceState",
+  "description": "Master enum contract collecting all Peak governance state families. Reusable enum/contract definitions, not a stored data instance — no instances are committed to the repo. The three universal axes (authorization_scope, review_status, lifecycle_status) are referenced from their standalone schemas; the five domain-specific families are defined in this file's `$defs`. Other schemas reference the family enums by `$ref`. Storage-agnostic. See docs/GOVERNANCE_STATES.md and docs/STATE_TRANSITIONS.md. AgentNet grounding of governed records is intended future architecture, not implemented.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["authorization_scope", "review_status", "lifecycle_status"],
+  "properties": {
+    "authorization_scope": {
+      "description": "How the record may be used.",
+      "$ref": "authorization-scope.schema.json#/$defs/AuthorizationScope"
+    },
+    "review_status": {
+      "description": "Governance review state.",
+      "$ref": "review-status.schema.json#/$defs/ReviewStatus"
+    },
+    "lifecycle_status": {
+      "description": "Lifecycle state.",
+      "$ref": "lifecycle-status.schema.json#/$defs/LifecycleStatus"
+    },
+    "evidence_status": {
+      "description": "Evidence-specific status (for EvidenceReference records).",
+      "$ref": "#/$defs/EvidenceStatus"
+    },
+    "financial_impact_status": {
+      "description": "Financial-impact-specific status (for FinancialImpactEstimate records).",
+      "$ref": "#/$defs/FinancialImpactStatus"
+    },
+    "resolver_capsule_status": {
+      "description": "Resolver-capsule-specific status (for ResolverCapsuleRecord).",
+      "$ref": "#/$defs/ResolverCapsuleStatus"
+    },
+    "source_system_access_status": {
+      "description": "Access status for a source system (for SourceSystemReference).",
+      "$ref": "#/$defs/SourceSystemAccessStatus"
+    },
+    "client_facing_approval_status": {
+      "description": "Client-facing approval state for any candidate deliverable.",
+      "$ref": "#/$defs/ClientFacingApprovalStatus"
+    }
+  },
+  "$defs": {
+    "EvidenceStatus": {
+      "type": "string",
+      "description": "Status of an EvidenceReference. Distinguishes reported from verified; agents may set up to needs_verification, humans verify.",
+      "enum": [
+        "collected",
+        "source_labeled",
+        "needs_verification",
+        "verified",
+        "disputed",
+        "superseded",
+        "excluded",
+        "archived"
+      ]
+    },
+    "FinancialImpactStatus": {
+      "type": "string",
+      "description": "Status of a FinancialImpactEstimate. Verification and client-facing approval require human/finance review; agents may not reach verified or client_facing_approved.",
+      "enum": [
+        "not_assessed",
+        "reported",
+        "estimated",
+        "calculated",
+        "finance_review_needed",
+        "finance_reviewed",
+        "verified",
+        "rejected",
+        "client_facing_approved"
+      ]
+    },
+    "ResolverCapsuleStatus": {
+      "type": "string",
+      "description": "Status of a ResolverCapsuleRecord. Methodology promotion and activation require governance approval; agents may propose but not approve.",
+      "enum": [
+        "draft_capsule",
+        "private_client_capsule",
+        "reviewed_private",
+        "active_private",
+        "methodology_candidate",
+        "approved_methodology",
+        "superseded",
+        "revoked",
+        "archived"
+      ]
+    },
+    "SourceSystemAccessStatus": {
+      "type": "string",
+      "description": "Access status for a client SourceSystemReference.",
+      "enum": [
+        "not_requested",
+        "requested",
+        "granted",
+        "partial",
+        "denied",
+        "expired",
+        "revoked"
+      ]
+    },
+    "ClientFacingApprovalStatus": {
+      "type": "string",
+      "description": "Client-facing approval state. Only humans may reach approved_for_client; agents may not.",
+      "enum": [
+        "not_client_facing",
+        "client_facing_candidate",
+        "requires_review",
+        "approved_for_client",
+        "rejected_for_client",
+        "withdrawn"
+      ]
+    }
+  }
+}

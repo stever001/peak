@@ -114,7 +114,10 @@ published to / grounded through AgentNet **without explicit Peak governance appr
 
 No output derived from this system may be shared with a client without **explicit human
 review and approval**. See the readiness ladder in
-[`CONSULTANT_WORKFLOW.md`](CONSULTANT_WORKFLOW.md).
+[`CONSULTANT_WORKFLOW.md`](CONSULTANT_WORKFLOW.md) and the governance state gates in
+[`GOVERNANCE_STATES.md`](GOVERNANCE_STATES.md) / [`STATE_TRANSITIONS.md`](STATE_TRANSITIONS.md):
+agent output defaults to `draft`/`needs_review`, and only a human sets
+`client_facing_approved`.
 
 ## 12. AgentNet status
 

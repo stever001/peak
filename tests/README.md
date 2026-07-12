@@ -10,7 +10,7 @@ objects are needed, the harnesses build **synthetic fixtures at runtime**
 directory that is auto-deleted. Nothing is stored. See
 [`../docs/FIXTURE_STRATEGY.md`](../docs/FIXTURE_STRATEGY.md).
 
-Eight harnesses, run together by `make validate`:
+Nine harnesses, run together by `make validate`:
 
 - `validate_phase1.py` — schemas + synthetic object fixtures.
 - `validate_phase2.py` — schemas + a synthetic `EngagementPacket`.
@@ -20,6 +20,7 @@ Eight harnesses, run together by `make validate`:
 - `validate_phase6_docs.py` — consultant-guide doc check (stdlib-only).
 - `validate_phase7_policy.py` — repo-hygiene / data-artifact guard (stdlib-only).
 - `validate_phase8_architecture.py` — controlled-data architecture doc check (stdlib-only).
+- `validate_phase9_governance.py` — governance-state contract check (jsonschema + stdlib).
 
 ## `synthetic_fixtures.py`
 
@@ -107,6 +108,17 @@ source-only phrase in the README, and fails if any file claims AgentNet is *impl
 fine). The Phase 8 architecture-contract schemas are covered by the schema self-check in
 phases 1–2; they carry no fixtures.
 
+## `validate_phase9_governance.py`
+
+Checks the Phase 9 governance-state contracts:
+[`../docs/GOVERNANCE_STATES.md`](../docs/GOVERNANCE_STATES.md) and
+[`../docs/STATE_TRANSITIONS.md`](../docs/STATE_TRANSITIONS.md) exist; the governance
+schemas (`governance-state`, `authorization-scope`, `review-status`, `lifecycle-status`)
+pass `check_schema`; all **eight** state families contain their required enum values; the
+key transition arrows and agent guardrail phrases appear in `STATE_TRANSITIONS.md`; the
+repo stays source-only; and AgentNet is not claimed as implemented. Uses `jsonschema`
+(already a dev dep) plus stdlib.
+
 ## Running
 
 This machine uses `python3` (there is no bare `python`). From the repo root:
@@ -116,7 +128,7 @@ This machine uses `python3` (there is no bare `python`). From the repo root:
 make install-dev          # == python3 -m pip install -r requirements-dev.txt
 
 # run all harnesses
-make validate             # == phase1 … phase8
+make validate             # == phase1 … phase9
 
 # or run one at a time
 make validate-phase1
@@ -127,6 +139,7 @@ make validate-phase5
 make validate-phase6
 make validate-phase7
 make validate-phase8
+make validate-phase9
 ```
 
 Or invoke them directly, without the Makefile:
@@ -140,11 +153,12 @@ python3 tests/validate_phase5_runner.py        # stdlib-only, no dependency need
 python3 tests/validate_phase6_docs.py          # stdlib-only, no dependency needed
 python3 tests/validate_phase7_policy.py        # stdlib-only, no dependency needed
 python3 tests/validate_phase8_architecture.py  # stdlib-only, no dependency needed
+python3 tests/validate_phase9_governance.py    # jsonschema + stdlib
 ```
 
 ## Exit codes
 
-All eight harnesses share the same convention:
+All nine harnesses share the same convention:
 
 | Code | Meaning |
 | --- | --- |

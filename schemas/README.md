@@ -63,6 +63,24 @@ does not build synthetic instances for them (they document controlled-storage sh
 not repo objects). `FinancialImpactEstimate` supports real numbers **only in controlled
 storage during authorized engagement work** — never as committed repo data.
 
+## Scope (Phase 9) — governance state contracts
+
+Phase 9 adds **enum contracts** for governance state (no instances). See
+[`../docs/GOVERNANCE_STATES.md`](../docs/GOVERNANCE_STATES.md) and
+[`../docs/STATE_TRANSITIONS.md`](../docs/STATE_TRANSITIONS.md).
+
+| Schema | Contract | Notes |
+| --- | --- | --- |
+| `governance-state.schema.json` | `GovernanceState` (master) | Collects all 8 families; the five domain families live in its `$defs` |
+| `authorization-scope.schema.json` | `AuthorizationScope` | `$defs.AuthorizationScope` |
+| `review-status.schema.json` | `ReviewStatus` | `$defs.ReviewStatus` + transition metadata |
+| `lifecycle-status.schema.json` | `LifecycleStatus` | `$defs.LifecycleStatus` |
+
+The Phase 8 architecture schemas now **reference these canonical enums** by `$ref`
+(e.g. `review_status` → `review-status.schema.json#/$defs/ReviewStatus`), so the state
+vocabulary has a single source of truth. Resolution is offline via the local registry;
+`check_schema` passes without resolving. No instances are committed.
+
 ## Conventions
 
 - **Draft 2020-12.** Each schema declares `$schema`, a stable `$id`, `title`,

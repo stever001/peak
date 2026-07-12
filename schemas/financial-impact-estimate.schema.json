@@ -67,9 +67,12 @@
       "enum": ["unverified", "reported", "verified"]
     },
     "review_status": {
-      "type": "string",
-      "description": "Governance review state of this estimate.",
-      "enum": ["draft", "in_review", "reviewed", "approved", "rejected"]
+      "description": "Governance review state of this estimate (canonical ReviewStatus).",
+      "$ref": "review-status.schema.json#/$defs/ReviewStatus"
+    },
+    "impact_status": {
+      "description": "Financial-impact-specific status (FinancialImpactStatus). Agents may not reach verified or client_facing_approved.",
+      "$ref": "governance-state.schema.json#/$defs/FinancialImpactStatus"
     },
     "client_facing_approved": {
       "type": "boolean",

@@ -79,3 +79,14 @@ The controlled data layer is described by architecture-contract schemas (shapes 
 See [`ENGAGEMENT_DATA_MODEL.md`](ENGAGEMENT_DATA_MODEL.md) for the full model. These are
 **architecture models, not a database migration** — no DB vendor is chosen and no SQL is
 written.
+
+## Governance states
+
+Every record in controlled storage carries governance state (authorization, review,
+lifecycle, plus domain-specific status) that gates how it may be used and who may advance
+it. The allowed states and transitions are defined in
+[`GOVERNANCE_STATES.md`](GOVERNANCE_STATES.md) and
+[`STATE_TRANSITIONS.md`](STATE_TRANSITIONS.md), with enum contracts in
+[`../schemas/governance-state.schema.json`](../schemas/governance-state.schema.json).
+Agent/AI workflows must default their output to `draft`/`needs_review` and may never set
+`client_facing_approved` — human review gates are preserved by contract.

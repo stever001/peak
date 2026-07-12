@@ -64,6 +64,8 @@ peak/
 │   ├── RESOLVER_CAPSULE_ARCHITECTURE.md  # Private resolver capsules (intended future)
 │   ├── ENGAGEMENT_DATA_MODEL.md          # Controlled-storage data model (architecture)
 │   ├── SOURCE_SYSTEM_CAPSULIZATION.md    # Source→capsule path (intended future)
+│   ├── GOVERNANCE_STATES.md              # Authorization/review/lifecycle state families
+│   ├── STATE_TRANSITIONS.md              # Allowed transitions + agent guardrails
 │   └── IMPLEMENTATION_PLAN.md
 ├── agents/                       # One folder per agent capability group
 │   ├── intake/                   # New client intake
@@ -153,6 +155,20 @@ API, resolver, ingestion pipeline, or AgentNet integration is implemented.
 Architecture-contract schemas (shapes only, no committed instances):
 `engagement-record`, `financial-impact-estimate`, `source-system-reference`,
 `resolver-capsule-record`.
+
+## Governance states (authorization, review, lifecycle)
+
+Governance state families define the allowed statuses, transitions, and human-review
+gates for engagement records, evidence, financial estimates, resolver capsules, source
+systems, and client-facing approval — so future agents create drafts, label evidence,
+distinguish reported vs. verified, and never approve client-facing output on their own.
+Enum contracts only; no stored data.
+
+- [`docs/GOVERNANCE_STATES.md`](docs/GOVERNANCE_STATES.md) — the eight state families.
+- [`docs/STATE_TRANSITIONS.md`](docs/STATE_TRANSITIONS.md) — allowed transitions and
+  agent guardrails.
+- Schemas: `governance-state` (master), `authorization-scope`, `review-status`,
+  `lifecycle-status`.
 
 ## AgentNet grounding (intended architecture)
 

@@ -199,6 +199,17 @@ through controlled access paths. See
 [`RESOLVER_CAPSULE_ARCHITECTURE.md`](RESOLVER_CAPSULE_ARCHITECTURE.md) — all architecture
 only, not implemented.
 
+## Governance states & agent guardrails
+
+Every record agents touch carries governance state (see
+[`GOVERNANCE_STATES.md`](GOVERNANCE_STATES.md) and
+[`STATE_TRANSITIONS.md`](STATE_TRANSITIONS.md)). Future agents must respect the gates:
+agent output **defaults to `draft`/`needs_review`** (and `not_client_facing`); agents may
+**not** set `client_facing_approved`, may **not** verify financial impact without human
+review, and may **not** publish or approve resolver capsules — they may only *propose*
+methodology candidates. These are contract-level rules, enforced by human review until
+any runtime exists.
+
 ## Cross-cutting rules
 
 - **Evidence-first:** every finding, risk, quick win, and recommendation links to

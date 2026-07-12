@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://peak.internal/schemas/v1/review-status.schema.json",
+  "title": "ReviewStatus",
+  "description": "Enum contract for the governance review status of a record, plus transition metadata. Reusable enum contract, not a stored data instance — no instances are committed to the repo. Storage-agnostic; other schemas reference `#/$defs/ReviewStatus`. See docs/GOVERNANCE_STATES.md and docs/STATE_TRANSITIONS.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["review_status"],
+  "properties": {
+    "review_status": {
+      "description": "The current review status value.",
+      "$ref": "#/$defs/ReviewStatus"
+    },
+    "previous_status": {
+      "description": "The prior review status, for transition tracking.",
+      "$ref": "#/$defs/ReviewStatus"
+    },
+    "reason": {
+      "type": "string",
+      "description": "Reason for the current status (required in practice for `rejected`, `superseded`, `archived`)."
+    },
+    "reviewed_by": {
+      "type": "string",
+      "description": "Anonymized actor who set the status. Human review is required to reach reviewed/approved states."
+    },
+    "reviewed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 timestamp of the review action."
+    }
+  },
+  "$defs": {
+    "ReviewStatus": {
+      "type": "string",
+      "description": "Allowed review status values. Agent-generated records must default to `draft` or `needs_review`; only humans may reach `consultant_reviewed` and beyond.",
+      "enum": [
+        "draft",
+        "needs_review",
+        "consultant_reviewed",
+        "qa_reviewed",
+        "approved_internal",
+        "client_facing_approved",
+        "rejected",
+        "superseded",
+        "archived"
+      ]
+    }
+  }
+}

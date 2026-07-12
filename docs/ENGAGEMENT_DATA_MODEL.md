@@ -41,8 +41,12 @@ Client 1───* Engagement 1───* EngagementPacket
                  └───* ResolverCapsuleRecord  ◄┘  (grounded on sources + evidence)
 ```
 
-`ReviewStatus` is a cross-cutting state (draft → in_review → reviewed → approved) that
-findings, estimates, capsules, and records carry through governance.
+`ReviewStatus` is a cross-cutting governance state that findings, estimates, capsules,
+and records carry. The full state families (authorization, review, lifecycle, evidence,
+financial impact, resolver capsule, source-system access, client-facing approval) and
+their transitions are defined in [`GOVERNANCE_STATES.md`](GOVERNANCE_STATES.md) and
+[`STATE_TRANSITIONS.md`](STATE_TRANSITIONS.md); the Phase 8 schemas reference the
+canonical enums from [`../schemas/governance-state.schema.json`](../schemas/governance-state.schema.json).
 
 ## FinancialImpactEstimate
 
@@ -64,6 +68,11 @@ Rules for financial data:
 - **No invented ROI.** Do not fabricate or extrapolate impact.
 - **No financial numbers in repo examples.** The repo commits no instances and no real
   figures.
+- **Governed by `FinancialImpactStatus`** (`not_assessed` → `reported` → `estimated` →
+  `calculated` → `finance_review_needed` → `finance_reviewed` → `verified` →
+  `client_facing_approved`). Agents may reach at most `calculated`/`finance_review_needed`;
+  `verified` and `client_facing_approved` require finance/human review. See
+  [`STATE_TRANSITIONS.md`](STATE_TRANSITIONS.md).
 
 ## Not in scope here
 

@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://peak.internal/schemas/v1/authorization-scope.schema.json",
+  "title": "AuthorizationScope",
+  "description": "Enum contract for the authorization scope that governs how a record may be used. This is a reusable enum contract, not a stored data instance — no instances are committed to the repo. Storage-agnostic; other schemas reference `#/$defs/AuthorizationScope`. See docs/GOVERNANCE_STATES.md and docs/STATE_TRANSITIONS.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["authorization_scope"],
+  "properties": {
+    "authorization_scope": {
+      "description": "The authorization scope value.",
+      "$ref": "#/$defs/AuthorizationScope"
+    },
+    "reason": {
+      "type": "string",
+      "description": "Optional reason/justification for the current scope (e.g. why revoked)."
+    },
+    "set_by": {
+      "type": "string",
+      "description": "Anonymized actor who set the scope."
+    },
+    "set_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 timestamp the scope was set."
+    }
+  },
+  "$defs": {
+    "AuthorizationScope": {
+      "type": "string",
+      "description": "Allowed authorization scope values.",
+      "enum": [
+        "engagement_authorized",
+        "internal_peak_only",
+        "client_private",
+        "client_facing_candidate",
+        "client_facing_approved",
+        "methodology_candidate",
+        "peak_methodology",
+        "fixture_test",
+        "revoked"
+      ]
+    }
+  }
+}

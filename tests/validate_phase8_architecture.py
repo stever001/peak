@@ -74,7 +74,11 @@ SOURCE_ONLY_MARKER = ("README.md", "source assets only")
 # future AgentNet integration phase is fine; asserting it is done/live/integrated is not.
 SCAN_ROOTS = ["README.md", "docs", "schemas", "tools", "tests", "prompts"]
 SCAN_EXTS = (".md", ".py", ".json")
-SCAN_SKIP = {os.path.abspath(__file__)}
+SCAN_SKIP = {
+    os.path.abspath(__file__),
+    # Sibling guard that legitimately contains the over-claim phrases to detect them.
+    os.path.abspath(os.path.join(REPO_ROOT, "tests", "validate_phase9_governance.py")),
+}
 AGENTNET_OVERCLAIM_PHRASES = (
     "agentnet is integrated",
     "agentnet integration is complete",

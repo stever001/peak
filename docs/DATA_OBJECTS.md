@@ -32,6 +32,14 @@ including the still-candidate `ControlGap`, `OperationalRisk`, `QuickWin`, and
 `Recommendation` — is described in
 [`ENGAGEMENT_DATA_MODEL.md`](ENGAGEMENT_DATA_MODEL.md).
 
+Phase 9 adds **governance state contracts** (enum contracts, no instances):
+`AuthorizationScope`, `ReviewStatus`, `LifecycleStatus`, and the domain families
+(`EvidenceStatus`, `FinancialImpactStatus`, `ResolverCapsuleStatus`,
+`SourceSystemAccessStatus`, `ClientFacingApprovalStatus`) — see
+[`GOVERNANCE_STATES.md`](GOVERNANCE_STATES.md) and
+[`STATE_TRANSITIONS.md`](STATE_TRANSITIONS.md). These define the human-review gates every
+governed record carries.
+
 ## Object relationship overview
 
 ```

@@ -54,6 +54,16 @@ Every capsule record carries:
 Grounding is **traceable by construction**: a capsule points back to the sources and
 evidence it was built from.
 
+## Capsule lifecycle & governance states
+
+A capsule moves through the `ResolverCapsuleStatus` family — `draft_capsule` →
+`private_client_capsule` → `reviewed_private` → `active_private`, with promotion to
+`methodology_candidate` (only after abstraction + human review) and `approved_methodology`
+(only after governance approval), plus `superseded`/`revoked`/`archived`. Agents may
+create drafts and *propose* methodology candidates but may not activate, approve,
+publish, or promote. See [`GOVERNANCE_STATES.md`](GOVERNANCE_STATES.md) §F and the
+transitions in [`STATE_TRANSITIONS.md`](STATE_TRANSITIONS.md).
+
 ## AgentNet / resolver integration status
 
 AgentNet and the resolver integration are **intended future architecture**. Nothing in

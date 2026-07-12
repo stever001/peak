@@ -57,9 +57,12 @@
       "items": { "type": "string", "pattern": "^evid_[A-Za-z0-9][A-Za-z0-9_-]*$" }
     },
     "review_status": {
-      "type": "string",
-      "description": "Governance review state.",
-      "enum": ["draft", "in_review", "reviewed", "approved", "rejected"]
+      "description": "Governance review state (canonical ReviewStatus).",
+      "$ref": "review-status.schema.json#/$defs/ReviewStatus"
+    },
+    "access_status": {
+      "description": "Access status for this source system (SourceSystemAccessStatus).",
+      "$ref": "governance-state.schema.json#/$defs/SourceSystemAccessStatus"
     },
     "notes": {
       "type": "string",
