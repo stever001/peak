@@ -4,12 +4,12 @@
 
 PYTHON ?= python3
 
-.PHONY: help validate validate-phase1 validate-phase2 validate-phase3 validate-phase4 validate-phase5 validate-phase6 validate-phase7 validate-phase8 validate-phase9 validate-phase10 packet-summary install-dev
+.PHONY: help validate validate-phase1 validate-phase2 validate-phase3 validate-phase4 validate-phase5 validate-phase6 validate-phase7 validate-phase8 validate-phase9 validate-phase10 validate-phase11 db-check packet-summary install-dev
 
 help: ## Show available targets
 	@echo "Targets:"
 	@echo "  make install-dev        Install dev dependencies ($(PYTHON) -m pip install -r requirements-dev.txt)"
-	@echo "  make validate           Run all validation harnesses (Phase 1 through Phase 10)"
+	@echo "  make validate           Run all validation harnesses (Phase 1 through Phase 11)"
 	@echo "  make validate-phase1    Run only the Phase 1 object harness"
 	@echo "  make validate-phase2    Run only the Phase 2 EngagementPacket harness"
 	@echo "  make validate-phase3    Run only the Phase 3 prompt-contract inventory check"
@@ -20,12 +20,14 @@ help: ## Show available targets
 	@echo "  make validate-phase8    Run only the Phase 8 controlled-data architecture doc check"
 	@echo "  make validate-phase9    Run only the Phase 9 governance-state contract check"
 	@echo "  make validate-phase10   Run only the Phase 10 database-plan doc check"
+	@echo "  make validate-phase11   Run only the Phase 11 database-scaffold check"
+	@echo "  make db-check           Alias for the Phase 11 database-scaffold check"
 	@echo "  make packet-summary PACKET=/path/to/packet.json   Summarize a real packet (read-only; no LLM/API)"
 
 install-dev: ## Install development dependencies
 	$(PYTHON) -m pip install -r requirements-dev.txt
 
-validate: validate-phase1 validate-phase2 validate-phase3 validate-phase4 validate-phase5 validate-phase6 validate-phase7 validate-phase8 validate-phase9 validate-phase10 ## Run all validation harnesses
+validate: validate-phase1 validate-phase2 validate-phase3 validate-phase4 validate-phase5 validate-phase6 validate-phase7 validate-phase8 validate-phase9 validate-phase10 validate-phase11 ## Run all validation harnesses
 
 validate-phase1: ## Run the Phase 1 schema/example validation harness
 	$(PYTHON) tests/validate_phase1.py
@@ -56,6 +58,12 @@ validate-phase9: ## Run the Phase 9 governance-state contract check
 
 validate-phase10: ## Run the Phase 10 database-plan doc check (stdlib-only)
 	$(PYTHON) tests/validate_phase10_database_plan.py
+
+validate-phase11: ## Run the Phase 11 database-scaffold check (stdlib-only)
+	$(PYTHON) tests/validate_phase11_db_scaffold.py
+
+db-check: ## Validate the DB scaffold (alias for validate-phase11)
+	$(PYTHON) tests/validate_phase11_db_scaffold.py
 
 packet-summary: ## Summarize a real packet: make packet-summary PACKET=/path/to/packet.json
 	@if [ -z "$(PACKET)" ]; then \

@@ -228,6 +228,19 @@ and documentation accurately states integration status.
   ingestion code. Checked by
   [`../tests/validate_phase10_database_plan.py`](../tests/validate_phase10_database_plan.py).
 
+**Controlled database scaffold (Phase 11 — source assets only):**
+
+- [x] MySQL chosen as the controlled engagement database; Python tooling layer is
+  SQLAlchemy + Alembic + PyMySQL. Added [`../peak/db/`](../peak/db/) (base, enums,
+  models, session), [`../alembic/`](../alembic/) with an initial migration that defines
+  **schema only** (no inserts, no data), `.env.example` (placeholders), and
+  [`DATABASE_SCAFFOLD.md`](DATABASE_SCAFFOLD.md). Enum values mirror the Phase 9 schema
+  contracts (the source of truth). **No client data, seed data, fixtures, dumps, DB
+  files, or credentials** are committed; `.env` is gitignored. Checked by
+  [`../tests/validate_phase11_db_scaffold.py`](../tests/validate_phase11_db_scaffold.py)
+  (`make db-check`). Local scaffold only — no production deployment, API, resolver,
+  ingestion, agent runtime, or AgentNet integration.
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

@@ -70,6 +70,7 @@ SCAN_SKIP = {
     os.path.abspath(os.path.join(REPO_ROOT, "tests", "validate_phase8_architecture.py")),
     os.path.abspath(os.path.join(REPO_ROOT, "tests", "validate_phase9_governance.py")),
     os.path.abspath(os.path.join(REPO_ROOT, "tests", "validate_phase10_database_plan.py")),
+    os.path.abspath(os.path.join(REPO_ROOT, "tests", "validate_phase11_db_scaffold.py")),
     os.path.abspath(os.path.join(REPO_ROOT, "docs", "DATA_HANDLING_POLICY.md")),
     os.path.abspath(os.path.join(REPO_ROOT, "docs", "FIXTURE_STRATEGY.md")),
 }

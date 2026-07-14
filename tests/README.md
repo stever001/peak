@@ -10,7 +10,7 @@ objects are needed, the harnesses build **synthetic fixtures at runtime**
 directory that is auto-deleted. Nothing is stored. See
 [`../docs/FIXTURE_STRATEGY.md`](../docs/FIXTURE_STRATEGY.md).
 
-Ten harnesses, run together by `make validate`:
+Eleven harnesses, run together by `make validate`:
 
 - `validate_phase1.py` — schemas + synthetic object fixtures.
 - `validate_phase2.py` — schemas + a synthetic `EngagementPacket`.
@@ -22,6 +22,7 @@ Ten harnesses, run together by `make validate`:
 - `validate_phase8_architecture.py` — controlled-data architecture doc check (stdlib-only).
 - `validate_phase9_governance.py` — governance-state contract check (jsonschema + stdlib).
 - `validate_phase10_database_plan.py` — database-plan doc check (stdlib-only).
+- `validate_phase11_db_scaffold.py` — MySQL DB-scaffold check (stdlib-only; `make db-check`).
 
 ## `synthetic_fixtures.py`
 
@@ -129,7 +130,20 @@ phrases are present (source-only, controlled database, private resolver capsules
 public-but-segregated, private resolver option, no client data in Git, human review
 gates, agent permission limits); the repo stays source-only **with no DB implementation**
 (no `*.sql`/`*.db`, no `migrations/`, no DB config files); and AgentNet is not claimed as
-implemented. Stdlib-only.
+implemented. Stdlib-only. (Note: `alembic.ini` is an allowed Phase 11 source asset and is
+not treated as a forbidden DB config.)
+
+## `validate_phase11_db_scaffold.py` (`make db-check`)
+
+Structural check for the Phase 11 MySQL scaffold: the `peak/db/` package (base, enums,
+models, session), `alembic.ini` + `alembic/env.py` + the initial migration, `.env.example`,
+`requirements.txt`, and `docs/DATABASE_SCAFFOLD.md` all exist; `.env` is gitignored and
+untracked while `.env.example` is allowed; there is **no stored data, no database file, no
+seed/`INSERT` in migrations, and no obvious committed credential**; the `peak/db/enums.py`
+values stay aligned to the Phase 9 schema enums; MySQL is documented; and AgentNet is not
+claimed as implemented. If SQLAlchemy is installed it additionally imports the models and
+checks all 11 tables are defined; if not, that step is skipped (structural check still
+runs). Stdlib-only.
 
 ## Running
 
@@ -140,7 +154,7 @@ This machine uses `python3` (there is no bare `python`). From the repo root:
 make install-dev          # == python3 -m pip install -r requirements-dev.txt
 
 # run all harnesses
-make validate             # == phase1 … phase10
+make validate             # == phase1 … phase11
 
 # or run one at a time
 make validate-phase1
@@ -153,6 +167,7 @@ make validate-phase7
 make validate-phase8
 make validate-phase9
 make validate-phase10
+make validate-phase11   # == make db-check
 ```
 
 Or invoke them directly, without the Makefile:
@@ -168,11 +183,12 @@ python3 tests/validate_phase7_policy.py        # stdlib-only, no dependency need
 python3 tests/validate_phase8_architecture.py  # stdlib-only, no dependency needed
 python3 tests/validate_phase9_governance.py    # jsonschema + stdlib
 python3 tests/validate_phase10_database_plan.py # stdlib-only, no dependency needed
+python3 tests/validate_phase11_db_scaffold.py   # stdlib-only, no dependency needed
 ```
 
 ## Exit codes
 
-All ten harnesses share the same convention:
+All eleven harnesses share the same convention:
 
 | Code | Meaning |
 | --- | --- |

@@ -62,8 +62,10 @@ REQUIRED_PHRASES = [
 # Source-only / no-artifact discipline.
 FORBIDDEN_PATHS = ["examples", "docs/REDACTION_GUIDE.md"]
 # Database implementation must not appear this phase.
+# Note: alembic.ini is an allowed source asset from Phase 11 (Alembic migration config,
+# no data/credentials — the URL comes from the environment), so it is NOT forbidden.
 DB_CONFIG_NAMES = {
-    "alembic.ini", "database.yml", "database.yaml", "knexfile.js", "ormconfig.json",
+    "database.yml", "database.yaml", "knexfile.js", "ormconfig.json",
     "my.cnf", "postgresql.conf", "schema.prisma", "sequelize.config.js",
 }
 DB_FILE_EXTS = (".sql", ".sqlite", ".sqlite3", ".db")

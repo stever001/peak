@@ -33,11 +33,13 @@ are never committed. See [`DATA_HANDLING_POLICY.md`](DATA_HANDLING_POLICY.md) an
 
 ## 3. No vendor choice yet, no SQL yet
 
-- **No DB vendor is chosen in this phase.** The record model
-  ([`DATABASE_RECORD_MODEL.md`](DATABASE_RECORD_MODEL.md)) is storage-agnostic; a vendor
-  is selected only when justified by the minimal-scaffold phase, against real
-  requirements (governance-state support, access control, auditability, capsule mapping).
-- **No SQL, DDL, or migrations** are written in this phase. No database config files.
+- **Vendor decision (as of Phase 11): MySQL.** The controlled engagement database is
+  **MySQL** (InnoDB/utf8mb4); the Python tooling layer is **SQLAlchemy + Alembic +
+  PyMySQL**. Not SQLite; not PostgreSQL (unless later justified). The Phase 10 record
+  model remains storage-agnostic in concept; Phase 11 realizes it against MySQL.
+- **Phase 10 itself writes no SQL/DDL/migrations.** From **Phase 11**, migrations are
+  source assets that define **schema structure only** (no data) — see
+  [`DATABASE_SCAFFOLD.md`](DATABASE_SCAFFOLD.md).
 
 ## 4. Relationships
 
@@ -66,7 +68,7 @@ Each stage is a separate future phase; only **Phase 10 (this document)** is deli
 | Phase | Deliverable | Notes |
 | --- | --- | --- |
 | **Phase 10** | **Database plan** (this doc set) | Architecture/planning only; no code, no vendor. |
-| **Phase 11** | Minimal local database scaffold | A local, disposable dev scaffold to exercise the record model — **no client data**, synthetic fixtures only, not committed. Vendor chosen here if justified. |
+| **Phase 11** | **Minimal local database scaffold** (done) | MySQL chosen; SQLAlchemy models, enum contracts, and Alembic migration (**schema only, no data**). Source assets only — see [`DATABASE_SCAFFOLD.md`](DATABASE_SCAFFOLD.md). |
 | **Phase 12** | Resolver/capsule adapter scaffold | An adapter shape that maps eligible records to `ResolverCapsuleRecord` candidates under governance — no live resolver, no publication. |
 | **Phase 13** | Agent execution harness | A guarded harness where agents draft records under the permission limits — no autonomous client-facing action. |
 | **Later** | Controlled ingestion from client source systems | Capsulization of ERP/WMS/reports/telemetry/logs under authorization — see [`SOURCE_SYSTEM_CAPSULIZATION.md`](SOURCE_SYSTEM_CAPSULIZATION.md). |

@@ -39,7 +39,9 @@ grounding is **intended future architecture, not implemented**.
 
 These make every record **traceable**: who created/changed it, from what sources and
 evidence, under what authorization, in what review/lifecycle state, and (if applicable)
-which agent run produced it.
+which agent run produced it. As of Phase 11 these audit and governance fields are **real
+columns** on the SQLAlchemy models ([`../peak/db/base.py`](../peak/db/base.py)),
+never hidden inside `details_json`.
 
 ## Human review gates
 

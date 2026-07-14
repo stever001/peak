@@ -70,7 +70,13 @@ peak/
 │   ├── DATABASE_RECORD_MODEL.md          # Planned record groups (no data)
 │   ├── DATABASE_ACCESS_AND_AUDIT.md      # Access roles, audit fields, agent limits
 │   ├── DATABASE_TO_RESOLVER_MAPPING.md   # DB records → resolver capsules (planning)
+│   ├── DATABASE_SCAFFOLD.md              # MySQL scaffold: models, enums, migration
 │   └── IMPLEMENTATION_PLAN.md
+├── peak/                         # Python tooling layer (SQLAlchemy models; no data)
+│   └── db/                       # base, enums, models, session (MySQL)
+├── alembic/                      # Alembic migrations (schema only; no data)
+├── alembic.ini                   # Alembic config (URL from env, not the repo)
+├── .env.example                  # Env placeholders only (PEAK_DATABASE_URL); .env ignored
 ├── agents/                       # One folder per agent capability group
 │   ├── intake/                   # New client intake
 │   ├── discovery/                # Assessment planning, interviews, walk-around
@@ -191,6 +197,21 @@ API, or resolver code**; the repo stays source-only and client data never enters
 - [`docs/DATABASE_TO_RESOLVER_MAPPING.md`](docs/DATABASE_TO_RESOLVER_MAPPING.md) — how
   records become resolver-capsule candidates; **public-but-segregated** (governed, not
   public disclosure) and **private resolver** options.
+
+### Scaffold (Phase 11)
+
+The controlled database targets **MySQL**, with a Python tooling layer (**SQLAlchemy +
+Alembic + PyMySQL**). Phase 11 adds **source assets only** — models, enum contracts, and
+an Alembic migration that defines **schema structure only**. **No data, no credentials,
+no database files** are committed; the connection URL comes from `PEAK_DATABASE_URL`
+(see `.env.example`). See [`docs/DATABASE_SCAFFOLD.md`](docs/DATABASE_SCAFFOLD.md).
+
+```bash
+make db-check                              # validate the scaffold (structural; stdlib-only)
+python3 -m pip install -r requirements.txt # SQLAlchemy/alembic/PyMySQL (to run migrations)
+cp .env.example .env                       # then set a real PEAK_DATABASE_URL (never committed)
+alembic upgrade head                       # create schema in a real MySQL (no data)
+```
 
 ## AgentNet grounding (intended architecture)
 

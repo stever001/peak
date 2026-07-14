@@ -1,10 +1,12 @@
 # Database Record Model
 
-Planned record groups for Peak's controlled engagement database. **Planning only — no
-database, schema migration, or stored data is created, and no actual records exist.**
-Records live in controlled storage, **never in Git**. Shapes reuse the architecture
-contracts in [`../schemas/`](../schemas/) and the governance states in
-[`GOVERNANCE_STATES.md`](GOVERNANCE_STATES.md). AgentNet grounding is **intended future
+Planned record groups for Peak's controlled engagement database. **No stored data —
+records live in controlled MySQL storage, never in Git, and no actual records exist.**
+Shapes reuse the architecture contracts in [`../schemas/`](../schemas/) and the governance
+states in [`GOVERNANCE_STATES.md`](GOVERNANCE_STATES.md). As of **Phase 11**, the core
+groups are realized as **SQLAlchemy models** ([`../peak/db/models.py`](../peak/db/models.py))
+with an Alembic migration that defines **schema only** — see
+[`DATABASE_SCAFFOLD.md`](DATABASE_SCAFFOLD.md). AgentNet grounding is **intended future
 architecture, not implemented**.
 
 Legend for each group:

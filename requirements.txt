@@ -1,0 +1,14 @@
+# Runtime dependencies for Peak's controlled-database tooling layer (MySQL).
+# These are needed to run migrations and use the SQLAlchemy models — NOT to run the
+# source-only validation harnesses (see requirements-dev.txt). Installing them does not
+# create or store any data.
+#
+# Install with:
+#     python3 -m pip install -r requirements.txt
+#
+# A running MySQL server and a PEAK_DATABASE_URL (see .env.example) are required to
+# actually apply migrations; none of that lives in this repo.
+
+SQLAlchemy>=2.0
+alembic>=1.13
+PyMySQL>=1.1

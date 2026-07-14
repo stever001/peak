@@ -6,9 +6,18 @@
 .idea/
 .vscode/
 
-# Environment
+# Environment — never commit real credentials. .env.example (placeholders) is allowed.
 .env
 .env.*
+!.env.example
+
+# Databases / dumps — never commit data (see docs/DATABASE_SCAFFOLD.md)
+*.db
+*.sqlite
+*.sqlite3
+*.sql
+dumps/
+backups/
 
 # Generated / local data — never commit data artifacts (see docs/FIXTURE_STRATEGY.md)
 .generated/
