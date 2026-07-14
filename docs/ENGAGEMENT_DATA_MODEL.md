@@ -77,5 +77,9 @@ Rules for financial data:
 ## Not in scope here
 
 This is a conceptual/architecture model. It intentionally does **not**: pick a database,
-define SQL/DDL, specify indexes, or store any data. Implementation is future work under
+define SQL/DDL, specify indexes, or store any data. The staged plan for the controlled
+database that realizes this model is in
+[`DATABASE_IMPLEMENTATION_PLAN.md`](DATABASE_IMPLEMENTATION_PLAN.md); the planned record
+groups (with governance states and capsule-readiness) are in
+[`DATABASE_RECORD_MODEL.md`](DATABASE_RECORD_MODEL.md). Implementation is future work under
 [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md).

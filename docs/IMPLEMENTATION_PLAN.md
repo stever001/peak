@@ -213,6 +213,21 @@ and documentation accurately states integration status.
   may never set `client_facing_approved`. Checked by
   [`../tests/validate_phase9_governance.py`](../tests/validate_phase9_governance.py).
 
+**Controlled database plan defined (groundwork — docs only):**
+
+- [x] The staged plan for the controlled engagement database is documented:
+  [`DATABASE_IMPLEMENTATION_PLAN.md`](DATABASE_IMPLEMENTATION_PLAN.md) (Phase 10 plan →
+  11 minimal scaffold → 12 resolver/capsule adapter → 13 agent harness → later controlled
+  ingestion; no vendor/SQL yet), [`DATABASE_RECORD_MODEL.md`](DATABASE_RECORD_MODEL.md)
+  (planned record groups), [`DATABASE_ACCESS_AND_AUDIT.md`](DATABASE_ACCESS_AND_AUDIT.md)
+  (roles, audit fields, agent permission limits), and
+  [`DATABASE_TO_RESOLVER_MAPPING.md`](DATABASE_TO_RESOLVER_MAPPING.md) (capsule readiness;
+  public-but-segregated vs. private resolver). The database is a **pre-capsulization
+  staging layer** serving immediate consulting delivery and future AI-readiness in
+  parallel. **Planning only** — no database, migrations, DB config, API, resolver, or
+  ingestion code. Checked by
+  [`../tests/validate_phase10_database_plan.py`](../tests/validate_phase10_database_plan.py).
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

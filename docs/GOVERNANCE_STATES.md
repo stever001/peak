@@ -115,4 +115,6 @@ Every governed record carries at least the three universal axes — `authorizati
 `review_status`, `lifecycle_status` — plus its domain-specific family where applicable.
 Agent-generated output defaults to the safest state (`draft` / `needs_review` /
 `not_client_facing`) and advances only through the gates in
-[`STATE_TRANSITIONS.md`](STATE_TRANSITIONS.md).
+[`STATE_TRANSITIONS.md`](STATE_TRANSITIONS.md). How these states are carried, scoped, and
+audited on controlled-database records is described in
+[`DATABASE_ACCESS_AND_AUDIT.md`](DATABASE_ACCESS_AND_AUDIT.md).

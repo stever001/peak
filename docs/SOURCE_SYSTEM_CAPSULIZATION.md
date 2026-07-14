@@ -56,4 +56,7 @@ Capsulization, resolver, and AgentNet grounding are **intended future architectu
 implemented**. Nothing in this repository ingests, capsulizes, stores, or grounds any
 source material. Client source data is handled only in controlled engagement storage
 under authorization (see [`DATA_HANDLING_POLICY.md`](DATA_HANDLING_POLICY.md) and
-[`CONTROLLED_DATA_ARCHITECTURE.md`](CONTROLLED_DATA_ARCHITECTURE.md)).
+[`CONTROLLED_DATA_ARCHITECTURE.md`](CONTROLLED_DATA_ARCHITECTURE.md)). Controlled
+ingestion from client source systems is a **later** stage of the database plan (see
+[`DATABASE_IMPLEMENTATION_PLAN.md`](DATABASE_IMPLEMENTATION_PLAN.md)), tracked by a
+`SourceIngestionRecord` ([`DATABASE_RECORD_MODEL.md`](DATABASE_RECORD_MODEL.md)).

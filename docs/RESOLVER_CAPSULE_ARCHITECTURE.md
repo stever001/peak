@@ -64,6 +64,15 @@ create drafts and *propose* methodology candidates but may not activate, approve
 publish, or promote. See [`GOVERNANCE_STATES.md`](GOVERNANCE_STATES.md) §F and the
 transitions in [`STATE_TRANSITIONS.md`](STATE_TRANSITIONS.md).
 
+## From controlled database to capsules
+
+Capsules are prepared from records in the controlled engagement database once they meet
+readiness criteria (evidence-linked, source-labeled, approved, scoped). The mapping,
+readiness checklist, and publication options (**public-but-segregated** — governed, not
+public disclosure — and **private resolver**) are in
+[`DATABASE_TO_RESOLVER_MAPPING.md`](DATABASE_TO_RESOLVER_MAPPING.md). No publication is
+implemented.
+
 ## AgentNet / resolver integration status
 
 AgentNet and the resolver integration are **intended future architecture**. Nothing in

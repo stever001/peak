@@ -78,6 +78,7 @@ SCAN_SKIP = {
     os.path.abspath(__file__),
     # Sibling guard that legitimately contains the over-claim phrases to detect them.
     os.path.abspath(os.path.join(REPO_ROOT, "tests", "validate_phase9_governance.py")),
+    os.path.abspath(os.path.join(REPO_ROOT, "tests", "validate_phase10_database_plan.py")),
 }
 AGENTNET_OVERCLAIM_PHRASES = (
     "agentnet is integrated",

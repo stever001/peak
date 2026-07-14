@@ -97,6 +97,7 @@ SCAN_ROOTS = ["README.md", "docs", "schemas", "tools", "tests", "prompts"]
 SCAN_SKIP = {
     os.path.abspath(__file__),
     os.path.abspath(os.path.join(REPO_ROOT, "tests", "validate_phase8_architecture.py")),
+    os.path.abspath(os.path.join(REPO_ROOT, "tests", "validate_phase10_database_plan.py")),
 }
 
 PASS, FAIL = "PASS", "FAIL"

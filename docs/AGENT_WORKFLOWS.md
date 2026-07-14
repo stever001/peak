@@ -208,7 +208,9 @@ agent output **defaults to `draft`/`needs_review`** (and `not_client_facing`); a
 **not** set `client_facing_approved`, may **not** verify financial impact without human
 review, and may **not** publish or approve resolver capsules — they may only *propose*
 methodology candidates. These are contract-level rules, enforced by human review until
-any runtime exists.
+any runtime exists; the access roles, audit fields, and agent permission limits for the
+future controlled database are in
+[`DATABASE_ACCESS_AND_AUDIT.md`](DATABASE_ACCESS_AND_AUDIT.md).
 
 ## Cross-cutting rules
 

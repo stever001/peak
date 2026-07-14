@@ -5,6 +5,18 @@ How Peak stores and grounds real engagement data **outside** this repository. Th
 is implemented here. AgentNet grounding/resolution is **intended future architecture,
 not implemented**.
 
+## Dual role & AI-readiness
+
+Peak has a dual role in every engagement: (1) use AI **internally** to assess and
+recommend improvements to the client's current inventory/warehouse operations, and (2)
+progressively refine messy client data, workflows, evidence, and operational knowledge so
+the client becomes **ready for capsulization** and eventual **AgentNet-based agentic AI
+operations**. These are **parallel goals** — each engagement phase should produce
+immediate consulting value *and* prepare the client for the next phase. The controlled
+database (see [`DATABASE_IMPLEMENTATION_PLAN.md`](DATABASE_IMPLEMENTATION_PLAN.md)) is a
+**pre-capsulization staging layer** designed to support both. AgentNet remains intended
+future architecture, not implemented.
+
 ## Principles
 
 - **The repo is source-only.** It contains source assets only: docs, schemas, prompt
@@ -78,7 +90,11 @@ The controlled data layer is described by architecture-contract schemas (shapes 
 
 See [`ENGAGEMENT_DATA_MODEL.md`](ENGAGEMENT_DATA_MODEL.md) for the full model. These are
 **architecture models, not a database migration** — no DB vendor is chosen and no SQL is
-written.
+written. The staged plan for standing up the controlled database is in
+[`DATABASE_IMPLEMENTATION_PLAN.md`](DATABASE_IMPLEMENTATION_PLAN.md), with the record
+groups in [`DATABASE_RECORD_MODEL.md`](DATABASE_RECORD_MODEL.md), access/audit in
+[`DATABASE_ACCESS_AND_AUDIT.md`](DATABASE_ACCESS_AND_AUDIT.md), and the capsule mapping in
+[`DATABASE_TO_RESOLVER_MAPPING.md`](DATABASE_TO_RESOLVER_MAPPING.md).
 
 ## Governance states
 

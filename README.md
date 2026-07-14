@@ -66,6 +66,10 @@ peak/
 │   ├── SOURCE_SYSTEM_CAPSULIZATION.md    # Source→capsule path (intended future)
 │   ├── GOVERNANCE_STATES.md              # Authorization/review/lifecycle state families
 │   ├── STATE_TRANSITIONS.md              # Allowed transitions + agent guardrails
+│   ├── DATABASE_IMPLEMENTATION_PLAN.md   # Staged plan for the controlled database
+│   ├── DATABASE_RECORD_MODEL.md          # Planned record groups (no data)
+│   ├── DATABASE_ACCESS_AND_AUDIT.md      # Access roles, audit fields, agent limits
+│   ├── DATABASE_TO_RESOLVER_MAPPING.md   # DB records → resolver capsules (planning)
 │   └── IMPLEMENTATION_PLAN.md
 ├── agents/                       # One folder per agent capability group
 │   ├── intake/                   # New client intake
@@ -169,6 +173,24 @@ Enum contracts only; no stored data.
   agent guardrails.
 - Schemas: `governance-state` (master), `authorization-scope`, `review-status`,
   `lifecycle-status`.
+
+## Controlled database (planning)
+
+Peak plans a **controlled engagement database** as the system of record for live data —
+serving immediate consulting delivery **and** progressive AI-readiness (a
+pre-capsulization staging layer). **Planning only — no database, migrations, DB config,
+API, or resolver code**; the repo stays source-only and client data never enters Git.
+
+- [`docs/DATABASE_IMPLEMENTATION_PLAN.md`](docs/DATABASE_IMPLEMENTATION_PLAN.md) — staged
+  plan (Phase 10 plan → 11 scaffold → 12 capsule adapter → 13 agent harness → later
+  ingestion); no vendor/SQL yet.
+- [`docs/DATABASE_RECORD_MODEL.md`](docs/DATABASE_RECORD_MODEL.md) — planned record
+  groups (no records).
+- [`docs/DATABASE_ACCESS_AND_AUDIT.md`](docs/DATABASE_ACCESS_AND_AUDIT.md) — roles, audit
+  fields, human-review gates, agent permission limits.
+- [`docs/DATABASE_TO_RESOLVER_MAPPING.md`](docs/DATABASE_TO_RESOLVER_MAPPING.md) — how
+  records become resolver-capsule candidates; **public-but-segregated** (governed, not
+  public disclosure) and **private resolver** options.
 
 ## AgentNet grounding (intended architecture)
 

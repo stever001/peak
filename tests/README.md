@@ -10,7 +10,7 @@ objects are needed, the harnesses build **synthetic fixtures at runtime**
 directory that is auto-deleted. Nothing is stored. See
 [`../docs/FIXTURE_STRATEGY.md`](../docs/FIXTURE_STRATEGY.md).
 
-Nine harnesses, run together by `make validate`:
+Ten harnesses, run together by `make validate`:
 
 - `validate_phase1.py` — schemas + synthetic object fixtures.
 - `validate_phase2.py` — schemas + a synthetic `EngagementPacket`.
@@ -21,6 +21,7 @@ Nine harnesses, run together by `make validate`:
 - `validate_phase7_policy.py` — repo-hygiene / data-artifact guard (stdlib-only).
 - `validate_phase8_architecture.py` — controlled-data architecture doc check (stdlib-only).
 - `validate_phase9_governance.py` — governance-state contract check (jsonschema + stdlib).
+- `validate_phase10_database_plan.py` — database-plan doc check (stdlib-only).
 
 ## `synthetic_fixtures.py`
 
@@ -119,6 +120,17 @@ key transition arrows and agent guardrail phrases appear in `STATE_TRANSITIONS.m
 repo stays source-only; and AgentNet is not claimed as implemented. Uses `jsonschema`
 (already a dev dep) plus stdlib.
 
+## `validate_phase10_database_plan.py`
+
+Doc check for the Phase 10 database-planning docs (`DATABASE_IMPLEMENTATION_PLAN.md`,
+`DATABASE_RECORD_MODEL.md`, `DATABASE_ACCESS_AND_AUDIT.md`,
+`DATABASE_TO_RESOLVER_MAPPING.md`): each exists with its required markers; the strategic
+phrases are present (source-only, controlled database, private resolver capsules,
+public-but-segregated, private resolver option, no client data in Git, human review
+gates, agent permission limits); the repo stays source-only **with no DB implementation**
+(no `*.sql`/`*.db`, no `migrations/`, no DB config files); and AgentNet is not claimed as
+implemented. Stdlib-only.
+
 ## Running
 
 This machine uses `python3` (there is no bare `python`). From the repo root:
@@ -128,7 +140,7 @@ This machine uses `python3` (there is no bare `python`). From the repo root:
 make install-dev          # == python3 -m pip install -r requirements-dev.txt
 
 # run all harnesses
-make validate             # == phase1 … phase9
+make validate             # == phase1 … phase10
 
 # or run one at a time
 make validate-phase1
@@ -140,6 +152,7 @@ make validate-phase6
 make validate-phase7
 make validate-phase8
 make validate-phase9
+make validate-phase10
 ```
 
 Or invoke them directly, without the Makefile:
@@ -154,11 +167,12 @@ python3 tests/validate_phase6_docs.py          # stdlib-only, no dependency need
 python3 tests/validate_phase7_policy.py        # stdlib-only, no dependency needed
 python3 tests/validate_phase8_architecture.py  # stdlib-only, no dependency needed
 python3 tests/validate_phase9_governance.py    # jsonschema + stdlib
+python3 tests/validate_phase10_database_plan.py # stdlib-only, no dependency needed
 ```
 
 ## Exit codes
 
-All nine harnesses share the same convention:
+All ten harnesses share the same convention:
 
 | Code | Meaning |
 | --- | --- |
