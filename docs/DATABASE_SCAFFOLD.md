@@ -71,6 +71,35 @@ Applying migrations requires a running MySQL server and real credentials — **n
 which live in this repo**. Client data belongs in the controlled MySQL database and, in
 future, resolver capsules — **not in Git**.
 
+## Verifying the scaffold locally (no database)
+
+The scaffold can be verified **without a MySQL server** by importing the models and
+inspecting metadata. Install the runtime dependencies into a local virtual environment
+(the `.venv/` directory is gitignored and must never be committed):
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt      # SQLAlchemy / alembic / PyMySQL
+.venv/bin/python -m pip install -r requirements-dev.txt  # jsonschema (validation harness)
+
+# dependency-backed scaffold check (imports models, verifies the 11 tables and columns)
+.venv/bin/python tests/validate_phase11_db_scaffold.py
+
+# or run the whole validation suite through the venv interpreter
+make validate PYTHON=.venv/bin/python
+```
+
+When SQLAlchemy/Alembic are installed, the Phase 11 check additionally imports
+`peak.db.models`, confirms `Base.metadata` defines **exactly** the 11 expected tables with
+unique names, and asserts every table carries the required governance/audit columns
+(`owner_id`, `authorization_scope`, `review_status`, `lifecycle_status`, `created_at`,
+`updated_at`). Without those dependencies the same check runs structurally and skips the
+import step. None of this connects to a database or writes any data.
+
+> Model annotations use `typing.Optional[...]` (not the `X | None` union) so the
+> SQLAlchemy models import on the repo's baseline `python3` (3.9+) as well as newer
+> interpreters.
+
 ## Scope of Phase 11
 
 Local scaffold only: schema definitions and migrations. **Not** included: production

@@ -76,7 +76,15 @@ AGENTNET_SCAN = ["docs/DATABASE_SCAFFOLD.md", "docs/DATABASE_IMPLEMENTATION_PLAN
 
 DB_FILE_EXTS = (".db", ".sqlite", ".sqlite3", ".sql")
 
+# Local environment/build dirs are not part of the source tree; skip them when walking so
+# a dependency shipped into a local .venv can't trip the artifact/credential scans.
+SKIP_DIRS = {".git", ".venv", "venv", "__pycache__", ".mypy_cache", ".pytest_cache"}
+
 PASS, FAIL = "PASS", "FAIL"
+
+
+def _skip(dirpath: str) -> bool:
+    return bool(SKIP_DIRS.intersection(dirpath.split(os.sep)))
 
 
 def read(rel):
@@ -137,7 +145,7 @@ def main() -> int:
         print(f"  [{PASS}] no examples/ directory")
     artifacts, dbfiles = [], []
     for dp, _, files in os.walk(REPO_ROOT):
-        if ".git" in dp.split(os.sep):
+        if _skip(dp):
             continue
         for f in files:
             if f.endswith(".example.json") or f.endswith(".example.md") or "redacted" in f:
@@ -172,7 +180,7 @@ def main() -> int:
     print("\n5. No committed credentials")
     secret_hits = []
     for dp, _, files in os.walk(REPO_ROOT):
-        if ".git" in dp.split(os.sep):
+        if _skip(dp):
             continue
         for f in files:
             fp = os.path.join(dp, f)
@@ -245,23 +253,72 @@ def main() -> int:
     else:
         print(f"  [{PASS}] AgentNet described only as intended/not-implemented")
 
-    # 9. Optional: import metadata if SQLAlchemy is installed.
-    print("\n9. Optional model import (SQLAlchemy)")
+    # 9. Optional: dependency-backed import + metadata verification.
+    #    Runs only when SQLAlchemy/Alembic are installed (see requirements.txt); the
+    #    structural checks above still run without them. Verifies importability,
+    #    the exact table set, unique table names, and required governance/audit columns.
+    print("\n9. Dependency-backed model import (SQLAlchemy / Alembic)")
     try:
         import sqlalchemy  # noqa: F401
-        sys.path.insert(0, REPO_ROOT)
-        from peak.db.base import Base
-        import peak.db.models  # noqa: F401
-        tables = set(Base.metadata.tables)
-        missing = [t for t in EXPECTED_TABLES if t not in tables]
-        if missing:
-            failures.append(f"model metadata missing tables: {missing}")
-            print(f"  [{FAIL}] model metadata missing tables: {missing}")
-        else:
-            print(f"  [{PASS}] model metadata defines all {len(EXPECTED_TABLES)} tables")
     except ImportError:
         print("  [skip] SQLAlchemy not installed — structural check only "
               "(pip install -r requirements.txt to enable)")
+    else:
+        print(f"  [{PASS}] SQLAlchemy imports ({sqlalchemy.__version__})")
+        try:
+            import alembic  # noqa: F401
+            print(f"  [{PASS}] Alembic imports ({alembic.__version__})")
+        except ImportError:
+            failures.append("alembic not importable despite SQLAlchemy present")
+            print(f"  [{FAIL}] Alembic not importable (pip install -r requirements.txt)")
+
+        sys.path.insert(0, REPO_ROOT)
+        from peak.db.base import Base
+        from peak.db import models as db_models  # noqa: F401
+        print(f"  [{PASS}] peak.db.models imports")
+
+        # Exactly the expected table set — no more, no fewer.
+        tables = set(Base.metadata.tables)
+        missing = sorted(set(EXPECTED_TABLES) - tables)
+        unexpected = sorted(tables - set(EXPECTED_TABLES))
+        if missing:
+            failures.append(f"model metadata missing tables: {missing}")
+            print(f"  [{FAIL}] model metadata missing tables: {missing}")
+        if unexpected:
+            failures.append(f"model metadata has unexpected tables: {unexpected}")
+            print(f"  [{FAIL}] model metadata has unexpected tables: {unexpected}")
+        if not missing and not unexpected:
+            print(f"  [{PASS}] Base.metadata defines exactly the {len(EXPECTED_TABLES)} expected tables")
+
+        # __tablename__ values must be unique across the declared models.
+        tablenames = [m.__tablename__ for m in getattr(db_models, "ALL_MODELS", [])]
+        dupes = sorted({t for t in tablenames if tablenames.count(t) > 1})
+        if dupes:
+            failures.append(f"duplicate model table names: {dupes}")
+            print(f"  [{FAIL}] duplicate model table names: {dupes}")
+        else:
+            print(f"  [{PASS}] model table names are unique ({len(tablenames)} models)")
+
+        # Required governance/audit columns present on every governed table.
+        required_cols = [
+            "owner_id", "authorization_scope", "review_status", "lifecycle_status",
+            "created_at", "updated_at",
+        ]
+        col_failures = []
+        for tname in EXPECTED_TABLES:
+            table = Base.metadata.tables.get(tname)
+            if table is None:
+                continue  # already reported as missing above
+            absent = [c for c in required_cols if c not in table.columns]
+            if absent:
+                col_failures.append(f"{tname}: missing {absent}")
+        if col_failures:
+            for cf in col_failures:
+                failures.append(f"required column(s) absent — {cf}")
+                print(f"  [{FAIL}] required column(s) absent — {cf}")
+        else:
+            print(f"  [{PASS}] all tables carry required governance/audit columns "
+                  f"({', '.join(required_cols)})")
 
     print("\n" + "=" * 37)
     print("Summary")

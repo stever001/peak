@@ -6,6 +6,12 @@
 .idea/
 .vscode/
 
+# Python virtual environments / bytecode — never commit the local venv (see docs/DATABASE_SCAFFOLD.md)
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
 # Environment — never commit real credentials. .env.example (placeholders) is allowed.
 .env
 .env.*

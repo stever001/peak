@@ -10,6 +10,7 @@ integrity is enforced app-side for now, not via hard FK constraints).
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Optional
 
 from sqlalchemy import Boolean, DateTime, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
@@ -22,7 +23,7 @@ class Client(Base, GovernanceMixin, AuditMixin):
     __table_args__ = MYSQL_TABLE_ARGS
     # id convention: client_<slug>
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    organization_label: Mapped[str | None] = mapped_column(String(255))
+    organization_label: Mapped[Optional[str]] = mapped_column(String(255))
 
 
 class Engagement(Base, GovernanceMixin, AuditMixin):
@@ -31,8 +32,8 @@ class Engagement(Base, GovernanceMixin, AuditMixin):
     # id convention: eng_<slug>
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     client_id: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
-    engagement_label: Mapped[str | None] = mapped_column(String(255))
-    status: Mapped[str | None] = mapped_column(String(32))  # prospective/active/on_hold/complete/closed
+    engagement_label: Mapped[Optional[str]] = mapped_column(String(255))
+    status: Mapped[Optional[str]] = mapped_column(String(32))  # prospective/active/on_hold/complete/closed
 
 
 class EngagementRecord(Base, GovernanceMixin, AuditMixin):
@@ -42,7 +43,7 @@ class EngagementRecord(Base, GovernanceMixin, AuditMixin):
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     client_id: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
     engagement_id: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
-    data_class: Mapped[str | None] = mapped_column(String(32))  # live_client_data
+    data_class: Mapped[Optional[str]] = mapped_column(String(32))  # live_client_data
 
 
 class EvidenceReference(Base, GovernanceMixin, AuditMixin):
@@ -50,14 +51,14 @@ class EvidenceReference(Base, GovernanceMixin, AuditMixin):
     __table_args__ = MYSQL_TABLE_ARGS
     # id convention: evid_<slug>
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    client_id: Mapped[str | None] = mapped_column(String(64), index=True)
-    engagement_id: Mapped[str | None] = mapped_column(String(64), index=True)
-    evidence_type: Mapped[str | None] = mapped_column(String(48))
-    source_type: Mapped[str | None] = mapped_column(String(48))
-    reliability: Mapped[str | None] = mapped_column(String(16))
+    client_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    engagement_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    evidence_type: Mapped[Optional[str]] = mapped_column(String(48))
+    source_type: Mapped[Optional[str]] = mapped_column(String(48))
+    reliability: Mapped[Optional[str]] = mapped_column(String(16))
     evidence_status: Mapped[str] = mapped_column(String(32), index=True, default="collected")
     sensitive_data_flag: Mapped[bool] = mapped_column(Boolean, default=False)
-    summary: Mapped[str | None] = mapped_column(Text)  # non-sensitive summary only
+    summary: Mapped[Optional[str]] = mapped_column(Text)  # non-sensitive summary only
 
 
 class SourceSystemReference(Base, GovernanceMixin, AuditMixin):
@@ -65,12 +66,12 @@ class SourceSystemReference(Base, GovernanceMixin, AuditMixin):
     __table_args__ = MYSQL_TABLE_ARGS
     # id convention: src_<slug>
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    client_id: Mapped[str | None] = mapped_column(String(64), index=True)
+    client_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
     engagement_id: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
-    source_type: Mapped[str | None] = mapped_column(String(32))
-    sensitivity_class: Mapped[str | None] = mapped_column(String(16))
+    source_type: Mapped[Optional[str]] = mapped_column(String(32))
+    sensitivity_class: Mapped[Optional[str]] = mapped_column(String(16))
     source_system_access_status: Mapped[str] = mapped_column(String(24), index=True, default="not_requested")
-    location_descriptor: Mapped[str | None] = mapped_column(String(255))
+    location_descriptor: Mapped[Optional[str]] = mapped_column(String(255))
 
 
 class FinancialImpactEstimate(Base, GovernanceMixin, AuditMixin):
@@ -78,15 +79,15 @@ class FinancialImpactEstimate(Base, GovernanceMixin, AuditMixin):
     __table_args__ = MYSQL_TABLE_ARGS
     # id convention: fie_<slug>
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    client_id: Mapped[str | None] = mapped_column(String(64), index=True)
+    client_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
     engagement_id: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
-    related_finding_id: Mapped[str | None] = mapped_column(String(64))
-    impact_type: Mapped[str | None] = mapped_column(String(24))
-    amount_low: Mapped[float | None] = mapped_column(Numeric(18, 2))
-    amount_high: Mapped[float | None] = mapped_column(Numeric(18, 2))
-    currency: Mapped[str | None] = mapped_column(String(3))
-    period: Mapped[str | None] = mapped_column(String(24))
-    verification_status: Mapped[str | None] = mapped_column(String(16))  # unverified/reported/verified
+    related_finding_id: Mapped[Optional[str]] = mapped_column(String(64))
+    impact_type: Mapped[Optional[str]] = mapped_column(String(24))
+    amount_low: Mapped[Optional[float]] = mapped_column(Numeric(18, 2))
+    amount_high: Mapped[Optional[float]] = mapped_column(Numeric(18, 2))
+    currency: Mapped[Optional[str]] = mapped_column(String(3))
+    period: Mapped[Optional[str]] = mapped_column(String(24))
+    verification_status: Mapped[Optional[str]] = mapped_column(String(16))  # unverified/reported/verified
     financial_impact_status: Mapped[str] = mapped_column(String(32), index=True, default="not_assessed")
     client_facing_approved: Mapped[bool] = mapped_column(Boolean, default=False)
 
@@ -96,10 +97,10 @@ class ResolverCapsuleRecord(Base, GovernanceMixin, AuditMixin):
     __table_args__ = MYSQL_TABLE_ARGS
     # id convention: cap_<slug>
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    client_id: Mapped[str | None] = mapped_column(String(64), index=True)
-    engagement_id: Mapped[str | None] = mapped_column(String(64), index=True)
-    capsule_scope: Mapped[str | None] = mapped_column(String(24))  # peak_methodology/client_private/fixture_test
-    sensitivity_class: Mapped[str | None] = mapped_column(String(16))
+    client_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    engagement_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    capsule_scope: Mapped[Optional[str]] = mapped_column(String(24))  # peak_methodology/client_private/fixture_test
+    sensitivity_class: Mapped[Optional[str]] = mapped_column(String(16))
     capsule_status: Mapped[str] = mapped_column(String(32), index=True, default="draft_capsule")
 
 
@@ -108,13 +109,13 @@ class ReviewRecord(Base, GovernanceMixin, AuditMixin):
     __table_args__ = MYSQL_TABLE_ARGS
     # id convention: rev_<slug>
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    client_id: Mapped[str | None] = mapped_column(String(64), index=True)
-    engagement_id: Mapped[str | None] = mapped_column(String(64), index=True)
+    client_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    engagement_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
     target_id: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
-    previous_status: Mapped[str | None] = mapped_column(String(32))
-    new_status: Mapped[str | None] = mapped_column(String(32))
-    reviewer: Mapped[str | None] = mapped_column(String(128))
-    reason: Mapped[str | None] = mapped_column(Text)
+    previous_status: Mapped[Optional[str]] = mapped_column(String(32))
+    new_status: Mapped[Optional[str]] = mapped_column(String(32))
+    reviewer: Mapped[Optional[str]] = mapped_column(String(128))
+    reason: Mapped[Optional[str]] = mapped_column(Text)
 
 
 class AgentRunRecord(Base, GovernanceMixin, AuditMixin):
@@ -122,12 +123,12 @@ class AgentRunRecord(Base, GovernanceMixin, AuditMixin):
     __table_args__ = MYSQL_TABLE_ARGS
     # id convention: arun_<slug>
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    client_id: Mapped[str | None] = mapped_column(String(64), index=True)
-    engagement_id: Mapped[str | None] = mapped_column(String(64), index=True)
-    prompt_contract_ref: Mapped[str | None] = mapped_column(String(255))
-    model_label: Mapped[str | None] = mapped_column(String(128))
-    started_at: Mapped[datetime | None] = mapped_column(DateTime)
-    finished_at: Mapped[datetime | None] = mapped_column(DateTime)
+    client_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    engagement_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    prompt_contract_ref: Mapped[Optional[str]] = mapped_column(String(255))
+    model_label: Mapped[Optional[str]] = mapped_column(String(128))
+    started_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
     # input/output record ids live in details_json (non-governance detail).
 
 
@@ -136,12 +137,12 @@ class CapsulePublicationCandidate(Base, GovernanceMixin, AuditMixin):
     __table_args__ = MYSQL_TABLE_ARGS
     # id convention: capc_<slug>
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    client_id: Mapped[str | None] = mapped_column(String(64), index=True)
-    engagement_id: Mapped[str | None] = mapped_column(String(64), index=True)
+    client_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    engagement_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
     capsule_id: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
-    resolver_target: Mapped[str | None] = mapped_column(String(32))  # public_but_segregated / private
-    client_facing_approval_status: Mapped[str | None] = mapped_column(String(32))
-    approval_decision: Mapped[str | None] = mapped_column(String(32))
+    resolver_target: Mapped[Optional[str]] = mapped_column(String(32))  # public_but_segregated / private
+    client_facing_approval_status: Mapped[Optional[str]] = mapped_column(String(32))
+    approval_decision: Mapped[Optional[str]] = mapped_column(String(32))
 
 
 class SourceIngestionRecord(Base, GovernanceMixin, AuditMixin):
@@ -149,10 +150,10 @@ class SourceIngestionRecord(Base, GovernanceMixin, AuditMixin):
     __table_args__ = MYSQL_TABLE_ARGS
     # id convention: ing_<slug>
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    client_id: Mapped[str | None] = mapped_column(String(64), index=True)
-    engagement_id: Mapped[str | None] = mapped_column(String(64), index=True)
+    client_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    engagement_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
     source_reference_id: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
-    captured_at: Mapped[datetime | None] = mapped_column(DateTime)
+    captured_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
 
 
 # Convenience list of all model classes (used by tooling/validation).

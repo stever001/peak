@@ -141,9 +141,15 @@ models, session), `alembic.ini` + `alembic/env.py` + the initial migration, `.en
 untracked while `.env.example` is allowed; there is **no stored data, no database file, no
 seed/`INSERT` in migrations, and no obvious committed credential**; the `peak/db/enums.py`
 values stay aligned to the Phase 9 schema enums; MySQL is documented; and AgentNet is not
-claimed as implemented. If SQLAlchemy is installed it additionally imports the models and
-checks all 11 tables are defined; if not, that step is skipped (structural check still
-runs). Stdlib-only.
+claimed as implemented. If SQLAlchemy **and** Alembic are installed it additionally
+imports them and `peak.db.models`, confirms `Base.metadata` defines **exactly** the 11
+expected tables with unique names, and asserts every table carries the required
+governance/audit columns (`owner_id`, `authorization_scope`, `review_status`,
+`lifecycle_status`, `created_at`, `updated_at`); if the dependencies are absent that step
+is skipped (structural check still runs). The structural portion is stdlib-only; the
+dependency-backed portion runs when the `requirements.txt` packages are installed — e.g.
+`make validate PYTHON=.venv/bin/python` (see
+[`../docs/DATABASE_SCAFFOLD.md`](../docs/DATABASE_SCAFFOLD.md)).
 
 ## Running
 

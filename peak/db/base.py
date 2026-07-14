@@ -8,6 +8,7 @@ prefixed strings, not autoincrement integers.
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Optional
 
 from sqlalchemy import Boolean, DateTime, JSON, String, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -25,15 +26,15 @@ class AuditMixin:
     """Audit columns carried by every record (see docs/DATABASE_ACCESS_AND_AUDIT.md)."""
 
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
-    created_by: Mapped[str | None] = mapped_column(String(128))
+    created_by: Mapped[Optional[str]] = mapped_column(String(128))
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), onupdate=func.now(), nullable=False
     )
-    updated_by: Mapped[str | None] = mapped_column(String(128))
+    updated_by: Mapped[Optional[str]] = mapped_column(String(128))
     # Provenance of an agent/worker run that produced or edited this record, if any.
-    agent_run_id: Mapped[str | None] = mapped_column(String(64), index=True)
+    agent_run_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
     # Non-governance detail only. Do NOT store governance fields here.
-    details_json: Mapped[dict | None] = mapped_column(JSON)
+    details_json: Mapped[Optional[dict]] = mapped_column(JSON)
 
 
 class GovernanceMixin:
@@ -44,7 +45,7 @@ class GovernanceMixin:
     MySQL portability and enforced app-side by the Python enums.
     """
 
-    owner_id: Mapped[str | None] = mapped_column(String(128), index=True)
-    authorization_scope: Mapped[str | None] = mapped_column(String(48), index=True)
+    owner_id: Mapped[Optional[str]] = mapped_column(String(128), index=True)
+    authorization_scope: Mapped[Optional[str]] = mapped_column(String(48), index=True)
     review_status: Mapped[str] = mapped_column(String(32), index=True, default="draft")
     lifecycle_status: Mapped[str] = mapped_column(String(32), index=True, default="draft")
