@@ -58,3 +58,8 @@ scaffold, [`DATABASE_RECORD_MODEL.md`](DATABASE_RECORD_MODEL.md)) plus a governe
 under access control ([`DATABASE_ACCESS_AND_AUDIT.md`](DATABASE_ACCESS_AND_AUDIT.md)). The
 [`AgentRunDraft`](../peak/agents/contracts.py) here is an **in-memory shape only**; it is
 never persisted and holds no client data.
+
+The **QA / Review Gate** (Phase 15, [`QA_REVIEW_GATE.md`](QA_REVIEW_GATE.md)) applies the
+same posture to *review* decisions on those outputs: its `ReviewDecision` is an in-memory
+shape only, with **no stored review records** in this phase. A future governed writer would
+persist it as a `ReviewRecord` under the same access and audit rules.

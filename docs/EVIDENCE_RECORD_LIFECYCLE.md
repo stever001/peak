@@ -18,7 +18,10 @@ authoritative merely because a worker created them**.
 3. **needs_review** — the record awaits human/QA review. Nothing advances it automatically.
 4. **approved_internal** *(future)* — a human/QA reviewer may advance the record to
    `approved_internal` after checking traceability, consistency, and completeness. Only
-   then is it treated as authoritative for internal use.
+   then is it treated as authoritative for internal use. The **QA / Review Gate**
+   ([`QA_REVIEW_GATE.md`](QA_REVIEW_GATE.md), Phase 15) is the production-shaped but
+   **no-side-effect** scaffold that computes this decision — `approve_internal` means
+   internal reliance only, and it stores nothing.
 5. **client_facing_approved** *(future)* — becoming client-facing requires an **explicit**
    further human approval gate; a worker or agent may never set it.
 6. **rejected / superseded / archived** — a reviewer may reject, supersede (replace with a

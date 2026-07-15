@@ -77,12 +77,15 @@ peak/
 │   ├── AGENT_RUN_RECORDS.md              # Future AgentRunRecord shape (nothing stored)
 │   ├── EVIDENCE_NORMALIZATION_WORKER.md  # First production-shaped worker (review-gated)
 │   ├── EVIDENCE_RECORD_LIFECYCLE.md      # Raw → normalized draft → reviewed evidence
+│   ├── QA_REVIEW_GATE.md                 # QA / review gate scaffold (no-side-effect decisions)
+│   ├── REVIEW_DECISION_MODEL.md          # Allowed/prohibited review decisions + state effects
 │   └── IMPLEMENTATION_PLAN.md
 ├── peak/                         # Python tooling layer (source only; no data)
 │   ├── db/                       # base, enums, models, session (MySQL)
 │   ├── agentnet/                 # Governance wrapper for the AgentNet MCP connector (no calls)
 │   ├── agents/                   # Agent execution harness scaffold (mock; no live execution)
-│   └── workers/                  # Production-shaped workers (evidence normalization; review-gated)
+│   ├── workers/                  # Production-shaped workers (evidence normalization; review-gated)
+│   └── review/                   # QA / review gate scaffold (no-side-effect review decisions)
 ├── alembic/                      # Alembic migrations (schema only; no data)
 ├── alembic.ini                   # Alembic config (URL from env, not the repo)
 ├── .env.example                  # Env placeholders only (PEAK_DATABASE_URL); .env ignored
@@ -292,6 +295,28 @@ merely because a worker created it.
 
 ```bash
 make validate-phase14   # evidence-normalization-worker check (stdlib-only; deterministic)
+```
+
+### QA / Review Gate (Phase 15)
+
+How Peak evaluates worker/agent outputs (the Phase 14 evidence drafts and future outputs)
+for **internal** approval, rejection, return for revision, supersession, or continued
+review. Decisions are **production-shaped but no-side-effect**: the gate persists nothing
+and confers no final authority. `approve_internal` means **internal reliance only** —
+client-facing approval, financial-impact verification, and capsule publication remain
+separate future gates (`client_facing_approved` and `capsule_candidate_ready` stay
+`false`). **No live LLM call, no AgentNet call, no database write, no network call, no
+client-facing output, no stored review records.**
+
+- [`peak/review/`](peak/review/) — review contracts, deterministic governance guards, and
+  a no-side-effect review-gate evaluator.
+- [`docs/QA_REVIEW_GATE.md`](docs/QA_REVIEW_GATE.md) — purpose, how it complements Phase 14,
+  and the future relationship to a controlled-DB `ReviewRecord`.
+- [`docs/REVIEW_DECISION_MODEL.md`](docs/REVIEW_DECISION_MODEL.md) — allowed vs. prohibited
+  decisions, the `approve_internal` checklist, and per-decision state effects.
+
+```bash
+make validate-phase15   # QA / review-gate check (stdlib-only; no-side-effect)
 ```
 
 ## Design constraints

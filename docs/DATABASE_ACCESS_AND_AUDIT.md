@@ -79,3 +79,11 @@ applies the same posture to a production-shaped worker: its output is review-gat
 (`draft`/`needs_review`, non-authoritative, non-client-facing) and it performs **no
 database write** — a future governed writer persists reviewed records under these access
 and audit rules. See [`EVIDENCE_RECORD_LIFECYCLE.md`](EVIDENCE_RECORD_LIFECYCLE.md).
+
+The Phase 15 **QA / Review Gate** ([`../peak/review/`](../peak/review/)) is where a QA
+reviewer's decision on such output is computed — production-shaped but **no-side-effect**.
+`approve_internal` means internal reliance only; a review decision may never create
+client-facing approval, verify financial impact, or publish a capsule. It writes nothing —
+there are **no stored review records** in this phase — and a future governed writer would
+persist the decision as the `ReviewRecord` above under these same access and audit rules.
+See [`QA_REVIEW_GATE.md`](QA_REVIEW_GATE.md) and [`REVIEW_DECISION_MODEL.md`](REVIEW_DECISION_MODEL.md).

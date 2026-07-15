@@ -36,7 +36,9 @@ The worker produces records whose *shape* is ready for later controlled storage,
 High-quality structure does **not** confer authority. A record becomes authoritative or
 client-facing only through the future human/QA review gates
 ([`EVIDENCE_RECORD_LIFECYCLE.md`](EVIDENCE_RECORD_LIFECYCLE.md),
-[`GOVERNANCE_STATES.md`](GOVERNANCE_STATES.md)).
+[`GOVERNANCE_STATES.md`](GOVERNANCE_STATES.md)). The **QA / Review Gate**
+([`QA_REVIEW_GATE.md`](QA_REVIEW_GATE.md), Phase 15) evaluates these drafts for internal
+reliance — a production-shaped but no-side-effect decision that stores nothing.
 
 ## Deterministic / no-live-call behavior in Phase 14
 

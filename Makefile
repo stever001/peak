@@ -4,12 +4,12 @@
 
 PYTHON ?= python3
 
-.PHONY: help validate validate-phase1 validate-phase2 validate-phase3 validate-phase4 validate-phase5 validate-phase6 validate-phase7 validate-phase8 validate-phase9 validate-phase10 validate-phase11 validate-phase12 validate-phase13 validate-phase14 db-check packet-summary install-dev
+.PHONY: help validate validate-phase1 validate-phase2 validate-phase3 validate-phase4 validate-phase5 validate-phase6 validate-phase7 validate-phase8 validate-phase9 validate-phase10 validate-phase11 validate-phase12 validate-phase13 validate-phase14 validate-phase15 db-check packet-summary install-dev
 
 help: ## Show available targets
 	@echo "Targets:"
 	@echo "  make install-dev        Install dev dependencies ($(PYTHON) -m pip install -r requirements-dev.txt)"
-	@echo "  make validate           Run all validation harnesses (Phase 1 through Phase 11)"
+	@echo "  make validate           Run all validation harnesses (Phase 1 through Phase 15)"
 	@echo "  make validate-phase1    Run only the Phase 1 object harness"
 	@echo "  make validate-phase2    Run only the Phase 2 EngagementPacket harness"
 	@echo "  make validate-phase3    Run only the Phase 3 prompt-contract inventory check"
@@ -24,13 +24,14 @@ help: ## Show available targets
 	@echo "  make validate-phase12   Run only the Phase 12 AgentNet MCP boundary check"
 	@echo "  make validate-phase13   Run only the Phase 13 agent-execution-harness check"
 	@echo "  make validate-phase14   Run only the Phase 14 evidence-normalization-worker check"
+	@echo "  make validate-phase15   Run only the Phase 15 QA / review-gate check"
 	@echo "  make db-check           Alias for the Phase 11 database-scaffold check"
 	@echo "  make packet-summary PACKET=/path/to/packet.json   Summarize a real packet (read-only; no LLM/API)"
 
 install-dev: ## Install development dependencies
 	$(PYTHON) -m pip install -r requirements-dev.txt
 
-validate: validate-phase1 validate-phase2 validate-phase3 validate-phase4 validate-phase5 validate-phase6 validate-phase7 validate-phase8 validate-phase9 validate-phase10 validate-phase11 validate-phase12 validate-phase13 validate-phase14 ## Run all validation harnesses
+validate: validate-phase1 validate-phase2 validate-phase3 validate-phase4 validate-phase5 validate-phase6 validate-phase7 validate-phase8 validate-phase9 validate-phase10 validate-phase11 validate-phase12 validate-phase13 validate-phase14 validate-phase15 ## Run all validation harnesses
 
 validate-phase1: ## Run the Phase 1 schema/example validation harness
 	$(PYTHON) tests/validate_phase1.py
@@ -73,6 +74,9 @@ validate-phase13: ## Run the Phase 13 agent-execution-harness check (stdlib-only
 
 validate-phase14: ## Run the Phase 14 evidence-normalization-worker check (stdlib-only)
 	$(PYTHON) tests/validate_phase14_evidence_worker.py
+
+validate-phase15: ## Run the Phase 15 QA / review-gate check (stdlib-only)
+	$(PYTHON) tests/validate_phase15_review_gate.py
 
 db-check: ## Validate the DB scaffold (alias for validate-phase11)
 	$(PYTHON) tests/validate_phase11_db_scaffold.py

@@ -118,6 +118,13 @@ shape fits this architecture, defaulting to `draft`/`needs_review` and non-autho
 under access control ([`DATABASE_ACCESS_AND_AUDIT.md`](DATABASE_ACCESS_AND_AUDIT.md)); see
 the record lifecycle in [`EVIDENCE_RECORD_LIFECYCLE.md`](EVIDENCE_RECORD_LIFECYCLE.md).
 
+Whether a worker output may be relied on internally is decided by the **QA / Review Gate**
+([`QA_REVIEW_GATE.md`](QA_REVIEW_GATE.md), [`../peak/review/`](../peak/review/), Phase 15):
+a production-shaped but **no-side-effect** review decision (`approve_internal` means
+internal reliance only). It stores nothing — there are **no stored review records** in this
+phase — and never creates client-facing approval; a future governed writer would persist
+the decision as a `ReviewRecord`.
+
 ## Grounding access boundary (AgentNet MCP connector)
 
 When future workflows reach the resolver for grounding, they do so through the **existing

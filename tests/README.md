@@ -10,7 +10,7 @@ objects are needed, the harnesses build **synthetic fixtures at runtime**
 directory that is auto-deleted. Nothing is stored. See
 [`../docs/FIXTURE_STRATEGY.md`](../docs/FIXTURE_STRATEGY.md).
 
-Fourteen harnesses, run together by `make validate`:
+Fifteen harnesses, run together by `make validate`:
 
 - `validate_phase1.py` — schemas + synthetic object fixtures.
 - `validate_phase2.py` — schemas + a synthetic `EngagementPacket`.
@@ -26,6 +26,7 @@ Fourteen harnesses, run together by `make validate`:
 - `validate_phase12_agentnet_mcp_boundary.py` — AgentNet MCP governance-boundary check (stdlib-only).
 - `validate_phase13_agent_harness.py` — agent-execution-harness scaffold check (stdlib-only).
 - `validate_phase14_evidence_worker.py` — evidence-normalization-worker check (stdlib-only).
+- `validate_phase15_review_gate.py` — QA / review-gate check (stdlib-only).
 
 ## `synthetic_fixtures.py`
 
@@ -200,6 +201,24 @@ review-gate phrases; and re-asserts source-only discipline. Stdlib-only; **no li
 no stored data**. See
 [`../docs/EVIDENCE_NORMALIZATION_WORKER.md`](../docs/EVIDENCE_NORMALIZATION_WORKER.md).
 
+## `validate_phase15_review_gate.py`
+
+Check for the **QA / Review Gate** (`peak/review/`). Confirms the package files exist and
+compile and the package imports; evaluates a **valid in-memory synthetic** `approve_internal`
+request and asserts the result is **production-shaped but no-side-effect** (`permitted`,
+`next_review_status = approved_internal`, `authoritative = true` for internal reliance only,
+`client_facing_approved` and `capsule_candidate_ready` `false`, and `database_write_made`,
+`llm_call_made`, `agentnet_call_made`, `network_call_made`, `capsule_publication_made`,
+`client_facing_output_created` all `false`); confirms governance rejects missing
+`owner_id`/`client_id`/`engagement_id`/`requested_by`/`reviewer_role`, a mismatched subject
+scope, each prohibited decision (`client_facing_approve`, `publish_capsule`,
+`verify_financial_impact`, `approve_authoritative_external`), revoked/archived lifecycle, and
+`approve_internal` with an incomplete/missing checklist — while `reject` is permitted (with
+warnings) despite an incomplete checklist; scans the package for **network/database/LLM
+imports or credentials** (there are none); checks the docs carry the no-side-effect phrases;
+and re-asserts source-only discipline. Stdlib-only; **no live call and no stored review
+records**. See [`../docs/QA_REVIEW_GATE.md`](../docs/QA_REVIEW_GATE.md).
+
 ## Running
 
 This machine uses `python3` (there is no bare `python`). From the repo root:
@@ -209,7 +228,7 @@ This machine uses `python3` (there is no bare `python`). From the repo root:
 make install-dev          # == python3 -m pip install -r requirements-dev.txt
 
 # run all harnesses
-make validate             # == phase1 … phase14
+make validate             # == phase1 … phase15
 
 # or run one at a time
 make validate-phase1
@@ -226,6 +245,7 @@ make validate-phase11   # == make db-check
 make validate-phase12
 make validate-phase13
 make validate-phase14
+make validate-phase15
 ```
 
 Or invoke them directly, without the Makefile:
@@ -245,11 +265,12 @@ python3 tests/validate_phase11_db_scaffold.py   # stdlib-only, no dependency nee
 python3 tests/validate_phase12_agentnet_mcp_boundary.py  # stdlib-only, no dependency needed
 python3 tests/validate_phase13_agent_harness.py          # stdlib-only, no dependency needed
 python3 tests/validate_phase14_evidence_worker.py        # stdlib-only, no dependency needed
+python3 tests/validate_phase15_review_gate.py            # stdlib-only, no dependency needed
 ```
 
 ## Exit codes
 
-All fourteen harnesses share the same convention:
+All fifteen harnesses share the same convention:
 
 | Code | Meaning |
 | --- | --- |

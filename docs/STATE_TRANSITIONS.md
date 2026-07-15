@@ -16,6 +16,13 @@ draft -> needs_review -> consultant_reviewed -> qa_reviewed -> approved_internal
 - `consultant_reviewed` and beyond require **human** action.
 - Any state may move to `rejected` (with a reason) or `superseded`; retired records go to
   `archived`.
+- The **QA / Review Gate** ([`QA_REVIEW_GATE.md`](QA_REVIEW_GATE.md), Phase 15) *consumes*
+  this vocabulary to compute a review decision on worker/agent output — `approve_internal`
+  → `approved_internal` (**internal reliance only**), `reject` → `rejected`,
+  `return_for_revision` → `needs_review` (no `needs_revision` state exists),
+  `supersede` → `superseded`, `keep_needs_review` → `needs_review`. It is a
+  production-shaped but **no-side-effect** scaffold: it never advances a record to a
+  client-facing state, and it stores nothing.
 
 ## Client-facing transition
 

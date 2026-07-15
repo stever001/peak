@@ -140,6 +140,13 @@ Legend for each group:
 - **Key fields:** `review_id`, target record id, previous/new `review_status`, reviewer, reason, timestamp.
 - **Governance states:** review, lifecycle.
 - **Capsule-ready?** No (governance trail). **Client-facing?** No.
+- **Produced by (future):** the **QA / Review Gate** ([`QA_REVIEW_GATE.md`](QA_REVIEW_GATE.md),
+  [`REVIEW_DECISION_MODEL.md`](REVIEW_DECISION_MODEL.md), [`../peak/review/`](../peak/review/),
+  Phase 15) computes the review decision (`approve_internal` = internal reliance only;
+  `reject` / `return_for_revision` / `supersede` / `keep_needs_review`) as a
+  production-shaped but **no-side-effect** result. In Phase 15 there are **no stored review
+  records**; a future governed writer persists the decision here. A review decision never
+  creates client-facing approval, verifies financial impact, or publishes a capsule.
 
 ### AgentRunRecord
 - **Purpose:** provenance of an agent/worker run (future harness — see the Phase 13

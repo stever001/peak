@@ -290,6 +290,27 @@ and documentation accurately states integration status.
   [`../tests/validate_phase14_evidence_worker.py`](../tests/validate_phase14_evidence_worker.py)
   (`make validate-phase14`).
 
+**QA / Review Gate (Phase 15 — scaffold only):**
+
+- [x] The decision layer over worker/agent outputs: [`../peak/review/`](../peak/review/) —
+  review contracts (`contracts.py`), deterministic governance guards (`governance.py`:
+  `evaluate_review_request`, `validate_requested_decision`, `build_review_checklist`), and a
+  no-side-effect review-gate evaluator (`review_gate.py`: `evaluate_review_gate`,
+  `derive_next_state`, `build_action_plan`) — plus
+  [`QA_REVIEW_GATE.md`](QA_REVIEW_GATE.md) and [`REVIEW_DECISION_MODEL.md`](REVIEW_DECISION_MODEL.md).
+  It evaluates a review request into a **production-shaped but no-side-effect**
+  `ReviewGateResult`: allowed decisions are `approve_internal` (**internal reliance only** —
+  `review_status=approved_internal`, `authoritative=true` for internal use), `reject`,
+  `return_for_revision` (→ `needs_review`), `supersede` (→ `superseded`), and
+  `keep_needs_review`; prohibited decisions (`client_facing_approve`, `publish_capsule`,
+  `verify_financial_impact`, `approve_authoritative_external`) are rejected. `client_facing_approved`
+  and `capsule_candidate_ready` stay `false` in every case. **No live LLM/AgentNet/MCP/resolver/
+  database/network call, no file write, no client-facing output, no capsule publication, no
+  stored review records.** A future governed writer would persist the decision as a
+  `ReviewRecord`. Checked by
+  [`../tests/validate_phase15_review_gate.py`](../tests/validate_phase15_review_gate.py)
+  (`make validate-phase15`).
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

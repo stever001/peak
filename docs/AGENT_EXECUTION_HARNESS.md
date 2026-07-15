@@ -86,6 +86,13 @@ implementation in [`../peak/workers/`](../peak/workers/) (Phase 14) — determin
 review-gated, still with no live call and no stored data. See
 [`EVIDENCE_NORMALIZATION_WORKER.md`](EVIDENCE_NORMALIZATION_WORKER.md).
 
+The `internal_qa_governance_agent` counterpart is the **QA / Review Gate**
+([`../peak/review/`](../peak/review/), Phase 15): a production-shaped but no-side-effect
+scaffold that evaluates worker/agent outputs (like the Phase 14 drafts) for internal
+approval, rejection, return for revision, supersession, or continued review — storing
+nothing and never creating client-facing approval. See
+[`QA_REVIEW_GATE.md`](QA_REVIEW_GATE.md) and [`REVIEW_DECISION_MODEL.md`](REVIEW_DECISION_MODEL.md).
+
 ## No client-facing output from the harness
 
 The harness produces **no client-facing output**. Any artifact an agent drafts is internal
