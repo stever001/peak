@@ -83,6 +83,8 @@ peak/
 │   ├── DB_BACKED_REVIEW_SCOPE_POLICY.md  # Stored-scope comparison rule for DB-backed review
 │   ├── CONTROLLED_DB_WRITER_BOUNDARY.md  # Generic controlled-write boundary (DB-aware, not DB-writing)
 │   ├── CONTROLLED_WRITE_ALLOWLIST.md     # Allowed/prohibited write tables + actions
+│   ├── EVIDENCE_PERSISTENCE_MAPPING.md   # Normalized evidence → controlled write plan (Phase 14→17)
+│   ├── EVIDENCE_WRITE_PLAN_POLICY.md     # Evidence write-plan rules (idempotency, stored-scope)
 │   └── IMPLEMENTATION_PLAN.md
 ├── peak/                         # Python tooling layer (source only; no data)
 │   ├── db/                       # base, enums, models, session (MySQL)
@@ -90,7 +92,8 @@ peak/
 │   ├── agents/                   # Agent execution harness scaffold (mock; no live execution)
 │   ├── workers/                  # Production-shaped workers (evidence normalization; review-gated)
 │   ├── review/                   # QA / review gate + review persistence boundary (no-side-effect)
-│   └── persistence/              # Controlled DB writer boundary: allowlist + governance (no live DB)
+│   ├── persistence/              # Controlled DB writer boundary: allowlist + governance (no live DB)
+│   └── evidence/                 # Evidence persistence mapping: Phase 14 → Phase 17 (no live DB)
 ├── alembic/                      # Alembic migrations (schema only; no data)
 ├── alembic.ini                   # Alembic config (URL from env, not the repo)
 ├── .env.example                  # Env placeholders only (PEAK_DATABASE_URL); .env ignored
@@ -380,6 +383,40 @@ call.** A write plan is not a write.
 
 ```bash
 make validate-phase17   # controlled-DB-writer-boundary check (stdlib-only; DB-aware, not DB-writing)
+```
+
+### Evidence Persistence Mapping (Phase 18)
+
+Connects the Phase 14 normalized evidence output to the Phase 17 controlled writer boundary
+— defined precisely, but **not executed**. Phase 18 is **DB-aware but not DB-writing**: it
+maps a `NormalizedEvidenceRecord` into a production-shaped but **review-gated**
+`EvidencePersistenceDraft` and routes it through Phase 17 as a no-op plan targeting
+`evidence_references` / `create_draft`. The draft's `evidence_record_id` and `created_at`
+stay `None` for a **future controlled DB writer**; the review gate (`draft` /
+`needs_review`, non-authoritative, not client-facing, not a capsule candidate) is preserved.
+**Evidence workers still do not write directly to the DB.**
+
+```
+NormalizedEvidenceRecord → EvidencePersistenceDraft → ControlledWriteSubject
+  → ControlledWriteRequest → ControlledWritePlan → no DB write
+```
+
+Enforced: `request.authorization_scope` must equal the parent subject snapshot's stored
+`stored_authorization_scope` (owner/client/engagement matching is necessary but not
+sufficient); an `idempotency_key` is required; and the carried normalization output must be
+permitted, side-effect-free, and still review-gated. **No live database connection, no SQL
+execution, no stored records, no live LLM/AgentNet/network call, no client-facing approval,
+no financial verification, no capsule publication.** A write plan is not a write.
+
+- [`peak/evidence/`](peak/evidence/) — evidence persistence contracts, deterministic mapping
+  governance, and evidence-to-controlled-write mapping helpers (bridging Phase 14 ↔ Phase 17).
+- [`docs/EVIDENCE_PERSISTENCE_MAPPING.md`](docs/EVIDENCE_PERSISTENCE_MAPPING.md) — the core
+  flow, what is mapped vs. executed, and the future controlled DB writer.
+- [`docs/EVIDENCE_WRITE_PLAN_POLICY.md`](docs/EVIDENCE_WRITE_PLAN_POLICY.md) — idempotency,
+  stored-scope, and the parent-subject authorization anchor.
+
+```bash
+make validate-phase18   # evidence-persistence-mapping check (stdlib-only; DB-aware, not DB-writing)
 ```
 
 ## Design constraints

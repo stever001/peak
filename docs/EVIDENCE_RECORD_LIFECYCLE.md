@@ -38,6 +38,14 @@ Normalized records are shaped to fit the controlled engagement database (the
 happens in this phase**; a future governed writer assigns ids and persists records under
 access control, carrying an `agent_run_id` for provenance.
 
+The step that prepares this persistence — without performing it — is the **Phase 18 Evidence
+Persistence Mapping** ([`EVIDENCE_PERSISTENCE_MAPPING.md`](EVIDENCE_PERSISTENCE_MAPPING.md),
+[`EVIDENCE_WRITE_PLAN_POLICY.md`](EVIDENCE_WRITE_PLAN_POLICY.md)): it maps a normalized
+record into an `EvidencePersistenceDraft` and routes it through the Phase 17 controlled
+writer boundary as a no-op plan targeting `evidence_references` / `create_draft`. It is
+**DB-aware but not DB-writing** — `evidence_record_id` / `created_at` stay unset for a future
+controlled DB writer, and the review gate is preserved.
+
 ## Relationship to future capsule candidate preparation
 
 Only after evidence is review-approved, well-scoped, and source-labeled can it feed

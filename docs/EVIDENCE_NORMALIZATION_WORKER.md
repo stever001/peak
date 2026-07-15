@@ -86,3 +86,14 @@ the raw material; humans and later governed steps decide what becomes authoritat
   ([`DATABASE_ACCESS_AND_AUDIT.md`](DATABASE_ACCESS_AND_AUDIT.md)).
 - **No AgentNet / LLM / network call in this phase.**
 - **No capsule publication** — deferred, and not implemented here.
+
+## Persistence is planned, never executed here (Phase 18)
+
+The worker never writes to the database. When a normalized record is destined for controlled
+storage, the **Phase 18 Evidence Persistence Mapping**
+([`EVIDENCE_PERSISTENCE_MAPPING.md`](EVIDENCE_PERSISTENCE_MAPPING.md),
+[`../peak/evidence/`](../peak/evidence/)) maps it into a production-shaped but review-gated
+`EvidencePersistenceDraft` and routes it through the Phase 17 controlled writer boundary as a
+no-op plan targeting `evidence_references` / `create_draft` — **DB-aware but not DB-writing**.
+**Evidence workers still do not write directly to the DB**; a future controlled DB writer
+executes the plan after the allowlist, `idempotency_key`, and stored-scope checks pass.

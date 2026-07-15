@@ -61,6 +61,16 @@ Legend for each group:
   `NormalizedEvidenceRecord`s (`draft`/`needs_review`, non-authoritative) — see
   [`EVIDENCE_NORMALIZATION_WORKER.md`](EVIDENCE_NORMALIZATION_WORKER.md) and
   [`EVIDENCE_RECORD_LIFECYCLE.md`](EVIDENCE_RECORD_LIFECYCLE.md). Nothing is stored yet.
+- **Persistence planned by (future):** the **Phase 18 Evidence Persistence Mapping**
+  ([`EVIDENCE_PERSISTENCE_MAPPING.md`](EVIDENCE_PERSISTENCE_MAPPING.md),
+  [`../peak/evidence/`](../peak/evidence/)) maps a normalized record into an
+  `EvidencePersistenceDraft` and a Phase 17 `ControlledWriteRequest` targeting this
+  `evidence_references` table (`create_draft`) — **DB-aware but not DB-writing**
+  (`evidence_record_id` / `created_at` left `None`; no connection, no SQL, no stored record).
+  Write authority is anchored to the stored parent subject
+  (`request.authorization_scope == subject.stored_authorization_scope`; identity matching
+  necessary but not sufficient), and an `idempotency_key` is required. Evidence workers do
+  not write directly; a future controlled DB writer executes the plan.
 
 ### SourceSystemReference
 - **Purpose:** pointer to a client source system/location

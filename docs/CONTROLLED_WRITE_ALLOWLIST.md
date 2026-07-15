@@ -11,7 +11,7 @@ persisted here.
 
 | Table | Written by (future) |
 | --- | --- |
-| `evidence_references` | normalized evidence records (Phase 14 → review) |
+| `evidence_references` | normalized evidence records (Phase 14 → **Phase 18 mapping** → review) |
 | `engagement_records` | engagement-scoped records |
 | `review_records` | QA / review decisions (Phase 15 → Phase 16) |
 | `agent_run_records` | agent/worker run provenance (Phase 13) |
@@ -77,4 +77,6 @@ audit expectations for the write.
 Enforcing the allowlist produces a **no-op** `ControlledWritePlan` and an in-memory
 `ControlledWriteAuditDraft` — never a database write. **Write plans are not writes**: no
 connection is opened, no SQL runs, and no record is stored until a future controlled DB
-writer executes the plan under access control.
+writer executes the plan under access control. The **Phase 18 Evidence Persistence Mapping**
+([`EVIDENCE_PERSISTENCE_MAPPING.md`](EVIDENCE_PERSISTENCE_MAPPING.md)) is the first consumer:
+it targets `evidence_references` / `create_draft` through this allowlist.

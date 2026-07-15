@@ -372,6 +372,37 @@ and documentation accurately states integration status.
   [`../tests/validate_phase17_controlled_db_writer.py`](../tests/validate_phase17_controlled_db_writer.py)
   (`make validate-phase17`).
 
+**Evidence Persistence Mapping (Phase 18 — DB-aware, not DB-writing):**
+
+- [x] The first domain to route through the Phase 17 boundary — connecting Phase 14 evidence
+  output to controlled write planning: [`../peak/evidence/`](../peak/evidence/) (kept out of
+  `peak/db/`, stdlib-only apart from importing the Phase 17 `peak.persistence` contracts/
+  planner) adds evidence persistence contracts (`persistence_contracts.py`:
+  `EvidencePersistenceSubjectSnapshot`, `EvidencePersistenceRequest`,
+  `EvidencePersistenceDraft`, `EvidencePersistenceDecision`,
+  `EvidencePersistenceMappingResult`), deterministic mapping governance
+  (`persistence_governance.py`: `evaluate_evidence_persistence_request`,
+  `validate_evidence_subject_scope`, `validate_normalization_result_for_persistence`,
+  `build_evidence_persistence_decision`), and mapping helpers (`evidence_record_mapper.py`:
+  `build_evidence_persistence_draft`, `build_controlled_write_subject`,
+  `build_controlled_write_request`, `prepare_evidence_persistence`) — plus
+  [`EVIDENCE_PERSISTENCE_MAPPING.md`](EVIDENCE_PERSISTENCE_MAPPING.md) and
+  [`EVIDENCE_WRITE_PLAN_POLICY.md`](EVIDENCE_WRITE_PLAN_POLICY.md). It maps a
+  `NormalizedEvidenceRecord` → `EvidencePersistenceDraft` → Phase 17 `ControlledWriteSubject`
+  → `ControlledWriteRequest` (target `evidence_references` / `create_draft`) →
+  `ControlledWritePlan` → no DB write. The review gate is preserved (`draft`/`needs_review`,
+  `authoritative=false`, `client_facing_approved=false`, `capsule_candidate_ready=false`) and
+  `evidence_record_id` / `created_at` stay `None`. Governance requires an `idempotency_key`,
+  `request.authorization_scope == subject_snapshot.stored_authorization_scope` (identity
+  matching necessary but not sufficient, anchored on the stored parent subject since the
+  evidence has no stored row yet), and a permitted, side-effect-free, still-review-gated
+  normalization output. **No live DB connection/read/write, no SQL, no stored records, no
+  SQLAlchemy/Alembic/`peak.db` import, no LLM/AgentNet/MCP/resolver/network call, no
+  client-facing approval, no financial verification, no capsule publication; evidence workers
+  still do not write directly to the DB.** Checked by
+  [`../tests/validate_phase18_evidence_persistence.py`](../tests/validate_phase18_evidence_persistence.py)
+  (`make validate-phase18`).
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

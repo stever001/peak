@@ -10,7 +10,7 @@ objects are needed, the harnesses build **synthetic fixtures at runtime**
 directory that is auto-deleted. Nothing is stored. See
 [`../docs/FIXTURE_STRATEGY.md`](../docs/FIXTURE_STRATEGY.md).
 
-Seventeen harnesses, run together by `make validate`:
+Eighteen harnesses, run together by `make validate`:
 
 - `validate_phase1.py` — schemas + synthetic object fixtures.
 - `validate_phase2.py` — schemas + a synthetic `EngagementPacket`.
@@ -29,6 +29,7 @@ Seventeen harnesses, run together by `make validate`:
 - `validate_phase15_review_gate.py` — QA / review-gate check (stdlib-only).
 - `validate_phase16_review_persistence.py` — review-persistence-boundary check (stdlib-only).
 - `validate_phase17_controlled_db_writer.py` — controlled-DB-writer-boundary check (stdlib-only).
+- `validate_phase18_evidence_persistence.py` — evidence-persistence-mapping check (stdlib-only).
 
 ## `synthetic_fixtures.py`
 
@@ -267,6 +268,31 @@ Stdlib-only; **no live database connection, no SQL execution, and no stored reco
 [`../docs/CONTROLLED_DB_WRITER_BOUNDARY.md`](../docs/CONTROLLED_DB_WRITER_BOUNDARY.md) and
 [`../docs/CONTROLLED_WRITE_ALLOWLIST.md`](../docs/CONTROLLED_WRITE_ALLOWLIST.md).
 
+## `validate_phase18_evidence_persistence.py`
+
+Check for the **Evidence Persistence Mapping** (`peak/evidence/`), which connects the Phase 14
+normalized evidence output to the Phase 17 controlled writer boundary. Confirms the package
+files exist and compile and the package imports; maps a **valid in-memory** normalized
+evidence result + stored parent subject snapshot and asserts the result is **DB-aware but not
+DB-writing** (`permitted`; the `EvidencePersistenceDraft` is review-gated with
+`evidence_record_id`/`created_at` `None`, `output_status = draft`, `review_status =
+needs_review`, `authoritative`/`client_facing_approved`/`capsule_candidate_ready` `false`; the
+Phase 17 `ControlledWriteRequest` targets `evidence_references` / `create_draft`; the plan's
+`requires_controlled_db_writer = true`; and `database_write_made`, `database_connection_made`,
+`sql_execution_made`, `stored_record_created`, `llm_call_made`, `agentnet_call_made`,
+`network_call_made`, `capsule_publication_made`, `client_facing_output_created` all `false`);
+confirms governance rejects each missing required field (including `idempotency_key`), a
+subject **or** normalized-record owner/client/engagement mismatch, a
+`request.authorization_scope` that does not match the subject's `stored_authorization_scope`,
+prohibited lifecycle statuses, an unpermitted or side-effect-flagged `normalization_result`,
+and a normalized record that is authoritative / client-facing-approved / capsule-ready or off
+the review gate — and that a denied request yields no draft/request/plan (side-effect-free
+denial); scans the package for **network / database / SQLAlchemy / `peak.db` / LLM imports or
+credentials** (there are none); checks the docs carry the mapping phrases; and re-asserts
+source-only discipline. Stdlib-only; **no live database connection, no SQL execution, and no
+stored records**. See [`../docs/EVIDENCE_PERSISTENCE_MAPPING.md`](../docs/EVIDENCE_PERSISTENCE_MAPPING.md)
+and [`../docs/EVIDENCE_WRITE_PLAN_POLICY.md`](../docs/EVIDENCE_WRITE_PLAN_POLICY.md).
+
 ## Running
 
 This machine uses `python3` (there is no bare `python`). From the repo root:
@@ -276,7 +302,7 @@ This machine uses `python3` (there is no bare `python`). From the repo root:
 make install-dev          # == python3 -m pip install -r requirements-dev.txt
 
 # run all harnesses
-make validate             # == phase1 … phase17
+make validate             # == phase1 … phase18
 
 # or run one at a time
 make validate-phase1
@@ -296,6 +322,7 @@ make validate-phase14
 make validate-phase15
 make validate-phase16
 make validate-phase17
+make validate-phase18
 ```
 
 Or invoke them directly, without the Makefile:
@@ -318,11 +345,12 @@ python3 tests/validate_phase14_evidence_worker.py        # stdlib-only, no depen
 python3 tests/validate_phase15_review_gate.py            # stdlib-only, no dependency needed
 python3 tests/validate_phase16_review_persistence.py     # stdlib-only, no dependency needed
 python3 tests/validate_phase17_controlled_db_writer.py   # stdlib-only, no dependency needed
+python3 tests/validate_phase18_evidence_persistence.py   # stdlib-only, no dependency needed
 ```
 
 ## Exit codes
 
-All seventeen harnesses share the same convention:
+All eighteen harnesses share the same convention:
 
 | Code | Meaning |
 | --- | --- |

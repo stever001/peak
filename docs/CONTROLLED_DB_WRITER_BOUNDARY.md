@@ -90,3 +90,14 @@ When the controlled database integration lands, a governed writer will execute t
 allowlisted table, assign `audit_record_id` / `created_at`, and persist the
 `ControlledWriteAuditDraft` for audit — under access control and enforcing the same stored
 scope and allowlist checks. **That write does not happen in Phase 17.**
+
+## First domain consumer (Phase 18)
+
+The **Phase 18 Evidence Persistence Mapping**
+([`EVIDENCE_PERSISTENCE_MAPPING.md`](EVIDENCE_PERSISTENCE_MAPPING.md),
+[`../peak/evidence/`](../peak/evidence/)) is the first domain to route through this boundary:
+it maps a Phase 14 `NormalizedEvidenceRecord` into an `EvidencePersistenceDraft` and submits
+a `ControlledWriteRequest` targeting `evidence_references` / `create_draft` with an
+`idempotency_key` and a parent-subject stored scope. It relies on exactly the checks here —
+allowlist, idempotency, stored-scope — and produces only a no-op plan. Future persistence
+for other domains (reviews, agent runs, ingestion) routes through the same boundary.

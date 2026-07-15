@@ -118,6 +118,15 @@ shape fits this architecture, defaulting to `draft`/`needs_review` and non-autho
 under access control ([`DATABASE_ACCESS_AND_AUDIT.md`](DATABASE_ACCESS_AND_AUDIT.md)); see
 the record lifecycle in [`EVIDENCE_RECORD_LIFECYCLE.md`](EVIDENCE_RECORD_LIFECYCLE.md).
 
+The **Phase 18 Evidence Persistence Mapping**
+([`EVIDENCE_PERSISTENCE_MAPPING.md`](EVIDENCE_PERSISTENCE_MAPPING.md),
+[`../peak/evidence/`](../peak/evidence/)) is the step that connects a normalized record to
+that future write: it maps the record into an `EvidencePersistenceDraft` and routes it
+through the Phase 17 controlled writer boundary as a no-op plan for `evidence_references` /
+`create_draft` — **DB-aware but not DB-writing**. Evidence workers still do not write
+directly to the DB, and every future write passes through the allowlist, `idempotency_key`,
+and parent-subject stored-scope checks.
+
 Whether a worker output may be relied on internally is decided by the **QA / Review Gate**
 ([`QA_REVIEW_GATE.md`](QA_REVIEW_GATE.md), [`../peak/review/`](../peak/review/), Phase 15):
 a production-shaped but **no-side-effect** review decision (`approve_internal` means

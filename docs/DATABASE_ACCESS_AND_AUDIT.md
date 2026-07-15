@@ -114,3 +114,14 @@ writer maps only allowlisted actions to parameterized operations under these aud
 it opens no connection and runs no SQL in this phase. A future writer would persist a
 `ControlledWriteAuditDraft` (recording table, action, requester/role, idempotency key,
 decision, and reasons) for each attempt.
+
+The Phase 18 **Evidence Persistence Mapping** ([`EVIDENCE_PERSISTENCE_MAPPING.md`](EVIDENCE_PERSISTENCE_MAPPING.md),
+[`EVIDENCE_WRITE_PLAN_POLICY.md`](EVIDENCE_WRITE_PLAN_POLICY.md)) is the first domain to use
+that front door: it maps a Phase 14 normalized evidence record to a `ControlledWriteRequest`
+for `evidence_references` / `create_draft`. Because the new evidence has **no stored row
+yet**, its write authority is anchored to the **stored parent/source/engagement subject** —
+the future writer loads that subject's `stored_authorization_scope` and requires
+`request.authorization_scope == subject.stored_authorization_scope` (identity matching
+necessary but not sufficient). Evidence workers still do not write directly to the DB, and
+the review gate (`draft` / `needs_review`, non-authoritative, non-client-facing) is preserved
+into the draft the writer would persist.
