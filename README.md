@@ -75,11 +75,14 @@ peak/
 │   ├── PEAK_RESOLVER_ACCESS_POLICY.md    # Who/what may reach the resolver, under governance
 │   ├── AGENT_EXECUTION_HARNESS.md        # How future agents are invoked/governed (no execution)
 │   ├── AGENT_RUN_RECORDS.md              # Future AgentRunRecord shape (nothing stored)
+│   ├── EVIDENCE_NORMALIZATION_WORKER.md  # First production-shaped worker (review-gated)
+│   ├── EVIDENCE_RECORD_LIFECYCLE.md      # Raw → normalized draft → reviewed evidence
 │   └── IMPLEMENTATION_PLAN.md
 ├── peak/                         # Python tooling layer (source only; no data)
 │   ├── db/                       # base, enums, models, session (MySQL)
 │   ├── agentnet/                 # Governance wrapper for the AgentNet MCP connector (no calls)
-│   └── agents/                   # Agent execution harness scaffold (mock; no live execution)
+│   ├── agents/                   # Agent execution harness scaffold (mock; no live execution)
+│   └── workers/                  # Production-shaped workers (evidence normalization; review-gated)
 ├── alembic/                      # Alembic migrations (schema only; no data)
 ├── alembic.ini                   # Alembic config (URL from env, not the repo)
 ├── .env.example                  # Env placeholders only (PEAK_DATABASE_URL); .env ignored
@@ -268,6 +271,27 @@ self-approve, publish capsules, or verify financial impact.
 
 ```bash
 make validate-phase13   # agent-execution-harness check (stdlib-only; no execution)
+```
+
+### Evidence Normalization Worker (Phase 14)
+
+The first **production-shaped** worker. It turns a raw evidence reference into a
+structured, **review-gated** normalized evidence record — output whose *shape* fits the
+controlled data architecture, but whose *status* is always gated (`draft` /
+`needs_review`, `authoritative = false`, `client_facing_approved = false`). Normalization
+is deterministic: **no live LLM call, no AgentNet call, no database write, no network
+call, no client-facing output, no capsule publication**. A record is not authoritative
+merely because a worker created it.
+
+- [`peak/workers/`](peak/workers/) — worker contracts, deterministic normalization
+  helpers, and governance guards.
+- [`docs/EVIDENCE_NORMALIZATION_WORKER.md`](docs/EVIDENCE_NORMALIZATION_WORKER.md) — design,
+  inputs, output categories, and boundaries.
+- [`docs/EVIDENCE_RECORD_LIFECYCLE.md`](docs/EVIDENCE_RECORD_LIFECYCLE.md) — raw → normalized
+  draft → reviewed → (future) capsule candidate.
+
+```bash
+make validate-phase14   # evidence-normalization-worker check (stdlib-only; deterministic)
 ```
 
 ## Design constraints

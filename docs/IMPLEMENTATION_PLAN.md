@@ -274,6 +274,22 @@ and documentation accurately states integration status.
   [`../tests/validate_phase13_agent_harness.py`](../tests/validate_phase13_agent_harness.py)
   (`make validate-phase13`).
 
+**First production-shaped worker — Evidence Normalization (Phase 14):**
+
+- [x] The first real worker: [`../peak/workers/`](../peak/workers/) — worker contracts
+  (`contracts.py`), deterministic normalization helpers (`evidence_normalization.py`), and
+  governance guards (`governance.py`) — plus
+  [`EVIDENCE_NORMALIZATION_WORKER.md`](EVIDENCE_NORMALIZATION_WORKER.md) and
+  [`EVIDENCE_RECORD_LIFECYCLE.md`](EVIDENCE_RECORD_LIFECYCLE.md). It turns a raw evidence
+  reference into a **production-shaped but review-gated** `NormalizedEvidenceRecord`
+  (`output_status=draft`, `review_status=needs_review`, `authoritative=false`,
+  `client_facing_approved=false`, `capsule_candidate_ready=false`). Normalization is fully
+  deterministic — **no live LLM/AgentNet/MCP/resolver/database/network call, no file write,
+  no client-facing output, no capsule publication, no stored data**. A record is not
+  authoritative merely because a worker created it. Checked by
+  [`../tests/validate_phase14_evidence_worker.py`](../tests/validate_phase14_evidence_worker.py)
+  (`make validate-phase14`).
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

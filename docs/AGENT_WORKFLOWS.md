@@ -68,6 +68,14 @@ governance checks, a no-op mock executor, and a mock LLM. Output defaults to
 [`AGENT_EXECUTION_HARNESS.md`](AGENT_EXECUTION_HARNESS.md) and
 [`AGENT_RUN_RECORDS.md`](AGENT_RUN_RECORDS.md). AgentNet integration is not complete.
 
+**First production-shaped worker (Phase 14).** Workflow 5 (evidence normalization) now has
+a real, deterministic worker in [`../peak/workers/`](../peak/workers/) that turns a raw
+evidence reference into a **production-shaped but review-gated** `NormalizedEvidenceRecord`
+(`draft`/`needs_review`, non-authoritative, non-client-facing). It makes no live
+LLM/AgentNet/database/network call and stores nothing. See
+[`EVIDENCE_NORMALIZATION_WORKER.md`](EVIDENCE_NORMALIZATION_WORKER.md) and
+[`EVIDENCE_RECORD_LIFECYCLE.md`](EVIDENCE_RECORD_LIFECYCLE.md).
+
 ## The first end-to-end thread
 
 The initial priority is one clean, connected path from a new client through to a

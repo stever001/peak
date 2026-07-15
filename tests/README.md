@@ -10,7 +10,7 @@ objects are needed, the harnesses build **synthetic fixtures at runtime**
 directory that is auto-deleted. Nothing is stored. See
 [`../docs/FIXTURE_STRATEGY.md`](../docs/FIXTURE_STRATEGY.md).
 
-Thirteen harnesses, run together by `make validate`:
+Fourteen harnesses, run together by `make validate`:
 
 - `validate_phase1.py` — schemas + synthetic object fixtures.
 - `validate_phase2.py` — schemas + a synthetic `EngagementPacket`.
@@ -25,6 +25,7 @@ Thirteen harnesses, run together by `make validate`:
 - `validate_phase11_db_scaffold.py` — MySQL DB-scaffold check (stdlib-only; `make db-check`).
 - `validate_phase12_agentnet_mcp_boundary.py` — AgentNet MCP governance-boundary check (stdlib-only).
 - `validate_phase13_agent_harness.py` — agent-execution-harness scaffold check (stdlib-only).
+- `validate_phase14_evidence_worker.py` — evidence-normalization-worker check (stdlib-only).
 
 ## `synthetic_fixtures.py`
 
@@ -183,6 +184,22 @@ governance rejects an unknown agent, missing `owner_id`, revoked/archived lifecy
 not-yet-implemented; and re-asserts source-only discipline. Stdlib-only; **makes no live
 call**. See [`../docs/AGENT_EXECUTION_HARNESS.md`](../docs/AGENT_EXECUTION_HARNESS.md).
 
+## `validate_phase14_evidence_worker.py`
+
+Check for the first production-shaped worker, the **Evidence Normalization Worker**
+(`peak/workers/`). Confirms the package files exist and compile and the package imports;
+normalizes a **valid in-memory synthetic request** and asserts the result is **review-gated**
+(`permitted`, `output_status = draft`, `review_status = needs_review`, `authoritative`,
+`client_facing_approved`, `capsule_candidate_ready`, `database_write_made`, `llm_call_made`,
+`agentnet_call_made`, `network_call_made`, `capsule_publication_made` all as required);
+confirms governance rejects missing `owner_id`/`client_id`/`engagement_id`, rejected
+`review_status`, revoked/archived/deleted `lifecycle_status`, missing `raw_evidence` /
+`source_reference`, and a request↔source scope mismatch; scans the package for
+**network/database/LLM imports or credentials** (there are none); checks the docs carry the
+review-gate phrases; and re-asserts source-only discipline. Stdlib-only; **no live call and
+no stored data**. See
+[`../docs/EVIDENCE_NORMALIZATION_WORKER.md`](../docs/EVIDENCE_NORMALIZATION_WORKER.md).
+
 ## Running
 
 This machine uses `python3` (there is no bare `python`). From the repo root:
@@ -192,7 +209,7 @@ This machine uses `python3` (there is no bare `python`). From the repo root:
 make install-dev          # == python3 -m pip install -r requirements-dev.txt
 
 # run all harnesses
-make validate             # == phase1 … phase13
+make validate             # == phase1 … phase14
 
 # or run one at a time
 make validate-phase1
@@ -208,6 +225,7 @@ make validate-phase10
 make validate-phase11   # == make db-check
 make validate-phase12
 make validate-phase13
+make validate-phase14
 ```
 
 Or invoke them directly, without the Makefile:
@@ -226,11 +244,12 @@ python3 tests/validate_phase10_database_plan.py # stdlib-only, no dependency nee
 python3 tests/validate_phase11_db_scaffold.py   # stdlib-only, no dependency needed
 python3 tests/validate_phase12_agentnet_mcp_boundary.py  # stdlib-only, no dependency needed
 python3 tests/validate_phase13_agent_harness.py          # stdlib-only, no dependency needed
+python3 tests/validate_phase14_evidence_worker.py        # stdlib-only, no dependency needed
 ```
 
 ## Exit codes
 
-All thirteen harnesses share the same convention:
+All fourteen harnesses share the same convention:
 
 | Code | Meaning |
 | --- | --- |

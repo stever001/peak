@@ -73,3 +73,9 @@ pre-execution checks around a no-op mock executor (no live call, output defaults
 `draft`/`needs_review`); the provenance record it would eventually write is described in
 [`AGENT_RUN_RECORDS.md`](AGENT_RUN_RECORDS.md). See
 [`AGENT_EXECUTION_HARNESS.md`](AGENT_EXECUTION_HARNESS.md).
+
+The Phase 14 **Evidence Normalization Worker** ([`../peak/workers/`](../peak/workers/))
+applies the same posture to a production-shaped worker: its output is review-gated
+(`draft`/`needs_review`, non-authoritative, non-client-facing) and it performs **no
+database write** — a future governed writer persists reviewed records under these access
+and audit rules. See [`EVIDENCE_RECORD_LIFECYCLE.md`](EVIDENCE_RECORD_LIFECYCLE.md).

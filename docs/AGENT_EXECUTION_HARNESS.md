@@ -81,6 +81,11 @@ The registry catalogs the 10 known agents/workers — `new_client_intake_agent`,
 each mapped to a workflow, a prompt contract (where one exists), governance defaults, and
 forward-looking flags. They are described here as **future** capabilities; none executes.
 
+The `evidence_normalization_worker` is the first to get a concrete, production-shaped
+implementation in [`../peak/workers/`](../peak/workers/) (Phase 14) — deterministic and
+review-gated, still with no live call and no stored data. See
+[`EVIDENCE_NORMALIZATION_WORKER.md`](EVIDENCE_NORMALIZATION_WORKER.md).
+
 ## No client-facing output from the harness
 
 The harness produces **no client-facing output**. Any artifact an agent drafts is internal

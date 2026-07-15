@@ -57,6 +57,10 @@ Legend for each group:
   `sensitive_data_flag`, evidence status.
 - **Governance states:** authorization, review, lifecycle, **EvidenceStatus**.
 - **Capsule-ready?** **Yes, when `verified`** and source-labeled. **Client-facing?** As cited support, after approval.
+- **Produced by (future):** the Evidence Normalization Worker drafts these as review-gated
+  `NormalizedEvidenceRecord`s (`draft`/`needs_review`, non-authoritative) — see
+  [`EVIDENCE_NORMALIZATION_WORKER.md`](EVIDENCE_NORMALIZATION_WORKER.md) and
+  [`EVIDENCE_RECORD_LIFECYCLE.md`](EVIDENCE_RECORD_LIFECYCLE.md). Nothing is stored yet.
 
 ### SourceSystemReference
 - **Purpose:** pointer to a client source system/location

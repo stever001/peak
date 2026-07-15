@@ -107,6 +107,17 @@ it. The allowed states and transitions are defined in
 Agent/AI workflows must default their output to `draft`/`needs_review` and may never set
 `client_facing_approved` — human review gates are preserved by contract.
 
+## Preparing records for controlled storage (workers)
+
+Records destined for controlled storage are shaped by **production-shaped but review-gated**
+workers before any persistence exists. The first is the **Evidence Normalization Worker**
+([`EVIDENCE_NORMALIZATION_WORKER.md`](EVIDENCE_NORMALIZATION_WORKER.md),
+[`../peak/workers/`](../peak/workers/)): it produces `NormalizedEvidenceRecord`s whose
+shape fits this architecture, defaulting to `draft`/`needs_review` and non-authoritative.
+**No database write happens yet** — a future governed writer persists reviewed records
+under access control ([`DATABASE_ACCESS_AND_AUDIT.md`](DATABASE_ACCESS_AND_AUDIT.md)); see
+the record lifecycle in [`EVIDENCE_RECORD_LIFECYCLE.md`](EVIDENCE_RECORD_LIFECYCLE.md).
+
 ## Grounding access boundary (AgentNet MCP connector)
 
 When future workflows reach the resolver for grounding, they do so through the **existing
