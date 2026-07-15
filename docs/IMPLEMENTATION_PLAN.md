@@ -241,6 +241,23 @@ and documentation accurately states integration status.
   (`make db-check`). Local scaffold only — no production deployment, API, resolver,
   ingestion, agent runtime, or AgentNet integration.
 
+**AgentNet MCP boundary (Phase 12 — governance wrapper scaffold):**
+
+- [x] Peak-side **governance wrapper** for future use of the **existing AgentNet MCP
+  connector** (a separate repo; not reimplemented or copied here). Added
+  [`../peak/agentnet/`](../peak/agentnet/) — request/response contracts
+  (`contracts.py`), deterministic guard checks (`governance.py`:
+  `evaluate_resolve_request`, `evaluate_history_request`,
+  `evaluate_capsule_validation_request`, `build_tool_call_plan`), and a **no-network mock
+  boundary** (`mock_mcp.py`) — plus [`AGENTNET_MCP_BOUNDARY.md`](AGENTNET_MCP_BOUNDARY.md)
+  and [`PEAK_RESOLVER_ACCESS_POLICY.md`](PEAK_RESOLVER_ACCESS_POLICY.md). The known tool
+  surface is exactly `agentnet.resolve` / `agentnet.resolve_history` /
+  `agentnet.validate_capsule`; publication tools are rejected. **Contracts/scaffold only —
+  no live MCP/resolver/AgentNet/network call, no credentials, no stored data; AgentNet
+  integration is not complete and capsule publication is deferred.** Checked by
+  [`../tests/validate_phase12_agentnet_mcp_boundary.py`](../tests/validate_phase12_agentnet_mcp_boundary.py)
+  (`make validate-phase12`).
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

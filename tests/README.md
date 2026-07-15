@@ -10,7 +10,7 @@ objects are needed, the harnesses build **synthetic fixtures at runtime**
 directory that is auto-deleted. Nothing is stored. See
 [`../docs/FIXTURE_STRATEGY.md`](../docs/FIXTURE_STRATEGY.md).
 
-Eleven harnesses, run together by `make validate`:
+Twelve harnesses, run together by `make validate`:
 
 - `validate_phase1.py` — schemas + synthetic object fixtures.
 - `validate_phase2.py` — schemas + a synthetic `EngagementPacket`.
@@ -23,6 +23,7 @@ Eleven harnesses, run together by `make validate`:
 - `validate_phase9_governance.py` — governance-state contract check (jsonschema + stdlib).
 - `validate_phase10_database_plan.py` — database-plan doc check (stdlib-only).
 - `validate_phase11_db_scaffold.py` — MySQL DB-scaffold check (stdlib-only; `make db-check`).
+- `validate_phase12_agentnet_mcp_boundary.py` — AgentNet MCP governance-boundary check (stdlib-only).
 
 ## `synthetic_fixtures.py`
 
@@ -151,6 +152,21 @@ dependency-backed portion runs when the `requirements.txt` packages are installe
 `make validate PYTHON=.venv/bin/python` (see
 [`../docs/DATABASE_SCAFFOLD.md`](../docs/DATABASE_SCAFFOLD.md)).
 
+## `validate_phase12_agentnet_mcp_boundary.py`
+
+Boundary check for Peak's **governance wrapper** around the **existing AgentNet MCP
+connector** (a separate repo; not reimplemented here). Confirms the `peak/agentnet/`
+scaffold files exist and compile; imports the package and asserts `KNOWN_MCP_TOOLS` is
+**exactly** `agentnet.resolve` / `agentnet.resolve_history` / `agentnet.validate_capsule`;
+exercises the governance guards (a valid request is permitted; publication-style and
+unknown tools, missing `owner_id`, and revoked/archived lifecycle are rejected); confirms
+the **no-network mock boundary** always reports `live_call_made = False` and
+`agentnet_integration_active = False`; scans the package for **network imports, credential
+reads, or connector imports** (there are none); checks the boundary docs carry the
+required language (no live calls, no capsule publication, AgentNet integration is not
+complete); and re-asserts source-only discipline. Stdlib-only; **makes no network call**.
+See [`../docs/AGENTNET_MCP_BOUNDARY.md`](../docs/AGENTNET_MCP_BOUNDARY.md).
+
 ## Running
 
 This machine uses `python3` (there is no bare `python`). From the repo root:
@@ -160,7 +176,7 @@ This machine uses `python3` (there is no bare `python`). From the repo root:
 make install-dev          # == python3 -m pip install -r requirements-dev.txt
 
 # run all harnesses
-make validate             # == phase1 … phase11
+make validate             # == phase1 … phase12
 
 # or run one at a time
 make validate-phase1
@@ -174,6 +190,7 @@ make validate-phase8
 make validate-phase9
 make validate-phase10
 make validate-phase11   # == make db-check
+make validate-phase12
 ```
 
 Or invoke them directly, without the Makefile:
@@ -190,11 +207,12 @@ python3 tests/validate_phase8_architecture.py  # stdlib-only, no dependency need
 python3 tests/validate_phase9_governance.py    # jsonschema + stdlib
 python3 tests/validate_phase10_database_plan.py # stdlib-only, no dependency needed
 python3 tests/validate_phase11_db_scaffold.py   # stdlib-only, no dependency needed
+python3 tests/validate_phase12_agentnet_mcp_boundary.py  # stdlib-only, no dependency needed
 ```
 
 ## Exit codes
 
-All eleven harnesses share the same convention:
+All twelve harnesses share the same convention:
 
 | Code | Meaning |
 | --- | --- |

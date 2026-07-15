@@ -62,6 +62,16 @@ scope, sensitivity class, node/capsule segregation), not open to the public. Cli
 confidentiality is preserved; nothing is disclosed publicly by making a capsule
 resolver-accessible.
 
+## Resolver access via the AgentNet MCP connector
+
+Future resolver *reads* (grounding lookups, resolve history, capsule validation) would go
+through the **existing AgentNet MCP connector** (a separate repo), governed by Peak's own
+wrapper — see [`AGENTNET_MCP_BOUNDARY.md`](AGENTNET_MCP_BOUNDARY.md) and
+[`PEAK_RESOLVER_ACCESS_POLICY.md`](PEAK_RESOLVER_ACCESS_POLICY.md). That wrapper is
+scaffold/contracts only: **no live calls**, and **AgentNet integration is not complete**.
+Note the distinction — access/grounding is being scaffolded now; **capsule publication
+(the mapping below) remains deferred** and is not implemented.
+
 ## Guardrails
 
 - **No publication implementation exists** — this is a mapping/plan only.

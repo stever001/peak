@@ -106,3 +106,12 @@ it. The allowed states and transitions are defined in
 [`../schemas/governance-state.schema.json`](../schemas/governance-state.schema.json).
 Agent/AI workflows must default their output to `draft`/`needs_review` and may never set
 `client_facing_approved` — human review gates are preserved by contract.
+
+## Grounding access boundary (AgentNet MCP connector)
+
+When future workflows reach the resolver for grounding, they do so through the **existing
+AgentNet MCP connector** (a separate repo), fronted by Peak's own **governance wrapper**
+that checks owner/engagement scope and governance state before any call. This boundary is
+contracts/scaffold only — it makes **no live calls**, and **AgentNet integration is not
+complete**. See [`AGENTNET_MCP_BOUNDARY.md`](AGENTNET_MCP_BOUNDARY.md) and
+[`PEAK_RESOLVER_ACCESS_POLICY.md`](PEAK_RESOLVER_ACCESS_POLICY.md).

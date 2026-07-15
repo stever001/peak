@@ -106,3 +106,8 @@ Local scaffold only: schema definitions and migrations. **Not** included: produc
 deployment, seed/fixtures, API, resolver integration, ingestion pipeline, agent runtime,
 LLM/AgentNet integration, or client-facing functionality. See
 [`DATABASE_IMPLEMENTATION_PLAN.md`](DATABASE_IMPLEMENTATION_PLAN.md) for the staged plan.
+
+Resolver *access* (grounding lookups via the existing AgentNet MCP connector) is
+scaffolded separately as a governance boundary in
+[`AGENTNET_MCP_BOUNDARY.md`](AGENTNET_MCP_BOUNDARY.md) — also contracts only, with no live
+calls and no AgentNet integration.

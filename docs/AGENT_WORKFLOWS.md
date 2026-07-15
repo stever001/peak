@@ -199,6 +199,13 @@ through controlled access paths. See
 [`RESOLVER_CAPSULE_ARCHITECTURE.md`](RESOLVER_CAPSULE_ARCHITECTURE.md) — all architecture
 only, not implemented.
 
+When a future runtime reaches the resolver for grounding, it would go through the
+**existing AgentNet MCP connector** (a separate repo), fronted by Peak's **governance
+wrapper** ([`AGENTNET_MCP_BOUNDARY.md`](AGENTNET_MCP_BOUNDARY.md),
+[`PEAK_RESOLVER_ACCESS_POLICY.md`](PEAK_RESOLVER_ACCESS_POLICY.md)) that checks
+owner/engagement scope and governance state first. Today that boundary is scaffold only —
+**no live calls**, and **AgentNet integration is not complete**.
+
 ## Governance states & agent guardrails
 
 Every record agents touch carries governance state (see

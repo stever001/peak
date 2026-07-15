@@ -79,3 +79,11 @@ AgentNet and the resolver integration are **intended future architecture**. Noth
 this repository performs, implements, or implies any capsule creation, resolver lookup,
 grounding, or AgentNet publication. These documents describe the target so the data
 contracts and governance are defined before any integration is built.
+
+Future resolver lookups would go through the **existing AgentNet MCP connector** (a
+separate repo), wrapped by Peak's own **governance boundary** — see
+[`AGENTNET_MCP_BOUNDARY.md`](AGENTNET_MCP_BOUNDARY.md) and
+[`PEAK_RESOLVER_ACCESS_POLICY.md`](PEAK_RESOLVER_ACCESS_POLICY.md). That boundary is
+scaffold/contracts only: it makes **no live calls**, and **AgentNet integration is not
+complete**. Capsule *publication* through the resolver remains deferred to a later phase
+and is not designed here.

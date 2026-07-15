@@ -71,9 +71,12 @@ peak/
 │   ├── DATABASE_ACCESS_AND_AUDIT.md      # Access roles, audit fields, agent limits
 │   ├── DATABASE_TO_RESOLVER_MAPPING.md   # DB records → resolver capsules (planning)
 │   ├── DATABASE_SCAFFOLD.md              # MySQL scaffold: models, enums, migration
+│   ├── AGENTNET_MCP_BOUNDARY.md          # Peak governance wrapper for the MCP connector
+│   ├── PEAK_RESOLVER_ACCESS_POLICY.md    # Who/what may reach the resolver, under governance
 │   └── IMPLEMENTATION_PLAN.md
-├── peak/                         # Python tooling layer (SQLAlchemy models; no data)
-│   └── db/                       # base, enums, models, session (MySQL)
+├── peak/                         # Python tooling layer (source only; no data)
+│   ├── db/                       # base, enums, models, session (MySQL)
+│   └── agentnet/                 # Governance wrapper for the AgentNet MCP connector (no calls)
 ├── alembic/                      # Alembic migrations (schema only; no data)
 ├── alembic.ini                   # Alembic config (URL from env, not the repo)
 ├── .env.example                  # Env placeholders only (PEAK_DATABASE_URL); .env ignored
@@ -221,6 +224,28 @@ anchored to Peak's methodology, prior engagements, and evidence standards.
 
 **AgentNet integration is not yet implemented.** Wherever grounding is referenced,
 treat it as target architecture unless a file explicitly states it is live.
+
+### AgentNet MCP boundary (Phase 12)
+
+There is an **existing AgentNet MCP connector** (a separate repo) that forwards MCP tool
+calls to an AgentNet-compatible resolver. Peak does **not** reimplement or copy it —
+instead Peak adds its own **governance wrapper** around *future* connector use. Phase 12
+is scaffold/contracts only: it makes **no live calls**, and **AgentNet integration is not
+complete**. Capsule publication strategy is deferred to a later phase.
+
+- [`peak/agentnet/`](peak/agentnet/) — request/response contracts, deterministic
+  governance guard checks, and a **no-network mock boundary** (never calls the connector,
+  reads no credentials, opens no socket).
+- [`docs/AGENTNET_MCP_BOUNDARY.md`](docs/AGENTNET_MCP_BOUNDARY.md) — the boundary and the
+  three known tools (`agentnet.resolve`, `agentnet.resolve_history`,
+  `agentnet.validate_capsule`).
+- [`docs/PEAK_RESOLVER_ACCESS_POLICY.md`](docs/PEAK_RESOLVER_ACCESS_POLICY.md) — who/what
+  may request resolver context, scoping, allowed tools, prohibited actions, and the
+  governance states checked before access.
+
+```bash
+make validate-phase12   # AgentNet MCP boundary check (stdlib-only; no network)
+```
 
 ## Design constraints
 
