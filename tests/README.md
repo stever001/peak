@@ -10,7 +10,7 @@ objects are needed, the harnesses build **synthetic fixtures at runtime**
 directory that is auto-deleted. Nothing is stored. See
 [`../docs/FIXTURE_STRATEGY.md`](../docs/FIXTURE_STRATEGY.md).
 
-Fifteen harnesses, run together by `make validate`:
+Sixteen harnesses, run together by `make validate`:
 
 - `validate_phase1.py` — schemas + synthetic object fixtures.
 - `validate_phase2.py` — schemas + a synthetic `EngagementPacket`.
@@ -27,6 +27,7 @@ Fifteen harnesses, run together by `make validate`:
 - `validate_phase13_agent_harness.py` — agent-execution-harness scaffold check (stdlib-only).
 - `validate_phase14_evidence_worker.py` — evidence-normalization-worker check (stdlib-only).
 - `validate_phase15_review_gate.py` — QA / review-gate check (stdlib-only).
+- `validate_phase16_review_persistence.py` — review-persistence-boundary check (stdlib-only).
 
 ## `synthetic_fixtures.py`
 
@@ -219,6 +220,29 @@ imports or credentials** (there are none); checks the docs carry the no-side-eff
 and re-asserts source-only discipline. Stdlib-only; **no live call and no stored review
 records**. See [`../docs/QA_REVIEW_GATE.md`](../docs/QA_REVIEW_GATE.md).
 
+## `validate_phase16_review_persistence.py`
+
+Check for the **Review Persistence Boundary** (`peak/review/persistence_contracts.py`,
+`persistence_governance.py`, `review_record_mapper.py`). Confirms the files exist and compile
+and the package imports; prepares persistence for a **valid in-memory** permitted
+`ReviewGateResult` + `StoredReviewSubjectSnapshot` and asserts the result is **DB-aware but
+not DB-writing** (`permitted`, `write_plan.target_table = review_records`,
+`review_record_id`/`created_at` `None`, `requires_controlled_db_writer = true`, and
+`database_write_made`, `database_connection_made`, `stored_review_record_created`,
+`llm_call_made`, `agentnet_call_made`, `network_call_made`, `capsule_publication_made`,
+`client_facing_output_created` all `false`); confirms governance rejects missing
+`owner_id`/`client_id`/`engagement_id`/`requested_by`/`reviewer_role`, a missing
+`subject_snapshot`/`review_gate_result`, an owner/client/engagement mismatch, a
+`request.authorization_scope` that does not match the subject's `stored_authorization_scope`
+(and a missing stored scope), prohibited request/subject lifecycle statuses, an unpermitted
+gate result, a gate result with any call/write flag set true, and an unknown persistence
+action — and that a denied request yields no write plan (side-effect-free denial); scans the
+new files for **network/database/LLM imports or credentials** (there are none); checks the
+docs carry the DB-aware-not-DB-writing phrases; and re-asserts source-only discipline.
+Stdlib-only; **no live database read/write and no stored review records**. See
+[`../docs/REVIEW_PERSISTENCE_BOUNDARY.md`](../docs/REVIEW_PERSISTENCE_BOUNDARY.md) and
+[`../docs/DB_BACKED_REVIEW_SCOPE_POLICY.md`](../docs/DB_BACKED_REVIEW_SCOPE_POLICY.md).
+
 ## Running
 
 This machine uses `python3` (there is no bare `python`). From the repo root:
@@ -228,7 +252,7 @@ This machine uses `python3` (there is no bare `python`). From the repo root:
 make install-dev          # == python3 -m pip install -r requirements-dev.txt
 
 # run all harnesses
-make validate             # == phase1 … phase15
+make validate             # == phase1 … phase16
 
 # or run one at a time
 make validate-phase1
@@ -246,6 +270,7 @@ make validate-phase12
 make validate-phase13
 make validate-phase14
 make validate-phase15
+make validate-phase16
 ```
 
 Or invoke them directly, without the Makefile:
@@ -266,11 +291,12 @@ python3 tests/validate_phase12_agentnet_mcp_boundary.py  # stdlib-only, no depen
 python3 tests/validate_phase13_agent_harness.py          # stdlib-only, no dependency needed
 python3 tests/validate_phase14_evidence_worker.py        # stdlib-only, no dependency needed
 python3 tests/validate_phase15_review_gate.py            # stdlib-only, no dependency needed
+python3 tests/validate_phase16_review_persistence.py     # stdlib-only, no dependency needed
 ```
 
 ## Exit codes
 
-All fifteen harnesses share the same convention:
+All sixteen harnesses share the same convention:
 
 | Code | Meaning |
 | --- | --- |

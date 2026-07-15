@@ -87,3 +87,15 @@ client-facing approval, verify financial impact, or publish a capsule. It writes
 there are **no stored review records** in this phase — and a future governed writer would
 persist the decision as the `ReviewRecord` above under these same access and audit rules.
 See [`QA_REVIEW_GATE.md`](QA_REVIEW_GATE.md) and [`REVIEW_DECISION_MODEL.md`](REVIEW_DECISION_MODEL.md).
+
+The Phase 16 **Review Persistence Boundary** ([`REVIEW_PERSISTENCE_BOUNDARY.md`](REVIEW_PERSISTENCE_BOUNDARY.md))
+prepares that future `ReviewRecord` write — **DB-aware but not DB-writing**. It maps a
+permitted `ReviewGateResult` into a `ReviewRecordDraft` and a no-op `ReviewWritePlan`
+targeting `review_records`, but opens no DB connection and performs **no live database
+read/write**; a future controlled-DB writer executes the plan under these rules. A
+**critical access rule** lives here: a DB-backed review must load the subject record's
+**stored** `authorization_scope` from the controlled DB and require
+`request.authorization_scope == subject.stored_authorization_scope` — owner/client/engagement
+matching is necessary but not sufficient. The persisted `ReviewRecord` should record both
+the stored scope matched and the request scope presented, so the scope check is auditable.
+See [`DB_BACKED_REVIEW_SCOPE_POLICY.md`](DB_BACKED_REVIEW_SCOPE_POLICY.md).

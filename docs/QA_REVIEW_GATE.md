@@ -82,6 +82,15 @@ audit trail. **That write does not happen in Phase 15.** The gate's job today is
 compute the decision deterministically; storing it, and any real authority, remains future
 work under human governance.
 
+**Phase 16 — the Review Persistence Boundary** ([`REVIEW_PERSISTENCE_BOUNDARY.md`](REVIEW_PERSISTENCE_BOUNDARY.md),
+[`../peak/review/`](../peak/review/)) is the next step: it prepares that future persistence
+as a production-shaped `ReviewRecordDraft` and a no-op `ReviewWritePlan`. Phase 15 decides
+whether a review outcome is permitted; **Phase 16 prepares future review persistence plans
+and does not persist records.** Phase 16 is **DB-aware but not DB-writing**, and a future
+DB-backed review must compare `request.authorization_scope` against the subject record's
+**stored** `stored_authorization_scope` — see
+[`DB_BACKED_REVIEW_SCOPE_POLICY.md`](DB_BACKED_REVIEW_SCOPE_POLICY.md).
+
 ## Boundaries
 
 - **No authority escalation to client-facing** — a review decision may never create

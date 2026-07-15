@@ -147,6 +147,16 @@ Legend for each group:
   production-shaped but **no-side-effect** result. In Phase 15 there are **no stored review
   records**; a future governed writer persists the decision here. A review decision never
   creates client-facing approval, verifies financial impact, or publishes a capsule.
+- **Prepared by (future):** the **Phase 16 Review Persistence Boundary**
+  ([`REVIEW_PERSISTENCE_BOUNDARY.md`](REVIEW_PERSISTENCE_BOUNDARY.md),
+  [`DB_BACKED_REVIEW_SCOPE_POLICY.md`](DB_BACKED_REVIEW_SCOPE_POLICY.md)) maps a permitted
+  `ReviewGateResult` into a `ReviewRecordDraft` and a no-op `ReviewWritePlan` targeting this
+  `review_records` table — **DB-aware but not DB-writing** (`review_record_id` / `created_at`
+  left `None`; no DB connection or write; no stored review records). A future controlled-DB
+  writer executes the plan. **Scope rule:** a DB-backed review compares
+  `request.authorization_scope` against the subject's stored `authorization_scope`
+  (identity matching is necessary but not sufficient). Persisting a `ReviewRecord` should
+  capture both the stored scope matched and the request scope presented, for audit.
 
 ### AgentRunRecord
 - **Purpose:** provenance of an agent/worker run (future harness — see the Phase 13

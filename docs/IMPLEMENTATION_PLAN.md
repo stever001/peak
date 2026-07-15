@@ -311,6 +311,34 @@ and documentation accurately states integration status.
   [`../tests/validate_phase15_review_gate.py`](../tests/validate_phase15_review_gate.py)
   (`make validate-phase15`).
 
+**Review Persistence Boundary (Phase 16 — DB-aware, not DB-writing):**
+
+- [x] The readiness boundary for persisting a permitted review outcome as a controlled-DB
+  `ReviewRecord`: [`../peak/review/`](../peak/review/) adds persistence contracts
+  (`persistence_contracts.py`: `StoredReviewSubjectSnapshot`, `ReviewPersistenceRequest`,
+  `ReviewRecordDraft`, `ReviewWritePlan`, `ReviewPersistenceResult`), deterministic
+  persistence-readiness governance (`persistence_governance.py`:
+  `evaluate_review_persistence_request`, `validate_subject_scope_against_request`,
+  `validate_gate_result_for_persistence`, `build_persistence_decision`), and mapping helpers
+  (`review_record_mapper.py`: `build_review_record_draft`, `build_review_write_plan`,
+  `prepare_review_persistence`) — plus
+  [`REVIEW_PERSISTENCE_BOUNDARY.md`](REVIEW_PERSISTENCE_BOUNDARY.md) and
+  [`DB_BACKED_REVIEW_SCOPE_POLICY.md`](DB_BACKED_REVIEW_SCOPE_POLICY.md). It maps a permitted
+  Phase 15 `ReviewGateResult` into a production-shaped `ReviewRecordDraft` and a no-op
+  `ReviewWritePlan` (target `review_records`). **DB-aware but not DB-writing:**
+  `review_record_id` / `created_at` stay `None`, `requires_controlled_db_writer=true`, and
+  every flag (`database_write_made`, `database_connection_made`, `stored_review_record_created`,
+  `llm_call_made`, `agentnet_call_made`, `network_call_made`, `capsule_publication_made`,
+  `client_facing_output_created`) is `false`. **Critical scope rule:** a DB-backed review
+  compares `request.authorization_scope` against the subject's stored
+  `stored_authorization_scope` (implemented now via an in-memory `StoredReviewSubjectSnapshot`);
+  owner/client/engagement matching is necessary but not sufficient. **No live database
+  read/write, no SQLAlchemy/`peak.db` import, no LLM/AgentNet/MCP/resolver/network call, no
+  client-facing approval, no financial verification, no capsule publication, no stored review
+  records.** Checked by
+  [`../tests/validate_phase16_review_persistence.py`](../tests/validate_phase16_review_persistence.py)
+  (`make validate-phase16`).
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

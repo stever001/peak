@@ -125,6 +125,15 @@ internal reliance only). It stores nothing — there are **no stored review reco
 phase — and never creates client-facing approval; a future governed writer would persist
 the decision as a `ReviewRecord`.
 
+The **Phase 16 Review Persistence Boundary** ([`REVIEW_PERSISTENCE_BOUNDARY.md`](REVIEW_PERSISTENCE_BOUNDARY.md),
+[`DB_BACKED_REVIEW_SCOPE_POLICY.md`](DB_BACKED_REVIEW_SCOPE_POLICY.md)) prepares that future
+persistence — **DB-aware but not DB-writing**. It produces a `ReviewRecordDraft` and a no-op
+`ReviewWritePlan` (target `review_records`) with **no live database read/write** and no
+stored review records. Because authority to act on a stored record depends on the record's
+own governance state, a DB-backed review must compare `request.authorization_scope` against
+the subject's stored `authorization_scope` (loaded from controlled storage) — owner/client/
+engagement matching is necessary but not sufficient.
+
 ## Grounding access boundary (AgentNet MCP connector)
 
 When future workflows reach the resolver for grounding, they do so through the **existing

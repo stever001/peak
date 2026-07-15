@@ -91,3 +91,11 @@ as a **`ReviewRecord`** ([`DATABASE_RECORD_MODEL.md`](DATABASE_RECORD_MODEL.md),
 reference, the decision, reviewer identity, authorization scope, reasons/warnings, and
 timestamps for audit. **No such write happens in Phase 15** — there are **no stored review
 records** in this phase.
+
+That future write is prepared (not executed) by the **Phase 16 Review Persistence
+Boundary** ([`REVIEW_PERSISTENCE_BOUNDARY.md`](REVIEW_PERSISTENCE_BOUNDARY.md)): it maps a
+permitted `ReviewGateResult` into a `ReviewRecordDraft` + no-op `ReviewWritePlan` targeting
+`review_records`, still **DB-aware but not DB-writing**. A DB-backed review must compare
+`request.authorization_scope` against the subject record's stored
+`stored_authorization_scope` (owner/client/engagement matching is necessary but not
+sufficient) — see [`DB_BACKED_REVIEW_SCOPE_POLICY.md`](DB_BACKED_REVIEW_SCOPE_POLICY.md).

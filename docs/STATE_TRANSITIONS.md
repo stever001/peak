@@ -23,6 +23,13 @@ draft -> needs_review -> consultant_reviewed -> qa_reviewed -> approved_internal
   `supersede` → `superseded`, `keep_needs_review` → `needs_review`. It is a
   production-shaped but **no-side-effect** scaffold: it never advances a record to a
   client-facing state, and it stores nothing.
+- The **Phase 16 Review Persistence Boundary** ([`REVIEW_PERSISTENCE_BOUNDARY.md`](REVIEW_PERSISTENCE_BOUNDARY.md))
+  carries these next-state values into a `ReviewRecordDraft` for a *future* controlled-DB
+  write — **DB-aware but not DB-writing** (nothing is persisted). Before planning any such
+  write it re-checks scope against stored state: `request.authorization_scope` must equal
+  the subject's stored `authorization_scope`, and the subject's stored `lifecycle_status`
+  must not be `revoked` / `archived` / `deleted_reference_only`. Identity matching alone is
+  necessary but not sufficient. See [`DB_BACKED_REVIEW_SCOPE_POLICY.md`](DB_BACKED_REVIEW_SCOPE_POLICY.md).
 
 ## Client-facing transition
 

@@ -79,13 +79,15 @@ peak/
 │   ├── EVIDENCE_RECORD_LIFECYCLE.md      # Raw → normalized draft → reviewed evidence
 │   ├── QA_REVIEW_GATE.md                 # QA / review gate scaffold (no-side-effect decisions)
 │   ├── REVIEW_DECISION_MODEL.md          # Allowed/prohibited review decisions + state effects
+│   ├── REVIEW_PERSISTENCE_BOUNDARY.md    # Future ReviewRecord persistence (DB-aware, not DB-writing)
+│   ├── DB_BACKED_REVIEW_SCOPE_POLICY.md  # Stored-scope comparison rule for DB-backed review
 │   └── IMPLEMENTATION_PLAN.md
 ├── peak/                         # Python tooling layer (source only; no data)
 │   ├── db/                       # base, enums, models, session (MySQL)
 │   ├── agentnet/                 # Governance wrapper for the AgentNet MCP connector (no calls)
 │   ├── agents/                   # Agent execution harness scaffold (mock; no live execution)
 │   ├── workers/                  # Production-shaped workers (evidence normalization; review-gated)
-│   └── review/                   # QA / review gate scaffold (no-side-effect review decisions)
+│   └── review/                   # QA / review gate + review persistence boundary (no-side-effect)
 ├── alembic/                      # Alembic migrations (schema only; no data)
 ├── alembic.ini                   # Alembic config (URL from env, not the repo)
 ├── .env.example                  # Env placeholders only (PEAK_DATABASE_URL); .env ignored
@@ -317,6 +319,33 @@ client-facing output, no stored review records.**
 
 ```bash
 make validate-phase15   # QA / review-gate check (stdlib-only; no-side-effect)
+```
+
+### Review Persistence Boundary (Phase 16)
+
+How a **permitted** Phase 15 review outcome will later be persisted as a controlled-DB
+`ReviewRecord` — described precisely, but **not executed**. Phase 16 is **DB-aware but not
+DB-writing**: it maps a `ReviewGateResult` into a production-shaped `ReviewRecordDraft` and
+a no-op `ReviewWritePlan` (target table `review_records`), but opens no database session,
+imports no SQLAlchemy / `peak.db`, and writes nothing. `review_record_id` and `created_at`
+stay `None` for a **future controlled DB writer**. **No live database read/write, no
+database connection, no stored review records, no live LLM/AgentNet/network call, no
+client-facing approval, no financial verification, no capsule publication.**
+
+The critical scope rule: a DB-backed review must compare `request.authorization_scope`
+against the subject record's **stored** scope (`stored_authorization_scope`) — owner/client/
+engagement matching is necessary but not sufficient. Implemented now with an in-memory
+`StoredReviewSubjectSnapshot`.
+
+- [`peak/review/`](peak/review/) — persistence contracts, deterministic persistence-readiness
+  governance, and review-record mapping / write-plan helpers.
+- [`docs/REVIEW_PERSISTENCE_BOUNDARY.md`](docs/REVIEW_PERSISTENCE_BOUNDARY.md) — the boundary,
+  what is planned vs. executed, and the future controlled-DB writer.
+- [`docs/DB_BACKED_REVIEW_SCOPE_POLICY.md`](docs/DB_BACKED_REVIEW_SCOPE_POLICY.md) — the
+  stored-scope comparison rule, denial behavior, and audit expectations.
+
+```bash
+make validate-phase16   # review-persistence-boundary check (stdlib-only; DB-aware, not DB-writing)
 ```
 
 ## Design constraints
