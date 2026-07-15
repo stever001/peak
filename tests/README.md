@@ -10,7 +10,7 @@ objects are needed, the harnesses build **synthetic fixtures at runtime**
 directory that is auto-deleted. Nothing is stored. See
 [`../docs/FIXTURE_STRATEGY.md`](../docs/FIXTURE_STRATEGY.md).
 
-Twelve harnesses, run together by `make validate`:
+Thirteen harnesses, run together by `make validate`:
 
 - `validate_phase1.py` — schemas + synthetic object fixtures.
 - `validate_phase2.py` — schemas + a synthetic `EngagementPacket`.
@@ -24,6 +24,7 @@ Twelve harnesses, run together by `make validate`:
 - `validate_phase10_database_plan.py` — database-plan doc check (stdlib-only).
 - `validate_phase11_db_scaffold.py` — MySQL DB-scaffold check (stdlib-only; `make db-check`).
 - `validate_phase12_agentnet_mcp_boundary.py` — AgentNet MCP governance-boundary check (stdlib-only).
+- `validate_phase13_agent_harness.py` — agent-execution-harness scaffold check (stdlib-only).
 
 ## `synthetic_fixtures.py`
 
@@ -167,6 +168,21 @@ required language (no live calls, no capsule publication, AgentNet integration i
 complete); and re-asserts source-only discipline. Stdlib-only; **makes no network call**.
 See [`../docs/AGENTNET_MCP_BOUNDARY.md`](../docs/AGENTNET_MCP_BOUNDARY.md).
 
+## `validate_phase13_agent_harness.py`
+
+Scaffold check for the Peak internal **agent execution harness** (`peak/agents/`; no live
+execution). Confirms the package files exist and compile; imports the package and asserts
+the registry lists **exactly** the 10 known agents/workers, each with a
+workflow/purpose/output/review default and (where set) an existing prompt contract;
+exercises the **no-op mock executor** (a permitted task returns `llm_call_made`,
+`agentnet_call_made`, `database_write_made`, and `client_facing_output_created` all
+`False`, with `output_status = draft` / `review_status = needs_review`); confirms
+governance rejects an unknown agent, missing `owner_id`, revoked/archived lifecycle,
+`client_facing_output_requested`, and `llm_execution_allowed`; scans the package for
+**network and database imports** (there are none); checks the docs describe AgentNet as
+not-yet-implemented; and re-asserts source-only discipline. Stdlib-only; **makes no live
+call**. See [`../docs/AGENT_EXECUTION_HARNESS.md`](../docs/AGENT_EXECUTION_HARNESS.md).
+
 ## Running
 
 This machine uses `python3` (there is no bare `python`). From the repo root:
@@ -176,7 +192,7 @@ This machine uses `python3` (there is no bare `python`). From the repo root:
 make install-dev          # == python3 -m pip install -r requirements-dev.txt
 
 # run all harnesses
-make validate             # == phase1 … phase12
+make validate             # == phase1 … phase13
 
 # or run one at a time
 make validate-phase1
@@ -191,6 +207,7 @@ make validate-phase9
 make validate-phase10
 make validate-phase11   # == make db-check
 make validate-phase12
+make validate-phase13
 ```
 
 Or invoke them directly, without the Makefile:
@@ -208,11 +225,12 @@ python3 tests/validate_phase9_governance.py    # jsonschema + stdlib
 python3 tests/validate_phase10_database_plan.py # stdlib-only, no dependency needed
 python3 tests/validate_phase11_db_scaffold.py   # stdlib-only, no dependency needed
 python3 tests/validate_phase12_agentnet_mcp_boundary.py  # stdlib-only, no dependency needed
+python3 tests/validate_phase13_agent_harness.py          # stdlib-only, no dependency needed
 ```
 
 ## Exit codes
 
-All twelve harnesses share the same convention:
+All thirteen harnesses share the same convention:
 
 | Code | Meaning |
 | --- | --- |

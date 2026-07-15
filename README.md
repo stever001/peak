@@ -73,10 +73,13 @@ peak/
 │   ├── DATABASE_SCAFFOLD.md              # MySQL scaffold: models, enums, migration
 │   ├── AGENTNET_MCP_BOUNDARY.md          # Peak governance wrapper for the MCP connector
 │   ├── PEAK_RESOLVER_ACCESS_POLICY.md    # Who/what may reach the resolver, under governance
+│   ├── AGENT_EXECUTION_HARNESS.md        # How future agents are invoked/governed (no execution)
+│   ├── AGENT_RUN_RECORDS.md              # Future AgentRunRecord shape (nothing stored)
 │   └── IMPLEMENTATION_PLAN.md
 ├── peak/                         # Python tooling layer (source only; no data)
 │   ├── db/                       # base, enums, models, session (MySQL)
-│   └── agentnet/                 # Governance wrapper for the AgentNet MCP connector (no calls)
+│   ├── agentnet/                 # Governance wrapper for the AgentNet MCP connector (no calls)
+│   └── agents/                   # Agent execution harness scaffold (mock; no live execution)
 ├── alembic/                      # Alembic migrations (schema only; no data)
 ├── alembic.ini                   # Alembic config (URL from env, not the repo)
 ├── .env.example                  # Env placeholders only (PEAK_DATABASE_URL); .env ignored
@@ -245,6 +248,26 @@ complete**. Capsule publication strategy is deferred to a later phase.
 
 ```bash
 make validate-phase12   # AgentNet MCP boundary check (stdlib-only; no network)
+```
+
+### Agent execution harness (Phase 13)
+
+A **scaffold** for how future Peak internal agents/workers will be **invoked, governed,
+and recorded** — with **no live execution**. Nothing here calls an LLM, AgentNet, an MCP
+connector, a resolver, a database, or the network, and nothing creates client-facing
+output. Governance forces agent output to `draft` / `needs_review`; agents never
+self-approve, publish capsules, or verify financial impact.
+
+- [`peak/agents/`](peak/agents/) — task/result contracts, a static registry of the 10
+  known agents/workers, deterministic governance checks, a **no-op mock executor**, and a
+  **mock LLM** (live execution disabled).
+- [`docs/AGENT_EXECUTION_HARNESS.md`](docs/AGENT_EXECUTION_HARNESS.md) — how tasks are
+  governed, how prompt contracts are selected, and how the Phase 12 resolver boundary fits.
+- [`docs/AGENT_RUN_RECORDS.md`](docs/AGENT_RUN_RECORDS.md) — the future `AgentRunRecord`
+  shape (nothing is stored in this phase).
+
+```bash
+make validate-phase13   # agent-execution-harness check (stdlib-only; no execution)
 ```
 
 ## Design constraints

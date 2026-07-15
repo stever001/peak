@@ -138,7 +138,8 @@ Legend for each group:
 - **Capsule-ready?** No (governance trail). **Client-facing?** No.
 
 ### AgentRunRecord
-- **Purpose:** provenance of an agent/worker run (future harness).
+- **Purpose:** provenance of an agent/worker run (future harness — see the Phase 13
+  scaffold [`AGENT_RUN_RECORDS.md`](AGENT_RUN_RECORDS.md); nothing is stored yet).
 - **Key fields:** `agent_run_id`, prompt-contract ref, inputs (record ids), outputs (record ids), model/tool label, timestamps, actor.
 - **Relationships:** referenced by records an agent drafted (`agent_run_id`).
 - **Governance states:** lifecycle. Agent outputs default to `draft`/`needs_review`.

@@ -59,6 +59,15 @@ interviews/observations → bundle a packet → summarize → run a contract →
 capture lessons — with the consultant rules, the QA readiness ladder, and the current
 phase boundary.
 
+**Agent execution harness (Phase 13, scaffold).** How these workflows will *later* be run
+by governed internal agents is scaffolded — with **no live execution** — in
+[`../peak/agents/`](../peak/agents/): a registry of the 10 known agents/workers (each
+mapped to a workflow and, where one exists, a prompt contract above), deterministic
+governance checks, a no-op mock executor, and a mock LLM. Output defaults to
+`draft`/`needs_review`; agents never self-approve or create client-facing output. See
+[`AGENT_EXECUTION_HARNESS.md`](AGENT_EXECUTION_HARNESS.md) and
+[`AGENT_RUN_RECORDS.md`](AGENT_RUN_RECORDS.md). AgentNet integration is not complete.
+
 ## The first end-to-end thread
 
 The initial priority is one clean, connected path from a new client through to a

@@ -4,7 +4,7 @@
 
 PYTHON ?= python3
 
-.PHONY: help validate validate-phase1 validate-phase2 validate-phase3 validate-phase4 validate-phase5 validate-phase6 validate-phase7 validate-phase8 validate-phase9 validate-phase10 validate-phase11 validate-phase12 db-check packet-summary install-dev
+.PHONY: help validate validate-phase1 validate-phase2 validate-phase3 validate-phase4 validate-phase5 validate-phase6 validate-phase7 validate-phase8 validate-phase9 validate-phase10 validate-phase11 validate-phase12 validate-phase13 db-check packet-summary install-dev
 
 help: ## Show available targets
 	@echo "Targets:"
@@ -22,13 +22,14 @@ help: ## Show available targets
 	@echo "  make validate-phase10   Run only the Phase 10 database-plan doc check"
 	@echo "  make validate-phase11   Run only the Phase 11 database-scaffold check"
 	@echo "  make validate-phase12   Run only the Phase 12 AgentNet MCP boundary check"
+	@echo "  make validate-phase13   Run only the Phase 13 agent-execution-harness check"
 	@echo "  make db-check           Alias for the Phase 11 database-scaffold check"
 	@echo "  make packet-summary PACKET=/path/to/packet.json   Summarize a real packet (read-only; no LLM/API)"
 
 install-dev: ## Install development dependencies
 	$(PYTHON) -m pip install -r requirements-dev.txt
 
-validate: validate-phase1 validate-phase2 validate-phase3 validate-phase4 validate-phase5 validate-phase6 validate-phase7 validate-phase8 validate-phase9 validate-phase10 validate-phase11 validate-phase12 ## Run all validation harnesses
+validate: validate-phase1 validate-phase2 validate-phase3 validate-phase4 validate-phase5 validate-phase6 validate-phase7 validate-phase8 validate-phase9 validate-phase10 validate-phase11 validate-phase12 validate-phase13 ## Run all validation harnesses
 
 validate-phase1: ## Run the Phase 1 schema/example validation harness
 	$(PYTHON) tests/validate_phase1.py
@@ -65,6 +66,9 @@ validate-phase11: ## Run the Phase 11 database-scaffold check (stdlib-only)
 
 validate-phase12: ## Run the Phase 12 AgentNet MCP boundary check (stdlib-only)
 	$(PYTHON) tests/validate_phase12_agentnet_mcp_boundary.py
+
+validate-phase13: ## Run the Phase 13 agent-execution-harness check (stdlib-only)
+	$(PYTHON) tests/validate_phase13_agent_harness.py
 
 db-check: ## Validate the DB scaffold (alias for validate-phase11)
 	$(PYTHON) tests/validate_phase11_db_scaffold.py

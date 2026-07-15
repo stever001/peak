@@ -67,4 +67,9 @@ For any future agent worker:
 - Agent-generated records **default to `draft` or `needs_review`** and carry an
   `agent_run_id` for provenance; advancement happens only through the human gates above.
 
-These limits are **contract-level** and human-enforced; no agent runtime exists yet.
+These limits are **contract-level** and human-enforced; no agent runtime exists yet. The
+Phase 13 scaffold in [`../peak/agents/`](../peak/agents/) encodes them as deterministic
+pre-execution checks around a no-op mock executor (no live call, output defaults to
+`draft`/`needs_review`); the provenance record it would eventually write is described in
+[`AGENT_RUN_RECORDS.md`](AGENT_RUN_RECORDS.md). See
+[`AGENT_EXECUTION_HARNESS.md`](AGENT_EXECUTION_HARNESS.md).

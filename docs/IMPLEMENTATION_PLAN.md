@@ -258,6 +258,22 @@ and documentation accurately states integration status.
   [`../tests/validate_phase12_agentnet_mcp_boundary.py`](../tests/validate_phase12_agentnet_mcp_boundary.py)
   (`make validate-phase12`).
 
+**Agent execution harness (Phase 13 — scaffold only):**
+
+- [x] Scaffold for how future Peak internal agents/workers are **invoked, governed, and
+  recorded**, with **no live execution**. Added [`../peak/agents/`](../peak/agents/) —
+  task/result/context/run-draft contracts (`contracts.py`), a static registry of the 10
+  known agents/workers (`registry.py`), deterministic pre-execution governance
+  (`governance.py`), a **no-op mock executor** (`executor.py`) that routes any resolver
+  context through the Phase 12 mock boundary, and a **mock LLM** (`mock_llm.py`) — plus
+  [`AGENT_EXECUTION_HARNESS.md`](AGENT_EXECUTION_HARNESS.md) and
+  [`AGENT_RUN_RECORDS.md`](AGENT_RUN_RECORDS.md). Output defaults to `draft`/`needs_review`;
+  agents cannot self-approve, create client-facing output, publish capsules, or verify
+  financial impact. **No live LLM/AgentNet/MCP/resolver/database/network call, no stored
+  data, no client-facing output; AgentNet integration is not complete.** Checked by
+  [`../tests/validate_phase13_agent_harness.py`](../tests/validate_phase13_agent_harness.py)
+  (`make validate-phase13`).
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing
