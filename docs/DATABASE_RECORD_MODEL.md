@@ -135,6 +135,18 @@ Legend for each group:
 
 ## Governance & process records
 
+> **Writer boundary (future):** every write into these tables — and into the evidence /
+> engagement / ingestion / capsule-candidate tables below — passes through the **Phase 17
+> Controlled DB Writer Boundary** ([`CONTROLLED_DB_WRITER_BOUNDARY.md`](CONTROLLED_DB_WRITER_BOUNDARY.md),
+> [`CONTROLLED_WRITE_ALLOWLIST.md`](CONTROLLED_WRITE_ALLOWLIST.md), [`../peak/persistence/`](../peak/persistence/)).
+> It enforces a **table/action allowlist**, an `idempotency_key`, and the subject stored-scope
+> check (`request.authorization_scope == subject.stored_authorization_scope`; identity
+> matching necessary but not sufficient) before producing a no-op `ControlledWritePlan`. It
+> is **DB-aware but not DB-writing** — no connection, no SQL, no stored records. `clients`,
+> `engagements`, `financial_impact_estimates`, and `resolver_capsule_records` are **not**
+> writable through this early boundary (the latter two await financial-verification /
+> capsule-publication gates).
+
 ### ReviewRecord
 - **Purpose:** an audit record of a governance review action.
 - **Key fields:** `review_id`, target record id, previous/new `review_status`, reviewer, reason, timestamp.

@@ -134,6 +134,15 @@ own governance state, a DB-backed review must compare `request.authorization_sco
 the subject's stored `authorization_scope` (loaded from controlled storage) — owner/client/
 engagement matching is necessary but not sufficient.
 
+The **Phase 17 Controlled DB Writer Boundary** ([`CONTROLLED_DB_WRITER_BOUNDARY.md`](CONTROLLED_DB_WRITER_BOUNDARY.md),
+[`CONTROLLED_WRITE_ALLOWLIST.md`](CONTROLLED_WRITE_ALLOWLIST.md), [`../peak/persistence/`](../peak/persistence/))
+generalizes that idea into the front door for *all* future controlled writes into this
+architecture — still **DB-aware but not DB-writing**. Every future persistence must pass
+through a **table/action allowlist** and the subject stored-scope check before a no-op
+`ControlledWritePlan` is produced; nothing here opens a database connection, executes SQL,
+or stores a record. `clients` / `engagements` and the financial/resolver tables are excluded
+from this early boundary until explicit governance gates exist.
+
 ## Grounding access boundary (AgentNet MCP connector)
 
 When future workflows reach the resolver for grounding, they do so through the **existing

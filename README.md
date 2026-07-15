@@ -81,13 +81,16 @@ peak/
 │   ├── REVIEW_DECISION_MODEL.md          # Allowed/prohibited review decisions + state effects
 │   ├── REVIEW_PERSISTENCE_BOUNDARY.md    # Future ReviewRecord persistence (DB-aware, not DB-writing)
 │   ├── DB_BACKED_REVIEW_SCOPE_POLICY.md  # Stored-scope comparison rule for DB-backed review
+│   ├── CONTROLLED_DB_WRITER_BOUNDARY.md  # Generic controlled-write boundary (DB-aware, not DB-writing)
+│   ├── CONTROLLED_WRITE_ALLOWLIST.md     # Allowed/prohibited write tables + actions
 │   └── IMPLEMENTATION_PLAN.md
 ├── peak/                         # Python tooling layer (source only; no data)
 │   ├── db/                       # base, enums, models, session (MySQL)
 │   ├── agentnet/                 # Governance wrapper for the AgentNet MCP connector (no calls)
 │   ├── agents/                   # Agent execution harness scaffold (mock; no live execution)
 │   ├── workers/                  # Production-shaped workers (evidence normalization; review-gated)
-│   └── review/                   # QA / review gate + review persistence boundary (no-side-effect)
+│   ├── review/                   # QA / review gate + review persistence boundary (no-side-effect)
+│   └── persistence/              # Controlled DB writer boundary: allowlist + governance (no live DB)
 ├── alembic/                      # Alembic migrations (schema only; no data)
 ├── alembic.ini                   # Alembic config (URL from env, not the repo)
 ├── .env.example                  # Env placeholders only (PEAK_DATABASE_URL); .env ignored
@@ -346,6 +349,37 @@ engagement matching is necessary but not sufficient. Implemented now with an in-
 
 ```bash
 make validate-phase16   # review-persistence-boundary check (stdlib-only; DB-aware, not DB-writing)
+```
+
+### Controlled DB Writer Boundary (Phase 17)
+
+The generic policy and validation boundary every **future** controlled database write must
+pass through — defined precisely, but **not executed**. Phase 17 is **DB-aware but not
+DB-writing**: a `ControlledWriteRequest` is checked against a **table/action allowlist** and
+governance (identity, subject stored-scope comparison, lifecycle, prohibited effects), then
+mapped to a no-op `ControlledWritePlan` and an in-memory `ControlledWriteAuditDraft`. It
+opens **no live database connection**, runs **no SQL execution**, and creates **no stored
+records**. Kept in `peak/persistence/` (not `peak/db/`) so it stays stdlib-only and imports
+no SQLAlchemy / Alembic / `peak.db`.
+
+Enforced at the boundary: `request.authorization_scope` must equal the subject's stored
+`stored_authorization_scope` (owner/client/engagement matching is necessary but not
+sufficient); an `idempotency_key` is required; and prohibited tables/actions (`clients`,
+`engagements`, `financial_impact_estimates`, `resolver_capsule_records`, and any
+publish / client-facing-approve / verify-financial / delete / migrate / seed / raw_sql
+action) are denied. **No client-facing approval, no financial verification, no capsule
+publication, no credentials/secrets, no deletes/migrations, no live LLM/AgentNet/network
+call.** A write plan is not a write.
+
+- [`peak/persistence/`](peak/persistence/) — controlled-write contracts, the table/action
+  allowlist, deterministic write governance, and no-op write-plan helpers.
+- [`docs/CONTROLLED_DB_WRITER_BOUNDARY.md`](docs/CONTROLLED_DB_WRITER_BOUNDARY.md) — the
+  boundary, what is planned vs. executed, and the future controlled DB writer.
+- [`docs/CONTROLLED_WRITE_ALLOWLIST.md`](docs/CONTROLLED_WRITE_ALLOWLIST.md) — allowed vs.
+  prohibited tables/actions and how the allowlist may expand through governance gates.
+
+```bash
+make validate-phase17   # controlled-DB-writer-boundary check (stdlib-only; DB-aware, not DB-writing)
 ```
 
 ## Design constraints

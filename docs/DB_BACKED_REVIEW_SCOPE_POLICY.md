@@ -73,3 +73,13 @@ next states, and timestamps ([`DATABASE_ACCESS_AND_AUDIT.md`](DATABASE_ACCESS_AN
 [`DATABASE_RECORD_MODEL.md`](DATABASE_RECORD_MODEL.md)). Recording *both* the stored scope
 and the presented request scope makes the scope check itself auditable. **No such write
 happens in Phase 16.**
+
+## Generalized by the Phase 17 writer boundary
+
+This stored-scope comparison is not review-specific: the **Phase 17 Controlled DB Writer
+Boundary** ([`CONTROLLED_DB_WRITER_BOUNDARY.md`](CONTROLLED_DB_WRITER_BOUNDARY.md)) applies
+the **same** rule — `request.authorization_scope == subject.stored_authorization_scope`,
+with owner/client/engagement matching necessary but not sufficient — to every future
+controlled write, alongside a table/action allowlist and an idempotency key. Any future
+DB-backed persistence loads the subject's stored scope from the controlled DB and denies on
+mismatch, exactly as described here.

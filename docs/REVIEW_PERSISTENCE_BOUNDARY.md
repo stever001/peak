@@ -72,3 +72,14 @@ When the controlled database integration lands, a governed writer will execute t
 `review_records`, and record the reviewer, authorization scope, decision, and audit trail
 under access control. **That write does not happen in Phase 16.** The boundary's job today
 is only to prepare a correct, scoped, side-effect-free plan.
+
+## Generalized by Phase 17
+
+The review-specific plan here is generalized by the **Phase 17 Controlled DB Writer
+Boundary** ([`CONTROLLED_DB_WRITER_BOUNDARY.md`](CONTROLLED_DB_WRITER_BOUNDARY.md),
+[`CONTROLLED_WRITE_ALLOWLIST.md`](CONTROLLED_WRITE_ALLOWLIST.md)): the front door **all**
+future controlled writes route through, enforcing a **table/action allowlist**, an
+`idempotency_key`, and the same subject stored-scope check before any no-op write plan is
+produced. `review_records` is one allowlisted target among several; the future controlled DB
+writer is shared. Phase 17 is likewise **DB-aware but not DB-writing** and does not write to
+the database.

@@ -30,6 +30,14 @@ draft -> needs_review -> consultant_reviewed -> qa_reviewed -> approved_internal
   the subject's stored `authorization_scope`, and the subject's stored `lifecycle_status`
   must not be `revoked` / `archived` / `deleted_reference_only`. Identity matching alone is
   necessary but not sufficient. See [`DB_BACKED_REVIEW_SCOPE_POLICY.md`](DB_BACKED_REVIEW_SCOPE_POLICY.md).
+- The **Phase 17 Controlled DB Writer Boundary** ([`CONTROLLED_DB_WRITER_BOUNDARY.md`](CONTROLLED_DB_WRITER_BOUNDARY.md))
+  gates the *write* that would record any of these transitions. A status-advancing action
+  (`update_review_status`, `update_lifecycle_status`, `mark_superseded`) must be on the
+  table/action allowlist, carry an `idempotency_key`, and pass the same stored-scope and
+  stored-lifecycle checks before a no-op write plan is produced — **DB-aware but not
+  DB-writing** (no connection, no SQL, no stored records). Delete/migrate/seed and
+  publish/client-facing/financial actions are rejected outright. See
+  [`CONTROLLED_WRITE_ALLOWLIST.md`](CONTROLLED_WRITE_ALLOWLIST.md).
 
 ## Client-facing transition
 

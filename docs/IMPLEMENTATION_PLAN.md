@@ -339,6 +339,39 @@ and documentation accurately states integration status.
   [`../tests/validate_phase16_review_persistence.py`](../tests/validate_phase16_review_persistence.py)
   (`make validate-phase16`).
 
+**Controlled DB Writer Boundary (Phase 17 — DB-aware, not DB-writing):**
+
+- [x] The generic policy/validation boundary every future controlled write routes through:
+  [`../peak/persistence/`](../peak/persistence/) (deliberately **not** `peak/db/`, kept
+  stdlib-only) adds controlled-write contracts (`contracts.py`: `ControlledWriteSubject`,
+  `ControlledWriteRequest`, `ControlledWriteDecision`, `ControlledWritePlan`,
+  `ControlledWriteResult`, `ControlledWriteAuditDraft`), a **table/action allowlist**
+  (`allowlist.py`: `ALLOWED_TABLES`, `ALLOWED_ACTIONS`, `PROHIBITED_TABLES`,
+  prohibited-action patterns, `is_allowed_table` / `is_allowed_action` / `is_prohibited_table`
+  / `is_prohibited_action`), deterministic write governance (`governance.py`:
+  `evaluate_controlled_write_request`, `validate_write_subject_scope`,
+  `validate_table_action_allowlist`, `build_controlled_write_decision`), and no-op write
+  planning (`write_plan.py`: `build_controlled_write_plan`,
+  `build_controlled_write_audit_draft`, `prepare_controlled_write`) — plus
+  [`CONTROLLED_DB_WRITER_BOUNDARY.md`](CONTROLLED_DB_WRITER_BOUNDARY.md) and
+  [`CONTROLLED_WRITE_ALLOWLIST.md`](CONTROLLED_WRITE_ALLOWLIST.md). A permitted request yields
+  a no-op `ControlledWritePlan` (`requires_controlled_db_writer=true`) and an in-memory
+  `ControlledWriteAuditDraft` (`audit_record_id` / `created_at` left `None`). **DB-aware but
+  not DB-writing:** `database_write_made`, `database_connection_made`, `sql_execution_made`,
+  `stored_record_created` all `false`; no SQLAlchemy / Alembic / `peak.db` import. Enforces
+  the **table/action allowlist** (only `evidence_references`, `engagement_records`,
+  `review_records`, `agent_run_records`, `source_ingestion_records`,
+  `capsule_publication_candidates`; never `clients` / `engagements` /
+  `financial_impact_estimates` / `resolver_capsule_records`), an `idempotency_key`, and
+  `request.authorization_scope == subject.stored_authorization_scope` (identity matching
+  necessary but not sufficient); rejects publish / client-facing-approve / verify-financial /
+  delete / migrate / seed / raw_sql actions. **No live DB connection/read/write, no SQL, no
+  stored records, no migrations/seeds/deletes, no credentials, no LLM/AgentNet/MCP/resolver/
+  network call, no client-facing approval, no financial verification, no capsule
+  publication.** Checked by
+  [`../tests/validate_phase17_controlled_db_writer.py`](../tests/validate_phase17_controlled_db_writer.py)
+  (`make validate-phase17`).
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

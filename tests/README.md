@@ -10,7 +10,7 @@ objects are needed, the harnesses build **synthetic fixtures at runtime**
 directory that is auto-deleted. Nothing is stored. See
 [`../docs/FIXTURE_STRATEGY.md`](../docs/FIXTURE_STRATEGY.md).
 
-Sixteen harnesses, run together by `make validate`:
+Seventeen harnesses, run together by `make validate`:
 
 - `validate_phase1.py` — schemas + synthetic object fixtures.
 - `validate_phase2.py` — schemas + a synthetic `EngagementPacket`.
@@ -28,6 +28,7 @@ Sixteen harnesses, run together by `make validate`:
 - `validate_phase14_evidence_worker.py` — evidence-normalization-worker check (stdlib-only).
 - `validate_phase15_review_gate.py` — QA / review-gate check (stdlib-only).
 - `validate_phase16_review_persistence.py` — review-persistence-boundary check (stdlib-only).
+- `validate_phase17_controlled_db_writer.py` — controlled-DB-writer-boundary check (stdlib-only).
 
 ## `synthetic_fixtures.py`
 
@@ -243,6 +244,29 @@ Stdlib-only; **no live database read/write and no stored review records**. See
 [`../docs/REVIEW_PERSISTENCE_BOUNDARY.md`](../docs/REVIEW_PERSISTENCE_BOUNDARY.md) and
 [`../docs/DB_BACKED_REVIEW_SCOPE_POLICY.md`](../docs/DB_BACKED_REVIEW_SCOPE_POLICY.md).
 
+## `validate_phase17_controlled_db_writer.py`
+
+Check for the **Controlled DB Writer Boundary** (`peak/persistence/`). Confirms the package
+files exist and compile and the package imports; asserts the **table/action allowlist** holds
+exactly the expected allowed tables/actions and its `is_allowed_*` / `is_prohibited_*` helpers
+behave; prepares a controlled write for a **valid in-memory** request and asserts the result
+is **DB-aware but not DB-writing** (`permitted`, `write_plan.requires_controlled_db_writer =
+true`, and `database_write_made`, `database_connection_made`, `sql_execution_made`,
+`stored_record_created`, `llm_call_made`, `agentnet_call_made`, `network_call_made`,
+`capsule_publication_made`, `client_facing_output_created` all `false`, with the audit draft's
+`audit_record_id`/`created_at` `None`); confirms governance rejects each missing required
+field (including `idempotency_key`), an owner/client/engagement mismatch, a
+`request.authorization_scope` that does not match the subject's `stored_authorization_scope`,
+prohibited request/subject lifecycle statuses, prohibited tables (`clients`, `engagements`,
+`financial_impact_estimates`, `resolver_capsule_records`), unlisted tables/actions, and
+publish / client-facing-approve / verify-financial / delete / raw_sql / migrate / seed
+actions — and that a denied request yields no write plan (side-effect-free denial); scans the
+package for **network / database / SQLAlchemy / `peak.db` / LLM imports or credentials** (there
+are none); checks the docs carry the boundary phrases; and re-asserts source-only discipline.
+Stdlib-only; **no live database connection, no SQL execution, and no stored records**. See
+[`../docs/CONTROLLED_DB_WRITER_BOUNDARY.md`](../docs/CONTROLLED_DB_WRITER_BOUNDARY.md) and
+[`../docs/CONTROLLED_WRITE_ALLOWLIST.md`](../docs/CONTROLLED_WRITE_ALLOWLIST.md).
+
 ## Running
 
 This machine uses `python3` (there is no bare `python`). From the repo root:
@@ -252,7 +276,7 @@ This machine uses `python3` (there is no bare `python`). From the repo root:
 make install-dev          # == python3 -m pip install -r requirements-dev.txt
 
 # run all harnesses
-make validate             # == phase1 … phase16
+make validate             # == phase1 … phase17
 
 # or run one at a time
 make validate-phase1
@@ -271,6 +295,7 @@ make validate-phase13
 make validate-phase14
 make validate-phase15
 make validate-phase16
+make validate-phase17
 ```
 
 Or invoke them directly, without the Makefile:
@@ -292,11 +317,12 @@ python3 tests/validate_phase13_agent_harness.py          # stdlib-only, no depen
 python3 tests/validate_phase14_evidence_worker.py        # stdlib-only, no dependency needed
 python3 tests/validate_phase15_review_gate.py            # stdlib-only, no dependency needed
 python3 tests/validate_phase16_review_persistence.py     # stdlib-only, no dependency needed
+python3 tests/validate_phase17_controlled_db_writer.py   # stdlib-only, no dependency needed
 ```
 
 ## Exit codes
 
-All sixteen harnesses share the same convention:
+All seventeen harnesses share the same convention:
 
 | Code | Meaning |
 | --- | --- |

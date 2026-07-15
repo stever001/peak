@@ -99,3 +99,18 @@ read/write**; a future controlled-DB writer executes the plan under these rules.
 matching is necessary but not sufficient. The persisted `ReviewRecord` should record both
 the stored scope matched and the request scope presented, so the scope check is auditable.
 See [`DB_BACKED_REVIEW_SCOPE_POLICY.md`](DB_BACKED_REVIEW_SCOPE_POLICY.md).
+
+The Phase 17 **Controlled DB Writer Boundary** ([`CONTROLLED_DB_WRITER_BOUNDARY.md`](CONTROLLED_DB_WRITER_BOUNDARY.md),
+[`CONTROLLED_WRITE_ALLOWLIST.md`](CONTROLLED_WRITE_ALLOWLIST.md)) is the generic front door
+every future controlled write passes through — **DB-aware but not DB-writing**. Before any
+plan is built it enforces a **table/action allowlist** (only `evidence_references`,
+`engagement_records`, `review_records`, `agent_run_records`, `source_ingestion_records`, and
+`capsule_publication_candidates` — never `clients` / `engagements` / `financial_impact_estimates` /
+`resolver_capsule_records`), requires an `idempotency_key` for write safety, and re-runs the
+stored-scope check (`request.authorization_scope == subject.stored_authorization_scope`;
+identity matching necessary but not sufficient). Publish / client-facing-approve /
+verify-financial / delete / migrate / seed / raw_sql actions are rejected, so the future
+writer maps only allowlisted actions to parameterized operations under these audit rules —
+it opens no connection and runs no SQL in this phase. A future writer would persist a
+`ControlledWriteAuditDraft` (recording table, action, requester/role, idempotency key,
+decision, and reasons) for each attempt.
