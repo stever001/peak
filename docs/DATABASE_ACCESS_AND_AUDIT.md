@@ -151,3 +151,14 @@ a DB unique index over `(owner_id, client_id, engagement_id, idempotency_key)` p
 fingerprint. It never updates or deletes, and it returns a typed receipt carrying no
 credentials, SQL, or connection details. Missing stored scope, missing request scope, a
 stored-scope mismatch, or a conflicting idempotency replay are all denied with no row written.
+
+The Phase 21 **Evidence Controlled Writer** ([`EVIDENCE_CONTROLLED_WRITER.md`](EVIDENCE_CONTROLLED_WRITER.md),
+[`EVIDENCE_IDEMPOTENCY_POLICY.md`](EVIDENCE_IDEMPOTENCY_POLICY.md),
+[`../peak/db/evidence_writer.py`](../peak/db/evidence_writer.py)) is the second such writer,
+for `evidence_references` (`create_draft`). It enforces the same access/audit rules — stored
+`Engagement` scope comparison (snapshot not trusted), stored-subject identity + lifecycle
+re-check, review-gated row (`output_status=draft`, `review_status=needs_review`,
+`lifecycle_status=active`, non-authoritative, non-client-facing, non-capsule) with
+server-controlled id/timestamps and `created_by`, and DB-enforced idempotency over
+`(owner_id, client_id, engagement_id, idempotency_key)` + payload fingerprint. It never
+updates or deletes and returns a typed receipt with no credentials/SQL/connection details.

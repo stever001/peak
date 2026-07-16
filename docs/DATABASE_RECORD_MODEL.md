@@ -56,21 +56,31 @@ Legend for each group:
 - **Key fields:** `evidence_id`, type, source, `summary`, reliability,
   `sensitive_data_flag`, evidence status.
 - **Governance states:** authorization, review, lifecycle, **EvidenceStatus**.
+- **Phase 21 columns:** `output_status` (governance-relevant review-gate status, a real
+  column), `idempotency_key`, and `payload_fingerprint`, with a unique index
+  `uq_evidence_references_idem` over `(owner_id, client_id, engagement_id, idempotency_key)`
+  (migration `003_evidence_idempotency`). Normalized detail (title, areas, source location,
+  confidence) lives in `details_json`.
 - **Capsule-ready?** **Yes, when `verified`** and source-labeled. **Client-facing?** As cited support, after approval.
 - **Produced by (future):** the Evidence Normalization Worker drafts these as review-gated
   `NormalizedEvidenceRecord`s (`draft`/`needs_review`, non-authoritative) — see
   [`EVIDENCE_NORMALIZATION_WORKER.md`](EVIDENCE_NORMALIZATION_WORKER.md) and
-  [`EVIDENCE_RECORD_LIFECYCLE.md`](EVIDENCE_RECORD_LIFECYCLE.md). Nothing is stored yet.
-- **Persistence planned by (future):** the **Phase 18 Evidence Persistence Mapping**
+  [`EVIDENCE_RECORD_LIFECYCLE.md`](EVIDENCE_RECORD_LIFECYCLE.md).
+- **Persistence planned by:** the **Phase 18 Evidence Persistence Mapping**
   ([`EVIDENCE_PERSISTENCE_MAPPING.md`](EVIDENCE_PERSISTENCE_MAPPING.md),
   [`../peak/evidence/`](../peak/evidence/)) maps a normalized record into an
   `EvidencePersistenceDraft` and a Phase 17 `ControlledWriteRequest` targeting this
-  `evidence_references` table (`create_draft`) — **DB-aware but not DB-writing**
-  (`evidence_record_id` / `created_at` left `None`; no connection, no SQL, no stored record).
-  Write authority is anchored to the stored parent subject
-  (`request.authorization_scope == subject.stored_authorization_scope`; identity matching
-  necessary but not sufficient), and an `idempotency_key` is required. Evidence workers do
-  not write directly; a future controlled DB writer executes the plan.
+  `evidence_references` table (`create_draft`) — DB-free.
+- **Persistence executed by:** the **Phase 21 Evidence Controlled Writer**
+  ([`EVIDENCE_CONTROLLED_WRITER.md`](EVIDENCE_CONTROLLED_WRITER.md),
+  [`../peak/db/evidence_writer.py`](../peak/db/evidence_writer.py)) creates exactly one
+  review-gated row. Write authority is anchored to the stored `Engagement` row, re-loaded
+  from the DB at write-time (`request.authorization_scope == engagement.authorization_scope`;
+  identity matching necessary but not sufficient — the mapping snapshot is not trusted). A
+  required `idempotency_key` is DB-enforced (replay returns the existing row; a conflicting
+  key is denied). The writer stamps server-controlled `id` / `created_at`, never updates or
+  deletes, and has no LLM/AgentNet/connector/network/client-facing/financial/capsule side
+  effect.
 
 ### SourceSystemReference
 - **Purpose:** pointer to a client source system/location

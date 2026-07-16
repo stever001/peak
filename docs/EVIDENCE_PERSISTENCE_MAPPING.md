@@ -95,3 +95,13 @@ controlled writer loads it from the controlled DB. See
   executed, in this phase, and always routed through the Phase 17 boundary. A **future
   controlled DB writer** performs the real write under
   [`DATABASE_ACCESS_AND_AUDIT.md`](DATABASE_ACCESS_AND_AUDIT.md).
+
+## Realized by Phase 21
+
+The plan this mapping produces is executed by the **Phase 21 Evidence Controlled Writer**
+([`EVIDENCE_CONTROLLED_WRITER.md`](EVIDENCE_CONTROLLED_WRITER.md),
+[`EVIDENCE_IDEMPOTENCY_POLICY.md`](EVIDENCE_IDEMPOTENCY_POLICY.md)) — the second real
+DB-backed persistence path. Phase 18 stays DB-free (this mapper imports no SQLAlchemy /
+`peak.db`); Phase 21 lives in the DB layer and re-loads the authoritative stored
+`Engagement` scope at write-time rather than trusting the snapshot here, then creates one
+review-gated `evidence_references` row under DB-enforced idempotency.

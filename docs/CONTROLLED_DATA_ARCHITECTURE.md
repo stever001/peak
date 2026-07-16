@@ -141,8 +141,12 @@ The **Phase 20 Agent Run Controlled Writer**
 that actually **persists** into this controlled store — creating one review-gated
 `agent_run_records` row. It closes the gap between "plan" and "row" for one narrow table
 only, and it re-loads the authoritative stored `Engagement` scope from the database at
-write-time (the mapping snapshot is not trusted as proof of authorization). Everything else
-in this architecture remains plan-only until it gets its own reviewed writer.
+write-time (the mapping snapshot is not trusted as proof of authorization). The **Phase 21
+Evidence Controlled Writer** ([`EVIDENCE_CONTROLLED_WRITER.md`](EVIDENCE_CONTROLLED_WRITER.md),
+[`../peak/db/evidence_writer.py`](../peak/db/evidence_writer.py)) does the same for
+`evidence_references` (`create_draft`), using the identical stored-`Engagement` authorization
+and DB-enforced idempotency. Everything else in this architecture remains plan-only until it
+gets its own reviewed writer.
 
 Whether a worker output may be relied on internally is decided by the **QA / Review Gate**
 ([`QA_REVIEW_GATE.md`](QA_REVIEW_GATE.md), [`../peak/review/`](../peak/review/), Phase 15):

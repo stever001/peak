@@ -110,13 +110,17 @@ Both rely on exactly the checks here — allowlist, idempotency, stored-scope �
 only no-op plans. Future persistence for other domains (reviews, ingestion) routes through
 the same boundary.
 
-## First live writer (Phase 20)
+## Live writers (Phases 20, 21)
 
 The Phase 17 boundary and the Phase 18/19 mappings all stop at a **plan**. The **Phase 20
 Agent Run Controlled Writer** ([`AGENT_RUN_CONTROLLED_WRITER.md`](AGENT_RUN_CONTROLLED_WRITER.md),
 [`../peak/db/agent_run_writer.py`](../peak/db/agent_run_writer.py)) is the first component
-that turns a plan into an actual database row — for `agent_run_records` only. It lives in the
-DB layer (`peak.db`), so the planning boundary here stays DB-free. It re-runs these same
-checks (allowlist, idempotency, snapshot-level scope) *and then* re-loads the authoritative
-stored `Engagement` scope from the database, because a snapshot is not proof of authorization
-at write-time. Other tables remain plan-only until each gets its own narrow, reviewed writer.
+that turns a plan into an actual database row — for `agent_run_records` only. The **Phase 21
+Evidence Controlled Writer** ([`EVIDENCE_CONTROLLED_WRITER.md`](EVIDENCE_CONTROLLED_WRITER.md),
+[`../peak/db/evidence_writer.py`](../peak/db/evidence_writer.py)) applies the identical
+pattern to `evidence_references` / `create_draft`. Both live in the DB layer (`peak.db`), so
+the planning boundary here stays DB-free; both re-run these same checks (allowlist,
+idempotency, snapshot-level scope) *and then* re-load the authoritative stored `Engagement`
+scope from the database, because a snapshot is not proof of authorization at write-time. Each
+writer is narrow — exactly one table/action — and other tables remain plan-only until each
+gets its own narrow, reviewed writer.

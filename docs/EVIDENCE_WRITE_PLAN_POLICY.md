@@ -75,3 +75,10 @@ assigning `evidence_record_id` / `created_at`, and recording an audit entry — 
 **future controlled DB writer** under access control
 ([`DATABASE_ACCESS_AND_AUDIT.md`](DATABASE_ACCESS_AND_AUDIT.md)). **That write does not
 happen in Phase 18.**
+
+That writer is delivered in **Phase 21**
+([`EVIDENCE_CONTROLLED_WRITER.md`](EVIDENCE_CONTROLLED_WRITER.md),
+[`EVIDENCE_IDEMPOTENCY_POLICY.md`](EVIDENCE_IDEMPOTENCY_POLICY.md)). It re-validates this same
+policy at write-time against the *live* database — comparing `request.authorization_scope` to
+the stored `Engagement.authorization_scope` (not the snapshot) and enforcing the idempotency
+boundary with a DB unique constraint — before creating a single review-gated row.

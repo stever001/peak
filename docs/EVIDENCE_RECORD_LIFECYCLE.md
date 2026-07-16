@@ -46,6 +46,13 @@ writer boundary as a no-op plan targeting `evidence_references` / `create_draft`
 **DB-aware but not DB-writing** — `evidence_record_id` / `created_at` stay unset for a future
 controlled DB writer, and the review gate is preserved.
 
+That future write is now performed by the **Phase 21 Evidence Controlled Writer**
+([`EVIDENCE_CONTROLLED_WRITER.md`](EVIDENCE_CONTROLLED_WRITER.md)): it creates exactly one
+review-gated `evidence_references` row, stamping the server-controlled `id` and `created_at`
+the draft left unset, after re-loading the authoritative stored `Engagement` scope from the
+database (the Phase 18 snapshot is not trusted) and enforcing DB-level idempotency. A retried
+write returns an `idempotent_replay` rather than a duplicate; a conflicting key is denied.
+
 ## Relationship to future capsule candidate preparation
 
 Only after evidence is review-approved, well-scoped, and source-labeled can it feed

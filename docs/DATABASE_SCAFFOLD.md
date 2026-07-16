@@ -31,6 +31,7 @@ alembic/
   versions/
     001_initial_controlled_database_schema.py   # tables only, no inserts
     002_agent_run_idempotency.py                # Phase 20: agent_run_records columns + unique index (no data)
+    003_evidence_idempotency.py                 # Phase 21: evidence_references columns + unique index (no data)
 .env.example      # placeholders only (PEAK_DATABASE_URL=...); .env is gitignored
 requirements.txt  # SQLAlchemy / alembic / PyMySQL (runtime tooling)
 ```

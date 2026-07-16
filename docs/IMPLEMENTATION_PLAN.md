@@ -463,6 +463,35 @@ and documentation accurately states integration status.
   (`make validate-phase20 PYTHON=.venv/bin/python` for the DB-backed suite; structural checks
   run on plain `python3`).
 
+**Evidence Controlled Writer (Phase 21 — second DB-backed writer):**
+
+- [x] The second narrow live DB writer, applying the Phase 20 pattern to
+  `evidence_references`: [`../peak/db/evidence_writer.py`](../peak/db/evidence_writer.py)
+  (+ `EvidenceWriteReceipt`/`EvidenceWriteOutcome` added to
+  [`../peak/db/writer_contracts.py`](../peak/db/writer_contracts.py)), the additive migration
+  [`../alembic/versions/003_evidence_idempotency.py`](../alembic/versions/003_evidence_idempotency.py)
+  (down_revision `002_agent_run_idem`; single linear head `003_evidence_idem`), and docs
+  [`EVIDENCE_CONTROLLED_WRITER.md`](EVIDENCE_CONTROLLED_WRITER.md) /
+  [`EVIDENCE_IDEMPOTENCY_POLICY.md`](EVIDENCE_IDEMPOTENCY_POLICY.md). It consumes the
+  Phase 17/18 `ControlledWriteRequest` (record_draft = a Phase 18 `EvidencePersistenceDraft`)
+  and creates **exactly one** review-gated row (`output_status=draft`,
+  `review_status=needs_review`, `lifecycle_status=active`, non-authoritative,
+  non-client-facing, non-capsule) with server-controlled id/timestamps. **Write-time DB-backed
+  authorization:** loads the authoritative stored `Engagement` row and requires
+  `request.authorization_scope == engagement.authorization_scope` (does **not** trust the
+  Phase 18 snapshot; identity matching necessary but not sufficient; missing stored/request
+  scope denied). **DB-enforced idempotency** via a unique index over
+  `(owner_id, client_id, engagement_id, idempotency_key)` + a `payload_fingerprint`,
+  distinguishing `created` / `idempotent_replay` / `denied` / `failed_before_write` /
+  `write_outcome_uncertain`. The writer allows only `evidence_references` / `create_draft`;
+  rejects duck-typed inputs, caller-supplied ids/timestamps, and prohibited posture; and
+  performs **no LLM/AgentNet/MCP/resolver/connector/network/client-facing/financial/capsule
+  side effect** and never updates or deletes. The Phase 18 evidence-domain mapper stays
+  **DB-free** (regression-guarded). Checked by
+  [`../tests/validate_phase21_evidence_writer.py`](../tests/validate_phase21_evidence_writer.py)
+  (`make validate-phase21 PYTHON=.venv/bin/python` for the DB-backed suite; structural checks
+  run on plain `python3`).
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

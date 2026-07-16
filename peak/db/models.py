@@ -48,7 +48,19 @@ class EngagementRecord(Base, GovernanceMixin, AuditMixin):
 
 class EvidenceReference(Base, GovernanceMixin, AuditMixin):
     __tablename__ = "evidence_references"
-    __table_args__ = MYSQL_TABLE_ARGS
+    # Phase 21: DB-enforced idempotency for the controlled evidence writer. The uniqueness
+    # boundary includes identity context so an idempotency key cannot collide across
+    # owner / client / engagement. See docs/EVIDENCE_IDEMPOTENCY_POLICY.md.
+    __table_args__ = (
+        UniqueConstraint(
+            "owner_id",
+            "client_id",
+            "engagement_id",
+            "idempotency_key",
+            name="uq_evidence_references_idem",
+        ),
+        MYSQL_TABLE_ARGS,
+    )
     # id convention: evid_<slug>
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     client_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
@@ -59,6 +71,12 @@ class EvidenceReference(Base, GovernanceMixin, AuditMixin):
     evidence_status: Mapped[str] = mapped_column(String(32), index=True, default="collected")
     sensitive_data_flag: Mapped[bool] = mapped_column(Boolean, default=False)
     summary: Mapped[Optional[str]] = mapped_column(Text)  # non-sensitive summary only
+    # Phase 21 controlled-writer fields. output_status is governance-relevant (a real
+    # column, not JSON); idempotency_key + payload_fingerprint back replay/replay-conflict
+    # detection. Normalized detail (title, areas, etc.) remains in details_json.
+    output_status: Mapped[str] = mapped_column(String(32), index=True, default="draft")
+    idempotency_key: Mapped[Optional[str]] = mapped_column(String(128), index=True)
+    payload_fingerprint: Mapped[Optional[str]] = mapped_column(String(64))
 
 
 class SourceSystemReference(Base, GovernanceMixin, AuditMixin):

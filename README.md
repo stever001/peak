@@ -89,9 +89,11 @@ peak/
 │   ├── AGENT_RUN_WRITE_PLAN_POLICY.md    # Agent run write-plan rules (idempotency, stored-scope)
 │   ├── AGENT_RUN_CONTROLLED_WRITER.md    # First real DB-backed writer for agent_run_records (Phase 20)
 │   ├── AGENT_RUN_IDEMPOTENCY_POLICY.md   # DB-enforced idempotency: replay vs replay-conflict
+│   ├── EVIDENCE_CONTROLLED_WRITER.md     # Second DB-backed writer, for evidence_references (Phase 21)
+│   ├── EVIDENCE_IDEMPOTENCY_POLICY.md    # DB-enforced idempotency for evidence rows
 │   └── IMPLEMENTATION_PLAN.md
 ├── peak/                         # Python tooling layer (source only; no data)
-│   ├── db/                       # base, enums, models, session (MySQL) + agent_run controlled writer (Phase 20)
+│   ├── db/                       # base, enums, models, session (MySQL) + agent_run (P20) & evidence (P21) writers
 │   ├── agentnet/                 # Governance wrapper for the AgentNet MCP connector (no calls)
 │   ├── agents/                   # Agent execution harness (mock) + agent run persistence mapping (no live DB)
 │   ├── workers/                  # Production-shaped workers (evidence normalization; review-gated)
@@ -483,6 +485,33 @@ effect**, and never updates or deletes. The Phase 19 agent-domain mapper stays D
 make validate-phase20 PYTHON=.venv/bin/python
 # On plain python3 (no SQLAlchemy) the DB layer is skipped and the structural checks run:
 make validate-phase20
+```
+
+### Evidence Controlled Writer (Phase 21)
+
+The **second DB-backed writer**, applying the Phase 20 pattern to `evidence_references`. It
+persists exactly one review-gated evidence row from a Phase 18 `EvidencePersistenceDraft`
+routed through the Phase 17 `ControlledWriteRequest` boundary — allowing only
+`evidence_references` / `create_draft`. At **write-time** it loads the authoritative stored
+`Engagement` row and requires `request.authorization_scope == engagement.authorization_scope`
+(identity matching necessary but not sufficient); enforces DB-level idempotency (unique index
+over owner/client/engagement/idempotency_key + payload fingerprint), distinguishing `created`,
+`idempotent_replay`, `denied`, `failed_before_write`, and `write_outcome_uncertain`; and
+returns a typed `EvidenceWriteReceipt`. Required posture: `output_status=draft`,
+`review_status=needs_review`, `lifecycle_status=active`, non-authoritative, not
+client-facing-approved, not a capsule candidate. It performs **no LLM, AgentNet, connector,
+external network, client-facing approval, financial verification, or capsule-publication side
+effect**, and never updates or deletes. The Phase 18 evidence-domain mapper stays DB-free.
+
+- [`peak/db/evidence_writer.py`](peak/db/evidence_writer.py) — the controlled writer.
+- [`alembic/versions/003_evidence_idempotency.py`](alembic/versions/003_evidence_idempotency.py)
+  — additive migration (idempotency key, payload fingerprint, unique index; no data).
+- [`docs/EVIDENCE_CONTROLLED_WRITER.md`](docs/EVIDENCE_CONTROLLED_WRITER.md) and
+  [`docs/EVIDENCE_IDEMPOTENCY_POLICY.md`](docs/EVIDENCE_IDEMPOTENCY_POLICY.md).
+
+```bash
+make validate-phase21 PYTHON=.venv/bin/python   # full DB-backed suite (temporary SQLite)
+make validate-phase21                           # structural only on plain python3
 ```
 
 ## Design constraints
