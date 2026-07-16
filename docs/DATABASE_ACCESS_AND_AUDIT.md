@@ -176,3 +176,14 @@ enforces that `approve_internal` is internal-reliance-only (never client-facing)
 decisions stay non-authoritative, and rejects `client_facing_approve` / `verify_financial_impact`
 / `publish_capsule`. It never updates or deletes and returns a typed receipt with no
 credentials/SQL/connection details.
+
+The Phase 23 **Engagement Packet Ingestion Boundary** ([`ENGAGEMENT_PACKET_INGESTION_BOUNDARY.md`](ENGAGEMENT_PACKET_INGESTION_BOUNDARY.md),
+[`PACKET_TO_CONTROLLED_WORKFLOW_POLICY.md`](PACKET_TO_CONTROLLED_WORKFLOW_POLICY.md),
+[`../peak/ingestion/`](../peak/ingestion/)) sits upstream of these writers and **does not write
+to the database at all** — it is an ingestion boundary that derives review-gated plans from an
+external `EngagementPacket`. It validates packet identity/scope (`request.authorization_scope
+== packet_reference.authorization_scope`; identity necessary but not sufficient), requires an
+`idempotency_key`, and rejects credential/secret payload keys without echoing secret values. A
+`source_ingestion_records` row is only ever *planned* here (a no-op Phase 17
+`ControlledWriteRequest`); persisting one requires a **future narrow source ingestion writer**
+that would enforce these same access/audit rules at write-time.

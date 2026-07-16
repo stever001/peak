@@ -105,3 +105,13 @@ DB-backed persistence path. Phase 18 stays DB-free (this mapper imports no SQLAl
 `peak.db`); Phase 21 lives in the DB layer and re-loads the authoritative stored
 `Engagement` scope at write-time rather than trusting the snapshot here, then creates one
 review-gated `evidence_references` row under DB-enforced idempotency.
+
+## Fed from packets by Phase 23
+
+The `NormalizedEvidenceRecord`s this mapping persists can originate from an external packet:
+the **Phase 23 Engagement Packet Ingestion Boundary**
+([`ENGAGEMENT_PACKET_INGESTION_BOUNDARY.md`](ENGAGEMENT_PACKET_INGESTION_BOUNDARY.md)) derives
+Phase 14 `EvidenceNormalizationRequest` objects from a validated packet, which the Phase 14
+worker normalizes and this Phase 18 mapping then plans for the Phase 21 writer. Ingestion is a
+boundary, not a writer — it persists nothing and routes everything through these existing
+review-gated boundaries.

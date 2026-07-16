@@ -127,3 +127,14 @@ these same checks (allowlist, idempotency, snapshot-level scope) *and then* re-l
 authoritative stored `Engagement` scope from the database, because a snapshot is not proof of
 authorization at write-time. Each writer is narrow — exactly one table/action — and other
 tables remain plan-only until each gets its own narrow, reviewed writer.
+
+## Upstream: packet ingestion (Phase 23)
+
+The **Phase 23 Engagement Packet Ingestion Boundary**
+([`ENGAGEMENT_PACKET_INGESTION_BOUNDARY.md`](ENGAGEMENT_PACKET_INGESTION_BOUNDARY.md),
+[`../peak/ingestion/`](../peak/ingestion/)) feeds external `EngagementPacket` material into
+this system without touching the database. It may prepare a no-op Phase 17
+`ControlledWriteRequest` for `source_ingestion_records` / `create_source_ingestion_record`,
+but it calls **no** writer — a plan is not a write. When a narrow **source ingestion writer**
+is added, it will follow the identical pattern (stored-`Engagement` scope re-check, DB-enforced
+idempotency, exactly one review-gated row).

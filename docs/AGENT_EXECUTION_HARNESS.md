@@ -118,3 +118,10 @@ DB-backed persistence path. It still is not the harness: the harness governs and
 Phase 19 mapper plans, and the Phase 20 writer (in the DB layer) creates one review-gated
 `agent_run_records` row after re-loading the authoritative stored `Engagement` scope and
 enforcing DB-level idempotency.
+
+Agent tasks may also be **derived** (never executed) from an external packet by the **Phase 23
+Engagement Packet Ingestion Boundary** ([`ENGAGEMENT_PACKET_INGESTION_BOUNDARY.md`](ENGAGEMENT_PACKET_INGESTION_BOUNDARY.md)):
+it maps a packet's `requested_agent_tasks` to `AgentTaskRequest` objects **only** for known
+registry agents (unknown agents are skipped with a warning), keeps `llm_execution_allowed=false`
+and `client_facing_output_requested=false`, and defaults them to `draft` / `needs_review`.
+Ingestion does not run them — the harness and its governance do, later, if at all.

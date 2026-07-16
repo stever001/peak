@@ -152,6 +152,16 @@ and DB-enforced idempotency. The **Phase 22 Review Record Controlled Writer**
 authorization and idempotency rules. Everything else in this architecture remains plan-only
 until it gets its own reviewed writer.
 
+External material enters through the **Phase 23 Engagement Packet Ingestion Boundary**
+([`ENGAGEMENT_PACKET_INGESTION_BOUNDARY.md`](ENGAGEMENT_PACKET_INGESTION_BOUNDARY.md),
+[`../peak/ingestion/`](../peak/ingestion/)) — an **ingestion boundary, not a direct importer
+and not a DB writer**. It validates an `EngagementPacket`, rejects credential/secret payloads,
+and derives review-gated plans (a `SourceIngestionDraft`, Phase 14 evidence requests, Phase 13
+agent tasks, a no-op Phase 17 write plan) that route through the existing controlled
+boundaries. Packet ingestion **does not write directly to the database** and does not bypass
+the evidence, agent, review, or controlled-writer boundaries; `source_ingestion_records`
+persistence requires a future narrow writer.
+
 Whether a worker output may be relied on internally is decided by the **QA / Review Gate**
 ([`QA_REVIEW_GATE.md`](QA_REVIEW_GATE.md), [`../peak/review/`](../peak/review/), Phase 15):
 a production-shaped but **no-side-effect** review decision (`approve_internal` means

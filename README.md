@@ -93,6 +93,8 @@ peak/
 │   ├── EVIDENCE_IDEMPOTENCY_POLICY.md    # DB-enforced idempotency for evidence rows
 │   ├── REVIEW_CONTROLLED_WRITER.md       # Third DB-backed writer, for review_records (Phase 22)
 │   ├── REVIEW_IDEMPOTENCY_POLICY.md      # DB-enforced idempotency for review rows
+│   ├── ENGAGEMENT_PACKET_INGESTION_BOUNDARY.md  # Packet ingestion boundary (no direct DB writes)
+│   ├── PACKET_TO_CONTROLLED_WORKFLOW_POLICY.md   # Packet-derived outputs + prohibited effects
 │   └── IMPLEMENTATION_PLAN.md
 ├── peak/                         # Python tooling layer (source only; no data)
 │   ├── db/                       # base, enums, models, session + agent_run (P20), evidence (P21) & review (P22) writers
@@ -101,7 +103,8 @@ peak/
 │   ├── workers/                  # Production-shaped workers (evidence normalization; review-gated)
 │   ├── review/                   # QA / review gate + review persistence boundary (no-side-effect)
 │   ├── persistence/              # Controlled DB writer boundary: allowlist + governance (no live DB)
-│   └── evidence/                 # Evidence persistence mapping: Phase 14 → Phase 17 (no live DB)
+│   ├── evidence/                 # Evidence persistence mapping: Phase 14 → Phase 17 (no live DB)
+│   └── ingestion/                # Engagement packet ingestion boundary: derives plans (no DB writes)
 ├── alembic/                      # Alembic migrations (schema only; no data)
 ├── alembic.ini                   # Alembic config (URL from env, not the repo)
 ├── .env.example                  # Env placeholders only (PEAK_DATABASE_URL); .env ignored
@@ -544,6 +547,34 @@ The Phase 16 review-domain mapper stays DB-free.
 ```bash
 make validate-phase22 PYTHON=.venv/bin/python   # full DB-backed suite (temporary SQLite)
 make validate-phase22                           # structural only on plain python3
+```
+
+### Engagement Packet Ingestion Boundary (Phase 23)
+
+The controlled front door for external `EngagementPacket` material — an **ingestion
+boundary, not a direct importer and not a DB writer**. It validates a packet's identity,
+scope, and shape (rejecting credential/secret payloads), then derives **production-shaped but
+review-gated** no-side-effect plans: a `SourceIngestionDraft`, Phase 14
+`EvidenceNormalizationRequest` objects (from present sections), Phase 13 `AgentTaskRequest`
+objects (known registry agents only, never executed, `llm_execution_allowed=false`), and
+optionally a Phase 17 `ControlledWriteRequest` for `source_ingestion_records` — **a plan
+only**. **No direct DB writes from packet ingestion**, no DB connection, no SQL, no stored
+packet, no live LLM/AgentNet/network call, no client-facing approval, no financial
+verification, no capsule publication. `source_ingestion_records` persistence awaits a future
+narrow source ingestion writer.
+
+```
+EngagementPacket → validate → govern → SourceIngestionDraft + evidence requests
+  + agent tasks + (optional) Phase 17 write plan → no DB writes
+```
+
+- [`peak/ingestion/`](peak/ingestion/) — ingestion contracts, deterministic packet governance,
+  and packet-to-request mapping helpers (bridging to Phases 13/14/17, all DB-free).
+- [`docs/ENGAGEMENT_PACKET_INGESTION_BOUNDARY.md`](docs/ENGAGEMENT_PACKET_INGESTION_BOUNDARY.md)
+  and [`docs/PACKET_TO_CONTROLLED_WORKFLOW_POLICY.md`](docs/PACKET_TO_CONTROLLED_WORKFLOW_POLICY.md).
+
+```bash
+make validate-phase23   # engagement-packet-ingestion-boundary check (stdlib-only; no DB)
 ```
 
 ## Design constraints

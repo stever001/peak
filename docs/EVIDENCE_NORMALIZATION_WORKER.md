@@ -97,3 +97,10 @@ storage, the **Phase 18 Evidence Persistence Mapping**
 no-op plan targeting `evidence_references` / `create_draft` — **DB-aware but not DB-writing**.
 **Evidence workers still do not write directly to the DB**; a future controlled DB writer
 executes the plan after the allowlist, `idempotency_key`, and stored-scope checks pass.
+
+Raw evidence may also arrive from an external packet: the **Phase 23 Engagement Packet
+Ingestion Boundary** ([`ENGAGEMENT_PACKET_INGESTION_BOUNDARY.md`](ENGAGEMENT_PACKET_INGESTION_BOUNDARY.md))
+derives Phase 14 `EvidenceNormalizationRequest` objects from a validated packet's evidence-like
+sections (carrying only a short `raw_text_preview`, never full raw text), which then feed this
+worker under its normal review gate. Ingestion is a boundary, not a writer, and does not
+persist anything.

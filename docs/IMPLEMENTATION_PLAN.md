@@ -524,6 +524,37 @@ and documentation accurately states integration status.
   (`make validate-phase22 PYTHON=.venv/bin/python` for the DB-backed suite; structural checks
   run on plain `python3`).
 
+**Engagement Packet Ingestion Boundary (Phase 23 — an ingestion boundary, not a writer):**
+
+- [x] The controlled front door for external `EngagementPacket` material, sitting *upstream*
+  of the Phase 20–22 writers: [`../peak/ingestion/`](../peak/ingestion/) adds ingestion
+  contracts (`contracts.py`: `EngagementPacketReference`, `PacketIngestionRequest`,
+  `PacketValidationResult`, `SourceIngestionDraft`, `PacketDerivedEvidencePlan`,
+  `PacketDerivedAgentTaskPlan`, `PacketIngestionPlan`, `PacketIngestionResult`), deterministic
+  ingestion governance (`governance.py`: `evaluate_packet_ingestion_request`,
+  `validate_packet_reference_scope`, `validate_packet_payload_shape`,
+  `build_packet_validation_result` — including a nested credential/secret-key guard), and
+  packet-to-request mapping (`packet_mapper.py`: `validate_packet`,
+  `build_source_ingestion_draft`, `derive_evidence_normalization_requests`,
+  `derive_agent_task_requests`, `build_packet_ingestion_plan`, `prepare_packet_ingestion`) —
+  plus [`ENGAGEMENT_PACKET_INGESTION_BOUNDARY.md`](ENGAGEMENT_PACKET_INGESTION_BOUNDARY.md) and
+  [`PACKET_TO_CONTROLLED_WORKFLOW_POLICY.md`](PACKET_TO_CONTROLLED_WORKFLOW_POLICY.md). It maps
+  a validated packet into a review-gated `SourceIngestionDraft`, Phase 14
+  `EvidenceNormalizationRequest` objects (from present sections), Phase 13 `AgentTaskRequest`
+  objects (known registry agents only, never executed, `llm_execution_allowed=false`), and a
+  no-op Phase 17 `ControlledWriteRequest` for `source_ingestion_records` /
+  `create_source_ingestion_record` (plan only). Requires an `idempotency_key` and
+  `request.authorization_scope == packet_reference.authorization_scope` (identity matching
+  necessary but not sufficient); rejects credential/secret payload keys (never echoing secret
+  values). **It is a boundary, not a direct importer:** no direct DB write, no DB connection,
+  no SQL, no stored packet, no call to any Phase 20/21/22 writer, no LLM/AgentNet/MCP/resolver/
+  network call, no client-facing approval, no financial verification, no capsule publication.
+  Source ingestion records await a future narrow writer before persistence. `peak/ingestion/`
+  imports no SQLAlchemy/Alembic/`peak.db` (bridges only the DB-free Phase 13/14/17 contracts).
+  Checked by
+  [`../tests/validate_phase23_packet_ingestion.py`](../tests/validate_phase23_packet_ingestion.py)
+  (`make validate-phase23`).
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

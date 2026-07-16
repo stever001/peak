@@ -258,6 +258,16 @@ Legend for each group:
 - **Key fields:** `ingestion_id`, `source_reference_id`, captured-at, authorization scope, review status, resulting evidence/record ids.
 - **Governance states:** authorization, review, lifecycle.
 - **Capsule-ready?** Indirectly. **Client-facing?** No.
+- **Prepared by:** the **Phase 23 Engagement Packet Ingestion Boundary**
+  ([`ENGAGEMENT_PACKET_INGESTION_BOUNDARY.md`](ENGAGEMENT_PACKET_INGESTION_BOUNDARY.md),
+  [`../peak/ingestion/`](../peak/ingestion/)) derives a review-gated `SourceIngestionDraft`
+  from a validated `EngagementPacket` and (optionally) a no-op Phase 17 `ControlledWriteRequest`
+  targeting this table (`create_source_ingestion_record`). Ingestion is a **boundary, not a
+  writer** — no direct DB write, no stored packet; `source_ingestion_record_id` / `created_at`
+  stay `None`. **Persistence executed by (future):** a narrow **source ingestion writer**
+  (mirroring the Phase 20–22 pattern) is still required before any row is stored — it would
+  re-load the authoritative stored `Engagement` scope at write-time and enforce DB-level
+  idempotency.
 
 ## Cross-cutting
 
