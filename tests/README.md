@@ -10,7 +10,7 @@ objects are needed, the harnesses build **synthetic fixtures at runtime**
 directory that is auto-deleted. Nothing is stored. See
 [`../docs/FIXTURE_STRATEGY.md`](../docs/FIXTURE_STRATEGY.md).
 
-Twenty-one harnesses, run together by `make validate`:
+Twenty-two harnesses, run together by `make validate`:
 
 - `validate_phase1.py` — schemas + synthetic object fixtures.
 - `validate_phase2.py` — schemas + a synthetic `EngagementPacket`.
@@ -35,6 +35,8 @@ Twenty-one harnesses, run together by `make validate`:
   always; DB-backed when SQLAlchemy is present).
 - `validate_phase21_evidence_writer.py` — controlled-DB evidence-writer check (structural
   always; DB-backed when SQLAlchemy is present).
+- `validate_phase22_review_writer.py` — controlled-DB review-writer check (structural always;
+  DB-backed when SQLAlchemy is present).
 
 ## `synthetic_fixtures.py`
 
@@ -373,6 +375,33 @@ with instructions if SQLAlchemy is absent (still exits 0). Run the full suite wi
 [`../docs/EVIDENCE_CONTROLLED_WRITER.md`](../docs/EVIDENCE_CONTROLLED_WRITER.md) and
 [`../docs/EVIDENCE_IDEMPOTENCY_POLICY.md`](../docs/EVIDENCE_IDEMPOTENCY_POLICY.md).
 
+## `validate_phase22_review_writer.py`
+
+Check for the Phase 22 **controlled DB review writer** (`peak/db/review_writer.py`,
+`peak/db/writer_contracts.py`) — the same two-layer pattern, applied to `review_records`. The
+**structural** layer confirms the files exist and compile; that the Phase 16 review-persistence
+mapper stays **DB-free**; that the writer imports no LLM/AgentNet/connector/network client or
+credential; that the `004_review_idempotency` migration is additive schema-only (no INSERT/seed,
+upgrade+downgrade, adds the unique index, `down_revision = 003_evidence_idem`); that the docs
+carry the required language; and that the repo stays source-only. The **DB-backed** layer (when
+SQLAlchemy is importable) builds a **temporary local SQLite database** (deleted afterward) and
+exercises real behavior — successful create for `approve_internal` (one row, server-stamped
+`rev_` id/timestamp, stored decision/authoritative/target_id/subject_record_type/new_status/
+lifecycle/output_status, accurate receipt flags) and for a non-authoritative `reject`;
+idempotent replay; conflicting replay (denied, row unchanged); DB-backed authorization (request
+scope vs stored `Engagement.authorization_scope`; missing stored/request scope; missing subject;
+owner/client/engagement mismatch); the table/action allowlist (wrong table/action +
+delete-/publish-/client-facing-/financial-like actions); decision/posture rejections
+(caller-supplied id/timestamp, client-facing/capsule flags, authoritative on a non-approve
+decision, approve_internal without `approved_internal`, and the prohibited
+`client_facing_approve`/`verify_financial_impact`/`publish_capsule` decisions); side-effect
+discipline (no unrelated table mutation); and transaction/failure semantics
+(`failed_before_write`, `write_outcome_uncertain`, and the `IntegrityError` race →
+replay/conflict). Skips the DB layer with instructions if SQLAlchemy is absent (still exits 0).
+Run the full suite with `make validate-phase22 PYTHON=.venv/bin/python`. See
+[`../docs/REVIEW_CONTROLLED_WRITER.md`](../docs/REVIEW_CONTROLLED_WRITER.md) and
+[`../docs/REVIEW_IDEMPOTENCY_POLICY.md`](../docs/REVIEW_IDEMPOTENCY_POLICY.md).
+
 ## Running
 
 This machine uses `python3` (there is no bare `python`). From the repo root:
@@ -382,7 +411,7 @@ This machine uses `python3` (there is no bare `python`). From the repo root:
 make install-dev          # == python3 -m pip install -r requirements-dev.txt
 
 # run all harnesses
-make validate             # == phase1 … phase21
+make validate             # == phase1 … phase22
 
 # or run one at a time
 make validate-phase1
@@ -406,6 +435,7 @@ make validate-phase18
 make validate-phase19
 make validate-phase20   # DB-backed; add PYTHON=.venv/bin/python for the full suite
 make validate-phase21   # DB-backed; add PYTHON=.venv/bin/python for the full suite
+make validate-phase22   # DB-backed; add PYTHON=.venv/bin/python for the full suite
 ```
 
 Or invoke them directly, without the Makefile:
@@ -432,11 +462,12 @@ python3 tests/validate_phase18_evidence_persistence.py   # stdlib-only, no depen
 python3 tests/validate_phase19_agent_run_persistence.py  # stdlib-only, no dependency needed
 .venv/bin/python tests/validate_phase20_agent_run_writer.py  # DB-backed (SQLAlchemy); skips DB layer on plain python3
 .venv/bin/python tests/validate_phase21_evidence_writer.py   # DB-backed (SQLAlchemy); skips DB layer on plain python3
+.venv/bin/python tests/validate_phase22_review_writer.py     # DB-backed (SQLAlchemy); skips DB layer on plain python3
 ```
 
 ## Exit codes
 
-All twenty-one harnesses share the same convention:
+All twenty-two harnesses share the same convention:
 
 | Code | Meaning |
 | --- | --- |

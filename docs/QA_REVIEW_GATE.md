@@ -91,6 +91,14 @@ DB-backed review must compare `request.authorization_scope` against the subject 
 **stored** `stored_authorization_scope` — see
 [`DB_BACKED_REVIEW_SCOPE_POLICY.md`](DB_BACKED_REVIEW_SCOPE_POLICY.md).
 
+**Phase 22 — the Review Record Controlled Writer**
+([`REVIEW_CONTROLLED_WRITER.md`](REVIEW_CONTROLLED_WRITER.md),
+[`../peak/db/review_writer.py`](../peak/db/review_writer.py)) is the step that finally
+**persists** a `ReviewRecordDraft` as a `review_records` row — the third DB-backed writer. It
+loads the authoritative stored `Engagement` scope at write-time (not the snapshot), enforces
+DB-level idempotency, and preserves the review posture: `approve_internal` means internal
+reliance only and never creates client-facing approval.
+
 ## Boundaries
 
 - **No authority escalation to client-facing** — a review decision may never create

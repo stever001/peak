@@ -91,9 +91,11 @@ peak/
 │   ├── AGENT_RUN_IDEMPOTENCY_POLICY.md   # DB-enforced idempotency: replay vs replay-conflict
 │   ├── EVIDENCE_CONTROLLED_WRITER.md     # Second DB-backed writer, for evidence_references (Phase 21)
 │   ├── EVIDENCE_IDEMPOTENCY_POLICY.md    # DB-enforced idempotency for evidence rows
+│   ├── REVIEW_CONTROLLED_WRITER.md       # Third DB-backed writer, for review_records (Phase 22)
+│   ├── REVIEW_IDEMPOTENCY_POLICY.md      # DB-enforced idempotency for review rows
 │   └── IMPLEMENTATION_PLAN.md
 ├── peak/                         # Python tooling layer (source only; no data)
-│   ├── db/                       # base, enums, models, session (MySQL) + agent_run (P20) & evidence (P21) writers
+│   ├── db/                       # base, enums, models, session + agent_run (P20), evidence (P21) & review (P22) writers
 │   ├── agentnet/                 # Governance wrapper for the AgentNet MCP connector (no calls)
 │   ├── agents/                   # Agent execution harness (mock) + agent run persistence mapping (no live DB)
 │   ├── workers/                  # Production-shaped workers (evidence normalization; review-gated)
@@ -512,6 +514,36 @@ effect**, and never updates or deletes. The Phase 18 evidence-domain mapper stay
 ```bash
 make validate-phase21 PYTHON=.venv/bin/python   # full DB-backed suite (temporary SQLite)
 make validate-phase21                           # structural only on plain python3
+```
+
+### Review Record Controlled Writer (Phase 22)
+
+The **third DB-backed writer**, applying the same pattern to `review_records`. It persists
+exactly one review row from a Phase 16 `ReviewRecordDraft` routed through the Phase 17
+`ControlledWriteRequest` boundary — allowing only `review_records` / `create_review_record`.
+At **write-time** it loads the authoritative stored `Engagement` row and requires
+`request.authorization_scope == engagement.authorization_scope` (identity matching necessary
+but not sufficient); enforces DB-level idempotency (unique index over
+owner/client/engagement/idempotency_key + payload fingerprint); distinguishes `created`,
+`idempotent_replay`, `denied`, `failed_before_write`, and `write_outcome_uncertain`; and
+returns a typed `ReviewWriteReceipt`. Decision posture: `approve_internal` means internal
+reliance only (may set `authoritative=true` only when `next_review_status=approved_internal`,
+never client-facing); `reject`/`return_for_revision`/`supersede`/`keep_needs_review` must be
+non-authoritative; `client_facing_approve`/`verify_financial_impact`/`publish_capsule` are
+rejected. It performs **no LLM, AgentNet, connector, external network, client-facing approval,
+financial verification, or capsule-publication side effect**, and never updates or deletes.
+The Phase 16 review-domain mapper stays DB-free.
+
+- [`peak/db/review_writer.py`](peak/db/review_writer.py) — the controlled writer.
+- [`alembic/versions/004_review_idempotency.py`](alembic/versions/004_review_idempotency.py)
+  — additive migration (decision/authoritative/output_status columns, idempotency key, payload
+  fingerprint, unique index; no data).
+- [`docs/REVIEW_CONTROLLED_WRITER.md`](docs/REVIEW_CONTROLLED_WRITER.md) and
+  [`docs/REVIEW_IDEMPOTENCY_POLICY.md`](docs/REVIEW_IDEMPOTENCY_POLICY.md).
+
+```bash
+make validate-phase22 PYTHON=.venv/bin/python   # full DB-backed suite (temporary SQLite)
+make validate-phase22                           # structural only on plain python3
 ```
 
 ## Design constraints

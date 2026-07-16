@@ -162,3 +162,17 @@ re-check, review-gated row (`output_status=draft`, `review_status=needs_review`,
 server-controlled id/timestamps and `created_by`, and DB-enforced idempotency over
 `(owner_id, client_id, engagement_id, idempotency_key)` + payload fingerprint. It never
 updates or deletes and returns a typed receipt with no credentials/SQL/connection details.
+
+The Phase 22 **Review Record Controlled Writer** ([`REVIEW_CONTROLLED_WRITER.md`](REVIEW_CONTROLLED_WRITER.md),
+[`REVIEW_IDEMPOTENCY_POLICY.md`](REVIEW_IDEMPOTENCY_POLICY.md),
+[`../peak/db/review_writer.py`](../peak/db/review_writer.py)) is the third such writer, for
+`review_records` (`create_review_record`). It enforces the same access/audit rules — stored
+`Engagement` scope comparison (snapshot not trusted), stored-subject identity + lifecycle
+re-check, server-controlled id/timestamps and `created_by`, and DB-enforced idempotency over
+`(owner_id, client_id, engagement_id, idempotency_key)` + payload fingerprint. It records the
+review decision and its next states (`decision`, `authoritative`, `new_status`,
+`review_status`, `lifecycle_status`, `output_status`) with the reviewed target as `target_id`,
+enforces that `approve_internal` is internal-reliance-only (never client-facing) while other
+decisions stay non-authoritative, and rejects `client_facing_approve` / `verify_financial_impact`
+/ `publish_capsule`. It never updates or deletes and returns a typed receipt with no
+credentials/SQL/connection details.

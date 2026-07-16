@@ -13,7 +13,7 @@ persisted here.
 | --- | --- |
 | `evidence_references` | normalized evidence records (Phase 14 → **Phase 18 mapping** → **Phase 21 live writer**) |
 | `engagement_records` | engagement-scoped records |
-| `review_records` | QA / review decisions (Phase 15 → Phase 16) |
+| `review_records` | QA / review decisions (Phase 15 → Phase 16 → **Phase 22 live writer**) |
 | `agent_run_records` | agent/worker run provenance (Phase 13 → **Phase 19 mapping** → **Phase 20 live writer**) |
 | `source_ingestion_records` | controlled source-ingestion provenance (future) |
 | `capsule_publication_candidates` | *draft* capsule candidates only (not publication) |

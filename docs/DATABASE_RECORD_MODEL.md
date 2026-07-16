@@ -170,6 +170,12 @@ Legend for each group:
 ### ReviewRecord
 - **Purpose:** an audit record of a governance review action.
 - **Key fields:** `review_id`, target record id, previous/new `review_status`, reviewer, reason, timestamp.
+- **Phase 22 columns:** `decision` + `authoritative` (governance-relevant, real columns),
+  `subject_record_type` (type of the reviewed target, whose id is `target_id`),
+  `output_status`, `idempotency_key`, and `payload_fingerprint`, with a unique index
+  `uq_review_records_idem` over `(owner_id, client_id, engagement_id, idempotency_key)`
+  (migration `004_review_idempotency`). Reviewer role, reasons, warnings, and flags live in
+  `details_json`.
 - **Governance states:** review, lifecycle.
 - **Capsule-ready?** No (governance trail). **Client-facing?** No.
 - **Produced by (future):** the **QA / Review Gate** ([`QA_REVIEW_GATE.md`](QA_REVIEW_GATE.md),
@@ -189,6 +195,19 @@ Legend for each group:
   `request.authorization_scope` against the subject's stored `authorization_scope`
   (identity matching is necessary but not sufficient). Persisting a `ReviewRecord` should
   capture both the stored scope matched and the request scope presented, for audit.
+- **Persistence executed by:** the **Phase 22 Review Record Controlled Writer**
+  ([`REVIEW_CONTROLLED_WRITER.md`](REVIEW_CONTROLLED_WRITER.md),
+  [`../peak/db/review_writer.py`](../peak/db/review_writer.py)) creates exactly one row from a
+  Phase 16 `ReviewRecordDraft`. Write authority is anchored to the stored `Engagement` row,
+  re-loaded from the DB at write-time (`request.authorization_scope ==
+  engagement.authorization_scope`; identity matching necessary but not sufficient — the
+  snapshot is not trusted). The reviewed target is stored as `target_id` + `subject_record_type`
+  (distinct from the engagement authorization anchor). `approve_internal` may be
+  `authoritative=true` (internal reliance only, never client-facing); other decisions are
+  non-authoritative; a required `idempotency_key` is DB-enforced (replay returns the existing
+  row; a conflicting key is denied). The writer stamps server-controlled `id` / `created_at`,
+  never updates or deletes, and has no LLM/AgentNet/connector/network/client-facing/financial/
+  capsule side effect.
 
 ### AgentRunRecord
 - **Purpose:** provenance of an agent/worker run (Phase 13 scaffold

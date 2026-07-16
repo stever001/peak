@@ -145,8 +145,12 @@ write-time (the mapping snapshot is not trusted as proof of authorization). The 
 Evidence Controlled Writer** ([`EVIDENCE_CONTROLLED_WRITER.md`](EVIDENCE_CONTROLLED_WRITER.md),
 [`../peak/db/evidence_writer.py`](../peak/db/evidence_writer.py)) does the same for
 `evidence_references` (`create_draft`), using the identical stored-`Engagement` authorization
-and DB-enforced idempotency. Everything else in this architecture remains plan-only until it
-gets its own reviewed writer.
+and DB-enforced idempotency. The **Phase 22 Review Record Controlled Writer**
+([`REVIEW_CONTROLLED_WRITER.md`](REVIEW_CONTROLLED_WRITER.md),
+[`../peak/db/review_writer.py`](../peak/db/review_writer.py)) is the third, persisting
+`review_records` (`create_review_record`) from a Phase 16 `ReviewRecordDraft` under the same
+authorization and idempotency rules. Everything else in this architecture remains plan-only
+until it gets its own reviewed writer.
 
 Whether a worker output may be relied on internally is decided by the **QA / Review Gate**
 ([`QA_REVIEW_GATE.md`](QA_REVIEW_GATE.md), [`../peak/review/`](../peak/review/), Phase 15):

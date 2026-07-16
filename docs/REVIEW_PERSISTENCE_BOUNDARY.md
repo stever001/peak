@@ -83,3 +83,14 @@ future controlled writes route through, enforcing a **table/action allowlist**, 
 produced. `review_records` is one allowlisted target among several; the future controlled DB
 writer is shared. Phase 17 is likewise **DB-aware but not DB-writing** and does not write to
 the database.
+
+## Realized by Phase 22
+
+The plan this boundary prepares is executed by the **Phase 22 Review Record Controlled
+Writer** ([`REVIEW_CONTROLLED_WRITER.md`](REVIEW_CONTROLLED_WRITER.md),
+[`REVIEW_IDEMPOTENCY_POLICY.md`](REVIEW_IDEMPOTENCY_POLICY.md)) — the third real DB-backed
+persistence path. Phase 16 stays DB-free (this mapper imports no SQLAlchemy / `peak.db`);
+Phase 22 lives in the DB layer and re-loads the authoritative stored `Engagement` scope at
+write-time rather than trusting the snapshot here, then creates one `review_records` row under
+DB-enforced idempotency. `approve_internal` may set `authoritative=true` (internal reliance
+only) and never creates client-facing approval.

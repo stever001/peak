@@ -99,3 +99,11 @@ permitted `ReviewGateResult` into a `ReviewRecordDraft` + no-op `ReviewWritePlan
 `request.authorization_scope` against the subject record's stored
 `stored_authorization_scope` (owner/client/engagement matching is necessary but not
 sufficient) — see [`DB_BACKED_REVIEW_SCOPE_POLICY.md`](DB_BACKED_REVIEW_SCOPE_POLICY.md).
+
+The **Phase 22 Review Record Controlled Writer**
+([`REVIEW_CONTROLLED_WRITER.md`](REVIEW_CONTROLLED_WRITER.md)) executes that write. It enforces
+this decision model at persistence time: `authoritative=true` is stored only for
+`approve_internal` (which must land on `approved_internal`); `reject` /
+`return_for_revision` / `supersede` / `keep_needs_review` are stored non-authoritative; and
+the prohibited decisions (`client_facing_approve`, `verify_financial_impact`,
+`publish_capsule`) are rejected at the writer, never persisted.

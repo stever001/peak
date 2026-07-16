@@ -124,7 +124,19 @@ class ResolverCapsuleRecord(Base, GovernanceMixin, AuditMixin):
 
 class ReviewRecord(Base, GovernanceMixin, AuditMixin):
     __tablename__ = "review_records"
-    __table_args__ = MYSQL_TABLE_ARGS
+    # Phase 22: DB-enforced idempotency for the controlled review writer. The uniqueness
+    # boundary includes identity context so an idempotency key cannot collide across
+    # owner / client / engagement. See docs/REVIEW_IDEMPOTENCY_POLICY.md.
+    __table_args__ = (
+        UniqueConstraint(
+            "owner_id",
+            "client_id",
+            "engagement_id",
+            "idempotency_key",
+            name="uq_review_records_idem",
+        ),
+        MYSQL_TABLE_ARGS,
+    )
     # id convention: rev_<slug>
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     client_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
@@ -134,6 +146,16 @@ class ReviewRecord(Base, GovernanceMixin, AuditMixin):
     new_status: Mapped[Optional[str]] = mapped_column(String(32))
     reviewer: Mapped[Optional[str]] = mapped_column(String(128))
     reason: Mapped[Optional[str]] = mapped_column(Text)
+    # Phase 22 controlled-writer fields. decision + authoritative are governance-relevant
+    # (real columns); output_status mirrors Phases 20/21; subject_record_type disambiguates
+    # the reviewed target (whose id is target_id). idempotency_key + payload_fingerprint back
+    # replay/replay-conflict detection.
+    decision: Mapped[Optional[str]] = mapped_column(String(48), index=True)
+    subject_record_type: Mapped[Optional[str]] = mapped_column(String(48))
+    authoritative: Mapped[bool] = mapped_column(Boolean, default=False)
+    output_status: Mapped[str] = mapped_column(String(32), index=True, default="draft")
+    idempotency_key: Mapped[Optional[str]] = mapped_column(String(128), index=True)
+    payload_fingerprint: Mapped[Optional[str]] = mapped_column(String(64))
 
 
 class AgentRunRecord(Base, GovernanceMixin, AuditMixin):

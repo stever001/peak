@@ -83,3 +83,10 @@ with owner/client/engagement matching necessary but not sufficient — to every 
 controlled write, alongside a table/action allowlist and an idempotency key. Any future
 DB-backed persistence loads the subject's stored scope from the controlled DB and denies on
 mismatch, exactly as described here.
+
+The **Phase 22 Review Record Controlled Writer**
+([`REVIEW_CONTROLLED_WRITER.md`](REVIEW_CONTROLLED_WRITER.md)) is the concrete review-domain
+realization: at write-time it loads the stored `Engagement` row and requires
+`request.authorization_scope == engagement.authorization_scope` before creating a
+`review_records` row — it does not trust the Phase 16 snapshot, and identity matching alone
+is not sufficient.

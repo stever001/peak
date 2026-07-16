@@ -110,7 +110,7 @@ Both rely on exactly the checks here — allowlist, idempotency, stored-scope �
 only no-op plans. Future persistence for other domains (reviews, ingestion) routes through
 the same boundary.
 
-## Live writers (Phases 20, 21)
+## Live writers (Phases 20, 21, 22)
 
 The Phase 17 boundary and the Phase 18/19 mappings all stop at a **plan**. The **Phase 20
 Agent Run Controlled Writer** ([`AGENT_RUN_CONTROLLED_WRITER.md`](AGENT_RUN_CONTROLLED_WRITER.md),
@@ -118,9 +118,12 @@ Agent Run Controlled Writer** ([`AGENT_RUN_CONTROLLED_WRITER.md`](AGENT_RUN_CONT
 that turns a plan into an actual database row — for `agent_run_records` only. The **Phase 21
 Evidence Controlled Writer** ([`EVIDENCE_CONTROLLED_WRITER.md`](EVIDENCE_CONTROLLED_WRITER.md),
 [`../peak/db/evidence_writer.py`](../peak/db/evidence_writer.py)) applies the identical
-pattern to `evidence_references` / `create_draft`. Both live in the DB layer (`peak.db`), so
-the planning boundary here stays DB-free; both re-run these same checks (allowlist,
-idempotency, snapshot-level scope) *and then* re-load the authoritative stored `Engagement`
-scope from the database, because a snapshot is not proof of authorization at write-time. Each
-writer is narrow — exactly one table/action — and other tables remain plan-only until each
-gets its own narrow, reviewed writer.
+pattern to `evidence_references` / `create_draft`. The **Phase 22 Review Record Controlled
+Writer** ([`REVIEW_CONTROLLED_WRITER.md`](REVIEW_CONTROLLED_WRITER.md),
+[`../peak/db/review_writer.py`](../peak/db/review_writer.py)) does the same for
+`review_records` / `create_review_record`, persisting a Phase 16 `ReviewRecordDraft`. All three
+live in the DB layer (`peak.db`), so the planning boundary here stays DB-free; all three re-run
+these same checks (allowlist, idempotency, snapshot-level scope) *and then* re-load the
+authoritative stored `Engagement` scope from the database, because a snapshot is not proof of
+authorization at write-time. Each writer is narrow — exactly one table/action — and other
+tables remain plan-only until each gets its own narrow, reviewed writer.

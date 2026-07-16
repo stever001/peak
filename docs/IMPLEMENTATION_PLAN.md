@@ -492,6 +492,38 @@ and documentation accurately states integration status.
   (`make validate-phase21 PYTHON=.venv/bin/python` for the DB-backed suite; structural checks
   run on plain `python3`).
 
+**Review Record Controlled Writer (Phase 22 — third DB-backed writer):**
+
+- [x] The third narrow live DB writer, applying the Phase 20/21 pattern to `review_records`:
+  [`../peak/db/review_writer.py`](../peak/db/review_writer.py) (+ `ReviewWriteReceipt`/
+  `ReviewWriteOutcome` added to [`../peak/db/writer_contracts.py`](../peak/db/writer_contracts.py)),
+  the additive migration
+  [`../alembic/versions/004_review_idempotency.py`](../alembic/versions/004_review_idempotency.py)
+  (down_revision `003_evidence_idem`; single linear head `004_review_idem`), and docs
+  [`REVIEW_CONTROLLED_WRITER.md`](REVIEW_CONTROLLED_WRITER.md) /
+  [`REVIEW_IDEMPOTENCY_POLICY.md`](REVIEW_IDEMPOTENCY_POLICY.md). It consumes a Phase 17
+  `ControlledWriteRequest` whose `record_draft` is a Phase 16 `ReviewRecordDraft` and creates
+  **exactly one** `review_records` row with server-controlled id/timestamps. **Write-time
+  DB-backed authorization:** loads the authoritative stored `Engagement` row and requires
+  `request.authorization_scope == engagement.authorization_scope` (does **not** trust the
+  Phase 16 snapshot; identity matching necessary but not sufficient; missing stored/request
+  scope denied). Note the review record has two subjects — the engagement authorization anchor
+  (`ControlledWriteRequest.subject`) and the reviewed target (`draft.subject_record_id`,
+  persisted as `target_id`). **Decision posture:** `approve_internal` means internal reliance
+  only (may set `authoritative=true` only with `next_review_status=approved_internal`, never
+  client-facing); other decisions must be non-authoritative; `client_facing_approve` /
+  `verify_financial_impact` / `publish_capsule` are rejected. **DB-enforced idempotency** via a
+  unique index over `(owner_id, client_id, engagement_id, idempotency_key)` + a
+  `payload_fingerprint`, distinguishing `created` / `idempotent_replay` / `denied` /
+  `failed_before_write` / `write_outcome_uncertain`. The writer allows only `review_records` /
+  `create_review_record`; rejects duck-typed inputs, caller-supplied ids/timestamps, and
+  prohibited posture; and performs **no LLM/AgentNet/MCP/resolver/connector/network/
+  client-facing/financial/capsule side effect** and never updates or deletes. The Phase 16
+  review-domain mapper stays **DB-free** (regression-guarded). Checked by
+  [`../tests/validate_phase22_review_writer.py`](../tests/validate_phase22_review_writer.py)
+  (`make validate-phase22 PYTHON=.venv/bin/python` for the DB-backed suite; structural checks
+  run on plain `python3`).
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

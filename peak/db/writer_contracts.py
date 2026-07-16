@@ -2,15 +2,16 @@
 
 Pure stdlib dataclasses/constants — **no SQLAlchemy, no peak.db model/session import** — so
 receipt shapes can be consumed and asserted on without a live database. The writers that
-produce these live in ``peak.db.agent_run_writer`` (Phase 20) and ``peak.db.evidence_writer``
-(Phase 21) and *do* use SQLAlchemy.
+produce these live in ``peak.db.agent_run_writer`` (Phase 20), ``peak.db.evidence_writer``
+(Phase 21), and ``peak.db.review_writer`` (Phase 22) and *do* use SQLAlchemy.
 
 A receipt is a **production-shaped persistence receipt**: enough to audit the operation
 without exposing credentials, SQL strings, connection URLs, or raw stored content. Every
 flag reports **actual** behavior (a denial before any DB connection reports no connection /
 no SQL; an idempotent replay reports reads but no new record; a created result reports the
 committed write; an uncertain outcome must not falsely claim no record exists). See
-docs/AGENT_RUN_CONTROLLED_WRITER.md and docs/EVIDENCE_CONTROLLED_WRITER.md.
+docs/AGENT_RUN_CONTROLLED_WRITER.md, docs/EVIDENCE_CONTROLLED_WRITER.md, and
+docs/REVIEW_CONTROLLED_WRITER.md.
 """
 
 from __future__ import annotations
@@ -126,6 +127,67 @@ class EvidenceWriteReceipt:
     transaction_committed: bool = False
     outcome_uncertain: bool = False
     # Review-gate posture of the record this write concerns.
+    review_status: Optional[str] = None
+    output_status: Optional[str] = None
+    # Server-stamped timestamps read back from the DB (ISO strings), when known.
+    created_at: Optional[str] = None
+    database_write_at: Optional[str] = None
+    reasons: List[str] = field(default_factory=list)
+    warnings: List[str] = field(default_factory=list)
+
+
+class ReviewWriteOutcome:
+    """Outcome codes for a controlled review-record write (str constants; no Enum)."""
+
+    CREATED = "created"
+    IDEMPOTENT_REPLAY = "idempotent_replay"
+    DENIED = "denied"
+    FAILED_BEFORE_WRITE = "failed_before_write"
+    WRITE_OUTCOME_UNCERTAIN = "write_outcome_uncertain"
+
+
+# The single table/action the Phase 22 review writer may target (Phase 17 allowlist subset).
+REVIEW_TARGET_TABLE = "review_records"
+REVIEW_TARGET_ACTION = "create_review_record"
+
+REVIEW_ALL_OUTCOMES = (
+    ReviewWriteOutcome.CREATED,
+    ReviewWriteOutcome.IDEMPOTENT_REPLAY,
+    ReviewWriteOutcome.DENIED,
+    ReviewWriteOutcome.FAILED_BEFORE_WRITE,
+    ReviewWriteOutcome.WRITE_OUTCOME_UNCERTAIN,
+)
+
+
+@dataclass
+class ReviewWriteReceipt:
+    """A typed, auditable receipt for one controlled review-record write attempt.
+
+    Contains no credentials, no SQL, no connection URL, and no raw stored content. The
+    boolean flags describe what actually happened during this attempt. ``decision`` and
+    ``authoritative`` echo the recorded review outcome.
+    """
+
+    outcome: str = ReviewWriteOutcome.DENIED
+    permitted: bool = False
+    reason_code: Optional[str] = None
+    target_table: str = REVIEW_TARGET_TABLE
+    target_action: str = REVIEW_TARGET_ACTION
+    # Stored identity — set only when safely known (created / idempotent_replay).
+    stored_record_id: Optional[str] = None
+    idempotency_key: Optional[str] = None  # the caller's key (not a secret); a safe reference
+    audit_trace_ref: Optional[str] = None
+    # Actual-behavior flags.
+    database_connection_made: bool = False
+    sql_execution_made: bool = False
+    database_write_made: bool = False
+    stored_record_created: bool = False
+    existing_record_returned: bool = False
+    transaction_committed: bool = False
+    outcome_uncertain: bool = False
+    # Recorded review outcome.
+    decision: Optional[str] = None
+    authoritative: bool = False
     review_status: Optional[str] = None
     output_status: Optional[str] = None
     # Server-stamped timestamps read back from the DB (ISO strings), when known.
