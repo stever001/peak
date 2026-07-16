@@ -137,3 +137,17 @@ future writer loads that subject's `stored_authorization_scope` and requires
 necessary but not sufficient). Agent execution still does not write directly to the DB, and
 the no-side-effect posture (`draft` / `needs_review`, all call/write flags false) is preserved
 into the draft the writer would persist as provenance.
+
+The Phase 20 **Agent Run Controlled Writer** ([`AGENT_RUN_CONTROLLED_WRITER.md`](AGENT_RUN_CONTROLLED_WRITER.md),
+[`AGENT_RUN_IDEMPOTENCY_POLICY.md`](AGENT_RUN_IDEMPOTENCY_POLICY.md),
+[`../peak/db/agent_run_writer.py`](../peak/db/agent_run_writer.py)) is that writer, now real.
+It is the first component to actually write to the controlled database, and it enforces the
+access/audit rules here at write-time: it loads the authoritative stored `Engagement` row and
+requires `request.authorization_scope == engagement.authorization_scope` (the snapshot is
+**not** trusted); it re-checks stored-subject identity and lifecycle; it creates only a
+review-gated row (`output_status=draft`, `review_status=needs_review`) with server-controlled
+id/timestamps/audit fields (`created_by` from the requester); and it enforces idempotency with
+a DB unique index over `(owner_id, client_id, engagement_id, idempotency_key)` plus a payload
+fingerprint. It never updates or deletes, and it returns a typed receipt carrying no
+credentials, SQL, or connection details. Missing stored scope, missing request scope, a
+stored-scope mismatch, or a conflicting idempotency replay are all denied with no row written.

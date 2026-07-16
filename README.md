@@ -87,9 +87,11 @@ peak/
 │   ├── EVIDENCE_WRITE_PLAN_POLICY.md     # Evidence write-plan rules (idempotency, stored-scope)
 │   ├── AGENT_RUN_PERSISTENCE_MAPPING.md  # Agent run output → controlled write plan (Phase 13→17)
 │   ├── AGENT_RUN_WRITE_PLAN_POLICY.md    # Agent run write-plan rules (idempotency, stored-scope)
+│   ├── AGENT_RUN_CONTROLLED_WRITER.md    # First real DB-backed writer for agent_run_records (Phase 20)
+│   ├── AGENT_RUN_IDEMPOTENCY_POLICY.md   # DB-enforced idempotency: replay vs replay-conflict
 │   └── IMPLEMENTATION_PLAN.md
 ├── peak/                         # Python tooling layer (source only; no data)
-│   ├── db/                       # base, enums, models, session (MySQL)
+│   ├── db/                       # base, enums, models, session (MySQL) + agent_run controlled writer (Phase 20)
 │   ├── agentnet/                 # Governance wrapper for the AgentNet MCP connector (no calls)
 │   ├── agents/                   # Agent execution harness (mock) + agent run persistence mapping (no live DB)
 │   ├── workers/                  # Production-shaped workers (evidence normalization; review-gated)
@@ -453,6 +455,34 @@ verification, no capsule publication.** A write plan is not a write.
 
 ```bash
 make validate-phase19   # agent-run-persistence-mapping check (stdlib-only; DB-aware, not DB-writing)
+```
+
+### Agent Run Controlled Writer (Phase 20)
+
+The **first real DB-backed persistence path**: a narrow controlled writer that creates
+review-gated `agent_run_records` rows from the Phase 19 output. It is not a generic CRUD
+repository — it allows exactly `agent_run_records` / `create_agent_run_record` and nothing
+else. At **write-time** it loads the authoritative stored authorization subject (the
+`Engagement` row) from the database and requires `request.authorization_scope ==
+engagement.authorization_scope`; identity matching is necessary but not sufficient. It
+enforces DB-level idempotency (unique index over owner/client/engagement/idempotency_key),
+distinguishing `created`, `idempotent_replay`, `denied`, `failed_before_write`, and
+`write_outcome_uncertain`, and returns a typed `AgentRunWriteReceipt`. It performs **no LLM,
+AgentNet, connector, external network, client-facing, financial, or capsule-publication side
+effect**, and never updates or deletes. The Phase 19 agent-domain mapper stays DB-free.
+
+- [`peak/db/agent_run_writer.py`](peak/db/agent_run_writer.py) — the controlled writer.
+- [`peak/db/writer_contracts.py`](peak/db/writer_contracts.py) — the typed receipt + outcomes.
+- [`alembic/versions/002_agent_run_idempotency.py`](alembic/versions/002_agent_run_idempotency.py)
+  — additive migration (idempotency key, payload fingerprint, unique index; no data).
+- [`docs/AGENT_RUN_CONTROLLED_WRITER.md`](docs/AGENT_RUN_CONTROLLED_WRITER.md) and
+  [`docs/AGENT_RUN_IDEMPOTENCY_POLICY.md`](docs/AGENT_RUN_IDEMPOTENCY_POLICY.md).
+
+```bash
+# DB-backed suite (uses the local .venv with SQLAlchemy; builds a temporary SQLite database):
+make validate-phase20 PYTHON=.venv/bin/python
+# On plain python3 (no SQLAlchemy) the DB layer is skipped and the structural checks run:
+make validate-phase20
 ```
 
 ## Design constraints

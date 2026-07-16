@@ -110,3 +110,11 @@ no-op plan targeting `agent_run_records` / `create_agent_run_record` — **DB-aw
 DB-writing**. **Agent execution still does not write directly to the DB**; a future
 controlled DB writer executes the plan after the allowlist, `idempotency_key`, and
 stored-scope checks pass.
+
+That writer now exists as the **Phase 20 Agent Run Controlled Writer**
+([`AGENT_RUN_CONTROLLED_WRITER.md`](AGENT_RUN_CONTROLLED_WRITER.md),
+[`../peak/db/agent_run_writer.py`](../peak/db/agent_run_writer.py)) — the first real
+DB-backed persistence path. It still is not the harness: the harness governs and drafts, the
+Phase 19 mapper plans, and the Phase 20 writer (in the DB layer) creates one review-gated
+`agent_run_records` row after re-loading the authoritative stored `Engagement` scope and
+enforcing DB-level idempotency.

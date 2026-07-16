@@ -181,22 +181,32 @@ Legend for each group:
   capture both the stored scope matched and the request scope presented, for audit.
 
 ### AgentRunRecord
-- **Purpose:** provenance of an agent/worker run (future harness — see the Phase 13
-  scaffold [`AGENT_RUN_RECORDS.md`](AGENT_RUN_RECORDS.md); nothing is stored yet).
+- **Purpose:** provenance of an agent/worker run (Phase 13 scaffold
+  [`AGENT_RUN_RECORDS.md`](AGENT_RUN_RECORDS.md); the **Phase 20** writer now persists these).
 - **Key fields:** `agent_run_id`, prompt-contract ref, inputs (record ids), outputs (record ids), model/tool label, timestamps, actor.
+- **Phase 20 columns:** `output_status` (governance-relevant review-gate status, a real
+  column), `idempotency_key`, and `payload_fingerprint`, with a unique index
+  `uq_agent_run_records_idem` over `(owner_id, client_id, engagement_id, idempotency_key)`
+  (migration `002_agent_run_idempotency`). Non-governance detail (agent name, workflow, input
+  ids, resolver flags) lives in `details_json`.
 - **Relationships:** referenced by records an agent drafted (`agent_run_id`).
-- **Governance states:** lifecycle. Agent outputs default to `draft`/`needs_review`.
+- **Governance states:** lifecycle + review. Rows are created review-gated
+  (`output_status=draft`, `review_status=needs_review`).
 - **Capsule-ready?** No. **Client-facing?** No.
-- **Persistence planned by (future):** the **Phase 19 Agent Run Persistence Mapping**
+- **Persistence planned by:** the **Phase 19 Agent Run Persistence Mapping**
   ([`AGENT_RUN_PERSISTENCE_MAPPING.md`](AGENT_RUN_PERSISTENCE_MAPPING.md),
   [`../peak/agents/`](../peak/agents/)) maps a Phase 13 `AgentTaskResult` + `AgentRunDraft`
   into an `AgentRunPersistenceDraft` and a Phase 17 `ControlledWriteRequest` targeting this
-  `agent_run_records` table (`create_agent_run_record`) — **DB-aware but not DB-writing**
-  (`agent_run_record_id` / `created_at` left `None`; no connection, no SQL, no stored record).
-  Write authority is anchored to the stored engagement/client/subject
-  (`request.authorization_scope == subject.stored_authorization_scope`; identity matching
-  necessary but not sufficient), and an `idempotency_key` is required. Agent execution does
-  not write directly; a future controlled DB writer executes the plan.
+  `agent_run_records` table (`create_agent_run_record`) — DB-free.
+- **Persistence executed by:** the **Phase 20 Agent Run Controlled Writer**
+  ([`AGENT_RUN_CONTROLLED_WRITER.md`](AGENT_RUN_CONTROLLED_WRITER.md),
+  [`../peak/db/agent_run_writer.py`](../peak/db/agent_run_writer.py)) creates exactly one
+  review-gated row. Write authority is anchored to the stored `Engagement` row, re-loaded
+  from the DB at write-time (`request.authorization_scope == engagement.authorization_scope`;
+  identity matching necessary but not sufficient — the mapping snapshot is not trusted). A
+  required `idempotency_key` is DB-enforced (replay returns the existing row; a conflicting
+  key is denied). The writer stamps server-controlled `id` / `created_at`, never updates or
+  deletes, and has no LLM/AgentNet/connector/network/client-facing/capsule side effect.
 
 ### ResolverCapsuleRecord
 - **Purpose:** a private resolver capsule

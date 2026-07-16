@@ -10,7 +10,7 @@ objects are needed, the harnesses build **synthetic fixtures at runtime**
 directory that is auto-deleted. Nothing is stored. See
 [`../docs/FIXTURE_STRATEGY.md`](../docs/FIXTURE_STRATEGY.md).
 
-Nineteen harnesses, run together by `make validate`:
+Twenty harnesses, run together by `make validate`:
 
 - `validate_phase1.py` — schemas + synthetic object fixtures.
 - `validate_phase2.py` — schemas + a synthetic `EngagementPacket`.
@@ -31,6 +31,8 @@ Nineteen harnesses, run together by `make validate`:
 - `validate_phase17_controlled_db_writer.py` — controlled-DB-writer-boundary check (stdlib-only).
 - `validate_phase18_evidence_persistence.py` — evidence-persistence-mapping check (stdlib-only).
 - `validate_phase19_agent_run_persistence.py` — agent-run-persistence-mapping check (stdlib-only).
+- `validate_phase20_agent_run_writer.py` — controlled-DB agent-run-writer check (structural
+  always; DB-backed when SQLAlchemy is present).
 
 ## `synthetic_fixtures.py`
 
@@ -318,6 +320,31 @@ discipline. Stdlib-only; **no live database connection, no SQL execution, and no
 records**. See [`../docs/AGENT_RUN_PERSISTENCE_MAPPING.md`](../docs/AGENT_RUN_PERSISTENCE_MAPPING.md)
 and [`../docs/AGENT_RUN_WRITE_PLAN_POLICY.md`](../docs/AGENT_RUN_WRITE_PLAN_POLICY.md).
 
+## `validate_phase20_agent_run_writer.py`
+
+Check for the Phase 20 **controlled DB agent-run writer** (`peak/db/agent_run_writer.py`,
+`peak/db/writer_contracts.py`). Runs in two layers. The **structural** layer (always,
+stdlib-only) confirms the files exist and compile; that the Phase 19 agent-domain mapper
+stays **DB-free** (no SQLAlchemy/Alembic/`peak.db` import — a regression guard); that the
+writer imports no LLM/AgentNet/connector/network client or credential; that the
+`002_agent_run_idempotency` migration is additive schema-only (no INSERT/seed, has
+upgrade+downgrade, adds the unique idempotency index); that the docs carry the required
+language; and that the repo stays source-only. The **DB-backed** layer runs only when
+SQLAlchemy is importable: it builds a **temporary local SQLite database** from the models
+(deleted afterward — nothing committed) and exercises real behavior — successful create
+(exactly one row, server-stamped id/timestamp, stored `output_status=draft` /
+`review_status=needs_review`, accurate receipt flags), idempotent replay (no second row),
+conflicting replay (denied, existing row unchanged), DB-backed authorization (request scope
+vs the stored `Engagement.authorization_scope`; missing stored/request scope; missing
+subject), identity mismatches (owner/client/engagement/subject/task-request), the
+table/action allowlist, draft-posture rejections, side-effect discipline (no unrelated table
+mutation), and transaction/failure semantics (`failed_before_write`,
+`write_outcome_uncertain`, and the `IntegrityError` race → replay/conflict). If SQLAlchemy is
+absent the DB layer is skipped with instructions and the harness still exits 0. Run the full
+suite with `make validate-phase20 PYTHON=.venv/bin/python`. See
+[`../docs/AGENT_RUN_CONTROLLED_WRITER.md`](../docs/AGENT_RUN_CONTROLLED_WRITER.md) and
+[`../docs/AGENT_RUN_IDEMPOTENCY_POLICY.md`](../docs/AGENT_RUN_IDEMPOTENCY_POLICY.md).
+
 ## Running
 
 This machine uses `python3` (there is no bare `python`). From the repo root:
@@ -327,7 +354,7 @@ This machine uses `python3` (there is no bare `python`). From the repo root:
 make install-dev          # == python3 -m pip install -r requirements-dev.txt
 
 # run all harnesses
-make validate             # == phase1 … phase19
+make validate             # == phase1 … phase20
 
 # or run one at a time
 make validate-phase1
@@ -349,6 +376,7 @@ make validate-phase16
 make validate-phase17
 make validate-phase18
 make validate-phase19
+make validate-phase20   # DB-backed; add PYTHON=.venv/bin/python for the full suite
 ```
 
 Or invoke them directly, without the Makefile:
@@ -373,11 +401,12 @@ python3 tests/validate_phase16_review_persistence.py     # stdlib-only, no depen
 python3 tests/validate_phase17_controlled_db_writer.py   # stdlib-only, no dependency needed
 python3 tests/validate_phase18_evidence_persistence.py   # stdlib-only, no dependency needed
 python3 tests/validate_phase19_agent_run_persistence.py  # stdlib-only, no dependency needed
+.venv/bin/python tests/validate_phase20_agent_run_writer.py  # DB-backed (SQLAlchemy); skips DB layer on plain python3
 ```
 
 ## Exit codes
 
-All nineteen harnesses share the same convention:
+All twenty harnesses share the same convention:
 
 | Code | Meaning |
 | --- | --- |

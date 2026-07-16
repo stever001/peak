@@ -436,6 +436,33 @@ and documentation accurately states integration status.
   [`../tests/validate_phase19_agent_run_persistence.py`](../tests/validate_phase19_agent_run_persistence.py)
   (`make validate-phase19`).
 
+**Agent Run Controlled Writer (Phase 20 — first real DB-backed persistence path):**
+
+- [x] The first phase that actually **writes to the controlled database**: a narrow
+  controlled writer for `agent_run_records`, [`../peak/db/agent_run_writer.py`](../peak/db/agent_run_writer.py)
+  (+ typed receipt/outcomes in [`../peak/db/writer_contracts.py`](../peak/db/writer_contracts.py)),
+  plus the additive migration
+  [`../alembic/versions/002_agent_run_idempotency.py`](../alembic/versions/002_agent_run_idempotency.py)
+  and docs [`AGENT_RUN_CONTROLLED_WRITER.md`](AGENT_RUN_CONTROLLED_WRITER.md) /
+  [`AGENT_RUN_IDEMPOTENCY_POLICY.md`](AGENT_RUN_IDEMPOTENCY_POLICY.md). It consumes the
+  Phase 17/19 `ControlledWriteRequest` (record_draft = a Phase 19 `AgentRunPersistenceDraft`)
+  and creates **exactly one** review-gated row (`output_status=draft`,
+  `review_status=needs_review`) with server-controlled id/timestamps. **Write-time DB-backed
+  authorization:** the writer loads the authoritative stored subject (the `Engagement` row)
+  from the DB and requires `request.authorization_scope == engagement.authorization_scope` —
+  it does **not** trust the Phase 19 snapshot; identity matching is necessary but not
+  sufficient; missing stored/request scope is denied. **DB-enforced idempotency** via a
+  unique index over `(owner_id, client_id, engagement_id, idempotency_key)` plus a
+  `payload_fingerprint`, distinguishing `created` / `idempotent_replay` / `denied` /
+  `failed_before_write` / `write_outcome_uncertain`. The writer allows only
+  `agent_run_records` / `create_agent_run_record`; rejects duck-typed inputs, caller-supplied
+  ids/timestamps, and prohibited draft posture; and performs **no LLM/AgentNet/MCP/resolver/
+  connector/network/client-facing/financial/capsule side effect** and never updates or
+  deletes. The Phase 19 agent-domain mapper stays **DB-free** (regression-guarded). Checked by
+  [`../tests/validate_phase20_agent_run_writer.py`](../tests/validate_phase20_agent_run_writer.py)
+  (`make validate-phase20 PYTHON=.venv/bin/python` for the DB-backed suite; structural checks
+  run on plain `python3`).
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

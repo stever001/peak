@@ -76,3 +76,16 @@ write authority is anchored to the stored engagement/client/subject
 (`request.authorization_scope == subject_snapshot.stored_authorization_scope`; identity
 matching necessary but not sufficient). Agent execution still does not write directly to the
 DB.
+
+The **Phase 20 Agent Run Controlled Writer**
+([`AGENT_RUN_CONTROLLED_WRITER.md`](AGENT_RUN_CONTROLLED_WRITER.md),
+[`../peak/db/agent_run_writer.py`](../peak/db/agent_run_writer.py)) is the first real
+DB-backed step that actually **stores** an `AgentRunRecord`. It creates exactly one
+review-gated row and stamps the server-controlled fields the draft left unset —
+`agent_run_record_id` (the row `id`) and `created_at`. Critically, it does **not** trust the
+Phase 19 snapshot: at write-time it re-loads the authoritative stored `Engagement` row and
+requires `request.authorization_scope == engagement.authorization_scope`. Idempotency is
+DB-enforced (unique index over owner/client/engagement/idempotency_key + a payload
+fingerprint), so a retried write returns an `idempotent_replay` instead of a duplicate, and a
+conflicting reuse of the key is denied. Phase 11 added the table shape; Phase 20 adds the
+`output_status`, `idempotency_key`, and `payload_fingerprint` columns and the writer.

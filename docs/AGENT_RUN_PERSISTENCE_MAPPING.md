@@ -101,3 +101,12 @@ loads it from the controlled DB. See
   never executed, in this phase, and always routed through the Phase 17 boundary. A **future
   controlled DB writer** performs the real write under
   [`DATABASE_ACCESS_AND_AUDIT.md`](DATABASE_ACCESS_AND_AUDIT.md).
+
+## Realized by Phase 20
+
+The plan this mapping produces is executed by the **Phase 20 Agent Run Controlled Writer**
+([`AGENT_RUN_CONTROLLED_WRITER.md`](AGENT_RUN_CONTROLLED_WRITER.md)) — the first real
+DB-backed persistence path. Phase 19 stays DB-free (this mapper imports no SQLAlchemy /
+`peak.db`); Phase 20 lives in the DB layer and re-loads the authoritative stored
+`Engagement` scope at write-time rather than trusting the snapshot here, then creates one
+review-gated `agent_run_records` row under DB-enforced idempotency.

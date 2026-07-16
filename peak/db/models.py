@@ -12,7 +12,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import Boolean, DateTime, Numeric, String, Text
+from sqlalchemy import Boolean, DateTime, Numeric, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .base import MYSQL_TABLE_ARGS, AuditMixin, Base, GovernanceMixin
@@ -120,7 +120,19 @@ class ReviewRecord(Base, GovernanceMixin, AuditMixin):
 
 class AgentRunRecord(Base, GovernanceMixin, AuditMixin):
     __tablename__ = "agent_run_records"
-    __table_args__ = MYSQL_TABLE_ARGS
+    # Phase 20: DB-enforced idempotency for the controlled agent-run writer. The uniqueness
+    # boundary includes identity context so an idempotency key cannot collide across
+    # owner / client / engagement. See docs/AGENT_RUN_IDEMPOTENCY_POLICY.md.
+    __table_args__ = (
+        UniqueConstraint(
+            "owner_id",
+            "client_id",
+            "engagement_id",
+            "idempotency_key",
+            name="uq_agent_run_records_idem",
+        ),
+        MYSQL_TABLE_ARGS,
+    )
     # id convention: arun_<slug>
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     client_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
@@ -129,6 +141,12 @@ class AgentRunRecord(Base, GovernanceMixin, AuditMixin):
     model_label: Mapped[Optional[str]] = mapped_column(String(128))
     started_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
     finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    # Phase 20 controlled-writer fields. output_status is governance-relevant (a real
+    # column, not JSON); idempotency_key + payload_fingerprint back replay/replay-conflict
+    # detection. agent_name/workflow/input ids remain non-governance detail in details_json.
+    output_status: Mapped[str] = mapped_column(String(32), index=True, default="draft")
+    idempotency_key: Mapped[Optional[str]] = mapped_column(String(128), index=True)
+    payload_fingerprint: Mapped[Optional[str]] = mapped_column(String(64))
     # input/output record ids live in details_json (non-governance detail).
 
 

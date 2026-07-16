@@ -109,3 +109,14 @@ The **Phase 19 Agent Run Persistence Mapping**
 Both rely on exactly the checks here — allowlist, idempotency, stored-scope — and produce
 only no-op plans. Future persistence for other domains (reviews, ingestion) routes through
 the same boundary.
+
+## First live writer (Phase 20)
+
+The Phase 17 boundary and the Phase 18/19 mappings all stop at a **plan**. The **Phase 20
+Agent Run Controlled Writer** ([`AGENT_RUN_CONTROLLED_WRITER.md`](AGENT_RUN_CONTROLLED_WRITER.md),
+[`../peak/db/agent_run_writer.py`](../peak/db/agent_run_writer.py)) is the first component
+that turns a plan into an actual database row — for `agent_run_records` only. It lives in the
+DB layer (`peak.db`), so the planning boundary here stays DB-free. It re-runs these same
+checks (allowlist, idempotency, snapshot-level scope) *and then* re-loads the authoritative
+stored `Engagement` scope from the database, because a snapshot is not proof of authorization
+at write-time. Other tables remain plan-only until each gets its own narrow, reviewed writer.

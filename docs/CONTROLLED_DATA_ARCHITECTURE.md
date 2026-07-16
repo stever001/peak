@@ -135,6 +135,15 @@ Phase 13 agent output into an `AgentRunPersistenceDraft` and a Phase 17 no-op pl
 directly to the DB; the same allowlist, idempotency, and stored-scope checks apply, anchored
 on the stored engagement/client/subject.
 
+The **Phase 20 Agent Run Controlled Writer**
+([`AGENT_RUN_CONTROLLED_WRITER.md`](AGENT_RUN_CONTROLLED_WRITER.md),
+[`../peak/db/agent_run_writer.py`](../peak/db/agent_run_writer.py)) is the first component
+that actually **persists** into this controlled store — creating one review-gated
+`agent_run_records` row. It closes the gap between "plan" and "row" for one narrow table
+only, and it re-loads the authoritative stored `Engagement` scope from the database at
+write-time (the mapping snapshot is not trusted as proof of authorization). Everything else
+in this architecture remains plan-only until it gets its own reviewed writer.
+
 Whether a worker output may be relied on internally is decided by the **QA / Review Gate**
 ([`QA_REVIEW_GATE.md`](QA_REVIEW_GATE.md), [`../peak/review/`](../peak/review/), Phase 15):
 a production-shaped but **no-side-effect** review decision (`approve_internal` means
