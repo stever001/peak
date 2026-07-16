@@ -15,7 +15,7 @@ persisted here.
 | `engagement_records` | engagement-scoped records |
 | `review_records` | QA / review decisions (Phase 15 → Phase 16 → **Phase 22 live writer**) |
 | `agent_run_records` | agent/worker run provenance (Phase 13 → **Phase 19 mapping** → **Phase 20 live writer**) |
-| `source_ingestion_records` | controlled source-ingestion provenance (future) |
+| `source_ingestion_records` | controlled source-ingestion provenance (Phase 23 → **Phase 24 live writer**) |
 | `capsule_publication_candidates` | *draft* capsule candidates only (not publication) |
 
 ## Allowed actions

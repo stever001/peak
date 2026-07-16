@@ -95,9 +95,11 @@ peak/
 │   ├── REVIEW_IDEMPOTENCY_POLICY.md      # DB-enforced idempotency for review rows
 │   ├── ENGAGEMENT_PACKET_INGESTION_BOUNDARY.md  # Packet ingestion boundary (no direct DB writes)
 │   ├── PACKET_TO_CONTROLLED_WORKFLOW_POLICY.md   # Packet-derived outputs + prohibited effects
+│   ├── SOURCE_INGESTION_CONTROLLED_WRITER.md     # Fourth DB-backed writer, for source_ingestion_records (Phase 24)
+│   ├── SOURCE_INGESTION_IDEMPOTENCY_POLICY.md    # DB-enforced idempotency for source ingestion rows
 │   └── IMPLEMENTATION_PLAN.md
 ├── peak/                         # Python tooling layer (source only; no data)
-│   ├── db/                       # base, enums, models, session + agent_run (P20), evidence (P21) & review (P22) writers
+│   ├── db/                       # base, enums, models, session + agent_run (P20), evidence (P21), review (P22) & source-ingestion (P24) writers
 │   ├── agentnet/                 # Governance wrapper for the AgentNet MCP connector (no calls)
 │   ├── agents/                   # Agent execution harness (mock) + agent run persistence mapping (no live DB)
 │   ├── workers/                  # Production-shaped workers (evidence normalization; review-gated)
@@ -575,6 +577,37 @@ EngagementPacket → validate → govern → SourceIngestionDraft + evidence req
 
 ```bash
 make validate-phase23   # engagement-packet-ingestion-boundary check (stdlib-only; no DB)
+```
+
+### Source Ingestion Record Controlled Writer (Phase 24)
+
+The **fourth DB-backed writer**, applying the same pattern to `source_ingestion_records`. It
+persists exactly one review-gated source ingestion row from a Phase 23 `SourceIngestionDraft`
+routed through the Phase 17 `ControlledWriteRequest` boundary — allowing only
+`source_ingestion_records` / `create_source_ingestion_record`. At **write-time** it loads the
+authoritative stored `Engagement` row and requires `request.authorization_scope ==
+engagement.authorization_scope` (identity matching necessary but not sufficient); enforces
+DB-level idempotency (unique index over owner/client/engagement/idempotency_key + payload
+fingerprint over packet **metadata only**); distinguishes `created`, `idempotent_replay`,
+`denied`, `failed_before_write`, and `write_outcome_uncertain`; and returns a typed
+`SourceIngestionWriteReceipt`. **Packet metadata only** is persisted (reference id, schema,
+source type, location reference, hash) — never the full packet payload, raw content, or
+secrets; a draft carrying `packet_payload` / `raw_packet_content` / a secret-like attribute is
+rejected. Required posture: `output_status=draft`, `review_status=needs_review`,
+`lifecycle_status=active`, non-authoritative, not client-facing, not a capsule candidate. **No
+LLM, AgentNet, connector, external network, client-facing approval, financial verification, or
+capsule-publication side effect**, and never updates or deletes. The Phase 23 ingestion
+package stays DB-free.
+
+- [`peak/db/source_ingestion_writer.py`](peak/db/source_ingestion_writer.py) — the controlled writer.
+- [`alembic/versions/005_source_ingestion_idempotency.py`](alembic/versions/005_source_ingestion_idempotency.py)
+  — additive migration (idempotency key, payload fingerprint, output_status, unique index; no data).
+- [`docs/SOURCE_INGESTION_CONTROLLED_WRITER.md`](docs/SOURCE_INGESTION_CONTROLLED_WRITER.md) and
+  [`docs/SOURCE_INGESTION_IDEMPOTENCY_POLICY.md`](docs/SOURCE_INGESTION_IDEMPOTENCY_POLICY.md).
+
+```bash
+make validate-phase24 PYTHON=.venv/bin/python   # full DB-backed suite (temporary SQLite)
+make validate-phase24                           # structural only on plain python3
 ```
 
 ## Design constraints

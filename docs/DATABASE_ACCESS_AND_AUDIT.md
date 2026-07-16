@@ -184,6 +184,17 @@ to the database at all** — it is an ingestion boundary that derives review-gat
 external `EngagementPacket`. It validates packet identity/scope (`request.authorization_scope
 == packet_reference.authorization_scope`; identity necessary but not sufficient), requires an
 `idempotency_key`, and rejects credential/secret payload keys without echoing secret values. A
-`source_ingestion_records` row is only ever *planned* here (a no-op Phase 17
-`ControlledWriteRequest`); persisting one requires a **future narrow source ingestion writer**
-that would enforce these same access/audit rules at write-time.
+`source_ingestion_records` row is only ever *planned* there (a no-op Phase 17
+`ControlledWriteRequest`).
+
+The Phase 24 **Source Ingestion Record Controlled Writer** ([`SOURCE_INGESTION_CONTROLLED_WRITER.md`](SOURCE_INGESTION_CONTROLLED_WRITER.md),
+[`SOURCE_INGESTION_IDEMPOTENCY_POLICY.md`](SOURCE_INGESTION_IDEMPOTENCY_POLICY.md),
+[`../peak/db/source_ingestion_writer.py`](../peak/db/source_ingestion_writer.py)) is the fourth
+such writer, for `source_ingestion_records` (`create_source_ingestion_record`). It enforces the
+same access/audit rules — stored `Engagement` scope comparison (packet reference/draft not
+trusted), stored-subject identity + lifecycle re-check, server-controlled id/timestamps and
+`created_by`, and DB-enforced idempotency over `(owner_id, client_id, engagement_id,
+idempotency_key)` + a metadata-only payload fingerprint. It persists **packet metadata only**
+(reference id, schema, source type, location reference, hash), never the full packet payload,
+raw content, or secrets, and rejects any draft carrying such content. It never updates or
+deletes and returns a typed receipt with no credentials/SQL/connection/packet content.

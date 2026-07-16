@@ -96,6 +96,10 @@ is not a write.
 - **No live LLM / AgentNet / MCP / resolver / network call.**
 - **No client-facing approval, no financial verification, no capsule publication.**
 - **No bypass** — packet-derived material always flows through the evidence, agent, review,
-  and controlled-writer boundaries. A **future source ingestion writer** performs any real
-  `source_ingestion_records` write under access control
-  ([`DATABASE_ACCESS_AND_AUDIT.md`](DATABASE_ACCESS_AND_AUDIT.md)).
+  and controlled-writer boundaries. The **Phase 24 Source Ingestion Record Controlled Writer**
+  ([`SOURCE_INGESTION_CONTROLLED_WRITER.md`](SOURCE_INGESTION_CONTROLLED_WRITER.md),
+  [`../peak/db/source_ingestion_writer.py`](../peak/db/source_ingestion_writer.py)) performs
+  the real `source_ingestion_records` write under access control
+  ([`DATABASE_ACCESS_AND_AUDIT.md`](DATABASE_ACCESS_AND_AUDIT.md)) — it re-loads the stored
+  `Engagement` scope at write-time, persists **packet metadata only** (never the payload), and
+  enforces DB-level idempotency.

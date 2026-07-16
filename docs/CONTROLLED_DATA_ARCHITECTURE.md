@@ -159,8 +159,13 @@ and not a DB writer**. It validates an `EngagementPacket`, rejects credential/se
 and derives review-gated plans (a `SourceIngestionDraft`, Phase 14 evidence requests, Phase 13
 agent tasks, a no-op Phase 17 write plan) that route through the existing controlled
 boundaries. Packet ingestion **does not write directly to the database** and does not bypass
-the evidence, agent, review, or controlled-writer boundaries; `source_ingestion_records`
-persistence requires a future narrow writer.
+the evidence, agent, review, or controlled-writer boundaries. That plan is executed by the
+**Phase 24 Source Ingestion Record Controlled Writer**
+([`SOURCE_INGESTION_CONTROLLED_WRITER.md`](SOURCE_INGESTION_CONTROLLED_WRITER.md),
+[`../peak/db/source_ingestion_writer.py`](../peak/db/source_ingestion_writer.py)) — the fourth
+DB-backed writer — which persists one review-gated `source_ingestion_records` row (**packet
+metadata only**, never the payload) under the same stored-`Engagement` authorization and
+DB-enforced idempotency.
 
 Whether a worker output may be relied on internally is decided by the **QA / Review Gate**
 ([`QA_REVIEW_GATE.md`](QA_REVIEW_GATE.md), [`../peak/review/`](../peak/review/), Phase 15):

@@ -254,20 +254,32 @@ Legend for each group:
 - **Capsule-ready?** It gates capsule readiness. **Client-facing?** No. **No publication implementation exists.**
 
 ### SourceIngestionRecord
-- **Purpose:** provenance of a controlled ingestion from a client source system (future).
-- **Key fields:** `ingestion_id`, `source_reference_id`, captured-at, authorization scope, review status, resulting evidence/record ids.
+- **Purpose:** provenance of a controlled ingestion from a client source system / packet.
+- **Key fields:** `ingestion_id`, `source_reference_id` (the packet reference id), captured-at, authorization scope, review status.
+- **Phase 24 columns:** `output_status` (governance-relevant, a real column), `idempotency_key`,
+  and `payload_fingerprint`, with a unique index `uq_source_ingestion_records_idem` over
+  `(owner_id, client_id, engagement_id, idempotency_key)` (migration `005_source_ingestion_idempotency`).
+  Packet **metadata** (schema name/version, source type, location reference, hash) lives in
+  `details_json` — never the full packet payload or raw content.
 - **Governance states:** authorization, review, lifecycle.
 - **Capsule-ready?** Indirectly. **Client-facing?** No.
 - **Prepared by:** the **Phase 23 Engagement Packet Ingestion Boundary**
   ([`ENGAGEMENT_PACKET_INGESTION_BOUNDARY.md`](ENGAGEMENT_PACKET_INGESTION_BOUNDARY.md),
   [`../peak/ingestion/`](../peak/ingestion/)) derives a review-gated `SourceIngestionDraft`
   from a validated `EngagementPacket` and (optionally) a no-op Phase 17 `ControlledWriteRequest`
-  targeting this table (`create_source_ingestion_record`). Ingestion is a **boundary, not a
-  writer** — no direct DB write, no stored packet; `source_ingestion_record_id` / `created_at`
-  stay `None`. **Persistence executed by (future):** a narrow **source ingestion writer**
-  (mirroring the Phase 20–22 pattern) is still required before any row is stored — it would
-  re-load the authoritative stored `Engagement` scope at write-time and enforce DB-level
-  idempotency.
+  targeting this table (`create_source_ingestion_record`) — DB-free.
+- **Persistence executed by:** the **Phase 24 Source Ingestion Record Controlled Writer**
+  ([`SOURCE_INGESTION_CONTROLLED_WRITER.md`](SOURCE_INGESTION_CONTROLLED_WRITER.md),
+  [`../peak/db/source_ingestion_writer.py`](../peak/db/source_ingestion_writer.py)) creates
+  exactly one review-gated row. Write authority is anchored to the stored `Engagement` row,
+  re-loaded from the DB at write-time (`request.authorization_scope ==
+  engagement.authorization_scope`; identity matching necessary but not sufficient — the packet
+  reference/draft is not trusted). The packet reference id is stored as `source_reference_id`;
+  **packet metadata only** goes to `details_json` (never the payload or raw content, and a draft
+  carrying `packet_payload` / `raw_packet_content` / a secret is rejected). A required
+  `idempotency_key` is DB-enforced (replay returns the existing row; a conflicting key is
+  denied). The writer stamps server-controlled `id` / `created_at`, never updates or deletes,
+  and has no LLM/AgentNet/connector/network/client-facing/financial/capsule side effect.
 
 ## Cross-cutting
 

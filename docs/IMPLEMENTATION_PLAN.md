@@ -555,6 +555,38 @@ and documentation accurately states integration status.
   [`../tests/validate_phase23_packet_ingestion.py`](../tests/validate_phase23_packet_ingestion.py)
   (`make validate-phase23`).
 
+**Source Ingestion Record Controlled Writer (Phase 24 — fourth DB-backed writer):**
+
+- [x] The fourth narrow live DB writer, applying the Phase 20–22 pattern to
+  `source_ingestion_records` and completing the Phase 23 ingestion path:
+  [`../peak/db/source_ingestion_writer.py`](../peak/db/source_ingestion_writer.py) (+
+  `SourceIngestionWriteReceipt`/`SourceIngestionWriteOutcome` added to
+  [`../peak/db/writer_contracts.py`](../peak/db/writer_contracts.py)), the additive migration
+  [`../alembic/versions/005_source_ingestion_idempotency.py`](../alembic/versions/005_source_ingestion_idempotency.py)
+  (down_revision `004_review_idem`; single linear head `005_source_ingestion_idem`), and docs
+  [`SOURCE_INGESTION_CONTROLLED_WRITER.md`](SOURCE_INGESTION_CONTROLLED_WRITER.md) /
+  [`SOURCE_INGESTION_IDEMPOTENCY_POLICY.md`](SOURCE_INGESTION_IDEMPOTENCY_POLICY.md). It consumes
+  a Phase 17 `ControlledWriteRequest` whose `record_draft` is a Phase 23 `SourceIngestionDraft`
+  and creates **exactly one** `source_ingestion_records` row with server-controlled
+  id/timestamps. **Write-time DB-backed authorization:** loads the authoritative stored
+  `Engagement` row and requires `request.authorization_scope == engagement.authorization_scope`
+  (does **not** trust the Phase 23 packet reference/draft; identity matching necessary but not
+  sufficient; missing stored/request scope denied). **Packet metadata only** is persisted
+  (reference id → `source_reference_id`; schema/source/location/hash → `details_json`) — the
+  full packet payload, raw content, and secrets are never stored, and a draft carrying
+  `packet_payload` / `raw_packet_content` / a secret-like attribute is rejected without echoing
+  values. **DB-enforced idempotency** via a unique index over
+  `(owner_id, client_id, engagement_id, idempotency_key)` + a metadata-only `payload_fingerprint`,
+  distinguishing `created` / `idempotent_replay` / `denied` / `failed_before_write` /
+  `write_outcome_uncertain`. The writer allows only `source_ingestion_records` /
+  `create_source_ingestion_record`; rejects duck-typed inputs, caller-supplied ids/timestamps,
+  and prohibited posture; and performs **no LLM/AgentNet/MCP/resolver/connector/network/
+  client-facing/financial/capsule side effect** and never updates or deletes. The Phase 23
+  ingestion package stays **DB-free** (regression-guarded). Checked by
+  [`../tests/validate_phase24_source_ingestion_writer.py`](../tests/validate_phase24_source_ingestion_writer.py)
+  (`make validate-phase24 PYTHON=.venv/bin/python` for the DB-backed suite; structural checks
+  run on plain `python3`).
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

@@ -3,15 +3,16 @@
 Pure stdlib dataclasses/constants — **no SQLAlchemy, no peak.db model/session import** — so
 receipt shapes can be consumed and asserted on without a live database. The writers that
 produce these live in ``peak.db.agent_run_writer`` (Phase 20), ``peak.db.evidence_writer``
-(Phase 21), and ``peak.db.review_writer`` (Phase 22) and *do* use SQLAlchemy.
+(Phase 21), ``peak.db.review_writer`` (Phase 22), and ``peak.db.source_ingestion_writer``
+(Phase 24) and *do* use SQLAlchemy.
 
 A receipt is a **production-shaped persistence receipt**: enough to audit the operation
 without exposing credentials, SQL strings, connection URLs, or raw stored content. Every
 flag reports **actual** behavior (a denial before any DB connection reports no connection /
 no SQL; an idempotent replay reports reads but no new record; a created result reports the
 committed write; an uncertain outcome must not falsely claim no record exists). See
-docs/AGENT_RUN_CONTROLLED_WRITER.md, docs/EVIDENCE_CONTROLLED_WRITER.md, and
-docs/REVIEW_CONTROLLED_WRITER.md.
+docs/AGENT_RUN_CONTROLLED_WRITER.md, docs/EVIDENCE_CONTROLLED_WRITER.md,
+docs/REVIEW_CONTROLLED_WRITER.md, and docs/SOURCE_INGESTION_CONTROLLED_WRITER.md.
 """
 
 from __future__ import annotations
@@ -188,6 +189,64 @@ class ReviewWriteReceipt:
     # Recorded review outcome.
     decision: Optional[str] = None
     authoritative: bool = False
+    review_status: Optional[str] = None
+    output_status: Optional[str] = None
+    # Server-stamped timestamps read back from the DB (ISO strings), when known.
+    created_at: Optional[str] = None
+    database_write_at: Optional[str] = None
+    reasons: List[str] = field(default_factory=list)
+    warnings: List[str] = field(default_factory=list)
+
+
+class SourceIngestionWriteOutcome:
+    """Outcome codes for a controlled source-ingestion write (str constants; no Enum)."""
+
+    CREATED = "created"
+    IDEMPOTENT_REPLAY = "idempotent_replay"
+    DENIED = "denied"
+    FAILED_BEFORE_WRITE = "failed_before_write"
+    WRITE_OUTCOME_UNCERTAIN = "write_outcome_uncertain"
+
+
+# The single table/action the Phase 24 source-ingestion writer may target (Phase 17 subset).
+SOURCE_INGESTION_TARGET_TABLE = "source_ingestion_records"
+SOURCE_INGESTION_TARGET_ACTION = "create_source_ingestion_record"
+
+SOURCE_INGESTION_ALL_OUTCOMES = (
+    SourceIngestionWriteOutcome.CREATED,
+    SourceIngestionWriteOutcome.IDEMPOTENT_REPLAY,
+    SourceIngestionWriteOutcome.DENIED,
+    SourceIngestionWriteOutcome.FAILED_BEFORE_WRITE,
+    SourceIngestionWriteOutcome.WRITE_OUTCOME_UNCERTAIN,
+)
+
+
+@dataclass
+class SourceIngestionWriteReceipt:
+    """A typed, auditable receipt for one controlled source-ingestion write attempt.
+
+    Contains no credentials, no SQL, no connection URL, and **no raw packet content**. The
+    boolean flags describe what actually happened during this attempt.
+    """
+
+    outcome: str = SourceIngestionWriteOutcome.DENIED
+    permitted: bool = False
+    reason_code: Optional[str] = None
+    target_table: str = SOURCE_INGESTION_TARGET_TABLE
+    target_action: str = SOURCE_INGESTION_TARGET_ACTION
+    # Stored identity — set only when safely known (created / idempotent_replay).
+    stored_record_id: Optional[str] = None
+    idempotency_key: Optional[str] = None  # the caller's key (not a secret); a safe reference
+    audit_trace_ref: Optional[str] = None
+    # Actual-behavior flags.
+    database_connection_made: bool = False
+    sql_execution_made: bool = False
+    database_write_made: bool = False
+    stored_record_created: bool = False
+    existing_record_returned: bool = False
+    transaction_committed: bool = False
+    outcome_uncertain: bool = False
+    # Review-gate posture of the record this write concerns.
     review_status: Optional[str] = None
     output_status: Optional[str] = None
     # Server-stamped timestamps read back from the DB (ISO strings), when known.

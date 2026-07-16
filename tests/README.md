@@ -10,7 +10,7 @@ objects are needed, the harnesses build **synthetic fixtures at runtime**
 directory that is auto-deleted. Nothing is stored. See
 [`../docs/FIXTURE_STRATEGY.md`](../docs/FIXTURE_STRATEGY.md).
 
-Twenty-three harnesses, run together by `make validate`:
+Twenty-four harnesses, run together by `make validate`:
 
 - `validate_phase1.py` — schemas + synthetic object fixtures.
 - `validate_phase2.py` — schemas + a synthetic `EngagementPacket`.
@@ -38,6 +38,8 @@ Twenty-three harnesses, run together by `make validate`:
 - `validate_phase22_review_writer.py` — controlled-DB review-writer check (structural always;
   DB-backed when SQLAlchemy is present).
 - `validate_phase23_packet_ingestion.py` — engagement-packet-ingestion-boundary check (stdlib-only).
+- `validate_phase24_source_ingestion_writer.py` — controlled-DB source-ingestion-writer check
+  (structural always; DB-backed when SQLAlchemy is present).
 
 ## `synthetic_fixtures.py`
 
@@ -427,6 +429,35 @@ and re-asserts source-only discipline. See
 [`../docs/ENGAGEMENT_PACKET_INGESTION_BOUNDARY.md`](../docs/ENGAGEMENT_PACKET_INGESTION_BOUNDARY.md)
 and [`../docs/PACKET_TO_CONTROLLED_WORKFLOW_POLICY.md`](../docs/PACKET_TO_CONTROLLED_WORKFLOW_POLICY.md).
 
+## `validate_phase24_source_ingestion_writer.py`
+
+Check for the Phase 24 **controlled DB source-ingestion writer** (`peak/db/source_ingestion_writer.py`,
+`peak/db/writer_contracts.py`) — the same two-layer pattern, applied to
+`source_ingestion_records`. The **structural** layer confirms the files exist and compile; that
+the Phase 23 ingestion package stays **DB-free**; that the writer imports no
+LLM/AgentNet/connector/network client or credential value; that the `005_source_ingestion_idempotency`
+migration is additive schema-only (no INSERT/seed, upgrade+downgrade, adds the unique index,
+`down_revision = 004_review_idem`); that the docs carry the required language (including
+**packet metadata only**); and that the repo stays source-only. The **DB-backed** layer (when
+SQLAlchemy is importable) builds a **temporary local SQLite database** (deleted afterward) and
+exercises real behavior — migration upgrade/downgrade/re-upgrade; successful create (one row,
+server-stamped `ing_` id/timestamp, packet **metadata only** stored — never the full payload,
+`source_reference_id` = packet reference id, stored `output_status=draft` /
+`review_status=needs_review` / `lifecycle_status=active`, accurate receipt flags); idempotent
+replay; conflicting replay (denied, row unchanged); DB-backed authorization (request scope vs
+stored `Engagement.authorization_scope`; missing stored/request scope; missing subject;
+owner/client/engagement mismatch); the table/action allowlist (wrong table/action +
+delete-/publish-/client-facing-/financial-/raw_sql-like actions); posture/content rejections
+(bad output/review/lifecycle status, authoritative, client-facing, capsule-ready, caller-supplied
+id/timestamp, missing source reference, and injected `packet_payload` / `raw_packet_content` /
+secret attributes — with secret values never echoed); side-effect discipline (no unrelated table
+mutation); and transaction/failure semantics (`failed_before_write`, `write_outcome_uncertain`,
+and the `IntegrityError` race → replay/conflict). Skips the DB layer with instructions if
+SQLAlchemy is absent (still exits 0). Run the full suite with
+`make validate-phase24 PYTHON=.venv/bin/python`. See
+[`../docs/SOURCE_INGESTION_CONTROLLED_WRITER.md`](../docs/SOURCE_INGESTION_CONTROLLED_WRITER.md)
+and [`../docs/SOURCE_INGESTION_IDEMPOTENCY_POLICY.md`](../docs/SOURCE_INGESTION_IDEMPOTENCY_POLICY.md).
+
 ## Running
 
 This machine uses `python3` (there is no bare `python`). From the repo root:
@@ -436,7 +467,7 @@ This machine uses `python3` (there is no bare `python`). From the repo root:
 make install-dev          # == python3 -m pip install -r requirements-dev.txt
 
 # run all harnesses
-make validate             # == phase1 … phase23
+make validate             # == phase1 … phase24
 
 # or run one at a time
 make validate-phase1
@@ -462,6 +493,7 @@ make validate-phase20   # DB-backed; add PYTHON=.venv/bin/python for the full su
 make validate-phase21   # DB-backed; add PYTHON=.venv/bin/python for the full suite
 make validate-phase22   # DB-backed; add PYTHON=.venv/bin/python for the full suite
 make validate-phase23   # stdlib-only; no database
+make validate-phase24   # DB-backed; add PYTHON=.venv/bin/python for the full suite
 ```
 
 Or invoke them directly, without the Makefile:
@@ -490,11 +522,12 @@ python3 tests/validate_phase19_agent_run_persistence.py  # stdlib-only, no depen
 .venv/bin/python tests/validate_phase21_evidence_writer.py   # DB-backed (SQLAlchemy); skips DB layer on plain python3
 .venv/bin/python tests/validate_phase22_review_writer.py     # DB-backed (SQLAlchemy); skips DB layer on plain python3
 python3 tests/validate_phase23_packet_ingestion.py           # stdlib-only, no dependency needed
+.venv/bin/python tests/validate_phase24_source_ingestion_writer.py  # DB-backed (SQLAlchemy); skips DB layer on plain python3
 ```
 
 ## Exit codes
 
-All twenty-three harnesses share the same convention:
+All twenty-four harnesses share the same convention:
 
 | Code | Meaning |
 | --- | --- |

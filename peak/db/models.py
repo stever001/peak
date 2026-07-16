@@ -205,13 +205,32 @@ class CapsulePublicationCandidate(Base, GovernanceMixin, AuditMixin):
 
 class SourceIngestionRecord(Base, GovernanceMixin, AuditMixin):
     __tablename__ = "source_ingestion_records"
-    __table_args__ = MYSQL_TABLE_ARGS
+    # Phase 24: DB-enforced idempotency for the controlled source-ingestion writer. The
+    # uniqueness boundary includes identity context so an idempotency key cannot collide
+    # across owner / client / engagement. See docs/SOURCE_INGESTION_IDEMPOTENCY_POLICY.md.
+    __table_args__ = (
+        UniqueConstraint(
+            "owner_id",
+            "client_id",
+            "engagement_id",
+            "idempotency_key",
+            name="uq_source_ingestion_records_idem",
+        ),
+        MYSQL_TABLE_ARGS,
+    )
     # id convention: ing_<slug>
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     client_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
     engagement_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
     source_reference_id: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
     captured_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    # Phase 24 controlled-writer fields. output_status is governance-relevant (a real column,
+    # not JSON); idempotency_key + payload_fingerprint back replay/replay-conflict detection.
+    # Packet metadata (schema, source type, location reference, hash) lives in details_json —
+    # never the full packet payload or raw content.
+    output_status: Mapped[str] = mapped_column(String(32), index=True, default="draft")
+    idempotency_key: Mapped[Optional[str]] = mapped_column(String(128), index=True)
+    payload_fingerprint: Mapped[Optional[str]] = mapped_column(String(64))
 
 
 # Convenience list of all model classes (used by tooling/validation).

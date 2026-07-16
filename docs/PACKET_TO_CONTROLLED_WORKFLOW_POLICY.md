@@ -57,12 +57,15 @@ decisions flow through Phases 15/16 and the Phase 22 review writer; and any actu
 goes through a narrow Phase 17–style controlled writer. Ingestion never shortcuts these — it
 only prepares material for them, so every downstream governance gate still applies.
 
-## Future DB-backed source ingestion writer
+## DB-backed source ingestion writer (Phase 24)
 
 Phase 23 does **not** persist a `source_ingestion_records` row. It prepares a
 `SourceIngestionDraft` and (optionally) a Phase 17 `ControlledWriteRequest` targeting
 `source_ingestion_records` / `create_source_ingestion_record`. **Source ingestion records
-require a later narrow writer before persistence** — a **future source ingestion writer**
-(mirroring the Phase 20–22 pattern) that, at write-time, re-loads the authoritative stored
-`Engagement` scope, enforces DB-level idempotency, and creates exactly one review-gated row.
-Until that writer exists, `source_ingestion_records` remains plan-only.
+require a narrow writer before persistence** — that writer is the **Phase 24 Source Ingestion
+Record Controlled Writer** ([`SOURCE_INGESTION_CONTROLLED_WRITER.md`](SOURCE_INGESTION_CONTROLLED_WRITER.md),
+[`SOURCE_INGESTION_IDEMPOTENCY_POLICY.md`](SOURCE_INGESTION_IDEMPOTENCY_POLICY.md)), which
+mirrors the Phase 20–22 pattern: at write-time it re-loads the authoritative stored
+`Engagement` scope (not the packet reference), enforces DB-level idempotency, persists **packet
+metadata only**, and creates exactly one review-gated row. Outside that writer,
+`source_ingestion_records` remains plan-only.
