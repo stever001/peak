@@ -97,6 +97,8 @@ peak/
 │   ├── PACKET_TO_CONTROLLED_WORKFLOW_POLICY.md   # Packet-derived outputs + prohibited effects
 │   ├── SOURCE_INGESTION_CONTROLLED_WRITER.md     # Fourth DB-backed writer, for source_ingestion_records (Phase 24)
 │   ├── SOURCE_INGESTION_IDEMPOTENCY_POLICY.md    # DB-enforced idempotency for source ingestion rows
+│   ├── CONTROLLED_PACKET_PROCESSING_ORCHESTRATOR.md # Controlled sequencing layer over Phases 23/24/14/21/13 (Phase 25)
+│   ├── PACKET_PROCESSING_ORCHESTRATION_POLICY.md   # Orchestration governance: modes, no-escalation, packet-content rule (Phase 25)
 │   └── IMPLEMENTATION_PLAN.md
 ├── peak/                         # Python tooling layer (source only; no data)
 │   ├── db/                       # base, enums, models, session + agent_run (P20), evidence (P21), review (P22) & source-ingestion (P24) writers
@@ -106,7 +108,8 @@ peak/
 │   ├── review/                   # QA / review gate + review persistence boundary (no-side-effect)
 │   ├── persistence/              # Controlled DB writer boundary: allowlist + governance (no live DB)
 │   ├── evidence/                 # Evidence persistence mapping: Phase 14 → Phase 17 (no live DB)
-│   └── ingestion/                # Engagement packet ingestion boundary: derives plans (no DB writes)
+│   ├── ingestion/                # Engagement packet ingestion boundary: derives plans (no DB writes)
+│   └── orchestration/            # Controlled packet-processing orchestrator: sequences existing boundaries (P25; plan-only default)
 ├── alembic/                      # Alembic migrations (schema only; no data)
 ├── alembic.ini                   # Alembic config (URL from env, not the repo)
 ├── .env.example                  # Env placeholders only (PEAK_DATABASE_URL); .env ignored
@@ -608,6 +611,46 @@ package stays DB-free.
 ```bash
 make validate-phase24 PYTHON=.venv/bin/python   # full DB-backed suite (temporary SQLite)
 make validate-phase24                           # structural only on plain python3
+```
+
+### Controlled Packet Processing Orchestrator (Phase 25)
+
+A **controlled sequencing layer** over the existing narrow boundaries — **not** a generic
+importer, workflow engine, CRUD layer, or write dispatcher. `process_engagement_packet` accepts
+a Phase 23 `PacketIngestionRequest`, routes it through the Phase 23 ingestion boundary, exposes
+the derived plan (source ingestion draft, plan-only source `ControlledWriteRequest`, Phase 14
+evidence requests, Phase 13 agent task requests), and — **only when explicitly requested and a
+`session_factory` is supplied** — persists through the existing narrow DB writers (Phase 24
+source-ingestion, Phase 21 evidence). It adds no table, no migration (head stays
+`005_source_ingestion_idem`), no generic writer, and no raw SQL.
+
+- **Plan-only is the default and no-side-effect** — every side-effect flag on the receipt is
+  `false`; it calls no DB writer, no agent/LLM, no AgentNet/MCP/resolver, no network.
+- **No stage may silently escalate from plan-only to persistence** — a persistence stage that is
+  not included, or is requested while `plan_only=true`, or has no `session_factory`, is *skipped*
+  with a specific reason (`skipped_not_requested` / `skipped_plan_only` /
+  `skipped_missing_session_factory`), never a silent write.
+- **Orchestrator preflight checks are helpful but not authoritative**: **stored Engagement
+  authorization remains authoritative** for every DB write and is enforced inside the narrow
+  writers at write-time. **Identity matching is necessary but not sufficient.**
+- It **never stores or echoes raw packet payload content** in receipts, logs, docs, exceptions,
+  or persistence receipts — only counts, ids, stage names, safe metadata, warnings, reason codes.
+- Agent-run persistence (Phase 19/20) is intentionally deferred (`skipped_no_safe_contract_path`),
+  since it would require running the Phase 13 mock executor; partial safe orchestration is
+  preferable to unsafe breadth. **AgentNet integration is not complete.**
+- Deterministic per-stage outcomes: `completed`, `skipped_not_requested`, `skipped_plan_only`,
+  `skipped_missing_session_factory`, `skipped_no_safe_contract_path`, `denied`,
+  `failed_before_write`, `write_outcome_uncertain`. A persistence stage reports `completed` only
+  when a narrow writer actually created or replayed a row — never for merely producing a plan.
+
+- [`peak/orchestration/`](peak/orchestration/) — orchestration contracts, deterministic preflight
+  governance, and the `process_engagement_packet` sequencer (DB writers imported lazily).
+- [`docs/CONTROLLED_PACKET_PROCESSING_ORCHESTRATOR.md`](docs/CONTROLLED_PACKET_PROCESSING_ORCHESTRATOR.md)
+  and [`docs/PACKET_PROCESSING_ORCHESTRATION_POLICY.md`](docs/PACKET_PROCESSING_ORCHESTRATION_POLICY.md).
+
+```bash
+make validate-phase25 PYTHON=.venv/bin/python   # structural + plan-only + DB-backed (temporary SQLite)
+make validate-phase25                           # structural + plan-only on plain python3 (DB layer skipped)
 ```
 
 ## Design constraints

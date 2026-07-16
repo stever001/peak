@@ -69,3 +69,11 @@ mirrors the Phase 20–22 pattern: at write-time it re-loads the authoritative s
 `Engagement` scope (not the packet reference), enforces DB-level idempotency, persists **packet
 metadata only**, and creates exactly one review-gated row. Outside that writer,
 `source_ingestion_records` remains plan-only.
+
+The **Phase 25 Controlled Packet Processing Orchestrator**
+([`CONTROLLED_PACKET_PROCESSING_ORCHESTRATOR.md`](CONTROLLED_PACKET_PROCESSING_ORCHESTRATOR.md),
+[`PACKET_PROCESSING_ORCHESTRATION_POLICY.md`](PACKET_PROCESSING_ORCHESTRATION_POLICY.md))
+sequences these packet-derived outputs deterministically. It preserves every prohibited-effect
+rule here: plan-only is the default, no stage silently escalates to persistence, persistence
+runs only through the existing narrow writers, and raw packet payload content is never stored or
+echoed. It grants no new write authority.

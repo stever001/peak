@@ -125,3 +125,12 @@ it maps a packet's `requested_agent_tasks` to `AgentTaskRequest` objects **only*
 registry agents (unknown agents are skipped with a warning), keeps `llm_execution_allowed=false`
 and `client_facing_output_requested=false`, and defaults them to `draft` / `needs_review`.
 Ingestion does not run them — the harness and its governance do, later, if at all.
+
+The **Phase 25 Controlled Packet Processing Orchestrator**
+([`CONTROLLED_PACKET_PROCESSING_ORCHESTRATOR.md`](CONTROLLED_PACKET_PROCESSING_ORCHESTRATOR.md))
+exposes those derived `AgentTaskRequest` objects as its *agent task planning* stage but **never
+executes an agent** and makes no LLM/AgentNet call. It deliberately **defers** agent-run
+persistence (Phase 19/20) as `skipped_no_safe_contract_path`, because wiring it would require
+running this harness's mock executor — which consults the disabled `MockLLM` interface. Partial
+safe orchestration is preferred; a future phase may wire agent-run persistence through Phase
+19/20 only.

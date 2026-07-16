@@ -104,3 +104,10 @@ derives Phase 14 `EvidenceNormalizationRequest` objects from a validated packet'
 sections (carrying only a short `raw_text_preview`, never full raw text), which then feed this
 worker under its normal review gate. Ingestion is a boundary, not a writer, and does not
 persist anything.
+
+The **Phase 25 Controlled Packet Processing Orchestrator**
+([`CONTROLLED_PACKET_PROCESSING_ORCHESTRATOR.md`](CONTROLLED_PACKET_PROCESSING_ORCHESTRATOR.md))
+runs this worker as its (default-on, DB-free) evidence-normalization stage over the derived
+requests, and — only when explicitly requested with a `session_factory` — routes each normalized
+record through the Phase 18 mapping into the Phase 21 evidence writer. Normalization stays
+deterministic (no LLM/AgentNet/network); the review gate is unchanged.

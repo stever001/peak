@@ -153,3 +153,14 @@ Migration `005_source_ingestion_idempotency` adds only what this phase needs to
 `uq_source_ingestion_records_idem` unique index. It is additive and non-destructive with a full
 downgrade path; it contains **no INSERT, no seed, and no data**. No production database is
 accessed; local dependency-backed checks use a temporary SQLite database built from the models.
+
+## Invoked by the Phase 25 orchestrator
+
+The **Phase 25 Controlled Packet Processing Orchestrator**
+([`CONTROLLED_PACKET_PROCESSING_ORCHESTRATOR.md`](CONTROLLED_PACKET_PROCESSING_ORCHESTRATOR.md))
+calls this writer as its source-ingestion persistence stage — and only when
+`plan_only=false`, the stage is included, and a `session_factory` is supplied. The orchestrator
+passes the request's `idempotency_key` straight through; it does not relax any check here. This
+writer's write-time stored-`Engagement` authorization stays authoritative — a stored-scope
+mismatch is still denied even when the orchestrator's preflight identity checks pass, surfacing
+to the caller as an orchestration `partial` outcome.

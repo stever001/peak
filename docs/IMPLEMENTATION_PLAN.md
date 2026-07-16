@@ -587,6 +587,45 @@ and documentation accurately states integration status.
   (`make validate-phase24 PYTHON=.venv/bin/python` for the DB-backed suite; structural checks
   run on plain `python3`).
 
+**Controlled Engagement Packet Processing Orchestrator (Phase 25 — controlled sequencing layer):**
+
+- [x] A **controlled sequencing layer** over the existing narrow boundaries — **not** a generic
+  importer, workflow engine, CRUD layer, or write dispatcher, and adding **no** new table, no
+  migration (Alembic head stays `005_source_ingestion_idem`), no generic writer, and no raw SQL:
+  [`../peak/orchestration/`](../peak/orchestration/) (`contracts.py`, `governance.py`,
+  `packet_processor.py`) and docs
+  [`CONTROLLED_PACKET_PROCESSING_ORCHESTRATOR.md`](CONTROLLED_PACKET_PROCESSING_ORCHESTRATOR.md) /
+  [`PACKET_PROCESSING_ORCHESTRATION_POLICY.md`](PACKET_PROCESSING_ORCHESTRATION_POLICY.md).
+  `process_engagement_packet` accepts a Phase 23 `PacketIngestionRequest`, routes it through the
+  Phase 23 ingestion boundary, exposes the derived plan (source ingestion draft, plan-only source
+  `ControlledWriteRequest`, Phase 14 `EvidenceNormalizationRequest` objects, Phase 13
+  `AgentTaskRequest` objects), and returns a typed `PacketProcessingReceipt`. **Plan-only is the
+  default and is no-side-effect** (every side-effect flag false; no DB writer, no agent/LLM, no
+  AgentNet/MCP/resolver, no network). **Controlled persistence** runs only when `plan_only=false`,
+  the specific stage is included, **and** a `session_factory` is supplied — and then only through
+  the existing narrow writers (Phase 24 source-ingestion, Phase 21 evidence via Phase 18 mapping);
+  DB writers are **lazy-imported** so plan-only runs without SQLAlchemy. **No stage may silently
+  escalate** — a persistence stage absent inclusion / under `plan_only=true` / without a
+  `session_factory` is *skipped* with a specific reason (`skipped_not_requested` /
+  `skipped_plan_only` / `skipped_missing_session_factory`), never a silent write; a missing
+  `session_factory` skips the stage, it does not fail the orchestration. **Orchestrator preflight
+  checks are helpful but not authoritative:** stored `Engagement` authorization remains
+  authoritative for every DB write and is enforced inside the narrow writers at write-time
+  (identity matching necessary but not sufficient — a stored-scope mismatch is denied by the
+  writer even when identities match, surfacing as an orchestration `partial`). It **never stores
+  or echoes raw packet payload content** in receipts/logs/exceptions — only counts, ids, stage
+  names, safe metadata, warnings, reason codes. Deterministic per-stage outcomes: `completed`,
+  `skipped_not_requested`, `skipped_plan_only`, `skipped_missing_session_factory`,
+  `skipped_no_safe_contract_path`, `denied`, `failed_before_write`, `write_outcome_uncertain` — a
+  persistence stage reports `completed` only when a narrow writer actually created or replayed a
+  row. **Agent-run persistence (Phase 19/20) is intentionally deferred** as
+  `skipped_no_safe_contract_path` (it would require running the Phase 13 mock executor, which
+  consults the disabled `MockLLM` interface); partial safe orchestration is preferable to unsafe
+  breadth. Checked by
+  [`../tests/validate_phase25_packet_processing_orchestrator.py`](../tests/validate_phase25_packet_processing_orchestrator.py)
+  (`make validate-phase25 PYTHON=.venv/bin/python` for the DB-backed layer; structural + plan-only
+  checks run on plain `python3`).
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

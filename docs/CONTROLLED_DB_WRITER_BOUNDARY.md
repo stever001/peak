@@ -143,3 +143,10 @@ this system without touching the database. It may prepare a no-op Phase 17
 but it calls **no** writer — a plan is not a write. The **Phase 24** source ingestion writer
 (above) executes that plan under the identical pattern (stored-`Engagement` scope re-check,
 DB-enforced idempotency, exactly one review-gated row, packet metadata only).
+
+The **Phase 25 Controlled Packet Processing Orchestrator**
+([`CONTROLLED_PACKET_PROCESSING_ORCHESTRATOR.md`](CONTROLLED_PACKET_PROCESSING_ORCHESTRATOR.md))
+sequences these boundaries but does **not** widen this one: it invents no generic writer
+dispatcher, writes no table beyond those the existing narrow writers already allow, and routes
+every persistence through them. Its preflight identity checks are advisory; the authoritative
+stored-scope check stays inside each writer.

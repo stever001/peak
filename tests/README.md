@@ -10,7 +10,7 @@ objects are needed, the harnesses build **synthetic fixtures at runtime**
 directory that is auto-deleted. Nothing is stored. See
 [`../docs/FIXTURE_STRATEGY.md`](../docs/FIXTURE_STRATEGY.md).
 
-Twenty-four harnesses, run together by `make validate`:
+Twenty-five harnesses, run together by `make validate`:
 
 - `validate_phase1.py` — schemas + synthetic object fixtures.
 - `validate_phase2.py` — schemas + a synthetic `EngagementPacket`.
@@ -40,6 +40,8 @@ Twenty-four harnesses, run together by `make validate`:
 - `validate_phase23_packet_ingestion.py` — engagement-packet-ingestion-boundary check (stdlib-only).
 - `validate_phase24_source_ingestion_writer.py` — controlled-DB source-ingestion-writer check
   (structural always; DB-backed when SQLAlchemy is present).
+- `validate_phase25_packet_processing_orchestrator.py` — controlled packet-processing
+  orchestrator check (structural + plan-only always; DB-backed when SQLAlchemy is present).
 
 ## `synthetic_fixtures.py`
 
@@ -458,6 +460,46 @@ SQLAlchemy is absent (still exits 0). Run the full suite with
 [`../docs/SOURCE_INGESTION_CONTROLLED_WRITER.md`](../docs/SOURCE_INGESTION_CONTROLLED_WRITER.md)
 and [`../docs/SOURCE_INGESTION_IDEMPOTENCY_POLICY.md`](../docs/SOURCE_INGESTION_IDEMPOTENCY_POLICY.md).
 
+## `validate_phase25_packet_processing_orchestrator.py`
+
+Check for the Phase 25 **controlled engagement packet processing orchestrator**
+(`peak/orchestration/`) — a controlled sequencing layer over the existing narrow boundaries,
+not a generic importer/workflow engine/CRUD/write dispatcher. Runs in three layers. The
+**structural** layer (always, stdlib-only) confirms the package files exist and compile; that
+the Phase 23 ingestion package stays **DB-free** (regression); that the orchestrator imports no
+network/LLM/AgentNet/connector client and **no top-level SQLAlchemy / `peak.db`** (the DB
+writers are lazy-imported inside the persistence stages, so plan-only runs without SQLAlchemy);
+that **no new migration** was added (Alembic head stays `005_source_ingestion_idem` — exactly
+five migration files); that the docs carry the required language (controlled sequencing layer,
+plan-only, no stage may silently escalate, preflight helpful-but-not-authoritative, stored
+Engagement authorization authoritative, identity necessary-but-not-sufficient, no live
+LLM/AgentNet/capsule/financial/client-facing); and that the repo stays source-only. The
+**plan-only** layer (always, stdlib-only) runs `process_engagement_packet` on a **valid
+in-memory** packet and asserts it is no-side-effect — a receipt with `orchestration_outcome =
+planned`, the derived plan exposed (source draft, plan-only source `ControlledWriteRequest`
+targeting `source_ingestion_records` / `create_source_ingestion_record`, Phase 14 evidence
+requests, Phase 13 agent task requests for **known registry agents only**, unknown agents
+skipped-with-warning, `llm_execution_allowed`/`client_facing_output_requested`/
+`resolver_context_allowed` false), **every side-effect flag false**, and **no raw packet payload
+sentinel** leaked into the receipt; that **no stage silently escalates** (persistence requested
+under `plan_only=true` → `skipped_plan_only`; requested without `session_factory` →
+`skipped_missing_session_factory`, not a failure; not-included → `skipped_not_requested`); that
+agent-run persistence is deferred as `skipped_no_safe_contract_path`; and that denials
+(secret-key packet, packet-reference owner/scope mismatch, revoked lifecycle, missing
+`idempotency_key`) return an outcome of `denied` without echoing secret values. The **DB-backed**
+layer runs only when SQLAlchemy is importable: it builds a **temporary local SQLite database**
+(deleted afterward) and exercises controlled persistence **through the existing narrow writers
+only** — Phase 24 source-ingestion (create → exactly one row + accurate DB flags with all
+non-DB side-effect flags false; idempotent replay; conflicting key → writer `denied`
+/`idempotency_conflict` → orchestration `partial`; stored-Engagement scope mismatch → writer
+`denied`/`stored_scope_mismatch`, no row) and Phase 21 evidence (rows == normalization count,
+receipts target `evidence_references` / `create_draft`, no source/agent/review rows; and
+`skipped_no_safe_contract_path` when normalization is disabled). If SQLAlchemy is absent the DB
+layer is skipped with instructions and the harness still exits 0. Run the full suite with
+`make validate-phase25 PYTHON=.venv/bin/python`. See
+[`../docs/CONTROLLED_PACKET_PROCESSING_ORCHESTRATOR.md`](../docs/CONTROLLED_PACKET_PROCESSING_ORCHESTRATOR.md)
+and [`../docs/PACKET_PROCESSING_ORCHESTRATION_POLICY.md`](../docs/PACKET_PROCESSING_ORCHESTRATION_POLICY.md).
+
 ## Running
 
 This machine uses `python3` (there is no bare `python`). From the repo root:
@@ -467,7 +509,7 @@ This machine uses `python3` (there is no bare `python`). From the repo root:
 make install-dev          # == python3 -m pip install -r requirements-dev.txt
 
 # run all harnesses
-make validate             # == phase1 … phase24
+make validate             # == phase1 … phase25
 
 # or run one at a time
 make validate-phase1
@@ -494,6 +536,7 @@ make validate-phase21   # DB-backed; add PYTHON=.venv/bin/python for the full su
 make validate-phase22   # DB-backed; add PYTHON=.venv/bin/python for the full suite
 make validate-phase23   # stdlib-only; no database
 make validate-phase24   # DB-backed; add PYTHON=.venv/bin/python for the full suite
+make validate-phase25   # structural+plan-only always; add PYTHON=.venv/bin/python for the DB layer
 ```
 
 Or invoke them directly, without the Makefile:
@@ -523,11 +566,12 @@ python3 tests/validate_phase19_agent_run_persistence.py  # stdlib-only, no depen
 .venv/bin/python tests/validate_phase22_review_writer.py     # DB-backed (SQLAlchemy); skips DB layer on plain python3
 python3 tests/validate_phase23_packet_ingestion.py           # stdlib-only, no dependency needed
 .venv/bin/python tests/validate_phase24_source_ingestion_writer.py  # DB-backed (SQLAlchemy); skips DB layer on plain python3
+.venv/bin/python tests/validate_phase25_packet_processing_orchestrator.py  # structural+plan-only always; DB layer needs SQLAlchemy
 ```
 
 ## Exit codes
 
-All twenty-four harnesses share the same convention:
+All twenty-five harnesses share the same convention:
 
 | Code | Meaning |
 | --- | --- |

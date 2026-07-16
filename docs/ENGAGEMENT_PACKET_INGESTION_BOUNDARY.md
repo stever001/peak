@@ -103,3 +103,9 @@ is not a write.
   ([`DATABASE_ACCESS_AND_AUDIT.md`](DATABASE_ACCESS_AND_AUDIT.md)) — it re-loads the stored
   `Engagement` scope at write-time, persists **packet metadata only** (never the payload), and
   enforces DB-level idempotency.
+
+The **Phase 25 Controlled Packet Processing Orchestrator**
+([`CONTROLLED_PACKET_PROCESSING_ORCHESTRATOR.md`](CONTROLLED_PACKET_PROCESSING_ORCHESTRATOR.md))
+is the controlled sequencing layer that routes a request through *this* boundary first and then,
+only when explicitly requested with a `session_factory`, into the Phase 24/Phase 21 writers. It
+adds no write authority of its own; this boundary's plan-only, no-DB posture is unchanged.

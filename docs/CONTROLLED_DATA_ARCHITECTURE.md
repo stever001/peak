@@ -200,3 +200,11 @@ that checks owner/engagement scope and governance state before any call. This bo
 contracts/scaffold only — it makes **no live calls**, and **AgentNet integration is not
 complete**. See [`AGENTNET_MCP_BOUNDARY.md`](AGENTNET_MCP_BOUNDARY.md) and
 [`PEAK_RESOLVER_ACCESS_POLICY.md`](PEAK_RESOLVER_ACCESS_POLICY.md).
+
+External `EngagementPacket` material enters this architecture only through the **Phase 23**
+ingestion boundary, and the **Phase 25 Controlled Packet Processing Orchestrator**
+([`CONTROLLED_PACKET_PROCESSING_ORCHESTRATOR.md`](CONTROLLED_PACKET_PROCESSING_ORCHESTRATOR.md))
+sequences that boundary into the existing narrow controlled writers. Real engagement data still
+lives **outside this repo** in controlled storage — the orchestrator persists (only when
+explicitly requested with a `session_factory`) through those writers and stores **no raw packet
+payload content**; plan-only is its default.

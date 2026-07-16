@@ -115,3 +115,11 @@ Phase 14 `EvidenceNormalizationRequest` objects from a validated packet, which t
 worker normalizes and this Phase 18 mapping then plans for the Phase 21 writer. Ingestion is a
 boundary, not a writer — it persists nothing and routes everything through these existing
 review-gated boundaries.
+
+The **Phase 25 Controlled Packet Processing Orchestrator**
+([`CONTROLLED_PACKET_PROCESSING_ORCHESTRATOR.md`](CONTROLLED_PACKET_PROCESSING_ORCHESTRATOR.md))
+drives exactly this chain end-to-end for packet-derived evidence: Phase 14 normalize → this
+Phase 18 mapping → Phase 21 write — but only when `plan_only=false`, evidence persistence is
+included, and a `session_factory` is supplied. It derives a distinct per-record idempotency key
+(`<idempotency_key>::evid::<i>`) so evidence rows do not collide on the shared boundary, and it
+never bypasses this mapping or the writer's stored-scope authorization.

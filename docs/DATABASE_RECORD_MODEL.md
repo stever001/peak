@@ -288,3 +288,10 @@ Every record carries the universal governance axes (`authorization_scope`,
 [`DATABASE_ACCESS_AND_AUDIT.md`](DATABASE_ACCESS_AND_AUDIT.md). No record is client-facing
 until a human sets the client-facing approval; no record is capsule-published without
 governance approval. **These are planned shapes — no actual records are created.**
+
+The live records that *do* get created flow through the narrow controlled writers (Phases
+20–22, 24), which the **Phase 25 Controlled Packet Processing Orchestrator**
+([`CONTROLLED_PACKET_PROCESSING_ORCHESTRATOR.md`](CONTROLLED_PACKET_PROCESSING_ORCHESTRATOR.md))
+may sequence. The orchestrator adds **no** new record group, table, or migration (the Alembic
+head stays `005_source_ingestion_idem`); it only routes into the existing `source_ingestion_records`
+and `evidence_references` writers, each of which still creates exactly one review-gated row.

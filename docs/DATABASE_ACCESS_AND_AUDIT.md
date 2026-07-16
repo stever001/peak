@@ -198,3 +198,11 @@ idempotency_key)` + a metadata-only payload fingerprint. It persists **packet me
 (reference id, schema, source type, location reference, hash), never the full packet payload,
 raw content, or secrets, and rejects any draft carrying such content. It never updates or
 deletes and returns a typed receipt with no credentials/SQL/connection/packet content.
+
+The **Phase 25 Controlled Packet Processing Orchestrator**
+([`CONTROLLED_PACKET_PROCESSING_ORCHESTRATOR.md`](CONTROLLED_PACKET_PROCESSING_ORCHESTRATOR.md))
+may call these narrow writers in sequence, but it changes none of the access/audit rules here:
+each writer still re-loads the authoritative stored `Engagement` scope at write-time (the
+orchestrator's preflight identity checks are advisory, not a substitute), server-controls
+id/timestamps and `created_by`, and enforces DB-level idempotency. The orchestration receipt
+likewise carries no credentials, SQL, connection details, or raw packet payload content.
