@@ -187,6 +187,16 @@ Legend for each group:
 - **Relationships:** referenced by records an agent drafted (`agent_run_id`).
 - **Governance states:** lifecycle. Agent outputs default to `draft`/`needs_review`.
 - **Capsule-ready?** No. **Client-facing?** No.
+- **Persistence planned by (future):** the **Phase 19 Agent Run Persistence Mapping**
+  ([`AGENT_RUN_PERSISTENCE_MAPPING.md`](AGENT_RUN_PERSISTENCE_MAPPING.md),
+  [`../peak/agents/`](../peak/agents/)) maps a Phase 13 `AgentTaskResult` + `AgentRunDraft`
+  into an `AgentRunPersistenceDraft` and a Phase 17 `ControlledWriteRequest` targeting this
+  `agent_run_records` table (`create_agent_run_record`) — **DB-aware but not DB-writing**
+  (`agent_run_record_id` / `created_at` left `None`; no connection, no SQL, no stored record).
+  Write authority is anchored to the stored engagement/client/subject
+  (`request.authorization_scope == subject.stored_authorization_scope`; identity matching
+  necessary but not sufficient), and an `idempotency_key` is required. Agent execution does
+  not write directly; a future controlled DB writer executes the plan.
 
 ### ResolverCapsuleRecord
 - **Purpose:** a private resolver capsule

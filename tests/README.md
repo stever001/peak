@@ -10,7 +10,7 @@ objects are needed, the harnesses build **synthetic fixtures at runtime**
 directory that is auto-deleted. Nothing is stored. See
 [`../docs/FIXTURE_STRATEGY.md`](../docs/FIXTURE_STRATEGY.md).
 
-Eighteen harnesses, run together by `make validate`:
+Nineteen harnesses, run together by `make validate`:
 
 - `validate_phase1.py` — schemas + synthetic object fixtures.
 - `validate_phase2.py` — schemas + a synthetic `EngagementPacket`.
@@ -30,6 +30,7 @@ Eighteen harnesses, run together by `make validate`:
 - `validate_phase16_review_persistence.py` — review-persistence-boundary check (stdlib-only).
 - `validate_phase17_controlled_db_writer.py` — controlled-DB-writer-boundary check (stdlib-only).
 - `validate_phase18_evidence_persistence.py` — evidence-persistence-mapping check (stdlib-only).
+- `validate_phase19_agent_run_persistence.py` — agent-run-persistence-mapping check (stdlib-only).
 
 ## `synthetic_fixtures.py`
 
@@ -293,6 +294,30 @@ source-only discipline. Stdlib-only; **no live database connection, no SQL execu
 stored records**. See [`../docs/EVIDENCE_PERSISTENCE_MAPPING.md`](../docs/EVIDENCE_PERSISTENCE_MAPPING.md)
 and [`../docs/EVIDENCE_WRITE_PLAN_POLICY.md`](../docs/EVIDENCE_WRITE_PLAN_POLICY.md).
 
+## `validate_phase19_agent_run_persistence.py`
+
+Check for the **Agent Run Persistence Mapping** (`peak/agents/persistence_contracts.py`,
+`persistence_governance.py`, `agent_run_mapper.py`), which connects the Phase 13 agent run
+output to the Phase 17 controlled writer boundary. Confirms the new files exist and compile
+and `peak.agents` imports; maps a **valid in-memory** agent task result + run draft + stored
+subject snapshot and asserts the result is **DB-aware but not DB-writing** (`permitted`; the
+`AgentRunPersistenceDraft` is review-gated with `agent_run_record_id`/`created_at` `None`,
+`output_status = draft`, `review_status = needs_review`; the Phase 17 `ControlledWriteRequest`
+targets `agent_run_records` / `create_agent_run_record`; the plan's
+`requires_controlled_db_writer = true`; and `database_write_made`, `database_connection_made`,
+`sql_execution_made`, `stored_record_created`, `llm_call_made`, `agentnet_call_made`,
+`network_call_made`, `capsule_publication_made`, `client_facing_output_created` all `false`);
+confirms governance rejects each missing required field (including `idempotency_key`), a
+subject **or** task-request owner/client/engagement mismatch, a `request.authorization_scope`
+that does not match the subject's `stored_authorization_scope`, prohibited lifecycle statuses,
+and an `AgentTaskResult` with a side-effect flag set or off the `draft` / `needs_review` gate
+— and that a denied request yields no draft/request/plan (side-effect-free denial); scans the
+new files for **network / database / SQLAlchemy / `peak.db` / LLM imports or credentials**
+(there are none); checks the docs carry the mapping phrases; and re-asserts source-only
+discipline. Stdlib-only; **no live database connection, no SQL execution, and no stored
+records**. See [`../docs/AGENT_RUN_PERSISTENCE_MAPPING.md`](../docs/AGENT_RUN_PERSISTENCE_MAPPING.md)
+and [`../docs/AGENT_RUN_WRITE_PLAN_POLICY.md`](../docs/AGENT_RUN_WRITE_PLAN_POLICY.md).
+
 ## Running
 
 This machine uses `python3` (there is no bare `python`). From the repo root:
@@ -302,7 +327,7 @@ This machine uses `python3` (there is no bare `python`). From the repo root:
 make install-dev          # == python3 -m pip install -r requirements-dev.txt
 
 # run all harnesses
-make validate             # == phase1 … phase18
+make validate             # == phase1 … phase19
 
 # or run one at a time
 make validate-phase1
@@ -323,6 +348,7 @@ make validate-phase15
 make validate-phase16
 make validate-phase17
 make validate-phase18
+make validate-phase19
 ```
 
 Or invoke them directly, without the Makefile:
@@ -346,11 +372,12 @@ python3 tests/validate_phase15_review_gate.py            # stdlib-only, no depen
 python3 tests/validate_phase16_review_persistence.py     # stdlib-only, no dependency needed
 python3 tests/validate_phase17_controlled_db_writer.py   # stdlib-only, no dependency needed
 python3 tests/validate_phase18_evidence_persistence.py   # stdlib-only, no dependency needed
+python3 tests/validate_phase19_agent_run_persistence.py  # stdlib-only, no dependency needed
 ```
 
 ## Exit codes
 
-All eighteen harnesses share the same convention:
+All nineteen harnesses share the same convention:
 
 | Code | Meaning |
 | --- | --- |

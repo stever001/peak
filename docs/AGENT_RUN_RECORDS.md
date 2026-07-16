@@ -63,3 +63,16 @@ The **QA / Review Gate** (Phase 15, [`QA_REVIEW_GATE.md`](QA_REVIEW_GATE.md)) ap
 same posture to *review* decisions on those outputs: its `ReviewDecision` is an in-memory
 shape only, with **no stored review records** in this phase. A future governed writer would
 persist it as a `ReviewRecord` under the same access and audit rules.
+
+The step that prepares this `AgentRunRecord` persistence — without performing it — is the
+**Phase 19 Agent Run Persistence Mapping**
+([`AGENT_RUN_PERSISTENCE_MAPPING.md`](AGENT_RUN_PERSISTENCE_MAPPING.md),
+[`AGENT_RUN_WRITE_PLAN_POLICY.md`](AGENT_RUN_WRITE_PLAN_POLICY.md)): it maps an
+`AgentTaskResult` + `AgentRunDraft` into an `AgentRunPersistenceDraft` and routes it through
+the Phase 17 controlled writer boundary as a no-op plan targeting `agent_run_records` /
+`create_agent_run_record`. It is **DB-aware but not DB-writing** — `agent_run_record_id` /
+`created_at` stay unset for a future controlled DB writer, the review gate is preserved, and
+write authority is anchored to the stored engagement/client/subject
+(`request.authorization_scope == subject_snapshot.stored_authorization_scope`; identity
+matching necessary but not sufficient). Agent execution still does not write directly to the
+DB.

@@ -125,3 +125,15 @@ the future writer loads that subject's `stored_authorization_scope` and requires
 necessary but not sufficient). Evidence workers still do not write directly to the DB, and
 the review gate (`draft` / `needs_review`, non-authoritative, non-client-facing) is preserved
 into the draft the writer would persist.
+
+The Phase 19 **Agent Run Persistence Mapping** ([`AGENT_RUN_PERSISTENCE_MAPPING.md`](AGENT_RUN_PERSISTENCE_MAPPING.md),
+[`AGENT_RUN_WRITE_PLAN_POLICY.md`](AGENT_RUN_WRITE_PLAN_POLICY.md)) is the second domain to
+use that front door: it maps a Phase 13 agent run output (`AgentTaskResult` +
+`AgentRunDraft`) to a `ControlledWriteRequest` for `agent_run_records` /
+`create_agent_run_record`. As with evidence, the new agent run record has **no stored row
+yet**, so its write authority is anchored to the **stored engagement/client/subject** — the
+future writer loads that subject's `stored_authorization_scope` and requires
+`request.authorization_scope == subject.stored_authorization_scope` (identity matching
+necessary but not sufficient). Agent execution still does not write directly to the DB, and
+the no-side-effect posture (`draft` / `needs_review`, all call/write flags false) is preserved
+into the draft the writer would persist as provenance.

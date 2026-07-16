@@ -403,6 +403,39 @@ and documentation accurately states integration status.
   [`../tests/validate_phase18_evidence_persistence.py`](../tests/validate_phase18_evidence_persistence.py)
   (`make validate-phase18`).
 
+**Agent Run Persistence Mapping (Phase 19 — DB-aware, not DB-writing):**
+
+- [x] The second domain to route through the Phase 17 boundary — connecting Phase 13 agent
+  run output to controlled write planning: [`../peak/agents/`](../peak/agents/) adds agent
+  run persistence contracts (`persistence_contracts.py`:
+  `AgentRunPersistenceSubjectSnapshot`, `AgentRunPersistenceRequest`,
+  `AgentRunPersistenceDraft`, `AgentRunPersistenceDecision`,
+  `AgentRunPersistenceMappingResult`), deterministic mapping governance
+  (`persistence_governance.py`: `evaluate_agent_run_persistence_request`,
+  `validate_agent_run_subject_scope`, `validate_agent_task_result_for_persistence`,
+  `build_agent_run_persistence_decision`), and mapping helpers (`agent_run_mapper.py`:
+  `build_agent_run_persistence_draft`, `build_controlled_write_subject`,
+  `build_controlled_write_request`, `prepare_agent_run_persistence`) — plus
+  [`AGENT_RUN_PERSISTENCE_MAPPING.md`](AGENT_RUN_PERSISTENCE_MAPPING.md) and
+  [`AGENT_RUN_WRITE_PLAN_POLICY.md`](AGENT_RUN_WRITE_PLAN_POLICY.md). It maps an
+  `AgentTaskResult` + `AgentRunDraft` → `AgentRunPersistenceDraft` → Phase 17
+  `ControlledWriteSubject` → `ControlledWriteRequest` (target `agent_run_records` /
+  `create_agent_run_record`) → `ControlledWritePlan` → no DB write. The review gate is
+  preserved (`draft`/`needs_review`, every "a call was made" flag `false`) and
+  `agent_run_record_id` / `created_at` stay `None`. Governance requires an `idempotency_key`,
+  `request.authorization_scope == subject_snapshot.stored_authorization_scope` (identity
+  matching necessary but not sufficient, anchored on the stored engagement/client/subject
+  since the run record has no stored row yet), and a permitted, side-effect-free,
+  still-review-gated agent output. The Phase 13 `AgentTaskResult` has no `network_call_made` /
+  `capsule_publication_made` field, so those are not invented on the input and are set `false`
+  on the draft and result. `peak/agents/__init__.py` re-exports the Phase 19 surface. **No
+  live DB connection/read/write, no SQL, no stored records, no SQLAlchemy/Alembic/`peak.db`
+  import, no LLM/AgentNet/MCP/resolver/network call, no client-facing output, no financial
+  verification, no capsule publication; agent execution still does not write directly to the
+  DB.** Checked by
+  [`../tests/validate_phase19_agent_run_persistence.py`](../tests/validate_phase19_agent_run_persistence.py)
+  (`make validate-phase19`).
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

@@ -85,11 +85,13 @@ peak/
 │   ├── CONTROLLED_WRITE_ALLOWLIST.md     # Allowed/prohibited write tables + actions
 │   ├── EVIDENCE_PERSISTENCE_MAPPING.md   # Normalized evidence → controlled write plan (Phase 14→17)
 │   ├── EVIDENCE_WRITE_PLAN_POLICY.md     # Evidence write-plan rules (idempotency, stored-scope)
+│   ├── AGENT_RUN_PERSISTENCE_MAPPING.md  # Agent run output → controlled write plan (Phase 13→17)
+│   ├── AGENT_RUN_WRITE_PLAN_POLICY.md    # Agent run write-plan rules (idempotency, stored-scope)
 │   └── IMPLEMENTATION_PLAN.md
 ├── peak/                         # Python tooling layer (source only; no data)
 │   ├── db/                       # base, enums, models, session (MySQL)
 │   ├── agentnet/                 # Governance wrapper for the AgentNet MCP connector (no calls)
-│   ├── agents/                   # Agent execution harness scaffold (mock; no live execution)
+│   ├── agents/                   # Agent execution harness (mock) + agent run persistence mapping (no live DB)
 │   ├── workers/                  # Production-shaped workers (evidence normalization; review-gated)
 │   ├── review/                   # QA / review gate + review persistence boundary (no-side-effect)
 │   ├── persistence/              # Controlled DB writer boundary: allowlist + governance (no live DB)
@@ -417,6 +419,40 @@ no financial verification, no capsule publication.** A write plan is not a write
 
 ```bash
 make validate-phase18   # evidence-persistence-mapping check (stdlib-only; DB-aware, not DB-writing)
+```
+
+### Agent Run Persistence Mapping (Phase 19)
+
+Connects the Phase 13 agent run output to the Phase 17 controlled writer boundary — defined
+precisely, but **not executed**. Phase 19 is **DB-aware but not DB-writing**: it maps an
+`AgentTaskResult` + `AgentRunDraft` into a production-shaped but **review-gated**
+`AgentRunPersistenceDraft` and routes it through Phase 17 as a no-op plan targeting
+`agent_run_records` / `create_agent_run_record`. The draft's `agent_run_record_id` and
+`created_at` stay `None` for a **future controlled DB writer**; the no-side-effect posture
+(`draft` / `needs_review`, every "a call was made" flag false) is preserved. **Agent
+execution still does not write directly to the DB.**
+
+```
+AgentTaskResult / AgentRunDraft → AgentRunPersistenceDraft → ControlledWriteSubject
+  → ControlledWriteRequest → ControlledWritePlan → no DB write
+```
+
+Enforced: `request.authorization_scope` must equal the stored subject snapshot's
+`stored_authorization_scope` (owner/client/engagement matching is necessary but not
+sufficient); an `idempotency_key` is required; and the carried agent output must be permitted,
+side-effect-free, and still review-gated. **No live database connection, no SQL execution, no
+stored records, no live LLM/AgentNet/network call, no client-facing output, no financial
+verification, no capsule publication.** A write plan is not a write.
+
+- [`peak/agents/`](peak/agents/) — agent run persistence contracts, deterministic mapping
+  governance, and agent-run-to-controlled-write mapping helpers (bridging Phase 13 ↔ Phase 17).
+- [`docs/AGENT_RUN_PERSISTENCE_MAPPING.md`](docs/AGENT_RUN_PERSISTENCE_MAPPING.md) — the core
+  flow, what is mapped vs. executed, and the future controlled DB writer.
+- [`docs/AGENT_RUN_WRITE_PLAN_POLICY.md`](docs/AGENT_RUN_WRITE_PLAN_POLICY.md) — idempotency,
+  stored-scope, and the stored-subject authorization anchor.
+
+```bash
+make validate-phase19   # agent-run-persistence-mapping check (stdlib-only; DB-aware, not DB-writing)
 ```
 
 ## Design constraints

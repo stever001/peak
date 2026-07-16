@@ -127,6 +127,14 @@ through the Phase 17 controlled writer boundary as a no-op plan for `evidence_re
 directly to the DB, and every future write passes through the allowlist, `idempotency_key`,
 and parent-subject stored-scope checks.
 
+The **Phase 19 Agent Run Persistence Mapping**
+([`AGENT_RUN_PERSISTENCE_MAPPING.md`](AGENT_RUN_PERSISTENCE_MAPPING.md),
+[`../peak/agents/`](../peak/agents/)) does the same for agent run provenance: it maps a
+Phase 13 agent output into an `AgentRunPersistenceDraft` and a Phase 17 no-op plan for
+`agent_run_records` / `create_agent_run_record`. Agent execution still does not write
+directly to the DB; the same allowlist, idempotency, and stored-scope checks apply, anchored
+on the stored engagement/client/subject.
+
 Whether a worker output may be relied on internally is decided by the **QA / Review Gate**
 ([`QA_REVIEW_GATE.md`](QA_REVIEW_GATE.md), [`../peak/review/`](../peak/review/), Phase 15):
 a production-shaped but **no-side-effect** review decision (`approve_internal` means
