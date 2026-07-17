@@ -78,3 +78,9 @@ the Phase 13 mock executor (which consults the disabled `MockLLM` interface) and
 run subject. When requested it is reported `skipped_no_safe_contract_path` with a clear reason.
 Partial safe orchestration is preferable to unsafe breadth; a future phase may wire it through
 Phase 19/20 only, tested for table/action safety.
+
+Separately, the derived Phase 13 `AgentTaskRequest` objects surfaced by the agent task planning
+stage are consumed by the **Phase 26 Controlled Agent Task Queue / Execution Readiness Boundary**
+([`AGENT_TASK_QUEUE_READINESS_BOUNDARY.md`](AGENT_TASK_QUEUE_READINESS_BOUNDARY.md)) — a DB-free
+boundary that plans review-gated, not-executed queue drafts. This handoff is by contract only;
+Phase 25 remains unchanged and still executes no agent.

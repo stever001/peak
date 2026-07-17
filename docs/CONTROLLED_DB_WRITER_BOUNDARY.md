@@ -150,3 +150,10 @@ sequences these boundaries but does **not** widen this one: it invents no generi
 dispatcher, writes no table beyond those the existing narrow writers already allow, and routes
 every persistence through them. Its preflight identity checks are advisory; the authoritative
 stored-scope check stays inside each writer.
+
+The **Phase 26 Controlled Agent Task Queue / Execution Readiness Boundary**
+([`AGENT_TASK_QUEUE_READINESS_BOUNDARY.md`](AGENT_TASK_QUEUE_READINESS_BOUNDARY.md)) builds
+plan-only `ControlledWriteRequest` objects that target a *future* `agent_task_queue_records` table
+via this boundary's shape — but it calls **no** writer and imports no `peak.db`. That table is
+**not yet** on the allowlist ([`CONTROLLED_WRITE_ALLOWLIST.md`](CONTROLLED_WRITE_ALLOWLIST.md)) and
+has no writer; a future Phase 27 would add both. A write plan is not a write.

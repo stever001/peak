@@ -295,3 +295,11 @@ The live records that *do* get created flow through the narrow controlled writer
 may sequence. The orchestrator adds **no** new record group, table, or migration (the Alembic
 head stays `005_source_ingestion_idem`); it only routes into the existing `source_ingestion_records`
 and `evidence_references` writers, each of which still creates exactly one review-gated row.
+
+A **planned future** record group, `agent_task_queue_records`, is described by the **Phase 26
+Controlled Agent Task Queue / Execution Readiness Boundary**
+([`AGENT_TASK_QUEUE_READINESS_BOUNDARY.md`](AGENT_TASK_QUEUE_READINESS_BOUNDARY.md)). Phase 26 is
+**DB-free**: it plans review-gated, not-executed queue drafts and a plan-only Phase 17 write
+request for that table but **adds no table, no column, and no migration** (the head is unchanged).
+A future Phase 27 would introduce the `agent_task_queue_records` table and its narrow writer,
+carrying the same universal governance axes and audit fields as every other record group above.

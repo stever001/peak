@@ -110,3 +110,10 @@ DB-backed persistence path. Phase 19 stays DB-free (this mapper imports no SQLAl
 `peak.db`); Phase 20 lives in the DB layer and re-loads the authoritative stored
 `Engagement` scope at write-time rather than trusting the snapshot here, then creates one
 review-gated `agent_run_records` row under DB-enforced idempotency.
+
+Note the distinct table: this mapping targets `agent_run_records` (the *output* of an executed
+agent run). The **Phase 26 Controlled Agent Task Queue / Execution Readiness Boundary**
+([`AGENT_TASK_QUEUE_READINESS_BOUNDARY.md`](AGENT_TASK_QUEUE_READINESS_BOUNDARY.md)) is upstream
+and different: it plans review-gated, **not-executed** queue drafts (a future
+`agent_task_queue_records` table) from derived Phase 13 `AgentTaskRequest` objects, before any
+run exists. Phase 26 is DB-free and executes nothing; it does **not** create `agent_run_records`.

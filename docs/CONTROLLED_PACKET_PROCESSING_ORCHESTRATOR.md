@@ -133,3 +133,15 @@ planning — complete by producing their derived objects.)
 - **No client-facing approval, no financial verification, no capsule publication.**
 - The Phase 23 ingestion package stays DB-free; the orchestrator imports the DB writers
   **lazily** so plan-only mode runs without SQLAlchemy.
+
+## Handoff to Phase 26 (agent task queue / execution readiness)
+
+The orchestrator's `agent_task_planning` stage exposes derived Phase 13 `AgentTaskRequest`
+objects on `PacketProcessingReceipt.agent_task_requests` (it never executes them). The **Phase 26
+Controlled Agent Task Queue / Execution Readiness Boundary**
+([`AGENT_TASK_QUEUE_READINESS_BOUNDARY.md`](AGENT_TASK_QUEUE_READINESS_BOUNDARY.md)) is the DB-free
+boundary that turns exactly those objects into review-gated, **not-executed** queue drafts and
+readiness assessments. To avoid scope creep, **Phase 25 code is unchanged**: the handoff is by
+contract — Phase 26's `AgentTaskQueueRequest.agent_task_requests` consumes the same objects this
+receipt surfaces. A later phase may wire Phase 25 to call Phase 26 directly once a narrow, safe
+integration is warranted; nothing here executes an agent.

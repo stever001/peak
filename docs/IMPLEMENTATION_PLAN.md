@@ -626,6 +626,40 @@ and documentation accurately states integration status.
   (`make validate-phase25 PYTHON=.venv/bin/python` for the DB-backed layer; structural + plan-only
   checks run on plain `python3`).
 
+**Controlled Agent Task Queue / Execution Readiness Boundary (Phase 26 — DB-free readiness planning):**
+
+- [x] A **readiness/queue-planning boundary** over derived Phase 13 `AgentTaskRequest` objects —
+  **not** an executor, task runner, job queue, workflow engine, or DB writer — analogous to
+  Phase 23 (which prepared source ingestion plans without DB writes):
+  [`../peak/task_queue/`](../peak/task_queue/) (`contracts.py`, `governance.py`,
+  `task_queue_mapper.py`) and docs
+  [`AGENT_TASK_QUEUE_READINESS_BOUNDARY.md`](AGENT_TASK_QUEUE_READINESS_BOUNDARY.md) /
+  [`AGENT_TASK_QUEUE_GOVERNANCE_POLICY.md`](AGENT_TASK_QUEUE_GOVERNANCE_POLICY.md).
+  `prepare_agent_task_queue_plan(request)` maps derived Phase 13 tasks into **review-gated,
+  not-executed** `AgentTaskQueueDraft` objects (`agent_task_queue_record_id=None`,
+  `output_status=draft`, `review_status=needs_review`, `execution_status=not_executed`,
+  `execution_allowed=false`, `requires_human_review=true`, ids/references only — never raw
+  payload/text), deterministic `AgentExecutionReadinessAssessment` objects, and plan-only Phase 17
+  `ControlledWriteRequest` objects targeting `agent_task_queue_records` /
+  `create_agent_task_queue_record`. It **adds no table and no migration** (Alembic head stays
+  `005_source_ingestion_idem`), executes **no agent (live or mock)**, and makes **no LLM / MockLLM
+  / AgentNet / MCP / resolver / network call**, opens no DB connection, writes no row, and creates
+  no client-facing output / financial verification / capsule publication — every side-effect flag
+  stays `false`. Readiness states: `queued_for_review`, `blocked_by_policy`,
+  `blocked_missing_evidence`, `blocked_unknown_agent`, `blocked_invalid_scope`,
+  `blocked_lifecycle`, `ready_for_future_controlled_execution` — where **"ready" never means
+  "execute now"** (structurally ready for a later controlled execution phase after review).
+  Governance requires request identity/scope/idempotency + ≥1 task, matches each task's identity
+  **and** scope (identity necessary but not sufficient), rejects unknown agents and live/LLM/
+  resolver/client-facing requests, and rejects any raw-content / secret / execution-intent field
+  (reporting key names only, never values). **Phase 25 integration is by documented handoff**
+  (Phase 25 code unchanged): Phase 26 consumes the same Phase 13 objects Phase 25 surfaces on
+  `PacketProcessingReceipt.agent_task_requests`. **A future Phase 27** may add the narrow
+  `agent_task_queue_records` DB writer (re-loading stored `Engagement` scope at write time,
+  DB-level idempotency), mirroring Phases 20–22/24. Checked by
+  [`../tests/validate_phase26_agent_task_queue_readiness.py`](../tests/validate_phase26_agent_task_queue_readiness.py)
+  (`make validate-phase26`; stdlib-only, DB-free).
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

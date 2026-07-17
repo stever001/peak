@@ -134,3 +134,12 @@ persistence (Phase 19/20) as `skipped_no_safe_contract_path`, because wiring it 
 running this harness's mock executor — which consults the disabled `MockLLM` interface. Partial
 safe orchestration is preferred; a future phase may wire agent-run persistence through Phase
 19/20 only.
+
+Derived `AgentTaskRequest` objects also feed the **Phase 26 Controlled Agent Task Queue /
+Execution Readiness Boundary** ([`AGENT_TASK_QUEUE_READINESS_BOUNDARY.md`](AGENT_TASK_QUEUE_READINESS_BOUNDARY.md)):
+a DB-free boundary that turns them into review-gated, **not-executed** queue drafts and
+deterministic execution-readiness assessments. Phase 26 uses this registry to accept only known
+agents and never runs one — no live or mock executor, no LLM/AgentNet/resolver/network call. Its
+`ready_for_future_controlled_execution` state means "structurally ready for a later controlled
+execution phase after human review", never "execute now"; `execution_allowed` stays `false`.
+Actual execution remains the harness's responsibility, later, if at all.

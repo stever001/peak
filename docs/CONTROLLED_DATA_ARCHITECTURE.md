@@ -208,3 +208,11 @@ sequences that boundary into the existing narrow controlled writers. Real engage
 lives **outside this repo** in controlled storage — the orchestrator persists (only when
 explicitly requested with a `session_factory`) through those writers and stores **no raw packet
 payload content**; plan-only is its default.
+
+Between packet ingestion and any future controlled agent execution sits the **Phase 26 Controlled
+Agent Task Queue / Execution Readiness Boundary**
+([`AGENT_TASK_QUEUE_READINESS_BOUNDARY.md`](AGENT_TASK_QUEUE_READINESS_BOUNDARY.md)): a **DB-free**
+boundary that plans review-gated, **not-executed** agent task queue drafts from derived Phase 13
+tasks. It stores nothing, executes nothing, and carries only ids/references — never raw client
+content. A future Phase 27 may add the narrow `agent_task_queue_records` writer that persists these
+drafts into controlled storage under the same stored-scope authorization rules.

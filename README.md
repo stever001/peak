@@ -99,6 +99,8 @@ peak/
 │   ├── SOURCE_INGESTION_IDEMPOTENCY_POLICY.md    # DB-enforced idempotency for source ingestion rows
 │   ├── CONTROLLED_PACKET_PROCESSING_ORCHESTRATOR.md # Controlled sequencing layer over Phases 23/24/14/21/13 (Phase 25)
 │   ├── PACKET_PROCESSING_ORCHESTRATION_POLICY.md   # Orchestration governance: modes, no-escalation, packet-content rule (Phase 25)
+│   ├── AGENT_TASK_QUEUE_READINESS_BOUNDARY.md      # DB-free agent task queue / execution readiness boundary (Phase 26)
+│   ├── AGENT_TASK_QUEUE_GOVERNANCE_POLICY.md       # Queue/readiness governance: readiness states, no execution (Phase 26)
 │   └── IMPLEMENTATION_PLAN.md
 ├── peak/                         # Python tooling layer (source only; no data)
 │   ├── db/                       # base, enums, models, session + agent_run (P20), evidence (P21), review (P22) & source-ingestion (P24) writers
@@ -109,7 +111,8 @@ peak/
 │   ├── persistence/              # Controlled DB writer boundary: allowlist + governance (no live DB)
 │   ├── evidence/                 # Evidence persistence mapping: Phase 14 → Phase 17 (no live DB)
 │   ├── ingestion/                # Engagement packet ingestion boundary: derives plans (no DB writes)
-│   └── orchestration/            # Controlled packet-processing orchestrator: sequences existing boundaries (P25; plan-only default)
+│   ├── orchestration/            # Controlled packet-processing orchestrator: sequences existing boundaries (P25; plan-only default)
+│   └── task_queue/               # Agent task queue / execution readiness boundary: plans queue drafts (P26; DB-free, no execution)
 ├── alembic/                      # Alembic migrations (schema only; no data)
 ├── alembic.ini                   # Alembic config (URL from env, not the repo)
 ├── .env.example                  # Env placeholders only (PEAK_DATABASE_URL); .env ignored
@@ -651,6 +654,46 @@ source-ingestion, Phase 21 evidence). It adds no table, no migration (head stays
 ```bash
 make validate-phase25 PYTHON=.venv/bin/python   # structural + plan-only + DB-backed (temporary SQLite)
 make validate-phase25                           # structural + plan-only on plain python3 (DB layer skipped)
+```
+
+### Controlled Agent Task Queue / Execution Readiness Boundary (Phase 26)
+
+A **readiness/queue-planning boundary** over derived Phase 13 `AgentTaskRequest` objects — **not**
+an executor, task runner, job queue, workflow engine, or DB writer. `prepare_agent_task_queue_plan`
+turns those tasks into governed, **review-gated**, **not executed** Agent Task Queue drafts and
+Execution Readiness assessments, plus optional plan-only Phase 17 controlled write requests for a
+*future* `agent_task_queue_records` writer. It is deliberately analogous to Phase 23 (which
+prepared source-ingestion plans without DB writes): Phase 26 prepares task-queue / readiness plans
+without DB writes. It adds no table and no migration (Alembic head stays `005_source_ingestion_idem`).
+
+- It executes **no agent** (live or mock), makes **no live LLM** / MockLLM / **AgentNet** / MCP /
+  resolver / network call, opens **no DB** connection, and writes no row; it creates no
+  client-facing output, verifies no financial impact, and publishes no capsule. Every side-effect
+  flag on the result stays `false`.
+- Each queue draft is review-gated and non-executed: `agent_task_queue_record_id=None`,
+  `output_status=draft`, `review_status=needs_review`, `execution_status=not_executed`,
+  `execution_allowed=false`, `requires_human_review=true`, and carries only ids/references (never
+  raw payload/text). Its idempotency key is deterministic per task
+  (`<key>::taskq::<index>::<agent_name>`).
+- Deterministic readiness states: `queued_for_review`, `blocked_by_policy`,
+  `blocked_missing_evidence`, `blocked_unknown_agent`, `blocked_invalid_scope`,
+  `blocked_lifecycle`, `ready_for_future_controlled_execution`. **"Ready" never means "execute
+  now"** — it means structurally ready for a later controlled execution phase after review.
+- Governance rejects unknown agents, identity/scope/lifecycle mismatches, live-execution / LLM /
+  resolver / client-facing requests, and any raw-content / secret / execution-intent field
+  (reporting key names only — secret and raw values are never echoed). **Identity matching is
+  necessary but not sufficient.**
+- **Phase 25 integration** is by documented handoff (Phase 25 code unchanged): Phase 26 consumes
+  the same Phase 13 `AgentTaskRequest` objects Phase 25 surfaces on its receipt. A future Phase 27
+  may add the narrow `agent_task_queue_records` DB writer.
+
+- [`peak/task_queue/`](peak/task_queue/) — queue/readiness contracts, deterministic governance,
+  and the `prepare_agent_task_queue_plan` mapper (DB-free; no execution).
+- [`docs/AGENT_TASK_QUEUE_READINESS_BOUNDARY.md`](docs/AGENT_TASK_QUEUE_READINESS_BOUNDARY.md) and
+  [`docs/AGENT_TASK_QUEUE_GOVERNANCE_POLICY.md`](docs/AGENT_TASK_QUEUE_GOVERNANCE_POLICY.md).
+
+```bash
+make validate-phase26   # agent-task-queue / execution-readiness check (stdlib-only; DB-free)
 ```
 
 ## Design constraints

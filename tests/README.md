@@ -10,7 +10,7 @@ objects are needed, the harnesses build **synthetic fixtures at runtime**
 directory that is auto-deleted. Nothing is stored. See
 [`../docs/FIXTURE_STRATEGY.md`](../docs/FIXTURE_STRATEGY.md).
 
-Twenty-five harnesses, run together by `make validate`:
+Twenty-six harnesses, run together by `make validate`:
 
 - `validate_phase1.py` — schemas + synthetic object fixtures.
 - `validate_phase2.py` — schemas + a synthetic `EngagementPacket`.
@@ -42,6 +42,8 @@ Twenty-five harnesses, run together by `make validate`:
   (structural always; DB-backed when SQLAlchemy is present).
 - `validate_phase25_packet_processing_orchestrator.py` — controlled packet-processing
   orchestrator check (structural + plan-only always; DB-backed when SQLAlchemy is present).
+- `validate_phase26_agent_task_queue_readiness.py` — agent task queue / execution readiness
+  boundary check (stdlib-only; DB-free — no database layer).
 
 ## `synthetic_fixtures.py`
 
@@ -500,6 +502,35 @@ layer is skipped with instructions and the harness still exits 0. Run the full s
 [`../docs/CONTROLLED_PACKET_PROCESSING_ORCHESTRATOR.md`](../docs/CONTROLLED_PACKET_PROCESSING_ORCHESTRATOR.md)
 and [`../docs/PACKET_PROCESSING_ORCHESTRATION_POLICY.md`](../docs/PACKET_PROCESSING_ORCHESTRATION_POLICY.md).
 
+## `validate_phase26_agent_task_queue_readiness.py`
+
+Check for the Phase 26 **Controlled Agent Task Queue / Execution Readiness Boundary**
+(`peak/task_queue/`) — a DB-free readiness/queue-planning boundary over derived Phase 13
+`AgentTaskRequest` objects, analogous to Phase 23. Stdlib-only; **no database** (Phase 26 writes
+nothing and connects to nothing). The **structural** layer confirms the package files exist,
+compile, and import; that the package imports no SQLAlchemy / Alembic / `peak.db` / live-or-mock
+LLM / AgentNet / MCP / resolver / connector / network module; that the Phase 23 ingestion package
+stays DB-free; that the Phase 25 commit is present in recent history; that **no Phase 26 migration**
+was added (exactly five migration files, no `006_*`, Alembic head stays `005_source_ingestion_idem`);
+and that the docs carry the required language. The **functional** layer runs
+`prepare_agent_task_queue_plan` and asserts: a valid task becomes a review-gated,
+`not_executed` / `execution_allowed=false` queue draft with no id/created_at and a deterministic
+per-task idempotency key, plus a plan-only Phase 17 `ControlledWriteRequest` targeting
+`agent_task_queue_records` / `create_agent_task_queue_record`; evidence-wired tasks reach
+`ready_for_future_controlled_execution` (still not executable now); multiple tasks get distinct
+keys; unknown agents are blocked (partial / all-blocked outcomes); request-level identity / scope /
+idempotency / lifecycle denials and per-task `blocked_invalid_scope` / `blocked_lifecycle` /
+`blocked_by_policy` (LLM / resolver / client-facing requested) / `blocked_missing_evidence`
+behave; raw packet payload, raw evidence/interview text, source bytes, secret-like keys, and
+execution/network/financial/publication intent keys are rejected without echoing values; and
+**every side-effect flag stays `false`** across all outcomes. The **integration** layer feeds the
+exact Phase 13 `AgentTaskRequest` objects produced by the Phase 23 ingestion boundary and surfaced
+by the Phase 25 orchestrator (plan-only) into Phase 26 and confirms no side effects — verifying the
+documented Phase 25 → Phase 26 handoff. It also re-asserts source-only discipline and that
+`.claude/settings.local.json` stays untracked. See
+[`../docs/AGENT_TASK_QUEUE_READINESS_BOUNDARY.md`](../docs/AGENT_TASK_QUEUE_READINESS_BOUNDARY.md)
+and [`../docs/AGENT_TASK_QUEUE_GOVERNANCE_POLICY.md`](../docs/AGENT_TASK_QUEUE_GOVERNANCE_POLICY.md).
+
 ## Running
 
 This machine uses `python3` (there is no bare `python`). From the repo root:
@@ -509,7 +540,7 @@ This machine uses `python3` (there is no bare `python`). From the repo root:
 make install-dev          # == python3 -m pip install -r requirements-dev.txt
 
 # run all harnesses
-make validate             # == phase1 … phase25
+make validate             # == phase1 … phase26
 
 # or run one at a time
 make validate-phase1
@@ -537,6 +568,7 @@ make validate-phase22   # DB-backed; add PYTHON=.venv/bin/python for the full su
 make validate-phase23   # stdlib-only; no database
 make validate-phase24   # DB-backed; add PYTHON=.venv/bin/python for the full suite
 make validate-phase25   # structural+plan-only always; add PYTHON=.venv/bin/python for the DB layer
+make validate-phase26   # stdlib-only; DB-free (no database layer)
 ```
 
 Or invoke them directly, without the Makefile:
@@ -567,11 +599,12 @@ python3 tests/validate_phase19_agent_run_persistence.py  # stdlib-only, no depen
 python3 tests/validate_phase23_packet_ingestion.py           # stdlib-only, no dependency needed
 .venv/bin/python tests/validate_phase24_source_ingestion_writer.py  # DB-backed (SQLAlchemy); skips DB layer on plain python3
 .venv/bin/python tests/validate_phase25_packet_processing_orchestrator.py  # structural+plan-only always; DB layer needs SQLAlchemy
+python3 tests/validate_phase26_agent_task_queue_readiness.py               # stdlib-only, no dependency needed (DB-free)
 ```
 
 ## Exit codes
 
-All twenty-five harnesses share the same convention:
+All twenty-six harnesses share the same convention:
 
 | Code | Meaning |
 | --- | --- |

@@ -83,3 +83,10 @@ That writer is delivered in **Phase 20**
 same policy at write-time against the *live* database — comparing `request.authorization_scope`
 to the stored `Engagement.authorization_scope` (not the snapshot) and enforcing the
 idempotency boundary with a DB unique constraint — before creating a single review-gated row.
+
+The upstream **Phase 26 Controlled Agent Task Queue / Execution Readiness Boundary**
+([`AGENT_TASK_QUEUE_GOVERNANCE_POLICY.md`](AGENT_TASK_QUEUE_GOVERNANCE_POLICY.md)) applies the
+same "identity is necessary but not sufficient" and per-task idempotency principles when planning
+queue drafts — but it is **DB-free and executes nothing**, targets a *future*
+`agent_task_queue_records` table (not `agent_run_records`), and never calls a writer. A future
+Phase 27 writer would enforce this policy at write-time exactly as Phase 20 does.

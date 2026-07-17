@@ -82,3 +82,15 @@ writer executes the plan under access control. The **Phase 18 Evidence Persisten
 (`evidence_references` / `create_draft`); the **Phase 19 Agent Run Persistence Mapping**
 ([`AGENT_RUN_PERSISTENCE_MAPPING.md`](AGENT_RUN_PERSISTENCE_MAPPING.md)) is the second
 (`agent_run_records` / `create_agent_run_record`) — both through this allowlist.
+
+### Planned future addition: `agent_task_queue_records`
+
+The **Phase 26 Controlled Agent Task Queue / Execution Readiness Boundary**
+([`AGENT_TASK_QUEUE_READINESS_BOUNDARY.md`](AGENT_TASK_QUEUE_READINESS_BOUNDARY.md)) builds
+plan-only `ControlledWriteRequest` objects with `target_table="agent_task_queue_records"` and
+`requested_action="create_agent_task_queue_record"`. This table/action is **not yet on the
+allowlist** and has **no writer** — Phase 26 only produces the plan artifact and calls nothing. A
+future **Phase 27** would add `agent_task_queue_records` / `create_agent_task_queue_record` to
+`ALLOWED_TABLES` / `ALLOWED_ACTIONS` here through the explicit governance gate, alongside a narrow
+DB-backed writer that re-loads the stored `Engagement` scope at write-time and enforces DB-level
+idempotency (mirroring Phases 20–22/24). Until then, the allowlist is unchanged.
