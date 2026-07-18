@@ -87,6 +87,8 @@ idempotency boundary with a DB unique constraint — before creating a single re
 The upstream **Phase 26 Controlled Agent Task Queue / Execution Readiness Boundary**
 ([`AGENT_TASK_QUEUE_GOVERNANCE_POLICY.md`](AGENT_TASK_QUEUE_GOVERNANCE_POLICY.md)) applies the
 same "identity is necessary but not sufficient" and per-task idempotency principles when planning
-queue drafts — but it is **DB-free and executes nothing**, targets a *future*
-`agent_task_queue_records` table (not `agent_run_records`), and never calls a writer. A future
-Phase 27 writer would enforce this policy at write-time exactly as Phase 20 does.
+queue drafts — but it is **DB-free and executes nothing**, targets the `agent_task_queue_records`
+table (not `agent_run_records`), and never calls a writer. The **Phase 27** queue writer
+([`AGENT_TASK_QUEUE_CONTROLLED_WRITER.md`](AGENT_TASK_QUEUE_CONTROLLED_WRITER.md)) enforces this
+policy at write-time exactly as Phase 20 does — but persists a review-gated, **not-executed** row
+and never creates an `agent_run_records` row.

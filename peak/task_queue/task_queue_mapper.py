@@ -103,13 +103,13 @@ def _is_blank(value) -> bool:
 
 
 def build_queue_draft(
-    request: AgentTaskQueueRequest, task, index: int
+    request: AgentTaskQueueRequest, task, index: int, readiness_state: Optional[str] = None
 ) -> AgentTaskQueueDraft:
     """Map one valid Phase 13 task into a review-gated ``AgentTaskQueueDraft`` (never stored).
 
     ``agent_task_queue_record_id`` and ``created_at`` are left ``None`` — a *future* narrow
-    controlled DB writer assigns them. The review-gate and no-execution posture is stamped, not
-    inherited. Only ids/references are carried; no raw payload/text.
+    controlled DB writer (Phase 27) assigns/persists them. The review-gate and no-execution
+    posture is stamped, not inherited. Only ids/references are carried; no raw payload/text.
     """
     entry = get_agent(getattr(task, "agent_name", None))
     workflow = getattr(entry, "workflow", None) or getattr(task, "workflow", None)
@@ -129,11 +129,14 @@ def build_queue_draft(
         task_input_summary=_task_input_summary(task),
         source_ingestion_record_id=getattr(request, "source_ingestion_record_id", None),
         evidence_reference_ids=list(getattr(request, "evidence_reference_ids", []) or []),
+        packet_processing_run_ref=getattr(request, "packet_processing_run_ref", None),
+        orchestration_ref=getattr(request, "orchestration_ref", None),
         prompt_contract_path=prompt_contract_path,
         authorization_scope=getattr(request, "authorization_scope", None),
         idempotency_key=_derived_idempotency_key(
             getattr(request, "idempotency_key", None), index, getattr(task, "agent_name", None)
         ),
+        readiness_state=readiness_state,
         output_status="draft",
         review_status="needs_review",
         lifecycle_status="draft",
@@ -255,7 +258,7 @@ def prepare_agent_task_queue_plan(
             warnings.extend(classification.reasons)
             assessments.append(assessment)
             continue
-        draft = build_queue_draft(request, task, index)
+        draft = build_queue_draft(request, task, index, classification.readiness_state)
         assessment.queue_draft_idempotency_key = draft.idempotency_key
         drafts.append(draft)
         write_requests.append(build_queue_controlled_write_request(request, draft))

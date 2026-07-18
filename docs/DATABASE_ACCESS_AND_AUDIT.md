@@ -206,3 +206,11 @@ each writer still re-loads the authoritative stored `Engagement` scope at write-
 orchestrator's preflight identity checks are advisory, not a substitute), server-controls
 id/timestamps and `created_by`, and enforces DB-level idempotency. The orchestration receipt
 likewise carries no credentials, SQL, connection details, or raw packet payload content.
+
+The **Phase 27** agent-task-queue writer
+([`AGENT_TASK_QUEUE_CONTROLLED_WRITER.md`](AGENT_TASK_QUEUE_CONTROLLED_WRITER.md)) applies the same
+access/audit rules to the new `agent_task_queue_records` table: write-time stored-`Engagement`
+scope re-check (identity necessary but not sufficient), server-controlled id/timestamps and
+`created_by`, DB-level idempotency, and a typed receipt with no credentials/SQL/connection/raw
+content. It stores **safe references only** and a review-gated, **not-executed** posture — it
+executes no agent and creates no `agent_run_records` row.

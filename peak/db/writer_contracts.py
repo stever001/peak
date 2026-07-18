@@ -198,6 +198,68 @@ class ReviewWriteReceipt:
     warnings: List[str] = field(default_factory=list)
 
 
+class AgentTaskQueueWriteOutcome:
+    """Outcome codes for a controlled agent-task-queue write (str constants; no Enum)."""
+
+    CREATED = "created"
+    IDEMPOTENT_REPLAY = "idempotent_replay"
+    DENIED = "denied"
+    FAILED_BEFORE_WRITE = "failed_before_write"
+    WRITE_OUTCOME_UNCERTAIN = "write_outcome_uncertain"
+
+
+# The single table/action the Phase 27 agent-task-queue writer may target (Phase 17 subset).
+AGENT_TASK_QUEUE_TARGET_TABLE = "agent_task_queue_records"
+AGENT_TASK_QUEUE_TARGET_ACTION = "create_agent_task_queue_record"
+
+AGENT_TASK_QUEUE_ALL_OUTCOMES = (
+    AgentTaskQueueWriteOutcome.CREATED,
+    AgentTaskQueueWriteOutcome.IDEMPOTENT_REPLAY,
+    AgentTaskQueueWriteOutcome.DENIED,
+    AgentTaskQueueWriteOutcome.FAILED_BEFORE_WRITE,
+    AgentTaskQueueWriteOutcome.WRITE_OUTCOME_UNCERTAIN,
+)
+
+
+@dataclass
+class AgentTaskQueueWriteReceipt:
+    """A typed, auditable receipt for one controlled agent-task-queue write attempt.
+
+    Contains no credentials, no SQL, no connection URL, and **no raw packet/evidence/interview
+    content, source bytes, or generated agent output**. The boolean flags describe what
+    actually happened during this attempt. This write persists a **review-gated, not-executed**
+    queue record only — it never executes an agent and never creates an ``agent_run_records`` row.
+    """
+
+    outcome: str = AgentTaskQueueWriteOutcome.DENIED
+    permitted: bool = False
+    reason_code: Optional[str] = None
+    target_table: str = AGENT_TASK_QUEUE_TARGET_TABLE
+    target_action: str = AGENT_TASK_QUEUE_TARGET_ACTION
+    # Stored identity — set only when safely known (created / idempotent_replay).
+    stored_record_id: Optional[str] = None
+    idempotency_key: Optional[str] = None  # the caller's key (not a secret); a safe reference
+    audit_trace_ref: Optional[str] = None
+    # Actual-behavior flags.
+    database_connection_made: bool = False
+    sql_execution_made: bool = False
+    database_write_made: bool = False
+    stored_record_created: bool = False
+    existing_record_returned: bool = False
+    transaction_committed: bool = False
+    outcome_uncertain: bool = False
+    # Review-gate / non-execution posture of the record this write concerns.
+    review_status: Optional[str] = None
+    output_status: Optional[str] = None
+    execution_status: Optional[str] = None
+    readiness_state: Optional[str] = None
+    # Server-stamped timestamps read back from the DB (ISO strings), when known.
+    created_at: Optional[str] = None
+    database_write_at: Optional[str] = None
+    reasons: List[str] = field(default_factory=list)
+    warnings: List[str] = field(default_factory=list)
+
+
 class SourceIngestionWriteOutcome:
     """Outcome codes for a controlled source-ingestion write (str constants; no Enum)."""
 

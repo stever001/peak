@@ -34,6 +34,7 @@ alembic/
     003_evidence_idempotency.py                 # Phase 21: evidence_references columns + unique index (no data)
     004_review_idempotency.py                   # Phase 22: review_records columns + unique index (no data)
     005_source_ingestion_idempotency.py         # Phase 24: source_ingestion_records columns + unique index (no data)
+    006_agent_task_queue_records.py             # Phase 27: agent_task_queue_records table (new table, no data)
 .env.example      # placeholders only (PEAK_DATABASE_URL=...); .env is gitignored
 requirements.txt  # SQLAlchemy / alembic / PyMySQL (runtime tooling)
 ```
@@ -86,7 +87,7 @@ python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt      # SQLAlchemy / alembic / PyMySQL
 .venv/bin/python -m pip install -r requirements-dev.txt  # jsonschema (validation harness)
 
-# dependency-backed scaffold check (imports models, verifies the 11 tables and columns)
+# dependency-backed scaffold check (imports models, verifies the 12 tables and columns)
 .venv/bin/python tests/validate_phase11_db_scaffold.py
 
 # or run the whole validation suite through the venv interpreter
@@ -94,7 +95,7 @@ make validate PYTHON=.venv/bin/python
 ```
 
 When SQLAlchemy/Alembic are installed, the Phase 11 check additionally imports
-`peak.db.models`, confirms `Base.metadata` defines **exactly** the 11 expected tables with
+`peak.db.models`, confirms `Base.metadata` defines **exactly** the 12 expected tables with
 unique names, and asserts every table carries the required governance/audit columns
 (`owner_id`, `authorization_scope`, `review_status`, `lifecycle_status`, `created_at`,
 `updated_at`). Without those dependencies the same check runs structurally and skips the

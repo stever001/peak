@@ -144,4 +144,7 @@ boundary that turns exactly those objects into review-gated, **not-executed** qu
 readiness assessments. To avoid scope creep, **Phase 25 code is unchanged**: the handoff is by
 contract — Phase 26's `AgentTaskQueueRequest.agent_task_requests` consumes the same objects this
 receipt surfaces. A later phase may wire Phase 25 to call Phase 26 directly once a narrow, safe
-integration is warranted; nothing here executes an agent.
+integration is warranted; nothing here executes an agent. Downstream, **Phase 27** persists Phase
+26's queue drafts as review-gated, not-executed `agent_task_queue_records` rows
+([`AGENT_TASK_QUEUE_CONTROLLED_WRITER.md`](AGENT_TASK_QUEUE_CONTROLLED_WRITER.md)) — still no agent
+execution and no `agent_run_records`.

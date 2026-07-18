@@ -101,9 +101,11 @@ peak/
 │   ├── PACKET_PROCESSING_ORCHESTRATION_POLICY.md   # Orchestration governance: modes, no-escalation, packet-content rule (Phase 25)
 │   ├── AGENT_TASK_QUEUE_READINESS_BOUNDARY.md      # DB-free agent task queue / execution readiness boundary (Phase 26)
 │   ├── AGENT_TASK_QUEUE_GOVERNANCE_POLICY.md       # Queue/readiness governance: readiness states, no execution (Phase 26)
+│   ├── AGENT_TASK_QUEUE_CONTROLLED_WRITER.md       # Fifth DB-backed writer, for agent_task_queue_records (Phase 27)
+│   ├── AGENT_TASK_QUEUE_IDEMPOTENCY_POLICY.md      # DB-enforced idempotency for agent task queue rows (Phase 27)
 │   └── IMPLEMENTATION_PLAN.md
 ├── peak/                         # Python tooling layer (source only; no data)
-│   ├── db/                       # base, enums, models, session + agent_run (P20), evidence (P21), review (P22) & source-ingestion (P24) writers
+│   ├── db/                       # base, enums, models, session + agent_run (P20), evidence (P21), review (P22), source-ingestion (P24) & agent-task-queue (P27) writers
 │   ├── agentnet/                 # Governance wrapper for the AgentNet MCP connector (no calls)
 │   ├── agents/                   # Agent execution harness (mock) + agent run persistence mapping (no live DB)
 │   ├── workers/                  # Production-shaped workers (evidence normalization; review-gated)
@@ -694,6 +696,40 @@ without DB writes. It adds no table and no migration (Alembic head stays `005_so
 
 ```bash
 make validate-phase26   # agent-task-queue / execution-readiness check (stdlib-only; DB-free)
+```
+
+### Agent Task Queue Controlled Writer (Phase 27)
+
+The **fifth** DB-backed writer, applying the Phase 20–24 pattern to `agent_task_queue_records`.
+It persists **exactly one** review-gated, **not-executed** queue row from a Phase 26
+`AgentTaskQueueDraft` routed through the Phase 17 `ControlledWriteRequest` boundary — allowing
+only `agent_task_queue_records` / `create_agent_task_queue_record`. At **write-time** it loads the
+authoritative stored `Engagement` row and requires `request.authorization_scope ==
+engagement.authorization_scope` (identity matching necessary but not sufficient); enforces
+DB-level idempotency (unique index over owner/client/engagement/idempotency_key + payload
+fingerprint); distinguishes `created` / `idempotent_replay` / `denied` / `failed_before_write` /
+`write_outcome_uncertain`; and returns a typed `AgentTaskQueueWriteReceipt`.
+
+It **executes no agent** (live or mock), makes **no LLM / MockLLM / AgentNet / MCP / resolver /
+connector / network call**, and **never creates an `agent_run_records` row**. Required posture:
+`output_status=draft`, `review_status=needs_review`, `lifecycle_status=draft`,
+`execution_status=not_executed`, `execution_allowed=false` (and `llm_execution_allowed` /
+`agentnet_context_allowed` / `resolver_context_allowed` / `network_allowed` all false),
+`requires_human_review=true`, non-authoritative, not client-facing, not a capsule candidate. Only
+safe references/summaries are stored (never raw packet/evidence/interview content, source bytes,
+generated output, or secrets); a draft carrying such an attribute is rejected without echoing the
+value. Agent identity is gated against the Phase 13 registry — unknown agents are never persisted.
+
+- [`peak/db/agent_task_queue_writer.py`](peak/db/agent_task_queue_writer.py) — the controlled writer.
+- [`alembic/versions/006_agent_task_queue_records.py`](alembic/versions/006_agent_task_queue_records.py)
+  — additive migration creating the single new table (down_revision `005_source_ingestion_idem`;
+  single linear head `006_agent_task_queue_records`; no data).
+- [`docs/AGENT_TASK_QUEUE_CONTROLLED_WRITER.md`](docs/AGENT_TASK_QUEUE_CONTROLLED_WRITER.md) and
+  [`docs/AGENT_TASK_QUEUE_IDEMPOTENCY_POLICY.md`](docs/AGENT_TASK_QUEUE_IDEMPOTENCY_POLICY.md).
+
+```bash
+make validate-phase27 PYTHON=.venv/bin/python   # full DB-backed suite (temporary SQLite)
+make validate-phase27                           # structural only on plain python3
 ```
 
 ## Design constraints

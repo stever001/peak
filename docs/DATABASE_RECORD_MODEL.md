@@ -296,10 +296,13 @@ may sequence. The orchestrator adds **no** new record group, table, or migration
 head stays `005_source_ingestion_idem`); it only routes into the existing `source_ingestion_records`
 and `evidence_references` writers, each of which still creates exactly one review-gated row.
 
-A **planned future** record group, `agent_task_queue_records`, is described by the **Phase 26
-Controlled Agent Task Queue / Execution Readiness Boundary**
-([`AGENT_TASK_QUEUE_READINESS_BOUNDARY.md`](AGENT_TASK_QUEUE_READINESS_BOUNDARY.md)). Phase 26 is
-**DB-free**: it plans review-gated, not-executed queue drafts and a plan-only Phase 17 write
-request for that table but **adds no table, no column, and no migration** (the head is unchanged).
-A future Phase 27 would introduce the `agent_task_queue_records` table and its narrow writer,
-carrying the same universal governance axes and audit fields as every other record group above.
+The `agent_task_queue_records` record group is planned by the **Phase 26 Controlled Agent Task
+Queue / Execution Readiness Boundary**
+([`AGENT_TASK_QUEUE_READINESS_BOUNDARY.md`](AGENT_TASK_QUEUE_READINESS_BOUNDARY.md)) — Phase 26 is
+**DB-free** and adds no table — and was **introduced as a real table by Phase 27** (migration
+`006_agent_task_queue_records`; the controlled DB now has **12 tables**). It carries the same
+universal governance axes and audit fields as every other record group above, plus execution-
+posture columns (`readiness_state`, `execution_status`, and the `*_allowed` / `requires_human_review`
+booleans) that are always stored in the review-gated, **not-executed** posture. Its narrow writer
+([`AGENT_TASK_QUEUE_CONTROLLED_WRITER.md`](AGENT_TASK_QUEUE_CONTROLLED_WRITER.md)) creates exactly
+one row and never executes an agent or creates an `agent_run_records` row.

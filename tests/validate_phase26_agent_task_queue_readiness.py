@@ -65,7 +65,7 @@ REQUIRED_PHRASES = [
     "no agentnet",
     "no mock",
     "review-gated",
-    "a future phase 27",
+    "phase 27",
     "identity matching is necessary but not sufficient",
 ]
 
@@ -157,8 +157,14 @@ def structural_checks() -> None:
         check("Phase 25 commit present in recent history (git unavailable — skipped)", True)
     versions_dir = os.path.join(REPO_ROOT, "alembic", "versions")
     versions = sorted(v for v in os.listdir(versions_dir) if v.endswith(".py"))
-    check("exactly 5 migration files (001..005)", len(versions) == 5)
-    check("no 006_* migration added", not any(v.startswith("006") for v in versions))
+    # Phase 26 is a DB-free boundary: it introduced no migration of its own. (Later phases —
+    # e.g. Phase 27's agent_task_queue_records table — legitimately add migrations, so this
+    # checks for a Phase-26-specific one, not a fixed global count.)
+    p26_migrations = [
+        v for v in versions
+        if any(term in v.lower() for term in ("task_queue_readiness", "phase26", "readiness"))
+    ]
+    check("no Phase 26 readiness migration added", not p26_migrations)
 
     print("\n6. Doc language")
     blob = re.sub(r"\s+", " ", "\n".join(read(rel) for rel in DOCS)).lower()

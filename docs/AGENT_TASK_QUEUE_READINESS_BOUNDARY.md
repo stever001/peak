@@ -88,11 +88,13 @@ Phases 20–22/24 do.
 
 Each valid queue draft yields a Phase 17 `ControlledWriteRequest` with
 `target_table="agent_task_queue_records"`, `requested_action="create_agent_task_queue_record"`,
-the engagement as subject, and the draft as `record_draft`. This is a **plan only**: no DB
-writer is called, `peak.db` is not imported, no migration or table is added, and no stored row
-is claimed. The `agent_task_queue_records` table is **not yet** on the Phase 17 allowlist and
-has no writer — **a future Phase 27** would add both. See
-[`CONTROLLED_WRITE_ALLOWLIST.md`](CONTROLLED_WRITE_ALLOWLIST.md).
+the engagement as subject, and the draft as `record_draft`. Within **this** phase (26) it is a
+**plan only**: no DB writer is called, `peak.db` is not imported, no migration or table is added,
+and no stored row is claimed. **Phase 27** added the `agent_task_queue_records` table, the Phase 17
+allowlist entry, and the narrow DB-backed writer
+([`AGENT_TASK_QUEUE_CONTROLLED_WRITER.md`](AGENT_TASK_QUEUE_CONTROLLED_WRITER.md)) that persists a
+review-gated, not-executed row from this exact draft; Phase 26 itself remains DB-free and executes
+nothing. See [`CONTROLLED_WRITE_ALLOWLIST.md`](CONTROLLED_WRITE_ALLOWLIST.md).
 
 ## Integration with Phase 25
 

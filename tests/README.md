@@ -10,7 +10,7 @@ objects are needed, the harnesses build **synthetic fixtures at runtime**
 directory that is auto-deleted. Nothing is stored. See
 [`../docs/FIXTURE_STRATEGY.md`](../docs/FIXTURE_STRATEGY.md).
 
-Twenty-six harnesses, run together by `make validate`:
+Twenty-seven harnesses, run together by `make validate`:
 
 - `validate_phase1.py` — schemas + synthetic object fixtures.
 - `validate_phase2.py` — schemas + a synthetic `EngagementPacket`.
@@ -44,6 +44,8 @@ Twenty-six harnesses, run together by `make validate`:
   orchestrator check (structural + plan-only always; DB-backed when SQLAlchemy is present).
 - `validate_phase26_agent_task_queue_readiness.py` — agent task queue / execution readiness
   boundary check (stdlib-only; DB-free — no database layer).
+- `validate_phase27_agent_task_queue_writer.py` — controlled-DB agent-task-queue-writer check
+  (structural always; DB-backed when SQLAlchemy is present).
 
 ## `synthetic_fixtures.py`
 
@@ -511,8 +513,8 @@ nothing and connects to nothing). The **structural** layer confirms the package 
 compile, and import; that the package imports no SQLAlchemy / Alembic / `peak.db` / live-or-mock
 LLM / AgentNet / MCP / resolver / connector / network module; that the Phase 23 ingestion package
 stays DB-free; that the Phase 25 commit is present in recent history; that **no Phase 26 migration**
-was added (exactly five migration files, no `006_*`, Alembic head stays `005_source_ingestion_idem`);
-and that the docs carry the required language. The **functional** layer runs
+was added (Phase 26 is a DB-free boundary; later phases such as Phase 27 legitimately add
+migrations); and that the docs carry the required language. The **functional** layer runs
 `prepare_agent_task_queue_plan` and asserts: a valid task becomes a review-gated,
 `not_executed` / `execution_allowed=false` queue draft with no id/created_at and a deterministic
 per-task idempotency key, plus a plan-only Phase 17 `ControlledWriteRequest` targeting
@@ -531,6 +533,39 @@ documented Phase 25 → Phase 26 handoff. It also re-asserts source-only discipl
 [`../docs/AGENT_TASK_QUEUE_READINESS_BOUNDARY.md`](../docs/AGENT_TASK_QUEUE_READINESS_BOUNDARY.md)
 and [`../docs/AGENT_TASK_QUEUE_GOVERNANCE_POLICY.md`](../docs/AGENT_TASK_QUEUE_GOVERNANCE_POLICY.md).
 
+## `validate_phase27_agent_task_queue_writer.py`
+
+Check for the Phase 27 **controlled DB agent-task-queue writer** (`peak/db/agent_task_queue_writer.py`,
+`peak/db/writer_contracts.py`) — the same two-layer pattern as Phases 20–24, applied to
+`agent_task_queue_records`. The **structural** layer confirms the files exist and compile; that the
+Phase 26 `peak/task_queue` package stays **DB-free**; that the writer imports no
+LLM/MockLLM/executor/AgentNet/MCP/resolver/connector/network client or credential; that the
+`006_agent_task_queue_records` migration is additive schema-only (creates one table, no INSERT/seed,
+upgrade+downgrade, adds the unique index, `down_revision = 005_source_ingestion_idem`); that the docs
+carry the required language; and that the repo stays source-only. The **DB-backed** layer (when
+SQLAlchemy is importable) builds a **temporary local SQLite database** (deleted afterward) and
+exercises real behavior — migration upgrade/downgrade/re-upgrade; successful create (one row,
+server-stamped `atq_` id/timestamp, **safe references only** — evidence ids as a list, no raw
+content, review-gated `output_status=draft` / `review_status=needs_review` /
+`lifecycle_status=draft` / `execution_status=not_executed` with all execution flags false and
+`requires_human_review=true`); side-effect discipline (**no `agent_run_records` row**, no unrelated
+writes); idempotent replay; conflicting replay (denied, row unchanged); DB-backed authorization
+(request scope vs stored `Engagement.authorization_scope`; missing stored/request scope; missing
+subject; owner/client/engagement mismatch); draft/request identity + **Phase 13 registry** gate
+(unknown agent rejected); table/action allowlist (wrong table/action + delete-/update-/publish-/
+execute-/client-facing-/financial-/raw_sql-like actions, and an `agent_run_records` target
+rejected); posture rejections (bad output/review/lifecycle/execution status, authoritative,
+client-facing, capsule-ready, execution/LLM/AgentNet/resolver/network allowed,
+`requires_human_review=false`, caller-supplied id/timestamp, missing/blocked readiness_state);
+content/secret guard (injected `packet_payload` / `raw_packet_content` / `raw_evidence_text` /
+`raw_interview_text` / `source_bytes` / `api_key` / `connection_string` / `token` attributes
+rejected without echoing values); and transaction/failure semantics (`failed_before_write`,
+`write_outcome_uncertain`, and the `IntegrityError` race → replay/conflict). Skips the DB layer
+with instructions if SQLAlchemy is absent (still exits 0). Run the full suite with
+`make validate-phase27 PYTHON=.venv/bin/python`. See
+[`../docs/AGENT_TASK_QUEUE_CONTROLLED_WRITER.md`](../docs/AGENT_TASK_QUEUE_CONTROLLED_WRITER.md)
+and [`../docs/AGENT_TASK_QUEUE_IDEMPOTENCY_POLICY.md`](../docs/AGENT_TASK_QUEUE_IDEMPOTENCY_POLICY.md).
+
 ## Running
 
 This machine uses `python3` (there is no bare `python`). From the repo root:
@@ -540,7 +575,7 @@ This machine uses `python3` (there is no bare `python`). From the repo root:
 make install-dev          # == python3 -m pip install -r requirements-dev.txt
 
 # run all harnesses
-make validate             # == phase1 … phase26
+make validate             # == phase1 … phase27
 
 # or run one at a time
 make validate-phase1
@@ -604,7 +639,7 @@ python3 tests/validate_phase26_agent_task_queue_readiness.py               # std
 
 ## Exit codes
 
-All twenty-six harnesses share the same convention:
+All twenty-seven harnesses share the same convention:
 
 | Code | Meaning |
 | --- | --- |

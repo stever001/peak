@@ -72,9 +72,10 @@ future-writer boundary. The plan-only Phase 17 `ControlledWriteRequest` carries 
 
 ## No execution, no persistence
 
-Phase 26 is a planning boundary. It never runs an agent and never writes a row. A future
-Phase 27 may add a narrow DB-backed `agent_task_queue_records` writer that re-loads the stored
-`Engagement` authorization at write time (identity necessary but not sufficient) and enforces
-DB-level idempotency — mirroring Phases 20–22/24. Until then, `agent_task_queue_records` is a
-**planned future** allowlist addition only; see
+Phase 26 is a planning boundary. It never runs an agent and never writes a row. **Phase 27**
+added the narrow DB-backed `agent_task_queue_records` writer
+([`AGENT_TASK_QUEUE_CONTROLLED_WRITER.md`](AGENT_TASK_QUEUE_CONTROLLED_WRITER.md)) that re-loads
+the stored `Engagement` authorization at write time (identity necessary but not sufficient) and
+enforces DB-level idempotency — mirroring Phases 20–22/24 — persisting a review-gated,
+not-executed row. Phase 26 itself still writes nothing; see
 [`CONTROLLED_WRITE_ALLOWLIST.md`](CONTROLLED_WRITE_ALLOWLIST.md).

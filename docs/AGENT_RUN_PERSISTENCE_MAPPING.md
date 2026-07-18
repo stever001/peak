@@ -114,6 +114,8 @@ review-gated `agent_run_records` row under DB-enforced idempotency.
 Note the distinct table: this mapping targets `agent_run_records` (the *output* of an executed
 agent run). The **Phase 26 Controlled Agent Task Queue / Execution Readiness Boundary**
 ([`AGENT_TASK_QUEUE_READINESS_BOUNDARY.md`](AGENT_TASK_QUEUE_READINESS_BOUNDARY.md)) is upstream
-and different: it plans review-gated, **not-executed** queue drafts (a future
-`agent_task_queue_records` table) from derived Phase 13 `AgentTaskRequest` objects, before any
-run exists. Phase 26 is DB-free and executes nothing; it does **not** create `agent_run_records`.
+and different: it plans review-gated, **not-executed** queue drafts (the
+`agent_task_queue_records` table, persisted by the **Phase 27** writer
+[`AGENT_TASK_QUEUE_CONTROLLED_WRITER.md`](AGENT_TASK_QUEUE_CONTROLLED_WRITER.md)) from derived
+Phase 13 `AgentTaskRequest` objects, before any run exists. Phase 26 is DB-free and executes
+nothing; neither Phase 26 nor the Phase 27 queue writer creates an `agent_run_records` row.

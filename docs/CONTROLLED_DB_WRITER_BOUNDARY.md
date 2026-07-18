@@ -153,7 +153,11 @@ stored-scope check stays inside each writer.
 
 The **Phase 26 Controlled Agent Task Queue / Execution Readiness Boundary**
 ([`AGENT_TASK_QUEUE_READINESS_BOUNDARY.md`](AGENT_TASK_QUEUE_READINESS_BOUNDARY.md)) builds
-plan-only `ControlledWriteRequest` objects that target a *future* `agent_task_queue_records` table
-via this boundary's shape — but it calls **no** writer and imports no `peak.db`. That table is
-**not yet** on the allowlist ([`CONTROLLED_WRITE_ALLOWLIST.md`](CONTROLLED_WRITE_ALLOWLIST.md)) and
-has no writer; a future Phase 27 would add both. A write plan is not a write.
+plan-only `ControlledWriteRequest` objects that target the `agent_task_queue_records` table via
+this boundary's shape — but it calls **no** writer and imports no `peak.db`. **Phase 27** added
+that table/action to the allowlist
+([`CONTROLLED_WRITE_ALLOWLIST.md`](CONTROLLED_WRITE_ALLOWLIST.md)) and the narrow DB-backed writer
+([`AGENT_TASK_QUEUE_CONTROLLED_WRITER.md`](AGENT_TASK_QUEUE_CONTROLLED_WRITER.md)) that executes
+the plan — persisting one review-gated, **not-executed** row under the identical pattern
+(stored-`Engagement` scope re-check, DB-enforced idempotency). A write plan is still not a write;
+Phase 26 remains plan-only.

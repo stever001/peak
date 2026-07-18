@@ -83,14 +83,18 @@ writer executes the plan under access control. The **Phase 18 Evidence Persisten
 ([`AGENT_RUN_PERSISTENCE_MAPPING.md`](AGENT_RUN_PERSISTENCE_MAPPING.md)) is the second
 (`agent_run_records` / `create_agent_run_record`) — both through this allowlist.
 
-### Planned future addition: `agent_task_queue_records`
+### `agent_task_queue_records` (Phase 27 — now live)
 
 The **Phase 26 Controlled Agent Task Queue / Execution Readiness Boundary**
 ([`AGENT_TASK_QUEUE_READINESS_BOUNDARY.md`](AGENT_TASK_QUEUE_READINESS_BOUNDARY.md)) builds
 plan-only `ControlledWriteRequest` objects with `target_table="agent_task_queue_records"` and
-`requested_action="create_agent_task_queue_record"`. This table/action is **not yet on the
-allowlist** and has **no writer** — Phase 26 only produces the plan artifact and calls nothing. A
-future **Phase 27** would add `agent_task_queue_records` / `create_agent_task_queue_record` to
-`ALLOWED_TABLES` / `ALLOWED_ACTIONS` here through the explicit governance gate, alongside a narrow
-DB-backed writer that re-loads the stored `Engagement` scope at write-time and enforces DB-level
-idempotency (mirroring Phases 20–22/24). Until then, the allowlist is unchanged.
+`requested_action="create_agent_task_queue_record"`. **Phase 26 may create these plan-only
+requests; Phase 27 is the first phase where the table/action has a live narrow DB writer.**
+
+Phase 27 added exactly this one table/action to `ALLOWED_TABLES` / `ALLOWED_ACTIONS` (no other
+change — no update/delete/upsert/raw-SQL action). The narrow Phase 27 writer
+([`AGENT_TASK_QUEUE_CONTROLLED_WRITER.md`](AGENT_TASK_QUEUE_CONTROLLED_WRITER.md)) re-loads the
+stored `Engagement` scope at write-time and enforces DB-level idempotency (mirroring Phases
+20–22/24). **This does not authorize execution** (no agent/LLM/AgentNet/resolver/network call)
+and **does not authorize `agent_run_records` creation** — Phase 27 persists review-gated,
+not-executed queue records only.

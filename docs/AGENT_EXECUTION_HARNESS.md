@@ -143,3 +143,9 @@ agents and never runs one — no live or mock executor, no LLM/AgentNet/resolver
 `ready_for_future_controlled_execution` state means "structurally ready for a later controlled
 execution phase after human review", never "execute now"; `execution_allowed` stays `false`.
 Actual execution remains the harness's responsibility, later, if at all.
+
+**Phase 27** persists those queue drafts as review-gated, **not-executed**
+`agent_task_queue_records` rows via a narrow DB writer
+([`AGENT_TASK_QUEUE_CONTROLLED_WRITER.md`](AGENT_TASK_QUEUE_CONTROLLED_WRITER.md)). Persisting a
+queue record still does **not** execute an agent, call this harness's executor / `MockLLM` /
+AgentNet, or create an `agent_run_records` row — it only records that a task is queued for review.

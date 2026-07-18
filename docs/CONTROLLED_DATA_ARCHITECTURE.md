@@ -214,5 +214,7 @@ Agent Task Queue / Execution Readiness Boundary**
 ([`AGENT_TASK_QUEUE_READINESS_BOUNDARY.md`](AGENT_TASK_QUEUE_READINESS_BOUNDARY.md)): a **DB-free**
 boundary that plans review-gated, **not-executed** agent task queue drafts from derived Phase 13
 tasks. It stores nothing, executes nothing, and carries only ids/references — never raw client
-content. A future Phase 27 may add the narrow `agent_task_queue_records` writer that persists these
-drafts into controlled storage under the same stored-scope authorization rules.
+content. **Phase 27** added the narrow `agent_task_queue_records` writer
+([`AGENT_TASK_QUEUE_CONTROLLED_WRITER.md`](AGENT_TASK_QUEUE_CONTROLLED_WRITER.md)) that persists
+these drafts into controlled storage under the same stored-scope authorization rules — a
+review-gated, **not-executed** row (no agent runs, no `agent_run_records` created).

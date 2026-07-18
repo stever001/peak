@@ -161,11 +161,19 @@ def structural_checks() -> None:
         check(f"{rel}: no connector/agentnet/mock_llm import", not conn)
         check(f"{rel}: no top-level DB import (writers lazy)", not topdb)
 
-    print("\n5. No new migration (head stays 005_source_ingestion_idem)")
+    print("\n5. Phase 25 added no migration (orchestrator is a sequencing layer)")
     versions = sorted(os.listdir(os.path.join(REPO_ROOT, "alembic", "versions")))
     versions = [v for v in versions if v.endswith(".py")]
-    check("exactly 5 migration files (001..005)", len(versions) == 5)
-    check("no 006_* migration added", not any(v.startswith("006") for v in versions))
+    # Phase 25 is a DB-free sequencing layer: it introduced no migration of its own. (Later
+    # phases legitimately add migrations, so this checks for a Phase-25-specific one, not a
+    # fixed global count.)
+    p25_migrations = [
+        v for v in versions
+        if any(term in v.lower() for term in ("orchestrat", "packet_processing", "phase25"))
+    ]
+    check("no Phase 25 orchestrator migration added", not p25_migrations)
+    check("the Phase 24 source-ingestion migration (005) is present",
+          any("005" in v for v in versions))
 
     print("\n6. Doc language")
     blob = re.sub(r"\s+", " ", "\n".join(read(rel) for rel in DOCS)).lower()

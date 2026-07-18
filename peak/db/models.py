@@ -233,6 +233,50 @@ class SourceIngestionRecord(Base, GovernanceMixin, AuditMixin):
     payload_fingerprint: Mapped[Optional[str]] = mapped_column(String(64))
 
 
+class AgentTaskQueueRecord(Base, GovernanceMixin, AuditMixin):
+    __tablename__ = "agent_task_queue_records"
+    # Phase 27: DB-enforced idempotency for the controlled agent-task-queue writer. The
+    # uniqueness boundary includes identity context so an idempotency key cannot collide across
+    # owner / client / engagement. See docs/AGENT_TASK_QUEUE_IDEMPOTENCY_POLICY.md.
+    __table_args__ = (
+        UniqueConstraint(
+            "owner_id",
+            "client_id",
+            "engagement_id",
+            "idempotency_key",
+            name="uq_agent_task_queue_records_idem",
+        ),
+        MYSQL_TABLE_ARGS,
+    )
+    # id convention: atq_<slug>
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    client_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    engagement_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    agent_name: Mapped[str] = mapped_column(String(128), index=True, nullable=False)
+    task_type: Mapped[Optional[str]] = mapped_column(String(64))
+    requested_action: Mapped[Optional[str]] = mapped_column(String(64))
+    source_ingestion_record_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    # Governance / execution-posture — real columns (never JSON). "not-executed" is enforced.
+    readiness_state: Mapped[Optional[str]] = mapped_column(String(48), index=True)
+    output_status: Mapped[str] = mapped_column(String(32), index=True, default="draft")
+    execution_status: Mapped[str] = mapped_column(String(32), index=True, default="not_executed")
+    authoritative: Mapped[bool] = mapped_column(Boolean, default=False)
+    client_facing_approved: Mapped[bool] = mapped_column(Boolean, default=False)
+    capsule_candidate_ready: Mapped[bool] = mapped_column(Boolean, default=False)
+    execution_allowed: Mapped[bool] = mapped_column(Boolean, default=False)
+    llm_execution_allowed: Mapped[bool] = mapped_column(Boolean, default=False)
+    agentnet_context_allowed: Mapped[bool] = mapped_column(Boolean, default=False)
+    resolver_context_allowed: Mapped[bool] = mapped_column(Boolean, default=False)
+    network_allowed: Mapped[bool] = mapped_column(Boolean, default=False)
+    requires_human_review: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Phase 27 controlled-writer fields. idempotency_key + payload_fingerprint back
+    # replay/replay-conflict detection. Safe references (task_input_ref, safe_input_summary,
+    # evidence_reference_ids, packet_processing_run_ref, orchestration_ref, prompt_contract_path,
+    # reasons, warnings) live in details_json — never raw payload/content.
+    idempotency_key: Mapped[Optional[str]] = mapped_column(String(128), index=True)
+    payload_fingerprint: Mapped[Optional[str]] = mapped_column(String(64))
+
+
 # Convenience list of all model classes (used by tooling/validation).
 ALL_MODELS = [
     Client,
@@ -246,4 +290,5 @@ ALL_MODELS = [
     AgentRunRecord,
     CapsulePublicationCandidate,
     SourceIngestionRecord,
+    AgentTaskQueueRecord,
 ]

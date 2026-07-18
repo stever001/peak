@@ -83,4 +83,6 @@ Separately, the derived Phase 13 `AgentTaskRequest` objects surfaced by the agen
 stage are consumed by the **Phase 26 Controlled Agent Task Queue / Execution Readiness Boundary**
 ([`AGENT_TASK_QUEUE_READINESS_BOUNDARY.md`](AGENT_TASK_QUEUE_READINESS_BOUNDARY.md)) — a DB-free
 boundary that plans review-gated, not-executed queue drafts. This handoff is by contract only;
-Phase 25 remains unchanged and still executes no agent.
+Phase 25 remains unchanged and still executes no agent. **Phase 27** persists those drafts as
+`agent_task_queue_records` rows through a narrow DB writer — review-gated and not-executed, with no
+agent execution and no `agent_run_records` creation.

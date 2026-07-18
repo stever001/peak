@@ -660,6 +660,43 @@ and documentation accurately states integration status.
   [`../tests/validate_phase26_agent_task_queue_readiness.py`](../tests/validate_phase26_agent_task_queue_readiness.py)
   (`make validate-phase26`; stdlib-only, DB-free).
 
+**Agent Task Queue Controlled Writer (Phase 27 — fifth DB-backed writer):**
+
+- [x] The fifth narrow live DB writer, applying the Phase 20–24 pattern to
+  `agent_task_queue_records` — the first live persistence for the Phase 26 readiness/queue
+  boundary: [`../peak/db/agent_task_queue_writer.py`](../peak/db/agent_task_queue_writer.py) (+
+  `AgentTaskQueueWriteReceipt` / `AgentTaskQueueWriteOutcome` added to
+  [`../peak/db/writer_contracts.py`](../peak/db/writer_contracts.py) and `AgentTaskQueueRecord`
+  added to [`../peak/db/models.py`](../peak/db/models.py)), the additive migration
+  [`../alembic/versions/006_agent_task_queue_records.py`](../alembic/versions/006_agent_task_queue_records.py)
+  (down_revision `005_source_ingestion_idem`; single linear head `006_agent_task_queue_records`;
+  creates one table only, no data), and docs
+  [`AGENT_TASK_QUEUE_CONTROLLED_WRITER.md`](AGENT_TASK_QUEUE_CONTROLLED_WRITER.md) /
+  [`AGENT_TASK_QUEUE_IDEMPOTENCY_POLICY.md`](AGENT_TASK_QUEUE_IDEMPOTENCY_POLICY.md). It consumes a
+  Phase 17 `ControlledWriteRequest` whose `record_draft` is a Phase 26 `AgentTaskQueueDraft` and
+  creates **exactly one** review-gated, **not-executed** `agent_task_queue_records` row with
+  server-controlled id/timestamps. **Write-time DB-backed authorization:** loads the authoritative
+  stored `Engagement` row and requires `request.authorization_scope ==
+  engagement.authorization_scope` (identity necessary but not sufficient; missing stored/request
+  scope denied). **No execution:** executes no agent (live or mock), makes no LLM/MockLLM/AgentNet/
+  MCP/resolver/connector/network call, and **never creates an `agent_run_records` row**. Stores
+  **safe references only** (agent_name, task_type/requested_action, task_input_ref,
+  safe_input_summary, source_ingestion_record_id, evidence_reference_ids, run/orchestration refs,
+  readiness_state, statuses, posture booleans) — never raw packet/evidence/interview content,
+  source bytes, generated output, or secrets; a draft carrying such an attribute is rejected
+  without echoing values. Agent identity is gated against the Phase 13 registry (unknown agents
+  rejected). **DB-enforced idempotency** via a unique index over
+  `(owner_id, client_id, engagement_id, idempotency_key)` + `payload_fingerprint`, distinguishing
+  `created` / `idempotent_replay` / `denied` / `failed_before_write` / `write_outcome_uncertain`
+  (with an `IntegrityError` re-query race branch). Allows only `agent_task_queue_records` /
+  `create_agent_task_queue_record`; the Phase 17 allowlist gained exactly that one table/action.
+  Never updates or deletes; no client-facing approval, financial verification, or capsule
+  publication. The Phase 26 `peak/task_queue` package stays **DB-free** (regression-guarded).
+  `make db-check` now reports **exactly 12 tables**. Checked by
+  [`../tests/validate_phase27_agent_task_queue_writer.py`](../tests/validate_phase27_agent_task_queue_writer.py)
+  (`make validate-phase27 PYTHON=.venv/bin/python` for the DB-backed suite; structural checks run
+  on plain `python3`).
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

@@ -140,9 +140,12 @@ class AgentTaskQueueDraft:
     task_input_summary: Optional[str] = None  # a safe count/shape summary, never raw content
     source_ingestion_record_id: Optional[str] = None
     evidence_reference_ids: List[str] = field(default_factory=list)
+    packet_processing_run_ref: Optional[str] = None
+    orchestration_ref: Optional[str] = None
     prompt_contract_path: Optional[str] = None
     authorization_scope: Optional[str] = None
     idempotency_key: Optional[str] = None  # deterministic per-task key
+    readiness_state: Optional[str] = None  # non-blocked readiness state (Phase 26 classification)
     output_status: str = DEFAULT_OUTPUT_STATUS
     review_status: str = DEFAULT_REVIEW_STATUS
     lifecycle_status: str = DEFAULT_LIFECYCLE_STATUS

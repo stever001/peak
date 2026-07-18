@@ -4,12 +4,12 @@
 
 PYTHON ?= python3
 
-.PHONY: help validate validate-phase1 validate-phase2 validate-phase3 validate-phase4 validate-phase5 validate-phase6 validate-phase7 validate-phase8 validate-phase9 validate-phase10 validate-phase11 validate-phase12 validate-phase13 validate-phase14 validate-phase15 validate-phase16 validate-phase17 validate-phase18 validate-phase19 validate-phase20 validate-phase21 validate-phase22 validate-phase23 validate-phase24 validate-phase25 validate-phase26 db-check packet-summary install-dev
+.PHONY: help validate validate-phase1 validate-phase2 validate-phase3 validate-phase4 validate-phase5 validate-phase6 validate-phase7 validate-phase8 validate-phase9 validate-phase10 validate-phase11 validate-phase12 validate-phase13 validate-phase14 validate-phase15 validate-phase16 validate-phase17 validate-phase18 validate-phase19 validate-phase20 validate-phase21 validate-phase22 validate-phase23 validate-phase24 validate-phase25 validate-phase26 validate-phase27 db-check packet-summary install-dev
 
 help: ## Show available targets
 	@echo "Targets:"
 	@echo "  make install-dev        Install dev dependencies ($(PYTHON) -m pip install -r requirements-dev.txt)"
-	@echo "  make validate           Run all validation harnesses (Phase 1 through Phase 26)"
+	@echo "  make validate           Run all validation harnesses (Phase 1 through Phase 27)"
 	@echo "  make validate-phase1    Run only the Phase 1 object harness"
 	@echo "  make validate-phase2    Run only the Phase 2 EngagementPacket harness"
 	@echo "  make validate-phase3    Run only the Phase 3 prompt-contract inventory check"
@@ -36,13 +36,14 @@ help: ## Show available targets
 	@echo "  make validate-phase24   Run only the Phase 24 controlled-DB source-ingestion-writer check"
 	@echo "  make validate-phase25   Run only the Phase 25 controlled-packet-processing-orchestrator check"
 	@echo "  make validate-phase26   Run only the Phase 26 agent-task-queue / execution-readiness check"
+	@echo "  make validate-phase27   Run only the Phase 27 controlled-DB agent-task-queue-writer check"
 	@echo "  make db-check           Alias for the Phase 11 database-scaffold check"
 	@echo "  make packet-summary PACKET=/path/to/packet.json   Summarize a real packet (read-only; no LLM/API)"
 
 install-dev: ## Install development dependencies
 	$(PYTHON) -m pip install -r requirements-dev.txt
 
-validate: validate-phase1 validate-phase2 validate-phase3 validate-phase4 validate-phase5 validate-phase6 validate-phase7 validate-phase8 validate-phase9 validate-phase10 validate-phase11 validate-phase12 validate-phase13 validate-phase14 validate-phase15 validate-phase16 validate-phase17 validate-phase18 validate-phase19 validate-phase20 validate-phase21 validate-phase22 validate-phase23 validate-phase24 validate-phase25 validate-phase26 ## Run all validation harnesses
+validate: validate-phase1 validate-phase2 validate-phase3 validate-phase4 validate-phase5 validate-phase6 validate-phase7 validate-phase8 validate-phase9 validate-phase10 validate-phase11 validate-phase12 validate-phase13 validate-phase14 validate-phase15 validate-phase16 validate-phase17 validate-phase18 validate-phase19 validate-phase20 validate-phase21 validate-phase22 validate-phase23 validate-phase24 validate-phase25 validate-phase26 validate-phase27 ## Run all validation harnesses
 
 validate-phase1: ## Run the Phase 1 schema/example validation harness
 	$(PYTHON) tests/validate_phase1.py
@@ -121,6 +122,9 @@ validate-phase25: ## Run the Phase 25 controlled-packet-processing-orchestrator 
 
 validate-phase26: ## Run the Phase 26 agent-task-queue / execution-readiness check (stdlib-only; DB-free)
 	$(PYTHON) tests/validate_phase26_agent_task_queue_readiness.py
+
+validate-phase27: ## Run the Phase 27 controlled-DB agent-task-queue-writer check (DB-backed via .venv)
+	$(PYTHON) tests/validate_phase27_agent_task_queue_writer.py
 
 db-check: ## Validate the DB scaffold (alias for validate-phase11)
 	$(PYTHON) tests/validate_phase11_db_scaffold.py
