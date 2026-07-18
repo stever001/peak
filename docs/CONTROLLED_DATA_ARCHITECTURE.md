@@ -221,3 +221,9 @@ review-gated, **not-executed** row (no agent runs, no `agent_run_records` create
 sequences this whole path (ingest → readiness → optional persistence) through the Phase 25
 orchestrator; see
 [`PACKET_TO_TASK_QUEUE_ORCHESTRATION_INTEGRATION.md`](PACKET_TO_TASK_QUEUE_ORCHESTRATION_INTEGRATION.md).
+
+Human review of packet-derived outputs is planned by the **Phase 29 Packet-Derived Review
+Orchestration Boundary**
+([`PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md`](PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md)):
+a **DB-free** boundary that organizes safe references into review-ready plans for human reviewers.
+It stores nothing, approves nothing, and carries only ids/references — never raw client content.

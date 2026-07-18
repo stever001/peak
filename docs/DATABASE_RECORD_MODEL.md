@@ -308,3 +308,9 @@ booleans) that are always stored in the review-gated, **not-executed** posture. 
 one row and never executes an agent or creates an `agent_run_records` row. **Phase 28** added no
 table or migration — it only lets the Phase 25 orchestrator drive that existing writer (the DB
 still has 12 tables; head `006_agent_task_queue_records`).
+
+**Phase 29** likewise added no table or migration: the Packet-Derived Review Orchestration
+Boundary is **DB-free** and stores nothing. A `review_bundle_records` record group is a **planned
+future** addition only (deferred), described by
+[`PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md`](PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md);
+no such table exists yet.

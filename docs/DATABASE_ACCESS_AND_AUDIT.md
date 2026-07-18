@@ -214,3 +214,8 @@ scope re-check (identity necessary but not sufficient), server-controlled id/tim
 `created_by`, DB-level idempotency, and a typed receipt with no credentials/SQL/connection/raw
 content. It stores **safe references only** and a review-gated, **not-executed** posture — it
 executes no agent and creates no `agent_run_records` row.
+
+The **Phase 29 Packet-Derived Review Orchestration Boundary**
+([`PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md`](PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md))
+touches the database not at all: it is DB-free, opens no connection, writes no row, and approves
+nothing. There is therefore no new access/audit surface in Phase 29.

@@ -104,6 +104,8 @@ peak/
 │   ├── AGENT_TASK_QUEUE_CONTROLLED_WRITER.md       # Fifth DB-backed writer, for agent_task_queue_records (Phase 27)
 │   ├── AGENT_TASK_QUEUE_IDEMPOTENCY_POLICY.md      # DB-enforced idempotency for agent task queue rows (Phase 27)
 │   ├── PACKET_TO_TASK_QUEUE_ORCHESTRATION_INTEGRATION.md # Phase 25 orchestrator ↔ Phase 26/27 queue path integration (Phase 28)
+│   ├── PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md # DB-free review-planning boundary for human reviewers (Phase 29)
+│   ├── REVIEW_ORCHESTRATION_GOVERNANCE_POLICY.md   # Review-orchestration governance: readiness states, no approval (Phase 29)
 │   └── IMPLEMENTATION_PLAN.md
 ├── peak/                         # Python tooling layer (source only; no data)
 │   ├── db/                       # base, enums, models, session + agent_run (P20), evidence (P21), review (P22), source-ingestion (P24) & agent-task-queue (P27) writers
@@ -115,7 +117,8 @@ peak/
 │   ├── evidence/                 # Evidence persistence mapping: Phase 14 → Phase 17 (no live DB)
 │   ├── ingestion/                # Engagement packet ingestion boundary: derives plans (no DB writes)
 │   ├── orchestration/            # Controlled packet-processing orchestrator: sequences existing boundaries (P25; plan-only default)
-│   └── task_queue/               # Agent task queue / execution readiness boundary: plans queue drafts (P26; DB-free, no execution)
+│   ├── task_queue/               # Agent task queue / execution readiness boundary: plans queue drafts (P26; DB-free, no execution)
+│   └── review_orchestration/     # Packet-derived review orchestration: plans human-review bundles (P29; DB-free, no approval)
 ├── alembic/                      # Alembic migrations (schema only; no data)
 ├── alembic.ini                   # Alembic config (URL from env, not the repo)
 ├── .env.example                  # Env placeholders only (PEAK_DATABASE_URL); .env ignored
@@ -762,6 +765,47 @@ persists the results through Phase 27.
 ```bash
 make validate-phase28 PYTHON=.venv/bin/python   # structural + plan-only + DB-backed (temporary SQLite)
 make validate-phase28                           # structural + plan-only on plain python3 (DB layer skipped)
+```
+
+### Packet-Derived Review Orchestration Boundary (Phase 29)
+
+A **DB-free review-planning boundary** that organizes packet-derived outputs (safe references,
+receipts, metadata from prior phases) into **review-ready** plans for human reviewers — review
+bundle drafts, review plan items, and review readiness assessments. It is analogous to Phase 26
+(which planned task-queue readiness without DB writes): Phase 29 plans human-review readiness
+without DB writes. It adds no table and no migration (head stays `006_agent_task_queue_records`;
+still 12 tables), and produces **no** `ControlledWriteRequest` objects — future persistence is
+deferred.
+
+- **It is not an approval phase.** **"Ready for human review" never means approved.** It never
+  performs `approve_internal`, creates client-facing output, verifies financial impact, publishes a
+  capsule, executes an agent, or calls an LLM/MockLLM/AgentNet/MCP/resolver/network; it does not
+  call or change the Phase 22 review writer and creates **no `review_records` row**. Every bundle
+  stays `output_status=draft` / `review_status=needs_review` / `lifecycle_status=draft` with
+  `approval_allowed=false` and `requires_human_review=true`. Every side-effect flag stays `false`.
+- **Public entry point:** `prepare_packet_review_plan(request) -> PacketReviewOrchestrationResult`.
+- **Item types:** `source_ingestion_review`, `evidence_reference_review`, `agent_task_queue_review`,
+  `packet_processing_review`, `cross_stage_consistency_review`, `missing_evidence_review`,
+  `readiness_exception_review`.
+- **Readiness states:** `ready_for_human_review`, `blocked_no_subjects`, `blocked_invalid_scope`,
+  `blocked_lifecycle`, `blocked_raw_content`, `blocked_secret_like_content`,
+  `blocked_execution_intent`, `blocked_approval_intent`, `blocked_publication_intent`,
+  `blocked_financial_verification_intent`.
+- **Governance** rejects missing identity/scope/idempotency, subject scope mismatch (identity
+  necessary but not sufficient), prohibited lifecycle, raw-content / secret-like fields, and
+  approval / execution / client-facing / publication / financial-verification intent — reporting
+  key names only (values never echoed).
+- **Handoff (documented):** the Phase 25/28 packet processor can hand its receipt refs and task
+  queue outputs (all safe references) into Phase 29; Phase 29 does not run inside Phase 25/28 and
+  imports no Phase 27 writer / no Phase 22 writer / no `peak.db`.
+
+- [`peak/review_orchestration/`](peak/review_orchestration/) — review-planning contracts,
+  deterministic governance, and the `prepare_packet_review_plan` planner (stdlib-only).
+- [`docs/PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md`](docs/PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md)
+  and [`docs/REVIEW_ORCHESTRATION_GOVERNANCE_POLICY.md`](docs/REVIEW_ORCHESTRATION_GOVERNANCE_POLICY.md).
+
+```bash
+make validate-phase29   # packet-derived review orchestration boundary check (stdlib-only; DB-free)
 ```
 
 ## Design constraints

@@ -123,3 +123,8 @@ Phase 18 mapping → Phase 21 write — but only when `plan_only=false`, evidenc
 included, and a `session_factory` is supplied. It derives a distinct per-record idempotency key
 (`<idempotency_key>::evid::<i>`) so evidence rows do not collide on the shared boundary, and it
 never bypasses this mapping or the writer's stored-scope authorization.
+
+Persisted `evidence_references` ids are safe references the **Phase 29 Packet-Derived Review
+Orchestration Boundary**
+([`PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md`](PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md))
+can cite as `evidence_reference_review` items when planning human review — DB-free and no-approval.

@@ -112,3 +112,12 @@ created or replayed and none failed; a mix is `partial`.
   without SQLAlchemy.
 - The orchestrator imports no live LLM / MockLLM / executor / AgentNet / MCP / resolver /
   connector / network module.
+
+## Downstream: Phase 29 review planning
+
+The receipt this integration produces (packet-processing receipt ref, source-ingestion / evidence
+/ agent-task-queue ids, task queue outputs) is safe-reference-only and can be handed to the
+**Phase 29 Packet-Derived Review Orchestration Boundary**
+([`PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md`](PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md))
+to plan human review. Phase 29 is DB-free, approves nothing, and does not run inside this
+integration — the handoff is by contract only.

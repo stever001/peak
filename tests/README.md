@@ -10,7 +10,7 @@ objects are needed, the harnesses build **synthetic fixtures at runtime**
 directory that is auto-deleted. Nothing is stored. See
 [`../docs/FIXTURE_STRATEGY.md`](../docs/FIXTURE_STRATEGY.md).
 
-Twenty-eight harnesses, run together by `make validate`:
+Twenty-nine harnesses, run together by `make validate`:
 
 - `validate_phase1.py` — schemas + synthetic object fixtures.
 - `validate_phase2.py` — schemas + a synthetic `EngagementPacket`.
@@ -48,6 +48,8 @@ Twenty-eight harnesses, run together by `make validate`:
   (structural always; DB-backed when SQLAlchemy is present).
 - `validate_phase28_packet_task_queue_integration.py` — packet → task queue orchestration
   integration check (structural + plan-only always; DB-backed when SQLAlchemy is present).
+- `validate_phase29_review_orchestration_boundary.py` — packet-derived review orchestration
+  boundary check (stdlib-only; DB-free — no database layer).
 
 ## `synthetic_fixtures.py`
 
@@ -594,6 +596,32 @@ still work. Skips the DB layer with instructions if SQLAlchemy is absent (still 
 full suite with `make validate-phase28 PYTHON=.venv/bin/python`. See
 [`../docs/PACKET_TO_TASK_QUEUE_ORCHESTRATION_INTEGRATION.md`](../docs/PACKET_TO_TASK_QUEUE_ORCHESTRATION_INTEGRATION.md).
 
+## `validate_phase29_review_orchestration_boundary.py`
+
+Check for the Phase 29 **Packet-Derived Review Orchestration Boundary** (`peak/review_orchestration/`)
+— a DB-free review-planning boundary over packet-derived outputs, analogous to Phase 26.
+Stdlib-only; **no database** (Phase 29 writes nothing, approves nothing, and connects to nothing).
+The **structural** layer confirms the package files exist, compile, and import; that the package
+imports no SQLAlchemy / Alembic / `peak.db` / live-or-mock LLM / AgentNet / MCP / resolver /
+connector / network module; that the Phase 23 ingestion and Phase 26 `task_queue` packages stay
+DB-free; that the Phase 28 commit is present; that **no Phase 29 migration** was added (head stays
+`006_agent_task_queue_records`) and **no new DB table** was declared; and that the docs carry the
+required language. The **functional** layer runs `prepare_packet_review_plan` and asserts: a valid
+request produces review bundle drafts, review plan items (source / evidence / agent-task-queue /
+packet-processing / cross-stage / missing-evidence), and a `ready_for_human_review` assessment —
+review-gated and **not approved** (`approval_allowed=false`, `requires_human_review=true`, no
+id/created_at); **every side-effect flag false**; strict/no-subject → denied and non-strict/
+no-subject → `blocked_no_subjects` (no stored-record claim); identity / scope / lifecycle denials;
+approval / execution / client-facing / publication / financial-verification intent denials (with
+the mapped `blocked_*` readiness state); and content safety — raw packet payload, raw evidence /
+interview text, source bytes, generated output, arbitrary JSON refs, multiline raw text, and
+secret-like keys rejected **without echoing values**. The **integration** layer confirms Phase 29
+consumes safe references shaped like Phase 25/28 packet-processing output and synthetic Phase
+27-style ids with no DB access, and that the package imports neither the Phase 27 writer nor the
+Phase 22 writer (no `review_records` write). See
+[`../docs/PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md`](../docs/PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md)
+and [`../docs/REVIEW_ORCHESTRATION_GOVERNANCE_POLICY.md`](../docs/REVIEW_ORCHESTRATION_GOVERNANCE_POLICY.md).
+
 ## Running
 
 This machine uses `python3` (there is no bare `python`). From the repo root:
@@ -603,7 +631,7 @@ This machine uses `python3` (there is no bare `python`). From the repo root:
 make install-dev          # == python3 -m pip install -r requirements-dev.txt
 
 # run all harnesses
-make validate             # == phase1 … phase28
+make validate             # == phase1 … phase29
 
 # or run one at a time
 make validate-phase1
@@ -634,6 +662,7 @@ make validate-phase25   # structural+plan-only always; add PYTHON=.venv/bin/pyth
 make validate-phase26   # stdlib-only; DB-free (no database layer)
 make validate-phase27   # DB-backed; add PYTHON=.venv/bin/python for the full suite
 make validate-phase28   # structural+plan-only always; add PYTHON=.venv/bin/python for the DB layer
+make validate-phase29   # stdlib-only; DB-free (no database layer)
 ```
 
 Or invoke them directly, without the Makefile:
@@ -667,11 +696,12 @@ python3 tests/validate_phase23_packet_ingestion.py           # stdlib-only, no d
 python3 tests/validate_phase26_agent_task_queue_readiness.py               # stdlib-only, no dependency needed (DB-free)
 .venv/bin/python tests/validate_phase27_agent_task_queue_writer.py         # DB-backed (SQLAlchemy); skips DB layer on plain python3
 .venv/bin/python tests/validate_phase28_packet_task_queue_integration.py   # structural+plan-only always; DB layer needs SQLAlchemy
+python3 tests/validate_phase29_review_orchestration_boundary.py             # stdlib-only, no dependency needed (DB-free)
 ```
 
 ## Exit codes
 
-All twenty-eight harnesses share the same convention:
+All twenty-nine harnesses share the same convention:
 
 | Code | Meaning |
 | --- | --- |

@@ -89,3 +89,9 @@ orchestrator as the `agent_task_queue_readiness` (plan-only, default-on) and
 persistence stage (`plan_only=false` + option on + `session_factory`). See
 [`PACKET_TO_TASK_QUEUE_ORCHESTRATION_INTEGRATION.md`](PACKET_TO_TASK_QUEUE_ORCHESTRATION_INTEGRATION.md).
 Persisting a queue record is not execution — no agent runs and no `agent_run_records` row is created.
+
+The packet-processing receipt and task queue outputs (safe references) may also be handed to the
+**Phase 29 Packet-Derived Review Orchestration Boundary**
+([`PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md`](PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md))
+for DB-free human-review planning. Phase 29 approves nothing and writes nothing; the handoff is by
+contract only.

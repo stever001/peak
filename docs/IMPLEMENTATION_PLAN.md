@@ -729,6 +729,39 @@ and documentation accurately states integration status.
   (`make validate-phase28 PYTHON=.venv/bin/python` for the DB-backed layer; structural + plan-only
   checks run on plain `python3`).
 
+**Packet-Derived Review Orchestration Boundary (Phase 29 — DB-free review planning):**
+
+- [x] A **DB-free review-planning boundary** that organizes packet-derived outputs (safe
+  references, receipts, metadata) into **review-ready** plans for human reviewers — **not** a
+  review-approval phase, review engine, workflow engine, or DB writer; analogous to Phase 26:
+  [`../peak/review_orchestration/`](../peak/review_orchestration/) (`contracts.py`,
+  `governance.py`, `review_planner.py`) and docs
+  [`PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md`](PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md) /
+  [`REVIEW_ORCHESTRATION_GOVERNANCE_POLICY.md`](REVIEW_ORCHESTRATION_GOVERNANCE_POLICY.md).
+  `prepare_packet_review_plan(request)` maps safe references (source-ingestion / evidence /
+  agent-task-queue ids, packet-processing + receipt refs) into review-gated `ReviewBundleDraft`
+  objects (`review_bundle_id=None`, `output_status=draft`, `review_status=needs_review`,
+  `lifecycle_status=draft`, `approval_allowed=false`, `execution_allowed=false`,
+  `publication_allowed=false`, `financial_verified=false`, `requires_human_review=true`),
+  deterministic `ReviewPlanItem` objects (source_ingestion / evidence_reference / agent_task_queue
+  / packet_processing / cross_stage_consistency / missing_evidence / readiness_exception), and
+  `ReviewReadinessAssessment` objects. Readiness states: `ready_for_human_review` plus the
+  `blocked_*` family (no_subjects / invalid_scope / lifecycle / raw_content / secret_like_content /
+  execution_intent / approval_intent / publication_intent / financial_verification_intent). **It is
+  DB-free** (adds no table, no migration — Alembic head stays `006_agent_task_queue_records`; still
+  12 tables — and produces **no** `ControlledWriteRequest` objects; future persistence deferred),
+  **approves nothing** (**"ready for human review" never means approved**), executes nothing, calls
+  no LLM/MockLLM/AgentNet/MCP/resolver/connector/network, does not call or change the Phase 22
+  review writer, and creates **no `review_records` or `agent_run_records` row**. Every side-effect
+  flag stays `false`. Governance requires identity/scope/idempotency + (in strict_mode) ≥1 safe
+  subject, matches structured subject-ref identity **and** scope (necessary but not sufficient), and
+  rejects raw-content / secret-like / approval / execution / client-facing / publication /
+  financial-verification content by key name (values never echoed). **Phase 25/28 integration is a
+  documented handoff** (safe references only; Phase 29 does not run inside Phase 25/28 and imports
+  no `peak.db` / Phase 27 writer / Phase 22 writer). Checked by
+  [`../tests/validate_phase29_review_orchestration_boundary.py`](../tests/validate_phase29_review_orchestration_boundary.py)
+  (`make validate-phase29`; stdlib-only, DB-free).
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

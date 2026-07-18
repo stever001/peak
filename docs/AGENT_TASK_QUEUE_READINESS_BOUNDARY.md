@@ -138,3 +138,8 @@ orchestrator already derives. See
 [`PACKET_TO_TASK_QUEUE_ORCHESTRATION_INTEGRATION.md`](PACKET_TO_TASK_QUEUE_ORCHESTRATION_INTEGRATION.md).
 This boundary stays DB-free and execution-free; the orchestrator only persists (via Phase 27) when
 explicitly requested with a `session_factory`.
+
+Agent task queue record ids (safe references) may also be handed to the **Phase 29 Packet-Derived
+Review Orchestration Boundary**
+([`PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md`](PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md))
+as `agent_task_queue_review` subjects for human-review planning — DB-free and no-approval.

@@ -149,3 +149,9 @@ assessments, and plan-only write requests on the receipt; the `agent_task_queue_
 (off by default) persists them through **Phase 27** `persist_agent_task_queue_record` only when
 `plan_only=false`, the option is on, and a `session_factory` is supplied. Persisting a queue record
 is **not execution** — nothing here executes an agent, and no `agent_run_records` row is created.
+
+Downstream, the **Phase 29 Packet-Derived Review Orchestration Boundary**
+([`PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md`](PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md))
+can consume this receipt's **safe references** (the packet-processing receipt ref, source-ingestion
+/ evidence / agent-task-queue ids) to plan human review — a DB-free, no-approval boundary. The
+handoff is by contract only; Phase 29 does not run inside this orchestrator.

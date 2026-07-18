@@ -123,3 +123,8 @@ denial) on the packet receipt. Write-time stored-`Engagement` authorization stay
 here — a stored-scope mismatch is denied even when the orchestrator's preflight identity checks
 pass. See
 [`PACKET_TO_TASK_QUEUE_ORCHESTRATION_INTEGRATION.md`](PACKET_TO_TASK_QUEUE_ORCHESTRATION_INTEGRATION.md).
+
+The `agent_task_queue_records` ids this writer creates are safe references that a human-review plan
+may cite: the **Phase 29 Packet-Derived Review Orchestration Boundary**
+([`PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md`](PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md))
+consumes those ids (DB-free, no approval, no DB read) to build `agent_task_queue_review` items.

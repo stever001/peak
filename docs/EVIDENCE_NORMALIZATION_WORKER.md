@@ -111,3 +111,8 @@ runs this worker as its (default-on, DB-free) evidence-normalization stage over 
 requests, and — only when explicitly requested with a `session_factory` — routes each normalized
 record through the Phase 18 mapping into the Phase 21 evidence writer. Normalization stays
 deterministic (no LLM/AgentNet/network); the review gate is unchanged.
+
+Evidence-reference ids (safe references) may later be organized for human review by the **Phase 29
+Packet-Derived Review Orchestration Boundary**
+([`PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md`](PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md))
+as `evidence_reference_review` items — DB-free, no approval, no raw content.

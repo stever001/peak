@@ -99,3 +99,8 @@ stored `Engagement` scope at write-time and enforces DB-level idempotency (mirro
 and **does not authorize `agent_run_records` creation** — Phase 27 persists review-gated,
 not-executed queue records only. **Phase 28** invokes the Phase 27 writer for this table/action
 from the Phase 25 orchestrator (opt-in controlled persistence); no other table/action was added.
+
+**Phase 29** added **no** table/action to this allowlist: the Packet-Derived Review Orchestration
+Boundary is DB-free and produces no `ControlledWriteRequest` objects. A future review-plan
+persistence phase (e.g. `review_bundle_records`) would add its table/action here through the same
+explicit governance gate.
