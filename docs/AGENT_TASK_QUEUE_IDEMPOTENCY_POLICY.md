@@ -47,3 +47,9 @@ pathological "integrity error but no matching row" case resolves to `write_outco
 Idempotency governs **persistence** only. A replay never executes an agent, never calls an
 LLM/AgentNet/resolver/network, and never creates an `agent_run_records` row. Replays and
 conflicts alike leave the stored, review-gated, not-executed posture untouched.
+
+When the **Phase 28** orchestrator integration drives persistence, it derives one Phase 26 queue
+draft per task (each with a distinct per-task key `<packet_idempotency_key>::taskq::<i>::<agent>`)
+and surfaces this writer's replay/conflict outcomes on the packet receipt
+(`task_queue_replay_count`, `task_queue_conflict_count`); a conflict makes the orchestration
+outcome `partial` and writes no extra row.

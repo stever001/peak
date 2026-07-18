@@ -9,6 +9,17 @@ and a ``session_factory`` is supplied** — persists through the existing narrow
 an unsupported table, executes an agent or LLM, calls AgentNet/MCP/resolver/network, creates
 client-facing output, verifies financial impact, or publishes a capsule.
 
+**Phase 28 — task queue integration.** The derived Phase 13 agent task requests are also routed
+through the Phase 26 task queue / execution readiness boundary
+(``prepare_agent_task_queue_plan``), which is DB-free and execution-free, so it runs in plan-only
+mode by default — exposing review-gated, **not-executed** queue drafts, readiness assessments, and
+plan-only Phase 17 controlled write requests. When (and only when) ``plan_only=False``,
+``include_agent_task_queue_persistence=True``, and a ``session_factory`` is supplied, those write
+requests are persisted through the **Phase 27** narrow writer
+(``persist_agent_task_queue_record``) — one review-gated ``agent_task_queue_records`` row each.
+Persisting a queue record is **not** execution: no agent runs, no ``agent_run_records`` row is
+created, and stored ``Engagement`` authorization stays authoritative inside the Phase 27 writer.
+
 Plan-only is the default and is no-side-effect: no DB writer, no DB connection, no SQL, no
 stored record, all side-effect flags ``False``. No stage silently escalates from plan-only to
 persistence. Receipts carry only counts, ids, stage names, safe metadata, warnings, and reason
@@ -36,12 +47,16 @@ from peak.evidence.persistence_contracts import (
     EvidencePersistenceSubjectSnapshot,
 )
 from peak.ingestion.packet_mapper import prepare_packet_ingestion
+from peak.task_queue.contracts import AgentTaskQueueRequest
+from peak.task_queue.task_queue_mapper import prepare_agent_task_queue_plan
 from peak.workers.evidence_normalization import normalize_evidence
 
 from .contracts import (
     STAGE_AGENT_RUN_RECORD_PERSISTENCE,
     STAGE_AGENT_RUN_RECORD_PLANNING,
     STAGE_AGENT_TASK_PLANNING,
+    STAGE_AGENT_TASK_QUEUE_PERSISTENCE,
+    STAGE_AGENT_TASK_QUEUE_READINESS,
     STAGE_EVIDENCE_NORMALIZATION,
     STAGE_EVIDENCE_PERSISTENCE,
     STAGE_SOURCE_INGESTION_PERSISTENCE,
@@ -78,10 +93,14 @@ def _stages_requested(options: OrchestrationStageOptions) -> List[str]:
         requested.append(STAGE_EVIDENCE_NORMALIZATION)
     if options.include_agent_task_planning:
         requested.append(STAGE_AGENT_TASK_PLANNING)
+    if options.include_agent_task_queue_readiness:
+        requested.append(STAGE_AGENT_TASK_QUEUE_READINESS)
     if options.include_source_ingestion_persistence:
         requested.append(STAGE_SOURCE_INGESTION_PERSISTENCE)
     if options.include_evidence_persistence:
         requested.append(STAGE_EVIDENCE_PERSISTENCE)
+    if options.include_agent_task_queue_persistence:
+        requested.append(STAGE_AGENT_TASK_QUEUE_PERSISTENCE)
     if options.include_agent_run_record_planning:
         requested.append(STAGE_AGENT_RUN_RECORD_PLANNING)
     if options.include_agent_run_record_persistence:
@@ -217,6 +236,12 @@ def process_engagement_packet(
     else:
         _record_stage(receipt, STAGE_AGENT_TASK_PLANNING, StageOutcome.SKIPPED_NOT_REQUESTED)
 
+    # --- Stage: agent task queue readiness (Phase 26; DB-free, execution-free) ---
+    if not options.include_agent_task_queue_readiness:
+        _record_stage(receipt, STAGE_AGENT_TASK_QUEUE_READINESS, StageOutcome.SKIPPED_NOT_REQUESTED)
+    else:
+        _run_task_queue_readiness(receipt, request, agent_task_requests)
+
     # --- Stage: source ingestion persistence (Phase 24 writer) ---
     if not options.include_source_ingestion_persistence:
         _record_stage(receipt, STAGE_SOURCE_INGESTION_PERSISTENCE, StageOutcome.SKIPPED_NOT_REQUESTED)
@@ -249,6 +274,20 @@ def process_engagement_packet(
             _record_stage(receipt, STAGE_EVIDENCE_PERSISTENCE, skip, reason=reason)
         else:
             _run_evidence_persistence(receipt, request, normalized_records, session_factory)
+
+    # --- Stage: agent task queue persistence (Phase 27 writer; only when explicitly requested) ---
+    if not options.include_agent_task_queue_persistence:
+        _record_stage(receipt, STAGE_AGENT_TASK_QUEUE_PERSISTENCE, StageOutcome.SKIPPED_NOT_REQUESTED)
+    else:
+        skip = _persistence_skip(options, session_factory, options.plan_only,
+                                 bool(receipt.task_queue_controlled_write_requests))
+        if skip is not None:
+            reason = ("no agent task queue controlled write requests were produced "
+                      "(enable include_agent_task_queue_readiness and supply known-agent tasks)"
+                      if skip == StageOutcome.SKIPPED_NO_SAFE_CONTRACT_PATH else None)
+            _record_stage(receipt, STAGE_AGENT_TASK_QUEUE_PERSISTENCE, skip, reason=reason)
+        else:
+            _run_task_queue_persistence(receipt, request, agent_task_requests, session_factory)
 
     # --- Stage: agent run record planning / persistence (intentionally deferred) ---
     if options.include_agent_run_record_planning:
@@ -323,15 +362,111 @@ def _run_evidence_persistence(receipt, request, normalized_records, session_fact
                   item_count=len(receipt.evidence_persistence_receipts))
 
 
+def _build_queue_request(request, agent_task_requests) -> AgentTaskQueueRequest:
+    """Build a Phase 26 ``AgentTaskQueueRequest`` from the packet request + derived tasks.
+
+    Only ids/references and safe metadata are carried — never raw packet payload or content. The
+    per-task idempotency keys Phase 26 derives are anchored on the packet request's key.
+    """
+    ref = getattr(request, "packet_reference", None)
+    return AgentTaskQueueRequest(
+        owner_id=getattr(request, "owner_id", None),
+        client_id=getattr(request, "client_id", None),
+        engagement_id=getattr(request, "engagement_id", None),
+        requested_by=getattr(request, "requested_by", None),
+        requester_role=getattr(request, "requester_role", None),
+        authorization_scope=getattr(request, "authorization_scope", None),
+        idempotency_key=getattr(request, "idempotency_key", None),
+        agent_task_requests=list(agent_task_requests),
+        packet_processing_run_ref=getattr(ref, "packet_reference_id", None),
+        requested_action="prepare_agent_task_queue_plan",
+        source_phase=getattr(request, "source_phase", None) or "phase28",
+        lifecycle_status=getattr(request, "lifecycle_status", None),
+    )
+
+
+def _run_task_queue_readiness(receipt, request, agent_task_requests) -> None:
+    """Run the Phase 26 readiness planner over the derived tasks (DB-free, execution-free)."""
+    if not agent_task_requests:
+        _record_stage(receipt, STAGE_AGENT_TASK_QUEUE_READINESS, StageOutcome.COMPLETED,
+                      item_count=0, reason="no derived agent task requests to plan")
+        return
+    queue_request = _build_queue_request(request, agent_task_requests)
+    qresult = prepare_agent_task_queue_plan(queue_request)
+    receipt.task_queue_readiness_result = qresult
+    plan = getattr(qresult, "plan", None)
+    if plan is not None:
+        receipt.task_queue_drafts = list(getattr(plan, "queue_drafts", []) or [])
+        receipt.task_queue_readiness_assessments = list(
+            getattr(plan, "readiness_assessments", []) or [])
+        receipt.task_queue_controlled_write_requests = list(
+            getattr(plan, "controlled_write_requests", []) or [])
+    receipt.task_queue_draft_count = getattr(qresult, "queue_draft_count", 0)
+    receipt.task_queue_blocked_count = getattr(qresult, "blocked_task_count", 0)
+    receipt.task_queue_controlled_write_request_count = getattr(
+        qresult, "controlled_write_request_count", 0)
+    receipt.warnings.extend(getattr(qresult, "warnings", []) or [])
+    # Readiness is a DB-free derivation: it completes by producing its plan even if some tasks
+    # were blocked. A request-level denial (unexpected here — identity is built from the same
+    # validated packet) is surfaced as DENIED but does not fail the packet plan.
+    if getattr(qresult, "permitted", False):
+        _record_stage(receipt, STAGE_AGENT_TASK_QUEUE_READINESS, StageOutcome.COMPLETED,
+                      item_count=receipt.task_queue_draft_count)
+    else:
+        _record_stage(receipt, STAGE_AGENT_TASK_QUEUE_READINESS, StageOutcome.DENIED,
+                      reason=getattr(qresult, "reason_code", None))
+
+
+def _run_task_queue_persistence(receipt, request, agent_task_requests, session_factory) -> None:
+    """Persist each Phase 26 queue draft via the Phase 27 narrow writer (only writer called)."""
+    from peak.db.agent_task_queue_writer import persist_agent_task_queue_record
+
+    queue_request = _build_queue_request(request, agent_task_requests)
+    stage_outcomes: List[str] = []
+    for cwr in receipt.task_queue_controlled_write_requests:
+        w = persist_agent_task_queue_record(
+            cwr, session_factory=session_factory, readiness_request=queue_request)
+        receipt.task_queue_write_receipts.append(w)
+        stage_outcomes.append(_apply_writer_flags(receipt, w))
+        raw_outcome = getattr(w, "outcome", None)
+        if raw_outcome == "created":
+            receipt.task_queue_persisted_count += 1
+        elif raw_outcome == "idempotent_replay":
+            receipt.task_queue_replay_count += 1
+        if getattr(w, "reason_code", None) == "idempotency_conflict":
+            receipt.task_queue_conflict_count += 1
+
+    completed = sum(1 for o in stage_outcomes if o == StageOutcome.COMPLETED)
+    failed = sum(1 for o in stage_outcomes if o in _FAILURE_OUTCOMES)
+    if completed and failed:
+        stage = StageOutcome.PARTIAL
+    elif completed:
+        stage = StageOutcome.COMPLETED
+    elif StageOutcome.WRITE_OUTCOME_UNCERTAIN in stage_outcomes:
+        stage = StageOutcome.WRITE_OUTCOME_UNCERTAIN
+    elif StageOutcome.FAILED_BEFORE_WRITE in stage_outcomes:
+        stage = StageOutcome.FAILED_BEFORE_WRITE
+    else:
+        stage = StageOutcome.DENIED
+    receipt.task_queue_persistence_stage_outcome = stage
+    receipt.task_queue_persistence_outcome = {
+        StageOutcome.COMPLETED: "persisted",
+        StageOutcome.PARTIAL: "partial",
+    }.get(stage, stage)
+    _record_stage(receipt, STAGE_AGENT_TASK_QUEUE_PERSISTENCE, stage, item_count=completed)
+
+
 def _finalize_outcome(receipt: PacketProcessingReceipt, options: OrchestrationStageOptions) -> None:
     """Set the aggregate orchestration outcome from the stage results."""
     persistence_stages = {
         STAGE_SOURCE_INGESTION_PERSISTENCE,
         STAGE_EVIDENCE_PERSISTENCE,
+        STAGE_AGENT_TASK_QUEUE_PERSISTENCE,
         STAGE_AGENT_RUN_RECORD_PERSISTENCE,
     }
+    failure_or_partial = _FAILURE_OUTCOMES | {StageOutcome.PARTIAL}
     persistence_results = [s for s in receipt.stage_results if s.stage in persistence_stages]
-    any_failed = any(s.outcome in _FAILURE_OUTCOMES for s in persistence_results)
+    any_failed = any(s.outcome in failure_or_partial for s in persistence_results)
     any_completed = any(s.outcome == StageOutcome.COMPLETED for s in persistence_results)
 
     if options.plan_only:

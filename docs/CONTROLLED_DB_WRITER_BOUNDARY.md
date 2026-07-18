@@ -160,4 +160,6 @@ that table/action to the allowlist
 ([`AGENT_TASK_QUEUE_CONTROLLED_WRITER.md`](AGENT_TASK_QUEUE_CONTROLLED_WRITER.md)) that executes
 the plan — persisting one review-gated, **not-executed** row under the identical pattern
 (stored-`Engagement` scope re-check, DB-enforced idempotency). A write plan is still not a write;
-Phase 26 remains plan-only.
+Phase 26 remains plan-only. **Phase 28** lets the Phase 25 orchestrator drive this writer (opt-in,
+`session_factory` required) as its `agent_task_queue_persistence` stage — routing every write
+through this boundary and the narrow writer, never a generic dispatcher.

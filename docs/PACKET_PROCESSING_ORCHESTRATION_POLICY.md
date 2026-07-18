@@ -82,7 +82,10 @@ Phase 19/20 only, tested for table/action safety.
 Separately, the derived Phase 13 `AgentTaskRequest` objects surfaced by the agent task planning
 stage are consumed by the **Phase 26 Controlled Agent Task Queue / Execution Readiness Boundary**
 ([`AGENT_TASK_QUEUE_READINESS_BOUNDARY.md`](AGENT_TASK_QUEUE_READINESS_BOUNDARY.md)) — a DB-free
-boundary that plans review-gated, not-executed queue drafts. This handoff is by contract only;
-Phase 25 remains unchanged and still executes no agent. **Phase 27** persists those drafts as
-`agent_task_queue_records` rows through a narrow DB writer — review-gated and not-executed, with no
-agent execution and no `agent_run_records` creation.
+boundary that plans review-gated, not-executed queue drafts. **Phase 28** wired this into the
+orchestrator as the `agent_task_queue_readiness` (plan-only, default-on) and
+`agent_task_queue_persistence` (opt-in) stages, the latter calling **Phase 27**
+`persist_agent_task_queue_record` only under the same no-escalation gates as every other
+persistence stage (`plan_only=false` + option on + `session_factory`). See
+[`PACKET_TO_TASK_QUEUE_ORCHESTRATION_INTEGRATION.md`](PACKET_TO_TASK_QUEUE_ORCHESTRATION_INTEGRATION.md).
+Persisting a queue record is not execution — no agent runs and no `agent_run_records` row is created.

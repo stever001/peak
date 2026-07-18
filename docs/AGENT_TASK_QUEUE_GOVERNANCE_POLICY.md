@@ -78,4 +78,7 @@ added the narrow DB-backed `agent_task_queue_records` writer
 the stored `Engagement` authorization at write time (identity necessary but not sufficient) and
 enforces DB-level idempotency — mirroring Phases 20–22/24 — persisting a review-gated,
 not-executed row. Phase 26 itself still writes nothing; see
-[`CONTROLLED_WRITE_ALLOWLIST.md`](CONTROLLED_WRITE_ALLOWLIST.md).
+[`CONTROLLED_WRITE_ALLOWLIST.md`](CONTROLLED_WRITE_ALLOWLIST.md). **Phase 28** invokes this
+readiness planner (and, opt-in, the Phase 27 writer) from the Phase 25 orchestrator without
+relaxing any rule here — see
+[`PACKET_TO_TASK_QUEUE_ORCHESTRATION_INTEGRATION.md`](PACKET_TO_TASK_QUEUE_ORCHESTRATION_INTEGRATION.md).

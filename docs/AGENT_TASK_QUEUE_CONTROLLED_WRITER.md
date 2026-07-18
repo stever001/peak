@@ -111,3 +111,15 @@ Alembic remains single-head; `make db-check` now expects **exactly 12 tables**.
   call**; **no `agent_run_records` write**; no client-facing approval, financial verification, or
   capsule publication; never updates or deletes.
 - The Phase 26 `peak/task_queue` package stays **DB-free**; this writer lives in the DB layer.
+
+## Invoked by the Phase 25 orchestrator (Phase 28)
+
+**Phase 28** calls this writer from the Phase 25 packet processor's `agent_task_queue_persistence`
+stage — and only when `plan_only=false`, `include_agent_task_queue_persistence=true`, and a
+`session_factory` is supplied. The orchestrator calls **only** `persist_agent_task_queue_record`
+(never a dynamically-dispatched writer), passes the request's `idempotency_key` through Phase 26's
+per-task derivation, and surfaces this writer's outcomes (created / idempotent_replay / conflict /
+denial) on the packet receipt. Write-time stored-`Engagement` authorization stays authoritative
+here — a stored-scope mismatch is denied even when the orchestrator's preflight identity checks
+pass. See
+[`PACKET_TO_TASK_QUEUE_ORCHESTRATION_INTEGRATION.md`](PACKET_TO_TASK_QUEUE_ORCHESTRATION_INTEGRATION.md).

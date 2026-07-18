@@ -141,10 +141,11 @@ objects on `PacketProcessingReceipt.agent_task_requests` (it never executes them
 Controlled Agent Task Queue / Execution Readiness Boundary**
 ([`AGENT_TASK_QUEUE_READINESS_BOUNDARY.md`](AGENT_TASK_QUEUE_READINESS_BOUNDARY.md)) is the DB-free
 boundary that turns exactly those objects into review-gated, **not-executed** queue drafts and
-readiness assessments. To avoid scope creep, **Phase 25 code is unchanged**: the handoff is by
-contract — Phase 26's `AgentTaskQueueRequest.agent_task_requests` consumes the same objects this
-receipt surfaces. A later phase may wire Phase 25 to call Phase 26 directly once a narrow, safe
-integration is warranted; nothing here executes an agent. Downstream, **Phase 27** persists Phase
-26's queue drafts as review-gated, not-executed `agent_task_queue_records` rows
-([`AGENT_TASK_QUEUE_CONTROLLED_WRITER.md`](AGENT_TASK_QUEUE_CONTROLLED_WRITER.md)) — still no agent
-execution and no `agent_run_records`.
+readiness assessments. **Phase 28** wired this handoff directly into the orchestrator (see
+[`PACKET_TO_TASK_QUEUE_ORCHESTRATION_INTEGRATION.md`](PACKET_TO_TASK_QUEUE_ORCHESTRATION_INTEGRATION.md)):
+the `agent_task_queue_readiness` stage (DB-free, default-on) runs Phase 26
+`prepare_agent_task_queue_plan` over those derived tasks and exposes queue drafts, readiness
+assessments, and plan-only write requests on the receipt; the `agent_task_queue_persistence` stage
+(off by default) persists them through **Phase 27** `persist_agent_task_queue_record` only when
+`plan_only=false`, the option is on, and a `session_factory` is supplied. Persisting a queue record
+is **not execution** — nothing here executes an agent, and no `agent_run_records` row is created.

@@ -103,6 +103,7 @@ peak/
 │   ├── AGENT_TASK_QUEUE_GOVERNANCE_POLICY.md       # Queue/readiness governance: readiness states, no execution (Phase 26)
 │   ├── AGENT_TASK_QUEUE_CONTROLLED_WRITER.md       # Fifth DB-backed writer, for agent_task_queue_records (Phase 27)
 │   ├── AGENT_TASK_QUEUE_IDEMPOTENCY_POLICY.md      # DB-enforced idempotency for agent task queue rows (Phase 27)
+│   ├── PACKET_TO_TASK_QUEUE_ORCHESTRATION_INTEGRATION.md # Phase 25 orchestrator ↔ Phase 26/27 queue path integration (Phase 28)
 │   └── IMPLEMENTATION_PLAN.md
 ├── peak/                         # Python tooling layer (source only; no data)
 │   ├── db/                       # base, enums, models, session + agent_run (P20), evidence (P21), review (P22), source-ingestion (P24) & agent-task-queue (P27) writers
@@ -730,6 +731,37 @@ value. Agent identity is gated against the Phase 13 registry — unknown agents 
 ```bash
 make validate-phase27 PYTHON=.venv/bin/python   # full DB-backed suite (temporary SQLite)
 make validate-phase27                           # structural only on plain python3
+```
+
+### Packet → Task Queue Orchestration Integration (Phase 28)
+
+Wires the Phase 26 task queue / execution readiness boundary and the Phase 27 narrow writer into
+the Phase 25 packet processor. It is an **orchestration integration phase, not a new writer
+phase** — no new table, no migration (head stays `006_agent_task_queue_records`; still 12 tables),
+no new writer. The orchestrator now routes the Phase 13 `AgentTaskRequest` objects it already
+derives through Phase 26 `prepare_agent_task_queue_plan` and, only when explicitly requested,
+persists the results through Phase 27.
+
+- **Plan-only (default):** exposes `task_queue_drafts`, `task_queue_readiness_assessments`,
+  `task_queue_controlled_write_requests` and their counts — review-gated, **not-executed** — with
+  every side-effect flag `false` (queue readiness is DB-free and execution-free).
+- **Controlled persistence:** only when `plan_only=false`, `include_agent_task_queue_persistence=true`,
+  and a `session_factory` is supplied does it call **only** `persist_agent_task_queue_record`
+  (Phase 27), attach the write receipts, and aggregate DB flags from actual writer calls;
+  idempotent replay and conflict flow through Phase 27. No option silently escalates plan-only.
+- **No execution:** never executes an agent, calls the Phase 13 executor / MockLLM / a live LLM /
+  AgentNet / MCP / resolver / connector / network, and **never creates an `agent_run_records`
+  row**. Agent task queue persistence is not execution.
+- **Authorization:** orchestrator preflight is advisory; **stored `Engagement` authorization
+  remains authoritative** inside the Phase 27 writer (identity necessary but not sufficient).
+
+- [`peak/orchestration/packet_processor.py`](peak/orchestration/packet_processor.py) — the two
+  new stages (`agent_task_queue_readiness`, `agent_task_queue_persistence`).
+- [`docs/PACKET_TO_TASK_QUEUE_ORCHESTRATION_INTEGRATION.md`](docs/PACKET_TO_TASK_QUEUE_ORCHESTRATION_INTEGRATION.md).
+
+```bash
+make validate-phase28 PYTHON=.venv/bin/python   # structural + plan-only + DB-backed (temporary SQLite)
+make validate-phase28                           # structural + plan-only on plain python3 (DB layer skipped)
 ```
 
 ## Design constraints

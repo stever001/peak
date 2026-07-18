@@ -305,4 +305,6 @@ universal governance axes and audit fields as every other record group above, pl
 posture columns (`readiness_state`, `execution_status`, and the `*_allowed` / `requires_human_review`
 booleans) that are always stored in the review-gated, **not-executed** posture. Its narrow writer
 ([`AGENT_TASK_QUEUE_CONTROLLED_WRITER.md`](AGENT_TASK_QUEUE_CONTROLLED_WRITER.md)) creates exactly
-one row and never executes an agent or creates an `agent_run_records` row.
+one row and never executes an agent or creates an `agent_run_records` row. **Phase 28** added no
+table or migration — it only lets the Phase 25 orchestrator drive that existing writer (the DB
+still has 12 tables; head `006_agent_task_queue_records`).

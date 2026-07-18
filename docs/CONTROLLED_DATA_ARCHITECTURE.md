@@ -217,4 +217,7 @@ tasks. It stores nothing, executes nothing, and carries only ids/references — 
 content. **Phase 27** added the narrow `agent_task_queue_records` writer
 ([`AGENT_TASK_QUEUE_CONTROLLED_WRITER.md`](AGENT_TASK_QUEUE_CONTROLLED_WRITER.md)) that persists
 these drafts into controlled storage under the same stored-scope authorization rules — a
-review-gated, **not-executed** row (no agent runs, no `agent_run_records` created).
+review-gated, **not-executed** row (no agent runs, no `agent_run_records` created). **Phase 28**
+sequences this whole path (ingest → readiness → optional persistence) through the Phase 25
+orchestrator; see
+[`PACKET_TO_TASK_QUEUE_ORCHESTRATION_INTEGRATION.md`](PACKET_TO_TASK_QUEUE_ORCHESTRATION_INTEGRATION.md).

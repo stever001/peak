@@ -97,4 +97,5 @@ change — no update/delete/upsert/raw-SQL action). The narrow Phase 27 writer
 stored `Engagement` scope at write-time and enforces DB-level idempotency (mirroring Phases
 20–22/24). **This does not authorize execution** (no agent/LLM/AgentNet/resolver/network call)
 and **does not authorize `agent_run_records` creation** — Phase 27 persists review-gated,
-not-executed queue records only.
+not-executed queue records only. **Phase 28** invokes the Phase 27 writer for this table/action
+from the Phase 25 orchestrator (opt-in controlled persistence); no other table/action was added.

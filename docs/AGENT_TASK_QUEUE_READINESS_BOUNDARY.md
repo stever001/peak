@@ -129,3 +129,12 @@ flags — all of which stay `false` in Phase 26: `direct_database_write_made`,
 - **No client-facing approval, no financial verification, no capsule publication.**
 - The package imports only stdlib plus the DB-free Phase 13 registry and Phase 17 controlled-
   write contracts.
+
+## Invoked by the Phase 25 orchestrator (Phase 28)
+
+**Phase 28** calls this boundary's `prepare_agent_task_queue_plan` from the Phase 25 packet
+processor's `agent_task_queue_readiness` stage (DB-free, default-on), over the Phase 13 tasks the
+orchestrator already derives. See
+[`PACKET_TO_TASK_QUEUE_ORCHESTRATION_INTEGRATION.md`](PACKET_TO_TASK_QUEUE_ORCHESTRATION_INTEGRATION.md).
+This boundary stays DB-free and execution-free; the orchestrator only persists (via Phase 27) when
+explicitly requested with a `session_factory`.

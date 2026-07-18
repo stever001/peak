@@ -27,6 +27,9 @@ STAGE_SOURCE_INGESTION_PERSISTENCE = "source_ingestion_persistence"
 STAGE_EVIDENCE_PERSISTENCE = "evidence_persistence"
 STAGE_AGENT_RUN_RECORD_PLANNING = "agent_run_record_planning"
 STAGE_AGENT_RUN_RECORD_PERSISTENCE = "agent_run_record_persistence"
+# Phase 28 — task queue integration stages.
+STAGE_AGENT_TASK_QUEUE_READINESS = "agent_task_queue_readiness"
+STAGE_AGENT_TASK_QUEUE_PERSISTENCE = "agent_task_queue_persistence"
 
 
 class StageOutcome:
@@ -40,6 +43,7 @@ class StageOutcome:
     DENIED = "denied"
     FAILED_BEFORE_WRITE = "failed_before_write"
     WRITE_OUTCOME_UNCERTAIN = "write_outcome_uncertain"
+    PARTIAL = "partial"  # a multi-item persistence stage: some items completed, some failed
 
 
 class OrchestrationOutcome:
@@ -67,6 +71,11 @@ class OrchestrationStageOptions:
     include_agent_task_planning: bool = True
     include_agent_run_record_planning: bool = False
     include_agent_run_record_persistence: bool = False
+    # Phase 28 — task queue integration. Readiness is DB-free and execution-free, so it is on
+    # by default (it plans review-gated, not-executed queue drafts from the derived Phase 13
+    # tasks). Persistence stays off by default and never silently escalates plan-only mode.
+    include_agent_task_queue_readiness: bool = True
+    include_agent_task_queue_persistence: bool = False
 
 
 @dataclass
@@ -106,13 +115,30 @@ class PacketProcessingReceipt:
     evidence_persistence_receipts: List[object] = field(default_factory=list)
     agent_task_count: int = 0
     agent_run_persistence_receipts: List[object] = field(default_factory=list)
+    # Phase 28 — task queue integration payload (all DB-free at plan time; never raw content).
+    task_queue_readiness_result: Optional[object] = None  # Phase 26 AgentTaskQueueReadinessResult
+    task_queue_drafts: List[object] = field(default_factory=list)  # Phase 26 AgentTaskQueueDraft
+    task_queue_readiness_assessments: List[object] = field(default_factory=list)
+    task_queue_controlled_write_requests: List[object] = field(default_factory=list)  # Phase 17 CWRs (plan only)
+    task_queue_write_receipts: List[object] = field(default_factory=list)  # Phase 27 receipts
+    task_queue_draft_count: int = 0
+    task_queue_blocked_count: int = 0
+    task_queue_controlled_write_request_count: int = 0
+    task_queue_persisted_count: int = 0
+    task_queue_replay_count: int = 0
+    task_queue_conflict_count: int = 0
+    task_queue_persistence_outcome: Optional[str] = None
+    task_queue_persistence_stage_outcome: Optional[str] = None
     # Aggregate side-effect flags (OR of any narrow-writer calls; all False in plan-only mode).
     database_connection_made: bool = False
     sql_execution_made: bool = False
     database_write_made: bool = False
     stored_record_created: bool = False
+    agent_execution_made: bool = False
+    mock_agent_execution_made: bool = False
     llm_call_made: bool = False
     agentnet_call_made: bool = False
+    resolver_call_made: bool = False
     network_call_made: bool = False
     client_facing_output_created: bool = False
     financial_verification_made: bool = False

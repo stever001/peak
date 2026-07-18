@@ -697,6 +697,38 @@ and documentation accurately states integration status.
   (`make validate-phase27 PYTHON=.venv/bin/python` for the DB-backed suite; structural checks run
   on plain `python3`).
 
+**Packet → Task Queue Orchestration Integration (Phase 28 — orchestration integration, not a new writer):**
+
+- [x] Wired the Phase 26 task queue / execution readiness boundary and the Phase 27 narrow writer
+  into the Phase 25 packet processor — **no new table, no migration** (Alembic head stays
+  `006_agent_task_queue_records`; still 12 tables), no new writer:
+  [`../peak/orchestration/packet_processor.py`](../peak/orchestration/packet_processor.py),
+  [`../peak/orchestration/contracts.py`](../peak/orchestration/contracts.py) and doc
+  [`PACKET_TO_TASK_QUEUE_ORCHESTRATION_INTEGRATION.md`](PACKET_TO_TASK_QUEUE_ORCHESTRATION_INTEGRATION.md).
+  Two new stages consume the Phase 13 `AgentTaskRequest` objects the orchestrator already derives:
+  `agent_task_queue_readiness` (DB-free, execution-free — runs Phase 26
+  `prepare_agent_task_queue_plan`, exposing review-gated / not-executed queue drafts, readiness
+  assessments, and plan-only Phase 17 write requests + counts) and `agent_task_queue_persistence`
+  (calls **only** the Phase 27 `persist_agent_task_queue_record`). New options
+  `include_agent_task_queue_readiness` (default **true**) and
+  `include_agent_task_queue_persistence` (default **false**); persistence runs only when
+  `plan_only=false`, the option is on, a `session_factory` is supplied, and Phase 26 produced valid
+  write requests — otherwise `skipped_plan_only` / `skipped_missing_session_factory` /
+  `skipped_not_requested` / `skipped_no_safe_contract_path` (**no silent escalation**). In plan-only
+  mode every side-effect flag stays `false`. It **executes no agent**, calls no
+  executor/MockLLM/LLM/AgentNet/MCP/resolver/connector/network, and **creates no `agent_run_records`
+  row** — agent task queue persistence is not execution. **Stored `Engagement` authorization stays
+  authoritative** inside the Phase 27 writer (orchestrator preflight is advisory; identity necessary
+  but not sufficient); a stored-scope mismatch is denied by the writer and surfaced as a `partial`
+  outcome. New receipt fields: `task_queue_readiness_result`, `task_queue_drafts`,
+  `task_queue_readiness_assessments`, `task_queue_controlled_write_requests`,
+  `task_queue_write_receipts`, and the `task_queue_*_count` / `task_queue_persistence_*` fields;
+  new stage outcome `partial`. Source-ingestion (Phase 24) and evidence (Phase 18/21) persistence
+  are regression-checked. Checked by
+  [`../tests/validate_phase28_packet_task_queue_integration.py`](../tests/validate_phase28_packet_task_queue_integration.py)
+  (`make validate-phase28 PYTHON=.venv/bin/python` for the DB-backed layer; structural + plan-only
+  checks run on plain `python3`).
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing
