@@ -10,7 +10,7 @@ objects are needed, the harnesses build **synthetic fixtures at runtime**
 directory that is auto-deleted. Nothing is stored. See
 [`../docs/FIXTURE_STRATEGY.md`](../docs/FIXTURE_STRATEGY.md).
 
-Thirty-one harnesses, run together by `make validate`:
+Thirty-two harnesses, run together by `make validate`:
 
 - `validate_phase1.py` — schemas + synthetic object fixtures.
 - `validate_phase2.py` — schemas + a synthetic `EngagementPacket`.
@@ -54,6 +54,8 @@ Thirty-one harnesses, run together by `make validate`:
   (structural always; DB-backed when SQLAlchemy is present).
 - `validate_phase31_packet_review_bundle_integration.py` — packet → review bundle orchestration
   integration check (structural + plan-only always; DB-backed when SQLAlchemy is present).
+- `validate_phase32_internal_reviewer_decision_boundary.py` — internal reviewer decision boundary
+  check (stdlib-only; DB-free — no database layer).
 
 ## `synthetic_fixtures.py`
 
@@ -684,6 +686,34 @@ the DB layer with instructions if SQLAlchemy is absent (still exits 0). Run the 
 `make validate-phase31 PYTHON=.venv/bin/python`. See
 [`../docs/PACKET_TO_REVIEW_BUNDLE_ORCHESTRATION_INTEGRATION.md`](../docs/PACKET_TO_REVIEW_BUNDLE_ORCHESTRATION_INTEGRATION.md).
 
+## `validate_phase32_internal_reviewer_decision_boundary.py`
+
+Check for the Phase 32 **Internal Reviewer Decision Boundary** (`peak/reviewer_decisions/`) — a
+DB-free decision-planning boundary over review-bundle references and safe reviewer selections,
+analogous to Phase 29. Stdlib-only; **no database** (Phase 32 writes nothing, approves nothing, and
+connects to nothing). The **structural** layer confirms the package files exist, compile, and
+import; that the package imports no SQLAlchemy / Alembic / `peak.db` / Phase 22 review writer /
+live-or-mock LLM / AgentNet / MCP / resolver / connector / network module; that the Phase 23
+ingestion, Phase 26 task_queue, and Phase 29 review_orchestration packages stay DB-free; that the
+Phase 31 commit is present; that **no Phase 32 migration** was added (head stays
+`007_review_bundle_records`) and **no new DB table** was declared; and that the docs carry the
+required language. The **functional** layer runs `prepare_internal_reviewer_decision` and asserts: a
+valid request produces one decision draft + routing plan + `ready_to_record` readiness assessment —
+review-gated and **not approved** (`approval_allowed=false`, `review_approval_made=false`, no
+id/created_at); **every side-effect flag false** and `controlled_write_request_count=0`;
+deterministic routing per allowed intent (incl. `return_for_revision` → `<stage>_revision`);
+`ready_for_internal_use` is accepted but approves nothing; identity / scope / lifecycle /
+missing-field / missing-bundle denials; disallowed intents (`approve_internal`, `publish_capsule`,
+`verify_financial_impact`, `execute_agent`, `send_to_client`, …) → `blocked_disallowed_intent` and
+unsupported → `blocked_unsupported_intent`; and content safety — raw packet payload, raw
+evidence/interview text, source bytes, generated output, arbitrary JSON refs, multiline summaries,
+DB-URL/raw-SQL keys, and secret-like keys rejected **without echoing values**. The **integration**
+layer confirms Phase 32 consumes safe references shaped like Phase 30 output (`review_bundle_record_id`)
+and Phase 29 output (review plan item refs) with no DB access, and imports neither the Phase 30
+writer nor the Phase 22 writer nor `peak.db`. See
+[`../docs/INTERNAL_REVIEWER_DECISION_BOUNDARY.md`](../docs/INTERNAL_REVIEWER_DECISION_BOUNDARY.md) and
+[`../docs/INTERNAL_REVIEWER_DECISION_GOVERNANCE_POLICY.md`](../docs/INTERNAL_REVIEWER_DECISION_GOVERNANCE_POLICY.md).
+
 ## Running
 
 This machine uses `python3` (there is no bare `python`). From the repo root:
@@ -693,7 +723,7 @@ This machine uses `python3` (there is no bare `python`). From the repo root:
 make install-dev          # == python3 -m pip install -r requirements-dev.txt
 
 # run all harnesses
-make validate             # == phase1 … phase31
+make validate             # == phase1 … phase32
 
 # or run one at a time
 make validate-phase1
@@ -727,6 +757,7 @@ make validate-phase28   # structural+plan-only always; add PYTHON=.venv/bin/pyth
 make validate-phase29   # stdlib-only; DB-free (no database layer)
 make validate-phase30   # DB-backed; add PYTHON=.venv/bin/python for the full suite
 make validate-phase31   # structural+plan-only always; add PYTHON=.venv/bin/python for the DB layer
+make validate-phase32   # stdlib-only; DB-free (no database layer)
 ```
 
 Or invoke them directly, without the Makefile:
@@ -763,11 +794,12 @@ python3 tests/validate_phase26_agent_task_queue_readiness.py               # std
 python3 tests/validate_phase29_review_orchestration_boundary.py             # stdlib-only, no dependency needed (DB-free)
 .venv/bin/python tests/validate_phase30_review_bundle_writer.py             # DB-backed (SQLAlchemy); skips DB layer on plain python3
 .venv/bin/python tests/validate_phase31_packet_review_bundle_integration.py # structural+plan-only always; DB layer needs SQLAlchemy
+python3 tests/validate_phase32_internal_reviewer_decision_boundary.py       # stdlib-only, no dependency needed (DB-free)
 ```
 
 ## Exit codes
 
-All thirty-one harnesses share the same convention:
+All thirty-two harnesses share the same convention:
 
 | Code | Meaning |
 | --- | --- |

@@ -50,3 +50,7 @@ per Phase 29 draft (keyed `<packet_idempotency_key>::review::bundle::<i>`) and s
 writer's replay/conflict outcomes on the packet receipt (`review_bundle_replay_count`,
 `review_bundle_conflict_count`); a conflict makes the orchestration outcome `partial` and writes no
 extra row.
+
+The persisted `review_bundle_records` id is a safe reference the **Phase 32 Internal Reviewer
+Decision Boundary** consumes to plan a reviewer decision; Phase 32 is DB-free, has its own
+idempotency-key contract for a *future* Phase 33 writer, and persists nothing itself.

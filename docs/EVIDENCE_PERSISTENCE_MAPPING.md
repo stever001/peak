@@ -128,3 +128,5 @@ Persisted `evidence_references` ids are safe references the **Phase 29 Packet-De
 Orchestration Boundary**
 ([`PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md`](PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md))
 can cite as `evidence_reference_review` items when planning human review — DB-free and no-approval.
+The **Phase 32 Internal Reviewer Decision Boundary** may likewise carry those `evidence_reference_ids`
+as safe references on a reviewer decision draft — DB-free, no approval, no `review_records` write.

@@ -319,4 +319,8 @@ universal governance axes + audit fields plus review-posture columns (`authorita
 stored in the review-gated, **not-approved** posture; the writer creates exactly one row and never
 approves anything or creates a `review_records` row. **Phase 31** added no table or migration — it
 only lets the Phase 25/28 orchestrator drive that existing writer (the DB still has 13 tables; head
-`007_review_bundle_records`).
+`007_review_bundle_records`). **Phase 32** added no table or migration either: the Internal Reviewer
+Decision Boundary is **DB-free** and stores nothing. An `internal_reviewer_decision_records` record
+group is a **planned future** addition only (deferred to Phase 33), described by
+[`INTERNAL_REVIEWER_DECISION_BOUNDARY.md`](INTERNAL_REVIEWER_DECISION_BOUNDARY.md); no such table
+exists yet.

@@ -230,3 +230,8 @@ approves nothing, calls no Phase 22 review writer, and creates no `review_record
 may drive this writer from the Phase 25/28 orchestrator but changes none of these access/audit
 rules: the write-time stored-`Engagement` scope re-check stays inside the writer (orchestrator
 preflight is advisory, not a substitute).
+
+The **Phase 32 Internal Reviewer Decision Boundary**
+([`INTERNAL_REVIEWER_DECISION_BOUNDARY.md`](INTERNAL_REVIEWER_DECISION_BOUNDARY.md)) touches the
+database not at all: it is DB-free, opens no connection, writes no row, approves nothing, and
+creates no `review_records` row. There is therefore no new access/audit surface in Phase 32.

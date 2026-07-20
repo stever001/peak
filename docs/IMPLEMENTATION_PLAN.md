@@ -838,6 +838,39 @@ and documentation accurately states integration status.
   (`make validate-phase31 PYTHON=.venv/bin/python` for the DB-backed layer; structural + plan-only
   checks run on plain `python3`).
 
+**Internal Reviewer Decision Boundary (Phase 32 — DB-free decision planning):**
+
+- [x] A **DB-free decision-planning boundary** that represents a structured internal reviewer
+  decision against a review bundle / review plan items — **not** a review-approval phase, review
+  engine, or DB writer; analogous to Phase 29:
+  [`../peak/reviewer_decisions/`](../peak/reviewer_decisions/) (`contracts.py`, `governance.py`,
+  `decision_mapper.py`) and docs
+  [`INTERNAL_REVIEWER_DECISION_BOUNDARY.md`](INTERNAL_REVIEWER_DECISION_BOUNDARY.md) /
+  [`INTERNAL_REVIEWER_DECISION_GOVERNANCE_POLICY.md`](INTERNAL_REVIEWER_DECISION_GOVERNANCE_POLICY.md).
+  `prepare_internal_reviewer_decision(request)` maps safe review-bundle / review-plan-item
+  references and safe reviewer selections into a review-gated `InternalReviewerDecisionDraft`
+  (`reviewer_decision_id=None`, `output_status=draft`, `review_status=needs_review`,
+  `lifecycle_status=draft`, `approval_allowed=false`, `execution_allowed=false`,
+  `publication_allowed=false`, `financial_verified=false`, `requires_human_review=true`), a
+  deterministic `ReviewerDecisionRoutingPlan` (recommendation only), and a
+  `ReviewerDecisionReadinessAssessment`. Allowed intents: `needs_more_evidence`,
+  `return_for_revision`, `ready_for_internal_use`, `blocked_by_scope`, `blocked_by_quality`,
+  `blocked_by_missing_source`, `rejected_for_policy`, `defer_review` — each mapped to a route
+  recommendation; approval/publication/execution/financial/client-facing intents are denied
+  (`blocked_disallowed_intent`). **`ready_for_internal_use` is not approval.** It is **DB-free**
+  (adds no table, no migration — Alembic head stays `007_review_bundle_records`; still 13 tables —
+  and produces **no** `ControlledWriteRequest` objects; future persistence deferred to Phase 33),
+  **persists nothing**, **does not call the Phase 22 review writer**, creates **no `review_records`
+  row**, approves nothing, executes nothing, and makes no LLM/MockLLM/AgentNet/MCP/resolver/network
+  call. Every side-effect flag stays `false`. Governance requires identity/scope/idempotency + a
+  review-bundle ref + short safe reviewer_role/decision_reason_code + an allowed intent, matches
+  structured subject-ref identity **and** scope (necessary but not sufficient), and rejects
+  raw-content / secret-like / DB-URL / raw-SQL fields by key name (values never echoed).
+  **Phase 31 integration is a documented handoff** (safe references only; Phase 32 does not run
+  inside packet processing and imports no `peak.db` / Phase 30 writer / Phase 22 writer). Checked by
+  [`../tests/validate_phase32_internal_reviewer_decision_boundary.py`](../tests/validate_phase32_internal_reviewer_decision_boundary.py)
+  (`make validate-phase32`; stdlib-only, DB-free).
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

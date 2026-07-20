@@ -124,3 +124,11 @@ writer receipt was created or replayed and none failed; a mix is `partial`.
   mode runs without SQLAlchemy.
 - The orchestrator imports no live LLM / MockLLM / executor / AgentNet / MCP / resolver / connector
   / network module, and never calls the Phase 22 review writer.
+
+## Downstream: Phase 32 reviewer decisions
+
+The `review_bundle_records` ids (and review-plan-item refs) this integration produces are safe
+references the **Phase 32 Internal Reviewer Decision Boundary**
+([`INTERNAL_REVIEWER_DECISION_BOUNDARY.md`](INTERNAL_REVIEWER_DECISION_BOUNDARY.md)) consumes to
+plan a structured reviewer decision. Phase 32 is DB-free, approves nothing, and does not run inside
+this integration — the handoff is by contract only.

@@ -66,4 +66,7 @@ Phase 29 is a planning boundary. It stores nothing, approves nothing, and calls 
 reviewer acts on these plans; a separate, existing gate (Phase 15/22) governs any actual review
 decision — Phase 29 does not change those and does not pre-empt them. **Phase 31** invokes this
 planner (and, opt-in, the Phase 30 writer) from the Phase 25/28 orchestrator without relaxing any
-rule here — it approves nothing and never calls Phase 22.
+rule here — it approves nothing and never calls Phase 22. **Phase 32**
+([`INTERNAL_REVIEWER_DECISION_GOVERNANCE_POLICY.md`](INTERNAL_REVIEWER_DECISION_GOVERNANCE_POLICY.md))
+plans a structured reviewer decision over the resulting bundle refs — still DB-free, still no
+approval, still no `review_records` write.

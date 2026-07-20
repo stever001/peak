@@ -233,3 +233,8 @@ review-gated, **not-approved** rows carrying safe references only (no raw client
 decision, no `review_records` row). **Phase 31** sequences this whole path (ingest → readiness →
 review planning → optional persistence) through the Phase 25/28 orchestrator; see
 [`PACKET_TO_REVIEW_BUNDLE_ORCHESTRATION_INTEGRATION.md`](PACKET_TO_REVIEW_BUNDLE_ORCHESTRATION_INTEGRATION.md).
+Structured internal reviewer decisions over those review bundles are planned by the **Phase 32
+Internal Reviewer Decision Boundary**
+([`INTERNAL_REVIEWER_DECISION_BOUNDARY.md`](INTERNAL_REVIEWER_DECISION_BOUNDARY.md)): a **DB-free**
+boundary that stores nothing, approves nothing, and carries only safe references — never raw client
+content. A future Phase 33 may persist reviewer decisions under the same controlled-storage rules.

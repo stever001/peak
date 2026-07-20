@@ -109,6 +109,8 @@ peak/
 │   ├── REVIEW_BUNDLE_CONTROLLED_WRITER.md          # Sixth DB-backed writer, for review_bundle_records (Phase 30)
 │   ├── REVIEW_BUNDLE_IDEMPOTENCY_POLICY.md         # DB-enforced idempotency for review bundle rows (Phase 30)
 │   ├── PACKET_TO_REVIEW_BUNDLE_ORCHESTRATION_INTEGRATION.md # Packet processor ↔ Phase 29/30 review path integration (Phase 31)
+│   ├── INTERNAL_REVIEWER_DECISION_BOUNDARY.md      # DB-free internal reviewer decision-planning boundary (Phase 32)
+│   ├── INTERNAL_REVIEWER_DECISION_GOVERNANCE_POLICY.md # Reviewer-decision governance: intents, routing, no approval (Phase 32)
 │   └── IMPLEMENTATION_PLAN.md
 ├── peak/                         # Python tooling layer (source only; no data)
 │   ├── db/                       # base, enums, models, session + agent_run (P20), evidence (P21), review (P22), source-ingestion (P24), agent-task-queue (P27) & review-bundle (P30) writers
@@ -121,7 +123,8 @@ peak/
 │   ├── ingestion/                # Engagement packet ingestion boundary: derives plans (no DB writes)
 │   ├── orchestration/            # Controlled packet-processing orchestrator: sequences existing boundaries (P25; plan-only default)
 │   ├── task_queue/               # Agent task queue / execution readiness boundary: plans queue drafts (P26; DB-free, no execution)
-│   └── review_orchestration/     # Packet-derived review orchestration: plans human-review bundles (P29; DB-free, no approval)
+│   ├── review_orchestration/     # Packet-derived review orchestration: plans human-review bundles (P29; DB-free, no approval)
+│   └── reviewer_decisions/       # Internal reviewer decision boundary: plans decision drafts + routing (P32; DB-free, no approval)
 ├── alembic/                      # Alembic migrations (schema only; no data)
 ├── alembic.ini                   # Alembic config (URL from env, not the repo)
 ├── .env.example                  # Env placeholders only (PEAK_DATABASE_URL); .env ignored
@@ -877,6 +880,42 @@ gathers safe references and adds two stages: `review_orchestration` (Phase 29) a
 ```bash
 make validate-phase31 PYTHON=.venv/bin/python   # structural + plan-only + DB-backed (temporary SQLite)
 make validate-phase31                           # structural + plan-only on plain python3 (DB layer skipped)
+```
+
+### Internal Reviewer Decision Boundary (Phase 32)
+
+A **DB-free decision-planning boundary** that lets Peak represent a structured internal reviewer
+decision against a review bundle / review plan items — producing a review-gated decision *draft*, a
+decision-readiness assessment, and a deterministic **routing recommendation**. It is analogous to
+Phase 29 (which planned review bundles without DB writes). It adds no table and no migration (head
+stays `007_review_bundle_records`; still 13 tables), and produces **no** `ControlledWriteRequest`
+objects — future persistence is deferred to Phase 33.
+
+- **It is not an approval phase.** It never persists a decision, never calls the Phase 22 review
+  writer, creates **no `review_records` row**, never calls `approve_internal`, and never creates
+  client-facing output, verifies financial impact, publishes a capsule, executes an agent, or calls
+  an LLM/MockLLM/AgentNet/MCP/resolver/network. Every side-effect flag stays `false`.
+  **`ready_for_internal_use` is not approval.**
+- **Public entry point:** `prepare_internal_reviewer_decision(request) -> InternalReviewerDecisionResult`.
+- **Allowed intents:** `needs_more_evidence`, `return_for_revision`, `ready_for_internal_use`,
+  `blocked_by_scope`, `blocked_by_quality`, `blocked_by_missing_source`, `rejected_for_policy`,
+  `defer_review` — each mapped to a deterministic **route recommendation** (not an action).
+  Approval / publication / execution / financial / client-facing intents are denied.
+- **Governance** rejects missing identity/scope/idempotency/review-bundle-ref, prohibited
+  lifecycle, disallowed/unsupported intents, email-like reviewer roles, and raw-content /
+  secret-like / DB-URL / raw-SQL fields — reporting key names only (values never echoed). Identity
+  matching is necessary but not sufficient.
+- **Handoff (documented):** Phase 32 consumes safe references shaped like Phase 30 output
+  (`review_bundle_record_id`) and Phase 29 output (review plan item refs); it does not run inside
+  packet processing and imports no Phase 30 / Phase 22 writer / `peak.db`.
+
+- [`peak/reviewer_decisions/`](peak/reviewer_decisions/) — decision contracts, deterministic
+  governance, and the `prepare_internal_reviewer_decision` mapper (stdlib-only).
+- [`docs/INTERNAL_REVIEWER_DECISION_BOUNDARY.md`](docs/INTERNAL_REVIEWER_DECISION_BOUNDARY.md) and
+  [`docs/INTERNAL_REVIEWER_DECISION_GOVERNANCE_POLICY.md`](docs/INTERNAL_REVIEWER_DECISION_GOVERNANCE_POLICY.md).
+
+```bash
+make validate-phase32   # internal reviewer decision boundary check (stdlib-only; DB-free)
 ```
 
 ## Design constraints

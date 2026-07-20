@@ -174,4 +174,7 @@ objects. **Phase 30** added the persistence counterpart — the narrow review-bu
 (never a `review_records` row, never an approval). **Phase 31** lets the Phase 25/28 orchestrator
 drive that writer (opt-in, `session_factory` required) as its `review_bundle_persistence` stage —
 routing every write through this boundary and the narrow writer, never a generic dispatcher and
-never Phase 22.
+never Phase 22. The **Phase 32 Internal Reviewer Decision Boundary**
+([`INTERNAL_REVIEWER_DECISION_BOUNDARY.md`](INTERNAL_REVIEWER_DECISION_BOUNDARY.md)) does **not**
+touch this boundary: it is DB-free and produces **no** `ControlledWriteRequest` objects — future
+reviewer-decision persistence is deferred to Phase 33.

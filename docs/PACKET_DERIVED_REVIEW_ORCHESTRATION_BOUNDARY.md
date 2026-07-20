@@ -137,3 +137,8 @@ would remain plan-only and no-side-effect.
 only when explicitly requested with a `session_factory` — persists the drafts through the Phase 30
 writer. This boundary stays DB-free and approval-free; the orchestrator adds no approval. See
 [`PACKET_TO_REVIEW_BUNDLE_ORCHESTRATION_INTEGRATION.md`](PACKET_TO_REVIEW_BUNDLE_ORCHESTRATION_INTEGRATION.md).
+
+Downstream, the **Phase 32 Internal Reviewer Decision Boundary**
+([`INTERNAL_REVIEWER_DECISION_BOUNDARY.md`](INTERNAL_REVIEWER_DECISION_BOUNDARY.md)) consumes review
+bundle / review-plan-item references to plan a structured reviewer decision — DB-free, no-approval,
+and **`ready_for_internal_use` is not approval**.

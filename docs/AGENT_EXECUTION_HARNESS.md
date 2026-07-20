@@ -153,4 +153,7 @@ AgentNet, or create an `agent_run_records` row — it only records that a task i
 The **Phase 29 Packet-Derived Review Orchestration Boundary**
 ([`PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md`](PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md))
 plans human review over agent-task-queue ids (and other safe references) but likewise executes no
-agent and calls nothing here — it is DB-free and approves nothing.
+agent and calls nothing here — it is DB-free and approves nothing. The **Phase 32 Internal Reviewer
+Decision Boundary** ([`INTERNAL_REVIEWER_DECISION_BOUNDARY.md`](INTERNAL_REVIEWER_DECISION_BOUNDARY.md))
+similarly plans reviewer decisions over safe references without executing any agent — its
+`execute_agent` intent is explicitly denied.

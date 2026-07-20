@@ -160,3 +160,7 @@ review-gated and **not-approved** (no `review_records` row, no approval). **Phas
 whole review path into the orchestrator as the `review_orchestration` (plan-only, default-on) and
 `review_bundle_persistence` (opt-in) stages — see
 [`PACKET_TO_REVIEW_BUNDLE_ORCHESTRATION_INTEGRATION.md`](PACKET_TO_REVIEW_BUNDLE_ORCHESTRATION_INTEGRATION.md).
+The **Phase 32 Internal Reviewer Decision Boundary**
+([`INTERNAL_REVIEWER_DECISION_BOUNDARY.md`](INTERNAL_REVIEWER_DECISION_BOUNDARY.md)) is a separate
+DB-free boundary that consumes the resulting review bundle refs to plan a reviewer decision; it does
+not run inside this orchestrator and approves nothing.

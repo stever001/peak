@@ -123,3 +123,9 @@ never Phase 22), surfacing this writer's outcomes (created / idempotent_replay /
 on the packet receipt. Write-time stored-`Engagement` authorization stays authoritative here — a
 stored-scope mismatch is denied even when the orchestrator's preflight identity checks pass. See
 [`PACKET_TO_REVIEW_BUNDLE_ORCHESTRATION_INTEGRATION.md`](PACKET_TO_REVIEW_BUNDLE_ORCHESTRATION_INTEGRATION.md).
+
+The `review_bundle_records` id this writer creates is a safe reference the **Phase 32 Internal
+Reviewer Decision Boundary**
+([`INTERNAL_REVIEWER_DECISION_BOUNDARY.md`](INTERNAL_REVIEWER_DECISION_BOUNDARY.md)) consumes (as
+`review_bundle_record_id`) to plan a reviewer decision — DB-free, no approval, no `review_records`
+write.

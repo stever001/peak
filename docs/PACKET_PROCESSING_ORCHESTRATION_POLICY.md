@@ -100,3 +100,5 @@ via a narrow DB writer — review-gated, **not-approved**, and never a `review_r
 and `review_bundle_persistence` (opt-in) stages, under the same no-escalation gates as every other
 persistence stage; it approves nothing and never calls Phase 22. See
 [`PACKET_TO_REVIEW_BUNDLE_ORCHESTRATION_INTEGRATION.md`](PACKET_TO_REVIEW_BUNDLE_ORCHESTRATION_INTEGRATION.md).
+The **Phase 32** reviewer-decision boundary consumes the resulting review bundle refs separately
+(DB-free, no approval); it is not invoked from packet processing.
