@@ -318,6 +318,58 @@ class ReviewBundleRecord(Base, GovernanceMixin, AuditMixin):
     payload_fingerprint: Mapped[Optional[str]] = mapped_column(String(64))
 
 
+class InternalReviewerDecisionRecord(Base, GovernanceMixin, AuditMixin):
+    __tablename__ = "internal_reviewer_decision_records"
+    # Phase 33: DB-enforced idempotency for the controlled internal-reviewer-decision writer. The
+    # uniqueness boundary includes identity context so an idempotency key cannot collide across
+    # owner / client / engagement. See docs/INTERNAL_REVIEWER_DECISION_IDEMPOTENCY_POLICY.md.
+    __table_args__ = (
+        UniqueConstraint(
+            "owner_id",
+            "client_id",
+            "engagement_id",
+            "idempotency_key",
+            name="uq_internal_reviewer_decision_records_idem",
+        ),
+        MYSQL_TABLE_ARGS,
+    )
+    # id convention: ird_<slug>
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    client_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    engagement_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    # Safe upstream references (never raw content).
+    review_bundle_ref: Mapped[Optional[str]] = mapped_column(String(128))
+    review_bundle_record_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    review_bundle_draft_ref: Mapped[Optional[str]] = mapped_column(String(128))
+    # Reviewer selections — short safe labels only.
+    reviewer_role: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    decision_intent: Mapped[Optional[str]] = mapped_column(String(48), index=True)
+    decision_reason_code: Mapped[Optional[str]] = mapped_column(String(64))
+    safe_decision_summary: Mapped[Optional[str]] = mapped_column(String(255))
+    return_to_stage: Mapped[Optional[str]] = mapped_column(String(48))
+    # Deterministic routing recommendation (server-derived; no action taken).
+    route_to: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    routing_reason_code: Mapped[Optional[str]] = mapped_column(String(64))
+    # Governance / non-approval posture — real columns (never JSON). "non-approval" is enforced.
+    output_status: Mapped[str] = mapped_column(String(32), index=True, default="draft")
+    authoritative: Mapped[bool] = mapped_column(Boolean, default=False)
+    client_facing_approved: Mapped[bool] = mapped_column(Boolean, default=False)
+    capsule_candidate_ready: Mapped[bool] = mapped_column(Boolean, default=False)
+    financial_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    execution_allowed: Mapped[bool] = mapped_column(Boolean, default=False)
+    approval_allowed: Mapped[bool] = mapped_column(Boolean, default=False)
+    publication_allowed: Mapped[bool] = mapped_column(Boolean, default=False)
+    requires_human_review: Mapped[bool] = mapped_column(Boolean, default=True)
+    client_facing_output_created: Mapped[bool] = mapped_column(Boolean, default=False)
+    review_approval_made: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Phase 33 controlled-writer fields. idempotency_key + payload_fingerprint back
+    # replay/replay-conflict detection. Safe references (review-plan/evidence/source/task-queue
+    # ids, requested_followup_actions, reasons, warnings) live in details_json — never raw
+    # payload/content or a final review approval/decision.
+    idempotency_key: Mapped[Optional[str]] = mapped_column(String(128), index=True)
+    payload_fingerprint: Mapped[Optional[str]] = mapped_column(String(64))
+
+
 # Convenience list of all model classes (used by tooling/validation).
 ALL_MODELS = [
     Client,
@@ -333,4 +385,5 @@ ALL_MODELS = [
     SourceIngestionRecord,
     AgentTaskQueueRecord,
     ReviewBundleRecord,
+    InternalReviewerDecisionRecord,
 ]

@@ -13,8 +13,9 @@ no migration, and no writer.
 - A `ReviewerDecisionReadinessAssessment`.
 - A typed `InternalReviewerDecisionResult` with counts, stage names, safe reasons, and warnings.
 
-Phase 32 produces **no** `ControlledWriteRequest` objects — it is **DB-free** and future persistence
-is deferred to **Phase 33**.
+Phase 32 produces **no** `ControlledWriteRequest` objects — it is **DB-free**; persistence is owned
+by the separate **Phase 33** controlled writer
+([`INTERNAL_REVIEWER_DECISION_CONTROLLED_WRITER.md`](INTERNAL_REVIEWER_DECISION_CONTROLLED_WRITER.md)).
 
 ## Prohibited effects
 
@@ -80,4 +81,5 @@ but **not sufficient** — the authorization scope must match too. A mismatch is
 Phase 32 is a planning boundary. It stores nothing, approves nothing, and calls no writer. A human
 reviewer acts on these drafts; a separate, existing gate (Phase 15/22) governs any actual review
 record — Phase 32 does not change those and does not pre-empt them. Persistence of reviewer
-decisions is a **Phase 33** concern.
+decisions is owned by the **Phase 33** controlled writer, which stores review-gated, **non-approval**
+`internal_reviewer_decision_records` only (still no approval, no `review_records` write).

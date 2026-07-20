@@ -332,6 +332,83 @@ class ReviewBundleWriteReceipt:
     warnings: List[str] = field(default_factory=list)
 
 
+class InternalReviewerDecisionWriteOutcome:
+    """Outcome codes for a controlled internal-reviewer-decision write (str constants; no Enum)."""
+
+    CREATED = "created"
+    IDEMPOTENT_REPLAY = "idempotent_replay"
+    DENIED = "denied"
+    FAILED_BEFORE_WRITE = "failed_before_write"
+    WRITE_OUTCOME_UNCERTAIN = "write_outcome_uncertain"
+
+
+# The single table/action the Phase 33 internal-reviewer-decision writer may target (Phase 17 subset).
+INTERNAL_REVIEWER_DECISION_TARGET_TABLE = "internal_reviewer_decision_records"
+INTERNAL_REVIEWER_DECISION_TARGET_ACTION = "create_internal_reviewer_decision_record"
+
+INTERNAL_REVIEWER_DECISION_ALL_OUTCOMES = (
+    InternalReviewerDecisionWriteOutcome.CREATED,
+    InternalReviewerDecisionWriteOutcome.IDEMPOTENT_REPLAY,
+    InternalReviewerDecisionWriteOutcome.DENIED,
+    InternalReviewerDecisionWriteOutcome.FAILED_BEFORE_WRITE,
+    InternalReviewerDecisionWriteOutcome.WRITE_OUTCOME_UNCERTAIN,
+)
+
+
+@dataclass
+class InternalReviewerDecisionWriteReceipt:
+    """A typed, auditable receipt for one controlled internal-reviewer-decision write attempt.
+
+    Contains no credentials, no SQL, no connection URL, **no raw packet/evidence/interview
+    content, source bytes, generated agent output, final review decision, or client-facing
+    language**. The boolean flags describe what actually happened during this attempt. This write
+    persists a **review-gated, non-approval** internal reviewer decision record only — it approves
+    nothing, calls no Phase 22 review writer, and creates no ``review_records`` or
+    ``agent_run_records`` row. ``decision_intent`` and ``route_to`` echo the routing recommendation;
+    ``ready_for_internal_use`` is **not** approval.
+    """
+
+    outcome: str = InternalReviewerDecisionWriteOutcome.DENIED
+    permitted: bool = False
+    reason_code: Optional[str] = None
+    target_table: str = INTERNAL_REVIEWER_DECISION_TARGET_TABLE
+    target_action: str = INTERNAL_REVIEWER_DECISION_TARGET_ACTION
+    # Stored identity — set only when safely known (created / idempotent_replay).
+    stored_record_id: Optional[str] = None
+    idempotency_key: Optional[str] = None  # the caller's key (not a secret); a safe reference
+    audit_trace_ref: Optional[str] = None
+    # Actual-behavior flags.
+    database_connection_made: bool = False
+    sql_execution_made: bool = False
+    database_write_made: bool = False
+    stored_record_created: bool = False
+    existing_record_returned: bool = False
+    transaction_committed: bool = False
+    outcome_uncertain: bool = False
+    # Decision-routing posture of the record this write concerns (safe labels only).
+    decision_intent: Optional[str] = None
+    route_to: Optional[str] = None
+    review_status: Optional[str] = None
+    output_status: Optional[str] = None
+    lifecycle_status: Optional[str] = None
+    # Non-effect flags — always False (Phase 33 approves nothing and executes nothing).
+    review_records_write_made: bool = False
+    review_approval_made: bool = False
+    client_facing_output_created: bool = False
+    financial_verification_made: bool = False
+    capsule_publication_made: bool = False
+    agent_execution_made: bool = False
+    llm_call_made: bool = False
+    agentnet_call_made: bool = False
+    resolver_call_made: bool = False
+    network_call_made: bool = False
+    # Server-stamped timestamps read back from the DB (ISO strings), when known.
+    created_at: Optional[str] = None
+    database_write_at: Optional[str] = None
+    reasons: List[str] = field(default_factory=list)
+    warnings: List[str] = field(default_factory=list)
+
+
 class SourceIngestionWriteOutcome:
     """Outcome codes for a controlled source-ingestion write (str constants; no Enum)."""
 

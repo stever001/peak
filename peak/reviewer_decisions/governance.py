@@ -79,8 +79,12 @@ _RAW_CONTENT_VALUE_MARKERS = ("packet_payload", "raw_evidence_text", "raw_interv
 _JSON_KEYVALUE_RE = re.compile(r'"[^"\n]{1,64}"\s*:')
 
 
-def _value_marker_category(value: str) -> Optional[str]:
+def classify_prohibited_value_marker(value: str) -> Optional[str]:
     """Return a marker *category* string if ``value`` carries an obvious unsafe marker, else None.
+
+    **Public, DB-free classifier** — the supported cross-boundary interface for consumers (e.g. the
+    Phase 33 DB writer) that must re-enforce this value-safety guard at their own boundary without
+    reaching into a private helper. It opens no database connection and imports no ``peak.db``.
 
     Categories: 'credential/secret', 'DB-URL/DSN', 'raw-SQL', 'raw-content', 'JSON/object'. Only the
     category is returned — never the value — so nothing sensitive is echoed. No semantic inspection.
@@ -102,6 +106,11 @@ def _value_marker_category(value: str) -> Optional[str]:
     if _JSON_KEYVALUE_RE.search(value):
         return "JSON/object"
     return None
+
+
+# Backward-compatible private alias for Phase 32's own internal call sites. Delegates to the public
+# classifier above — same behavior, same categories.
+_value_marker_category = classify_prohibited_value_marker
 
 
 @dataclass

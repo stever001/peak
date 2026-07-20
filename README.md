@@ -111,9 +111,11 @@ peak/
 │   ├── PACKET_TO_REVIEW_BUNDLE_ORCHESTRATION_INTEGRATION.md # Packet processor ↔ Phase 29/30 review path integration (Phase 31)
 │   ├── INTERNAL_REVIEWER_DECISION_BOUNDARY.md      # DB-free internal reviewer decision-planning boundary (Phase 32)
 │   ├── INTERNAL_REVIEWER_DECISION_GOVERNANCE_POLICY.md # Reviewer-decision governance: intents, routing, no approval (Phase 32)
+│   ├── INTERNAL_REVIEWER_DECISION_CONTROLLED_WRITER.md # Seventh DB-backed writer, for internal_reviewer_decision_records (Phase 33)
+│   ├── INTERNAL_REVIEWER_DECISION_IDEMPOTENCY_POLICY.md # DB-enforced idempotency for reviewer decision rows (Phase 33)
 │   └── IMPLEMENTATION_PLAN.md
 ├── peak/                         # Python tooling layer (source only; no data)
-│   ├── db/                       # base, enums, models, session + agent_run (P20), evidence (P21), review (P22), source-ingestion (P24), agent-task-queue (P27) & review-bundle (P30) writers
+│   ├── db/                       # base, enums, models, session + agent_run (P20), evidence (P21), review (P22), source-ingestion (P24), agent-task-queue (P27), review-bundle (P30) & internal-reviewer-decision (P33) writers
 │   ├── agentnet/                 # Governance wrapper for the AgentNet MCP connector (no calls)
 │   ├── agents/                   # Agent execution harness (mock) + agent run persistence mapping (no live DB)
 │   ├── workers/                  # Production-shaped workers (evidence normalization; review-gated)
@@ -887,9 +889,9 @@ make validate-phase31                           # structural + plan-only on plai
 A **DB-free decision-planning boundary** that lets Peak represent a structured internal reviewer
 decision against a review bundle / review plan items — producing a review-gated decision *draft*, a
 decision-readiness assessment, and a deterministic **routing recommendation**. It is analogous to
-Phase 29 (which planned review bundles without DB writes). It adds no table and no migration (head
-stays `007_review_bundle_records`; still 13 tables), and produces **no** `ControlledWriteRequest`
-objects — future persistence is deferred to Phase 33.
+Phase 29 (which planned review bundles without DB writes). It adds no table and no migration, and
+produces **no** `ControlledWriteRequest` objects — persistence is owned by the separate Phase 33
+writer below.
 
 - **It is not an approval phase.** It never persists a decision, never calls the Phase 22 review
   writer, creates **no `review_records` row**, never calls `approve_internal`, and never creates
@@ -916,6 +918,42 @@ objects — future persistence is deferred to Phase 33.
 
 ```bash
 make validate-phase32   # internal reviewer decision boundary check (stdlib-only; DB-free)
+```
+
+### Internal Reviewer Decision Controlled Writer (Phase 33)
+
+The **seventh** narrow live DB writer. It persists **exactly one** `internal_reviewer_decision_records`
+row from a Phase 32 `InternalReviewerDecisionDraft` routed through the Phase 17
+`ControlledWriteRequest` boundary — allowing only `internal_reviewer_decision_records` /
+`create_internal_reviewer_decision_record`. It is the **persistence counterpart to Phase 32**, not
+an approval phase.
+
+- **Non-approval, review-gated records only.** It never calls `approve_internal`, never calls the
+  Phase 22 review writer, and **creates no `review_records` row**. It executes no agent, creates no
+  `agent_run_records` row, and makes no LLM/MockLLM/AgentNet/MCP/resolver/network call and no
+  client-facing output / financial verification / capsule publication. Every stored row is
+  `output_status=draft`, `review_status=needs_review`, `lifecycle_status=draft`, with all
+  approval/execution/publication posture booleans false and `requires_human_review=true`.
+  **`ready_for_internal_use` is not approval.**
+- **Public entry point:** `persist_internal_reviewer_decision_record(controlled_write_request, *,
+  session_factory=None, decision_request=None) -> InternalReviewerDecisionWriteReceipt`. A DB-layer
+  planner helper `build_decision_controlled_write_request(...)` wraps a Phase 32 draft in the Phase
+  17 request (Phase 32 stays strictly DB-free — the bridge lives in the DB layer).
+- **Write-time authorization loads the stored `Engagement`** and requires
+  `request.authorization_scope == engagement.authorization_scope`; identity matching is necessary
+  but not sufficient. Only the eight Phase 32 intents may be persisted; a deterministic `route_to`
+  is stored (recommendation only).
+- **Idempotency** boundary `(owner_id, client_id, engagement_id, idempotency_key)` with a
+  `payload_fingerprint` (exact `idempotent_replay` vs. `idempotency_conflict`; `IntegrityError`
+  race re-query). Migration `008_internal_reviewer_decision_records`
+  (`down_revision = 007_review_bundle_records`) adds one table; head is single; `make db-check` now
+  expects **14 tables**.
+- [`peak/db/internal_reviewer_decision_writer.py`](peak/db/internal_reviewer_decision_writer.py),
+  [`docs/INTERNAL_REVIEWER_DECISION_CONTROLLED_WRITER.md`](docs/INTERNAL_REVIEWER_DECISION_CONTROLLED_WRITER.md),
+  and [`docs/INTERNAL_REVIEWER_DECISION_IDEMPOTENCY_POLICY.md`](docs/INTERNAL_REVIEWER_DECISION_IDEMPOTENCY_POLICY.md).
+
+```bash
+make validate-phase33   # controlled-DB internal-reviewer-decision-writer check (DB-backed via .venv)
 ```
 
 ## Design constraints

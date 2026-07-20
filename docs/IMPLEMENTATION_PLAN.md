@@ -871,6 +871,43 @@ and documentation accurately states integration status.
   [`../tests/validate_phase32_internal_reviewer_decision_boundary.py`](../tests/validate_phase32_internal_reviewer_decision_boundary.py)
   (`make validate-phase32`; stdlib-only, DB-free).
 
+**Internal Reviewer Decision Controlled Writer (Phase 33 — seventh DB-backed writer):**
+
+- [x] The **persistence counterpart to Phase 32**: a narrow live DB writer that persists **exactly
+  one** `internal_reviewer_decision_records` row from a Phase 32 `InternalReviewerDecisionDraft`
+  routed through the Phase 17 `ControlledWriteRequest` boundary — allowing only
+  `internal_reviewer_decision_records` / `create_internal_reviewer_decision_record`.
+  [`../peak/db/internal_reviewer_decision_writer.py`](../peak/db/internal_reviewer_decision_writer.py),
+  migration [`../alembic/versions/008_internal_reviewer_decision_records.py`](../alembic/versions/008_internal_reviewer_decision_records.py),
+  and docs
+  [`INTERNAL_REVIEWER_DECISION_CONTROLLED_WRITER.md`](INTERNAL_REVIEWER_DECISION_CONTROLLED_WRITER.md) /
+  [`INTERNAL_REVIEWER_DECISION_IDEMPOTENCY_POLICY.md`](INTERNAL_REVIEWER_DECISION_IDEMPOTENCY_POLICY.md).
+  `persist_internal_reviewer_decision_record(controlled_write_request, *, session_factory=None,
+  decision_request=None)` returns a typed `InternalReviewerDecisionWriteReceipt`. **Non-approval,
+  review-gated records only:** every stored row is `output_status=draft`,
+  `review_status=needs_review`, `lifecycle_status=draft`, with all approval/execution/publication
+  posture booleans false, `client_facing_output_created=false`, `review_approval_made=false`, and
+  `requires_human_review=true`. **`ready_for_internal_use` is not approval.** Only the eight Phase
+  32 intents may be persisted; a deterministic `route_to` is stored (recommendation only).
+  **Write-time authorization loads the stored `Engagement`** and requires
+  `request.authorization_scope == engagement.authorization_scope` (identity necessary, not
+  sufficient); missing stored/request scope, stored identity mismatch, and prohibited stored
+  lifecycle are denied. **Content safety:** only safe references/summaries/labels are persisted
+  (lists live in `details_json`); an injected raw-content/secret/DB-URL/raw-SQL/approval-decision
+  attribute is rejected without echoing the value, and the Phase 32 summary/followup value-safety
+  markers are re-enforced at write time. **Idempotency** boundary
+  `(owner_id, client_id, engagement_id, idempotency_key)` + `payload_fingerprint` (`created` /
+  `idempotent_replay` / `idempotency_conflict` / `failed_before_write` / `write_outcome_uncertain`;
+  `IntegrityError` race re-query). Additive migration `008_internal_reviewer_decision_records`
+  (`down_revision = 007_review_bundle_records`) creates one table, no INSERT/seed; Alembic stays
+  single-head; the controlled DB now has **14 tables**. It approves nothing, never calls
+  `approve_internal` or the Phase 22 review writer, creates no `review_records`/`agent_run_records`
+  row, executes no agent, and makes no LLM/MockLLM/AgentNet/MCP/resolver/network call. An optional
+  Phase-32-side CWR helper was **skipped** to keep Phase 32 strictly DB-free; the equivalent bridge
+  (`build_decision_controlled_write_request`) lives in the Phase 33 DB layer. Checked by
+  [`../tests/validate_phase33_internal_reviewer_decision_writer.py`](../tests/validate_phase33_internal_reviewer_decision_writer.py)
+  (`make validate-phase33`; DB-backed via `.venv`).
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

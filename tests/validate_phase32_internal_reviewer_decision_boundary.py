@@ -161,11 +161,15 @@ def structural_checks() -> None:
         check("Phase 31 commit present (git unavailable — skipped)", True)
     versions = sorted(v for v in os.listdir(os.path.join(REPO_ROOT, "alembic", "versions"))
                       if v.endswith(".py"))
-    check("latest migration is 007_review_bundle_records",
+    check("Phase 30 migration 007_review_bundle_records present",
           any(v.startswith("007_review_bundle_records") for v in versions))
-    check("no 008_* migration added", not any(v.startswith("008") for v in versions))
-    models = read("peak/db/models.py")
-    check("no reviewer_decision table added to models", "reviewer_decision" not in models.lower())
+    # Phase 32 is a DB-free decision-planning boundary: it persists nothing itself. The reviewer
+    # decision *package* defines no SQLAlchemy model/table — persistence (the 008 migration and the
+    # InternalReviewerDecisionRecord model) is owned by the separate Phase 33 DB writer.
+    for rel in PY_FILES:
+        text = read(rel)
+        check(f"{rel}: defines no DB model/table",
+              "mapped_column" not in text and "__tablename__" not in text)
 
     print("\n6. Doc language")
     blob = re.sub(r"\s+", " ", "\n".join(read(rel) for rel in DOCS)).lower()

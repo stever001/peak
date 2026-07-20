@@ -14,9 +14,11 @@ writes.**
 
 **Phase 32 is DB-free.** It produces **no** `ControlledWriteRequest` objects and writes nothing —
 no new table, no migration, no writer. **Phase 32 does not persist reviewer decisions**, **does not
-call the Phase 22 review writer**, and creates **no `review_records` row**. Future persistence of
-reviewer decisions is deferred to **Phase 33**, which may add a narrow DB-backed writer for reviewer
-decision records. The package imports only stdlib; it imports no SQLAlchemy / Alembic / `peak.db`,
+call the Phase 22 review writer**, and creates **no `review_records` row**. Persistence of reviewer
+decisions is owned by the separate **Phase 33** narrow DB-backed writer
+([`INTERNAL_REVIEWER_DECISION_CONTROLLED_WRITER.md`](INTERNAL_REVIEWER_DECISION_CONTROLLED_WRITER.md)),
+which stores review-gated, non-approval `internal_reviewer_decision_records` only. The package
+imports only stdlib; it imports no SQLAlchemy / Alembic / `peak.db`,
 no Phase 22 writer, no live/mock LLM, no AgentNet/MCP/resolver/connector, and no network module.
 
 ## Not an approval phase
@@ -102,7 +104,9 @@ email/credential; and multiline / over-long refs, labels, or summaries. Detectio
 ## Controlled write planning
 
 **Phase 32 produces no `ControlledWriteRequest` objects** (`controlled_write_request_count == 0`).
-It is DB-free; future persistence is deferred to Phase 33.
+It is DB-free; persistence is owned by the separate Phase 33 controlled writer, whose DB-layer
+planner helper (`build_decision_controlled_write_request`) wraps a Phase 32 draft in a Phase 17
+request — Phase 32 itself never builds one and never imports `peak.db`.
 
 ## Integration with Phase 31 (documented handoff)
 

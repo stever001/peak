@@ -56,6 +56,8 @@ Thirty-two harnesses, run together by `make validate`:
   integration check (structural + plan-only always; DB-backed when SQLAlchemy is present).
 - `validate_phase32_internal_reviewer_decision_boundary.py` — internal reviewer decision boundary
   check (stdlib-only; DB-free — no database layer).
+- `validate_phase33_internal_reviewer_decision_writer.py` — controlled-DB
+  internal-reviewer-decision-writer check (structural always; DB-backed when SQLAlchemy is present).
 
 ## `synthetic_fixtures.py`
 
@@ -695,9 +697,9 @@ connects to nothing). The **structural** layer confirms the package files exist,
 import; that the package imports no SQLAlchemy / Alembic / `peak.db` / Phase 22 review writer /
 live-or-mock LLM / AgentNet / MCP / resolver / connector / network module; that the Phase 23
 ingestion, Phase 26 task_queue, and Phase 29 review_orchestration packages stay DB-free; that the
-Phase 31 commit is present; that **no Phase 32 migration** was added (head stays
-`007_review_bundle_records`) and **no new DB table** was declared; and that the docs carry the
-required language. The **functional** layer runs `prepare_internal_reviewer_decision` and asserts: a
+Phase 31 commit is present; that the Phase 30 migration `007_review_bundle_records` is present and
+the **Phase 32 package declares no SQLAlchemy model/table** (persistence is owned by the separate
+Phase 33 writer); and that the docs carry the required language. The **functional** layer runs `prepare_internal_reviewer_decision` and asserts: a
 valid request produces one decision draft + routing plan + `ready_to_record` readiness assessment —
 review-gated and **not approved** (`approval_allowed=false`, `review_approval_made=false`, no
 id/created_at); **every side-effect flag false** and `controlled_write_request_count=0`;
@@ -714,6 +716,34 @@ writer nor the Phase 22 writer nor `peak.db`. See
 [`../docs/INTERNAL_REVIEWER_DECISION_BOUNDARY.md`](../docs/INTERNAL_REVIEWER_DECISION_BOUNDARY.md) and
 [`../docs/INTERNAL_REVIEWER_DECISION_GOVERNANCE_POLICY.md`](../docs/INTERNAL_REVIEWER_DECISION_GOVERNANCE_POLICY.md).
 
+## `validate_phase33_internal_reviewer_decision_writer.py`
+
+Check for the Phase 33 **Internal Reviewer Decision Controlled Writer**
+(`peak/db/internal_reviewer_decision_writer.py`) — the seventh narrow live DB writer and the
+persistence counterpart to Phase 32. The **structural** layer (always, stdlib-only) confirms the
+writer/receipt/migration/doc files exist and compile; that the Phase 32 `peak/reviewer_decisions`
+package stays DB-free; that the writer imports no LLM/MockLLM/executor/AgentNet/MCP/resolver/
+connector/network client, credential, or Phase 22 review writer; that migration
+`008_internal_reviewer_decision_records` is additive schema-only (one table, no INSERT/seed,
+`down_revision = 007_review_bundle_records`); that the Phase 17 allowlist gained exactly the one
+new table/action (no broadening); and that the docs carry the required language (incl. **14
+tables**). The **DB-backed** layer (when SQLAlchemy is importable) exercises real behavior against a
+temporary SQLite database: migration upgrade/downgrade/re-upgrade; a successful create storing safe
+references only in the review-gated **non-approval** posture (`ready_for_internal_use` stored but
+not approval); the DB-layer CWR planner helper; idempotent replay and conflicting replay; DB-backed
+stored-`Engagement` authorization (stored-scope comparison, identity necessary but not sufficient,
+prohibited stored lifecycle); pre-DB draft/request identity and scope mismatches; table/action
+allowlist denials (incl. `review_records`/`agent_run_records` targets and approve/publish/execute/
+client-facing/financial/raw-SQL actions); decision-intent denials (`approve_internal`,
+`publish_capsule`, `verify_financial_impact`, `execute_agent`, `send_to_client`, …) with every
+allowed intent persisting; posture/caller-field rejections; content-attribute and summary/followup
+value-safety rejections **without echoing values**; side-effect discipline (no
+`review_records`/`agent_run_records` write); and transaction/failure semantics
+(`failed_before_write`, `write_outcome_uncertain`, `IntegrityError` race). Run
+`make validate-phase33 PYTHON=.venv/bin/python` for the DB layer. See
+[`../docs/INTERNAL_REVIEWER_DECISION_CONTROLLED_WRITER.md`](../docs/INTERNAL_REVIEWER_DECISION_CONTROLLED_WRITER.md) and
+[`../docs/INTERNAL_REVIEWER_DECISION_IDEMPOTENCY_POLICY.md`](../docs/INTERNAL_REVIEWER_DECISION_IDEMPOTENCY_POLICY.md).
+
 ## Running
 
 This machine uses `python3` (there is no bare `python`). From the repo root:
@@ -723,7 +753,7 @@ This machine uses `python3` (there is no bare `python`). From the repo root:
 make install-dev          # == python3 -m pip install -r requirements-dev.txt
 
 # run all harnesses
-make validate             # == phase1 … phase32
+make validate             # == phase1 … phase33
 
 # or run one at a time
 make validate-phase1
@@ -758,6 +788,7 @@ make validate-phase29   # stdlib-only; DB-free (no database layer)
 make validate-phase30   # DB-backed; add PYTHON=.venv/bin/python for the full suite
 make validate-phase31   # structural+plan-only always; add PYTHON=.venv/bin/python for the DB layer
 make validate-phase32   # stdlib-only; DB-free (no database layer)
+make validate-phase33   # DB-backed; add PYTHON=.venv/bin/python for the full suite
 ```
 
 Or invoke them directly, without the Makefile:
@@ -795,6 +826,7 @@ python3 tests/validate_phase29_review_orchestration_boundary.py             # st
 .venv/bin/python tests/validate_phase30_review_bundle_writer.py             # DB-backed (SQLAlchemy); skips DB layer on plain python3
 .venv/bin/python tests/validate_phase31_packet_review_bundle_integration.py # structural+plan-only always; DB layer needs SQLAlchemy
 python3 tests/validate_phase32_internal_reviewer_decision_boundary.py       # stdlib-only, no dependency needed (DB-free)
+.venv/bin/python tests/validate_phase33_internal_reviewer_decision_writer.py # DB-backed (SQLAlchemy); skips DB layer on plain python3
 ```
 
 ## Exit codes

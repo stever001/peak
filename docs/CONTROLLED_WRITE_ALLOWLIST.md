@@ -114,6 +114,16 @@ authorize approval, `review_records` creation, client-facing output, financial v
 capsule publication — Phase 30 persists review-gated, not-approved records only. **Phase 31** added
 **no** table/action: it only invokes the Phase 30 writer for this same table/action from the
 orchestrator (opt-in controlled persistence). **Phase 32** added **no** table/action either: the
-Internal Reviewer Decision Boundary is DB-free and produces no `ControlledWriteRequest` objects. A
-future **Phase 33** reviewer-decision persistence phase (e.g. `internal_reviewer_decision_records`)
-would add its table/action here through the same explicit governance gate.
+Internal Reviewer Decision Boundary is DB-free and produces no `ControlledWriteRequest` objects.
+
+### `internal_reviewer_decision_records` (Phase 33 — now live)
+
+**Phase 33** added exactly `internal_reviewer_decision_records` /
+`create_internal_reviewer_decision_record` to `ALLOWED_TABLES` / `ALLOWED_ACTIONS` (no other change
+— no update/delete/upsert/raw-SQL action). Phase 32 creates internal reviewer decision drafts only;
+**Phase 33 is the first phase where `internal_reviewer_decision_records` has a live narrow DB
+writer**
+([`INTERNAL_REVIEWER_DECISION_CONTROLLED_WRITER.md`](INTERNAL_REVIEWER_DECISION_CONTROLLED_WRITER.md)).
+This does **not** authorize approval, `approve_internal`, `review_records` creation, client-facing
+output, financial verification, capsule publication, or execution — Phase 33 persists review-gated,
+**non-approval** records only. `ready_for_internal_use` is **not** approval.

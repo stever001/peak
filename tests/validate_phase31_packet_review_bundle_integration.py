@@ -169,9 +169,10 @@ def structural_checks() -> None:
         check("Phase 30 commit present (git unavailable — skipped)", True)
     versions = sorted(v for v in os.listdir(os.path.join(REPO_ROOT, "alembic", "versions"))
                       if v.endswith(".py"))
-    check("latest migration is 007_review_bundle_records",
+    check("Phase 30 migration 007_review_bundle_records present",
           any(v.startswith("007_review_bundle_records") for v in versions))
-    check("no 008_* migration added", not any(v.startswith("008") for v in versions))
+    # Phase 31 is an integration phase and adds no migration of its own; later phases (e.g. the
+    # Phase 33 internal-reviewer-decision writer's 008_* migration) legitimately add their own.
     p31 = [v for v in versions if any(t in v.lower() for t in ("phase31", "review_bundle_integration",
                                                                "review_orchestration_integration"))]
     check("no Phase 31 migration added", not p31)

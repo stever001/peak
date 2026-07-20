@@ -320,7 +320,14 @@ stored in the review-gated, **not-approved** posture; the writer creates exactly
 approves anything or creates a `review_records` row. **Phase 31** added no table or migration — it
 only lets the Phase 25/28 orchestrator drive that existing writer (the DB still has 13 tables; head
 `007_review_bundle_records`). **Phase 32** added no table or migration either: the Internal Reviewer
-Decision Boundary is **DB-free** and stores nothing. An `internal_reviewer_decision_records` record
-group is a **planned future** addition only (deferred to Phase 33), described by
-[`INTERNAL_REVIEWER_DECISION_BOUNDARY.md`](INTERNAL_REVIEWER_DECISION_BOUNDARY.md); no such table
-exists yet.
+Decision Boundary is **DB-free** and stores nothing. **Phase 33** introduced the
+`internal_reviewer_decision_records` record group as a real table (migration
+`008_internal_reviewer_decision_records`; the controlled DB now has **14 tables**), persisted by the
+narrow Phase 33 writer
+([`INTERNAL_REVIEWER_DECISION_CONTROLLED_WRITER.md`](INTERNAL_REVIEWER_DECISION_CONTROLLED_WRITER.md)).
+It carries the universal governance axes + audit fields plus decision-posture columns
+(`authoritative`, `approval_allowed`, `publication_allowed`, `financial_verified`,
+`client_facing_output_created`, `review_approval_made`, `requires_human_review`, …) always stored in
+the review-gated, **non-approval** posture, plus the deterministic routing columns (`decision_intent`,
+`route_to`); the writer creates exactly one row and never approves anything, calls
+`approve_internal`, or creates a `review_records` row.

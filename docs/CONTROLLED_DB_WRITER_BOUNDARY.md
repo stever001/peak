@@ -176,5 +176,10 @@ drive that writer (opt-in, `session_factory` required) as its `review_bundle_per
 routing every write through this boundary and the narrow writer, never a generic dispatcher and
 never Phase 22. The **Phase 32 Internal Reviewer Decision Boundary**
 ([`INTERNAL_REVIEWER_DECISION_BOUNDARY.md`](INTERNAL_REVIEWER_DECISION_BOUNDARY.md)) does **not**
-touch this boundary: it is DB-free and produces **no** `ControlledWriteRequest` objects — future
-reviewer-decision persistence is deferred to Phase 33.
+touch this boundary: it is DB-free and produces **no** `ControlledWriteRequest` objects. **Phase
+33** added the persistence counterpart — the narrow internal-reviewer-decision writer
+([`INTERNAL_REVIEWER_DECISION_CONTROLLED_WRITER.md`](INTERNAL_REVIEWER_DECISION_CONTROLLED_WRITER.md))
+— which routes an `InternalReviewerDecisionDraft` write through this boundary and the allowlisted
+`internal_reviewer_decision_records` / `create_internal_reviewer_decision_record` table/action,
+persisting one review-gated, **non-approval** row (never a `review_records` row, never an approval,
+never `approve_internal`). `ready_for_internal_use` is **not** approval.
