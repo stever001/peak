@@ -277,6 +277,47 @@ class AgentTaskQueueRecord(Base, GovernanceMixin, AuditMixin):
     payload_fingerprint: Mapped[Optional[str]] = mapped_column(String(64))
 
 
+class ReviewBundleRecord(Base, GovernanceMixin, AuditMixin):
+    __tablename__ = "review_bundle_records"
+    # Phase 30: DB-enforced idempotency for the controlled review-bundle writer. The uniqueness
+    # boundary includes identity context so an idempotency key cannot collide across
+    # owner / client / engagement. See docs/REVIEW_BUNDLE_IDEMPOTENCY_POLICY.md.
+    __table_args__ = (
+        UniqueConstraint(
+            "owner_id",
+            "client_id",
+            "engagement_id",
+            "idempotency_key",
+            name="uq_review_bundle_records_idem",
+        ),
+        MYSQL_TABLE_ARGS,
+    )
+    # id convention: rvb_<slug>
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    client_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    engagement_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    packet_processing_receipt_ref: Mapped[Optional[str]] = mapped_column(String(128))
+    reviewer_role: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    review_reason: Mapped[Optional[str]] = mapped_column(String(255))
+    review_scope: Mapped[Optional[str]] = mapped_column(String(48))
+    # Governance / review-posture — real columns (never JSON). "not-approved" is enforced.
+    output_status: Mapped[str] = mapped_column(String(32), index=True, default="draft")
+    authoritative: Mapped[bool] = mapped_column(Boolean, default=False)
+    client_facing_approved: Mapped[bool] = mapped_column(Boolean, default=False)
+    capsule_candidate_ready: Mapped[bool] = mapped_column(Boolean, default=False)
+    financial_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    execution_allowed: Mapped[bool] = mapped_column(Boolean, default=False)
+    approval_allowed: Mapped[bool] = mapped_column(Boolean, default=False)
+    publication_allowed: Mapped[bool] = mapped_column(Boolean, default=False)
+    requires_human_review: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Phase 30 controlled-writer fields. idempotency_key + payload_fingerprint back
+    # replay/replay-conflict detection. Safe references (source/evidence/task-queue ids,
+    # subject_refs, reasons, warnings) live in details_json — never raw payload/content or a
+    # final review decision.
+    idempotency_key: Mapped[Optional[str]] = mapped_column(String(128), index=True)
+    payload_fingerprint: Mapped[Optional[str]] = mapped_column(String(64))
+
+
 # Convenience list of all model classes (used by tooling/validation).
 ALL_MODELS = [
     Client,
@@ -291,4 +332,5 @@ ALL_MODELS = [
     CapsulePublicationCandidate,
     SourceIngestionRecord,
     AgentTaskQueueRecord,
+    ReviewBundleRecord,
 ]

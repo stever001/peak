@@ -106,9 +106,11 @@ peak/
 │   ├── PACKET_TO_TASK_QUEUE_ORCHESTRATION_INTEGRATION.md # Phase 25 orchestrator ↔ Phase 26/27 queue path integration (Phase 28)
 │   ├── PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md # DB-free review-planning boundary for human reviewers (Phase 29)
 │   ├── REVIEW_ORCHESTRATION_GOVERNANCE_POLICY.md   # Review-orchestration governance: readiness states, no approval (Phase 29)
+│   ├── REVIEW_BUNDLE_CONTROLLED_WRITER.md          # Sixth DB-backed writer, for review_bundle_records (Phase 30)
+│   ├── REVIEW_BUNDLE_IDEMPOTENCY_POLICY.md         # DB-enforced idempotency for review bundle rows (Phase 30)
 │   └── IMPLEMENTATION_PLAN.md
 ├── peak/                         # Python tooling layer (source only; no data)
-│   ├── db/                       # base, enums, models, session + agent_run (P20), evidence (P21), review (P22), source-ingestion (P24) & agent-task-queue (P27) writers
+│   ├── db/                       # base, enums, models, session + agent_run (P20), evidence (P21), review (P22), source-ingestion (P24), agent-task-queue (P27) & review-bundle (P30) writers
 │   ├── agentnet/                 # Governance wrapper for the AgentNet MCP connector (no calls)
 │   ├── agents/                   # Agent execution harness (mock) + agent run persistence mapping (no live DB)
 │   ├── workers/                  # Production-shaped workers (evidence normalization; review-gated)
@@ -806,6 +808,41 @@ deferred.
 
 ```bash
 make validate-phase29   # packet-derived review orchestration boundary check (stdlib-only; DB-free)
+```
+
+### Review Bundle Controlled Writer (Phase 30)
+
+The **sixth** DB-backed writer, the persistence counterpart to Phase 29. It persists **exactly
+one** review-gated, **not-approved** `review_bundle_records` row from a Phase 29 `ReviewBundleDraft`
+routed through the Phase 17 `ControlledWriteRequest` boundary — allowing only `review_bundle_records`
+/ `create_review_bundle_record`. At **write-time** it loads the authoritative stored `Engagement`
+row and requires `request.authorization_scope == engagement.authorization_scope` (identity
+necessary but not sufficient); enforces DB-level idempotency (unique index over
+owner/client/engagement/idempotency_key + payload fingerprint); distinguishes `created` /
+`idempotent_replay` / `denied` / `failed_before_write` / `write_outcome_uncertain`; and returns a
+typed `ReviewBundleWriteReceipt`.
+
+It **approves nothing** — no `approve_internal`, **no Phase 22 review writer call, no
+`review_records` row**. It executes no agent, makes no LLM/MockLLM/AgentNet/MCP/resolver/connector/
+network call, creates no `agent_run_records` row, and performs no client-facing output / financial
+verification / capsule publication. Required posture: `output_status=draft`,
+`review_status=needs_review`, `lifecycle_status=draft`, and all of `authoritative` /
+`client_facing_approved` / `capsule_candidate_ready` / `financial_verified` / `execution_allowed` /
+`approval_allowed` / `publication_allowed` false with `requires_human_review=true`. Only safe
+references/summaries are stored (never raw packet/evidence/interview content, source bytes,
+generated output, secrets, or a final review decision); a draft carrying such an attribute is
+rejected without echoing the value.
+
+- [`peak/db/review_bundle_writer.py`](peak/db/review_bundle_writer.py) — the controlled writer.
+- [`alembic/versions/007_review_bundle_records.py`](alembic/versions/007_review_bundle_records.py)
+  — additive migration creating the single new table (down_revision `006_agent_task_queue_records`;
+  single linear head `007_review_bundle_records`; no data).
+- [`docs/REVIEW_BUNDLE_CONTROLLED_WRITER.md`](docs/REVIEW_BUNDLE_CONTROLLED_WRITER.md) and
+  [`docs/REVIEW_BUNDLE_IDEMPOTENCY_POLICY.md`](docs/REVIEW_BUNDLE_IDEMPOTENCY_POLICY.md).
+
+```bash
+make validate-phase30 PYTHON=.venv/bin/python   # full DB-backed suite (temporary SQLite)
+make validate-phase30                           # structural only on plain python3
 ```
 
 ## Design constraints

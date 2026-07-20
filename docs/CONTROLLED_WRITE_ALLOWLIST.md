@@ -101,6 +101,14 @@ not-executed queue records only. **Phase 28** invokes the Phase 27 writer for th
 from the Phase 25 orchestrator (opt-in controlled persistence); no other table/action was added.
 
 **Phase 29** added **no** table/action to this allowlist: the Packet-Derived Review Orchestration
-Boundary is DB-free and produces no `ControlledWriteRequest` objects. A future review-plan
-persistence phase (e.g. `review_bundle_records`) would add its table/action here through the same
-explicit governance gate.
+Boundary is DB-free and produces no `ControlledWriteRequest` objects.
+
+### `review_bundle_records` (Phase 30 — now live)
+
+**Phase 30** added exactly `review_bundle_records` / `create_review_bundle_record` to
+`ALLOWED_TABLES` / `ALLOWED_ACTIONS` (no other change — no update/delete/upsert/raw-SQL action).
+Phase 29 creates review bundle drafts only; **Phase 30 is the first phase where
+`review_bundle_records` has a live narrow DB writer**
+([`REVIEW_BUNDLE_CONTROLLED_WRITER.md`](REVIEW_BUNDLE_CONTROLLED_WRITER.md)). This does **not**
+authorize approval, `review_records` creation, client-facing output, financial verification, or
+capsule publication — Phase 30 persists review-gated, not-approved records only.

@@ -14,10 +14,15 @@ without DB writes.**
 ## DB-free; future persistence deferred
 
 **Phase 29 is DB-free.** It produces **no** `ControlledWriteRequest` objects and writes nothing —
-no new table, no migration, no writer. Future persistence of review plans (e.g. a
-`review_bundle_records` table) is **deferred to a later phase**. The package imports only stdlib;
-it imports no SQLAlchemy / Alembic / `peak.db`, no live/mock LLM, no AgentNet/MCP/resolver/
-connector, and no network module.
+no new table, no migration, no writer. The package imports only stdlib; it imports no SQLAlchemy /
+Alembic / `peak.db`, no live/mock LLM, no AgentNet/MCP/resolver/connector, and no network module.
+
+**Phase 30** added the persistence counterpart: the narrow DB-backed review-bundle writer
+([`REVIEW_BUNDLE_CONTROLLED_WRITER.md`](REVIEW_BUNDLE_CONTROLLED_WRITER.md)) persists a Phase 29
+`ReviewBundleDraft` into a `review_bundle_records` row through the Phase 17 boundary — review-gated
+and **not-approved**. Phase 29 itself remains DB-free and unchanged; the Phase 30 writer (or a test)
+constructs the `ControlledWriteRequest` from a draft. Persisting a review bundle is **not
+approval**: no `review_records` row is created and nothing is approved.
 
 ## Not an approval phase
 

@@ -12,8 +12,11 @@ references. It adds no approval authority, no table, no migration, and no writer
 - Deterministic `ReviewReadinessAssessment` objects.
 - A typed `PacketReviewOrchestrationResult` with counts, stage names, safe reasons, and warnings.
 
-Phase 29 produces **no** `ControlledWriteRequest` objects — it is **DB-free** and future
-persistence is deferred.
+Phase 29 produces **no** `ControlledWriteRequest` objects — it is **DB-free**. Persistence of a
+review bundle draft is provided by the **Phase 30** narrow review-bundle writer
+([`REVIEW_BUNDLE_CONTROLLED_WRITER.md`](REVIEW_BUNDLE_CONTROLLED_WRITER.md)), which persists a
+review-gated, **not-approved** `review_bundle_records` row and creates no `review_records` row.
+Phase 29 stays DB-free and unchanged.
 
 ## Prohibited effects
 

@@ -762,6 +762,48 @@ and documentation accurately states integration status.
   [`../tests/validate_phase29_review_orchestration_boundary.py`](../tests/validate_phase29_review_orchestration_boundary.py)
   (`make validate-phase29`; stdlib-only, DB-free).
 
+**Review Bundle Controlled Writer (Phase 30 — sixth DB-backed writer):**
+
+- [x] The sixth narrow live DB writer, the persistence counterpart to Phase 29, applying the
+  Phase 20–24/27 pattern to `review_bundle_records`:
+  [`../peak/db/review_bundle_writer.py`](../peak/db/review_bundle_writer.py) (+
+  `ReviewBundleWriteReceipt` / `ReviewBundleWriteOutcome` in
+  [`../peak/db/writer_contracts.py`](../peak/db/writer_contracts.py) and `ReviewBundleRecord` in
+  [`../peak/db/models.py`](../peak/db/models.py)), the additive migration
+  [`../alembic/versions/007_review_bundle_records.py`](../alembic/versions/007_review_bundle_records.py)
+  (down_revision `006_agent_task_queue_records`; single linear head `007_review_bundle_records`;
+  creates one table only, no data), and docs
+  [`REVIEW_BUNDLE_CONTROLLED_WRITER.md`](REVIEW_BUNDLE_CONTROLLED_WRITER.md) /
+  [`REVIEW_BUNDLE_IDEMPOTENCY_POLICY.md`](REVIEW_BUNDLE_IDEMPOTENCY_POLICY.md). It consumes a
+  Phase 17 `ControlledWriteRequest` whose `record_draft` is a Phase 29 `ReviewBundleDraft` and
+  creates **exactly one** review-gated, **not-approved** `review_bundle_records` row with
+  server-controlled id/timestamps. **Write-time DB-backed authorization:** loads the authoritative
+  stored `Engagement` row and requires `request.authorization_scope ==
+  engagement.authorization_scope` (identity necessary but not sufficient; missing stored/request
+  scope denied). **No approval:** approves nothing (no `approve_internal`), **calls no Phase 22
+  review writer, creates no `review_records` row**, executes no agent, makes no
+  LLM/MockLLM/AgentNet/MCP/resolver/connector/network call, creates no `agent_run_records` row, and
+  performs no client-facing output / financial verification / capsule publication. Stores **safe
+  references only** (packet-processing receipt ref, source/evidence/task-queue ids, subject id+type,
+  reviewer_role, review_reason, review_scope, statuses, posture booleans) — never raw
+  packet/evidence/interview content, source bytes, generated output, secrets, or a **final review
+  decision**; a draft carrying such an attribute is rejected without echoing values. Required
+  posture: `output_status=draft`, `review_status=needs_review`, `lifecycle_status=draft`, and all of
+  `authoritative` / `client_facing_approved` / `capsule_candidate_ready` / `financial_verified` /
+  `execution_allowed` / `approval_allowed` / `publication_allowed` false with
+  `requires_human_review=true`. **DB-enforced idempotency** via a unique index over
+  `(owner_id, client_id, engagement_id, idempotency_key)` + `payload_fingerprint`, distinguishing
+  `created` / `idempotent_replay` / `denied` / `failed_before_write` / `write_outcome_uncertain`
+  (with an `IntegrityError` re-query race branch). Allows only `review_bundle_records` /
+  `create_review_bundle_record`; the Phase 17 allowlist gained exactly that one table/action. Never
+  updates or deletes. The Phase 29 `peak/review_orchestration` package stays **DB-free** (the
+  optional Phase 29 CWR helper was **skipped** — the Phase 30 tests construct the
+  `ControlledWriteRequest` directly, leaving Phase 29 untouched). `make db-check` now reports
+  **exactly 13 tables**. Checked by
+  [`../tests/validate_phase30_review_bundle_writer.py`](../tests/validate_phase30_review_bundle_writer.py)
+  (`make validate-phase30 PYTHON=.venv/bin/python` for the DB-backed suite; structural checks run on
+  plain `python3`).
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

@@ -10,7 +10,7 @@ objects are needed, the harnesses build **synthetic fixtures at runtime**
 directory that is auto-deleted. Nothing is stored. See
 [`../docs/FIXTURE_STRATEGY.md`](../docs/FIXTURE_STRATEGY.md).
 
-Twenty-nine harnesses, run together by `make validate`:
+Thirty harnesses, run together by `make validate`:
 
 - `validate_phase1.py` — schemas + synthetic object fixtures.
 - `validate_phase2.py` — schemas + a synthetic `EngagementPacket`.
@@ -50,6 +50,8 @@ Twenty-nine harnesses, run together by `make validate`:
   integration check (structural + plan-only always; DB-backed when SQLAlchemy is present).
 - `validate_phase29_review_orchestration_boundary.py` — packet-derived review orchestration
   boundary check (stdlib-only; DB-free — no database layer).
+- `validate_phase30_review_bundle_writer.py` — controlled-DB review-bundle-writer check
+  (structural always; DB-backed when SQLAlchemy is present).
 
 ## `synthetic_fixtures.py`
 
@@ -622,6 +624,38 @@ Phase 22 writer (no `review_records` write). See
 [`../docs/PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md`](../docs/PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md)
 and [`../docs/REVIEW_ORCHESTRATION_GOVERNANCE_POLICY.md`](../docs/REVIEW_ORCHESTRATION_GOVERNANCE_POLICY.md).
 
+## `validate_phase30_review_bundle_writer.py`
+
+Check for the Phase 30 **controlled DB review-bundle writer** (`peak/db/review_bundle_writer.py`,
+`peak/db/writer_contracts.py`) — the same two-layer pattern as Phases 20–24 and 27, applied to
+`review_bundle_records` (the persistence counterpart to Phase 29). The **structural** layer confirms
+the files exist and compile; that the Phase 29 `peak/review_orchestration` package stays **DB-free**;
+that the writer imports no LLM/MockLLM/executor/AgentNet/MCP/resolver/connector/network client, no
+Phase 22 review writer, and no credential; that the `007_review_bundle_records` migration is
+additive schema-only (creates one table, no INSERT/seed, upgrade+downgrade, adds the unique index,
+`down_revision = 006_agent_task_queue_records`); that the docs carry the required language; and that
+the repo stays source-only. The **DB-backed** layer (when SQLAlchemy is importable) builds a
+**temporary local SQLite database** (deleted afterward) and exercises real behavior — migration
+upgrade/downgrade/re-upgrade; successful create (one row, server-stamped `rvb_` id/timestamp, **safe
+references only** — source/evidence/task ids + subject id+type in `details_json`, no raw content,
+review-gated `output_status=draft` / `review_status=needs_review` / `lifecycle_status=draft` with all
+approval/execution/publication/financial flags false and `requires_human_review=true`); side-effect
+discipline (**no `review_records` row, no `agent_run_records` row**, no unrelated writes); idempotent
+replay; conflicting replay (denied, row unchanged); DB-backed authorization (request scope vs stored
+`Engagement.authorization_scope`; missing stored/request scope; missing subject;
+owner/client/engagement mismatch); draft/request identity mismatches; table/action allowlist (wrong
+table/action + approve-/update-/delete-/publish-/execute-/client-facing-/financial-/raw_sql-like
+actions, and `review_records` / `agent_run_records` targets rejected); posture rejections (each
+posture flag, caller-supplied id/timestamp); content/decision/secret guard (injected `packet_payload`
+/ `raw_evidence_text` / `raw_interview_text` / `source_bytes` / `generated_output` /
+`approval_decision` / `api_key` / `connection_string` / `token` / `credential` attributes rejected
+without echoing values); and transaction/failure semantics (`failed_before_write`,
+`write_outcome_uncertain`, and the `IntegrityError` race → replay/conflict). Skips the DB layer with
+instructions if SQLAlchemy is absent (still exits 0). Run the full suite with
+`make validate-phase30 PYTHON=.venv/bin/python`. See
+[`../docs/REVIEW_BUNDLE_CONTROLLED_WRITER.md`](../docs/REVIEW_BUNDLE_CONTROLLED_WRITER.md) and
+[`../docs/REVIEW_BUNDLE_IDEMPOTENCY_POLICY.md`](../docs/REVIEW_BUNDLE_IDEMPOTENCY_POLICY.md).
+
 ## Running
 
 This machine uses `python3` (there is no bare `python`). From the repo root:
@@ -631,7 +665,7 @@ This machine uses `python3` (there is no bare `python`). From the repo root:
 make install-dev          # == python3 -m pip install -r requirements-dev.txt
 
 # run all harnesses
-make validate             # == phase1 … phase29
+make validate             # == phase1 … phase30
 
 # or run one at a time
 make validate-phase1
@@ -663,6 +697,7 @@ make validate-phase26   # stdlib-only; DB-free (no database layer)
 make validate-phase27   # DB-backed; add PYTHON=.venv/bin/python for the full suite
 make validate-phase28   # structural+plan-only always; add PYTHON=.venv/bin/python for the DB layer
 make validate-phase29   # stdlib-only; DB-free (no database layer)
+make validate-phase30   # DB-backed; add PYTHON=.venv/bin/python for the full suite
 ```
 
 Or invoke them directly, without the Makefile:
@@ -697,11 +732,12 @@ python3 tests/validate_phase26_agent_task_queue_readiness.py               # std
 .venv/bin/python tests/validate_phase27_agent_task_queue_writer.py         # DB-backed (SQLAlchemy); skips DB layer on plain python3
 .venv/bin/python tests/validate_phase28_packet_task_queue_integration.py   # structural+plan-only always; DB layer needs SQLAlchemy
 python3 tests/validate_phase29_review_orchestration_boundary.py             # stdlib-only, no dependency needed (DB-free)
+.venv/bin/python tests/validate_phase30_review_bundle_writer.py             # DB-backed (SQLAlchemy); skips DB layer on plain python3
 ```
 
 ## Exit codes
 
-All twenty-nine harnesses share the same convention:
+All thirty harnesses share the same convention:
 
 | Code | Meaning |
 | --- | --- |

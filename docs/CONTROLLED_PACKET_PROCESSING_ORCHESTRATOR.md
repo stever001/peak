@@ -154,4 +154,6 @@ Downstream, the **Phase 29 Packet-Derived Review Orchestration Boundary**
 ([`PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md`](PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md))
 can consume this receipt's **safe references** (the packet-processing receipt ref, source-ingestion
 / evidence / agent-task-queue ids) to plan human review — a DB-free, no-approval boundary. The
-handoff is by contract only; Phase 29 does not run inside this orchestrator.
+handoff is by contract only; Phase 29 does not run inside this orchestrator. **Phase 30** persists
+the resulting review bundle drafts into a `review_bundle_records` row via a narrow DB writer —
+review-gated and **not-approved** (no `review_records` row, no approval).

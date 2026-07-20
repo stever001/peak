@@ -167,4 +167,8 @@ through this boundary and the narrow writer, never a generic dispatcher.
 The **Phase 29 Packet-Derived Review Orchestration Boundary**
 ([`PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md`](PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md))
 does **not** touch this boundary at all: it is DB-free and produces **no** `ControlledWriteRequest`
-objects — future persistence of review plans is deferred to a later phase.
+objects. **Phase 30** added the persistence counterpart — the narrow review-bundle writer
+([`REVIEW_BUNDLE_CONTROLLED_WRITER.md`](REVIEW_BUNDLE_CONTROLLED_WRITER.md)) — which routes a
+`ReviewBundleDraft` write through this boundary and the allowlisted `review_bundle_records` /
+`create_review_bundle_record` table/action, persisting one review-gated, **not-approved** row
+(never a `review_records` row, never an approval).

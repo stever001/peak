@@ -21,6 +21,7 @@ ALLOWED_TABLES = frozenset(
         "agent_run_records",
         "source_ingestion_records",
         "agent_task_queue_records",
+        "review_bundle_records",
         "capsule_publication_candidates",
     }
 )
@@ -33,6 +34,7 @@ ALLOWED_ACTIONS = frozenset(
         "create_agent_run_record",
         "create_source_ingestion_record",
         "create_agent_task_queue_record",
+        "create_review_bundle_record",
         "create_capsule_candidate_draft",
         "update_review_status",
         "update_lifecycle_status",

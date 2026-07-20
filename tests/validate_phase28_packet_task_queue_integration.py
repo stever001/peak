@@ -166,9 +166,11 @@ def structural_checks() -> None:
         check("Phase 27 commit present (git unavailable — skipped)", True)
     versions = sorted(v for v in os.listdir(os.path.join(REPO_ROOT, "alembic", "versions"))
                       if v.endswith(".py"))
-    check("latest migration is 006_agent_task_queue_records",
+    check("the Phase 27 agent-task-queue migration (006) is present",
           any(v.startswith("006_agent_task_queue_records") for v in versions))
-    check("no 007_* migration added", not any(v.startswith("007") for v in versions))
+    # Phase 28 is an orchestration-integration phase: it introduced no migration of its own.
+    # (Later phases legitimately add migrations, so this checks for a Phase-28-specific one,
+    # not a fixed global count.)
     p28 = [v for v in versions if any(t in v.lower() for t in ("phase28", "task_queue_integration",
                                                                "orchestration_integration"))]
     check("no Phase 28 migration added", not p28)

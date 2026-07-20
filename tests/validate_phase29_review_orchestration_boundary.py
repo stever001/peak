@@ -157,11 +157,16 @@ def structural_checks() -> None:
         check("Phase 28 commit present (git unavailable — skipped)", True)
     versions = sorted(v for v in os.listdir(os.path.join(REPO_ROOT, "alembic", "versions"))
                       if v.endswith(".py"))
-    check("latest migration is 006_agent_task_queue_records",
+    check("the Phase 27 agent-task-queue migration (006) is present",
           any(v.startswith("006_agent_task_queue_records") for v in versions))
-    check("no 007_* migration added", not any(v.startswith("007") for v in versions))
-    models = read("peak/db/models.py")
-    check("no review_bundle table added to models", "review_bundle" not in models.lower())
+    # Phase 29 is a DB-free boundary: it introduced no migration of its own. (Later phases —
+    # e.g. Phase 30's review_bundle_records table — legitimately add migrations, so this checks
+    # for a Phase-29-specific migration, not a fixed global count.)
+    p29_migrations = [
+        v for v in versions
+        if any(t in v.lower() for t in ("review_orchestration", "phase29", "review_plan"))
+    ]
+    check("no Phase 29 review-orchestration migration added", not p29_migrations)
 
     print("\n6. Doc language")
     blob = re.sub(r"\s+", " ", "\n".join(read(rel) for rel in DOCS)).lower()

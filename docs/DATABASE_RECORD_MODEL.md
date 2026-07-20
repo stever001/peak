@@ -309,8 +309,12 @@ one row and never executes an agent or creates an `agent_run_records` row. **Pha
 table or migration — it only lets the Phase 25 orchestrator drive that existing writer (the DB
 still has 12 tables; head `006_agent_task_queue_records`).
 
-**Phase 29** likewise added no table or migration: the Packet-Derived Review Orchestration
-Boundary is **DB-free** and stores nothing. A `review_bundle_records` record group is a **planned
-future** addition only (deferred), described by
-[`PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md`](PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md);
-no such table exists yet.
+**Phase 29** added no table or migration: the Packet-Derived Review Orchestration Boundary is
+**DB-free** and stores nothing. **Phase 30** introduced the `review_bundle_records` record group as
+a real table (migration `007_review_bundle_records`; the controlled DB now has **13 tables**),
+persisted by the narrow Phase 30 writer
+([`REVIEW_BUNDLE_CONTROLLED_WRITER.md`](REVIEW_BUNDLE_CONTROLLED_WRITER.md)). It carries the
+universal governance axes + audit fields plus review-posture columns (`authoritative`,
+`approval_allowed`, `publication_allowed`, `financial_verified`, `requires_human_review`, …) always
+stored in the review-gated, **not-approved** posture; the writer creates exactly one row and never
+approves anything or creates a `review_records` row.

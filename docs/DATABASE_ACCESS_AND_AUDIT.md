@@ -219,3 +219,11 @@ The **Phase 29 Packet-Derived Review Orchestration Boundary**
 ([`PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md`](PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md))
 touches the database not at all: it is DB-free, opens no connection, writes no row, and approves
 nothing. There is therefore no new access/audit surface in Phase 29.
+
+The **Phase 30** review-bundle writer
+([`REVIEW_BUNDLE_CONTROLLED_WRITER.md`](REVIEW_BUNDLE_CONTROLLED_WRITER.md)) applies the same
+access/audit rules to the new `review_bundle_records` table: write-time stored-`Engagement` scope
+re-check (identity necessary but not sufficient), server-controlled id/timestamps and `created_by`,
+DB-level idempotency, and a typed receipt with no credentials/SQL/connection/raw content or review
+decision. It stores **safe references only** and a review-gated, **not-approved** posture — it
+approves nothing, calls no Phase 22 review writer, and creates no `review_records` row.

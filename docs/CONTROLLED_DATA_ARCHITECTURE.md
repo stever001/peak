@@ -227,3 +227,7 @@ Orchestration Boundary**
 ([`PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md`](PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md)):
 a **DB-free** boundary that organizes safe references into review-ready plans for human reviewers.
 It stores nothing, approves nothing, and carries only ids/references — never raw client content.
+**Phase 30** persists those review bundle drafts into a controlled `review_bundle_records` table via
+a narrow DB writer ([`REVIEW_BUNDLE_CONTROLLED_WRITER.md`](REVIEW_BUNDLE_CONTROLLED_WRITER.md)) —
+review-gated, **not-approved** rows carrying safe references only (no raw client content, no review
+decision, no `review_records` row).

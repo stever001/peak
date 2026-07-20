@@ -260,6 +260,78 @@ class AgentTaskQueueWriteReceipt:
     warnings: List[str] = field(default_factory=list)
 
 
+class ReviewBundleWriteOutcome:
+    """Outcome codes for a controlled review-bundle write (str constants; no Enum)."""
+
+    CREATED = "created"
+    IDEMPOTENT_REPLAY = "idempotent_replay"
+    DENIED = "denied"
+    FAILED_BEFORE_WRITE = "failed_before_write"
+    WRITE_OUTCOME_UNCERTAIN = "write_outcome_uncertain"
+
+
+# The single table/action the Phase 30 review-bundle writer may target (Phase 17 subset).
+REVIEW_BUNDLE_TARGET_TABLE = "review_bundle_records"
+REVIEW_BUNDLE_TARGET_ACTION = "create_review_bundle_record"
+
+REVIEW_BUNDLE_ALL_OUTCOMES = (
+    ReviewBundleWriteOutcome.CREATED,
+    ReviewBundleWriteOutcome.IDEMPOTENT_REPLAY,
+    ReviewBundleWriteOutcome.DENIED,
+    ReviewBundleWriteOutcome.FAILED_BEFORE_WRITE,
+    ReviewBundleWriteOutcome.WRITE_OUTCOME_UNCERTAIN,
+)
+
+
+@dataclass
+class ReviewBundleWriteReceipt:
+    """A typed, auditable receipt for one controlled review-bundle write attempt.
+
+    Contains no credentials, no SQL, no connection URL, **no raw packet/evidence/interview
+    content, source bytes, generated agent output, or final review decision**. The boolean flags
+    describe what actually happened during this attempt. This write persists a **review-gated,
+    not-approved** review bundle record only — it approves nothing, calls no Phase 22 review
+    writer, and creates no ``review_records`` or ``agent_run_records`` row.
+    """
+
+    outcome: str = ReviewBundleWriteOutcome.DENIED
+    permitted: bool = False
+    reason_code: Optional[str] = None
+    target_table: str = REVIEW_BUNDLE_TARGET_TABLE
+    target_action: str = REVIEW_BUNDLE_TARGET_ACTION
+    # Stored identity — set only when safely known (created / idempotent_replay).
+    stored_record_id: Optional[str] = None
+    idempotency_key: Optional[str] = None  # the caller's key (not a secret); a safe reference
+    audit_trace_ref: Optional[str] = None
+    # Actual-behavior flags.
+    database_connection_made: bool = False
+    sql_execution_made: bool = False
+    database_write_made: bool = False
+    stored_record_created: bool = False
+    existing_record_returned: bool = False
+    transaction_committed: bool = False
+    outcome_uncertain: bool = False
+    # Review-gate / non-approval posture of the record this write concerns.
+    review_status: Optional[str] = None
+    output_status: Optional[str] = None
+    lifecycle_status: Optional[str] = None
+    # Non-effect flags — always False (Phase 30 approves nothing and executes nothing).
+    review_approval_made: bool = False
+    client_facing_output_created: bool = False
+    financial_verification_made: bool = False
+    capsule_publication_made: bool = False
+    agent_execution_made: bool = False
+    llm_call_made: bool = False
+    agentnet_call_made: bool = False
+    resolver_call_made: bool = False
+    network_call_made: bool = False
+    # Server-stamped timestamps read back from the DB (ISO strings), when known.
+    created_at: Optional[str] = None
+    database_write_at: Optional[str] = None
+    reasons: List[str] = field(default_factory=list)
+    warnings: List[str] = field(default_factory=list)
+
+
 class SourceIngestionWriteOutcome:
     """Outcome codes for a controlled source-ingestion write (str constants; no Enum)."""
 

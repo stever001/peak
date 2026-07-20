@@ -94,4 +94,5 @@ The packet-processing receipt and task queue outputs (safe references) may also 
 **Phase 29 Packet-Derived Review Orchestration Boundary**
 ([`PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md`](PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md))
 for DB-free human-review planning. Phase 29 approves nothing and writes nothing; the handoff is by
-contract only.
+contract only. **Phase 30** persists the resulting review bundle drafts into `review_bundle_records`
+via a narrow DB writer — review-gated, **not-approved**, and never a `review_records` write.
