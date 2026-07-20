@@ -226,4 +226,7 @@ access/audit rules to the new `review_bundle_records` table: write-time stored-`
 re-check (identity necessary but not sufficient), server-controlled id/timestamps and `created_by`,
 DB-level idempotency, and a typed receipt with no credentials/SQL/connection/raw content or review
 decision. It stores **safe references only** and a review-gated, **not-approved** posture — it
-approves nothing, calls no Phase 22 review writer, and creates no `review_records` row.
+approves nothing, calls no Phase 22 review writer, and creates no `review_records` row. **Phase 31**
+may drive this writer from the Phase 25/28 orchestrator but changes none of these access/audit
+rules: the write-time stored-`Engagement` scope re-check stays inside the writer (orchestrator
+preflight is advisory, not a substitute).

@@ -20,6 +20,19 @@ requests are persisted through the **Phase 27** narrow writer
 Persisting a queue record is **not** execution: no agent runs, no ``agent_run_records`` row is
 created, and stored ``Engagement`` authorization stays authoritative inside the Phase 27 writer.
 
+**Phase 31 — review bundle integration.** Safe packet-processing references (source-ingestion /
+evidence / agent-task-queue ids or safe draft refs, plus a deterministic packet-processing receipt
+ref) are routed through the Phase 29 review orchestration boundary
+(``prepare_packet_review_plan``), which is DB-free and approval-free, so it runs in plan-only mode
+by default — exposing review-gated, **not-approved** review bundle drafts, review plan items, and
+readiness assessments. When (and only when) ``plan_only=False``,
+``include_review_bundle_persistence=True``, and a ``session_factory`` is supplied, the orchestrator
+builds a Phase 17 controlled write request per draft and persists it through the **Phase 30** narrow
+writer (``persist_review_bundle_record``) — one review-gated ``review_bundle_records`` row each.
+Persisting a review bundle is **not** approval: nothing is approved, the Phase 22 review writer is
+never called, no ``review_records`` row is created, and stored ``Engagement`` authorization stays
+authoritative inside the Phase 30 writer.
+
 Plan-only is the default and is no-side-effect: no DB writer, no DB connection, no SQL, no
 stored record, all side-effect flags ``False``. No stage silently escalates from plan-only to
 persistence. Receipts carry only counts, ids, stage names, safe metadata, warnings, and reason
@@ -47,6 +60,9 @@ from peak.evidence.persistence_contracts import (
     EvidencePersistenceSubjectSnapshot,
 )
 from peak.ingestion.packet_mapper import prepare_packet_ingestion
+from peak.persistence.contracts import ControlledWriteRequest, ControlledWriteSubject
+from peak.review_orchestration.contracts import PacketReviewOrchestrationRequest
+from peak.review_orchestration.review_planner import prepare_packet_review_plan
 from peak.task_queue.contracts import AgentTaskQueueRequest
 from peak.task_queue.task_queue_mapper import prepare_agent_task_queue_plan
 from peak.workers.evidence_normalization import normalize_evidence
@@ -59,6 +75,8 @@ from .contracts import (
     STAGE_AGENT_TASK_QUEUE_READINESS,
     STAGE_EVIDENCE_NORMALIZATION,
     STAGE_EVIDENCE_PERSISTENCE,
+    STAGE_REVIEW_BUNDLE_PERSISTENCE,
+    STAGE_REVIEW_ORCHESTRATION,
     STAGE_SOURCE_INGESTION_PERSISTENCE,
     OrchestrationOutcome,
     OrchestrationStageOptions,
@@ -101,6 +119,10 @@ def _stages_requested(options: OrchestrationStageOptions) -> List[str]:
         requested.append(STAGE_EVIDENCE_PERSISTENCE)
     if options.include_agent_task_queue_persistence:
         requested.append(STAGE_AGENT_TASK_QUEUE_PERSISTENCE)
+    if options.include_review_orchestration:
+        requested.append(STAGE_REVIEW_ORCHESTRATION)
+    if options.include_review_bundle_persistence:
+        requested.append(STAGE_REVIEW_BUNDLE_PERSISTENCE)
     if options.include_agent_run_record_planning:
         requested.append(STAGE_AGENT_RUN_RECORD_PLANNING)
     if options.include_agent_run_record_persistence:
@@ -289,6 +311,29 @@ def process_engagement_packet(
         else:
             _run_task_queue_persistence(receipt, request, agent_task_requests, session_factory)
 
+    # --- Stage: review orchestration (Phase 29; DB-free, approval-free) ---
+    review_request = None
+    if not options.include_review_orchestration:
+        _record_stage(receipt, STAGE_REVIEW_ORCHESTRATION, StageOutcome.SKIPPED_NOT_REQUESTED)
+    else:
+        review_request = _run_review_orchestration(receipt, request)
+
+    # --- Stage: review bundle persistence (Phase 30 writer; only when explicitly requested) ---
+    if not options.include_review_bundle_persistence:
+        _record_stage(receipt, STAGE_REVIEW_BUNDLE_PERSISTENCE, StageOutcome.SKIPPED_NOT_REQUESTED)
+    else:
+        skip = _persistence_skip(options, session_factory, options.plan_only,
+                                 bool(receipt.review_bundle_drafts))
+        if skip is not None:
+            reason = ("no review bundle drafts were produced "
+                      "(enable include_review_orchestration and supply safe references)"
+                      if skip == StageOutcome.SKIPPED_NO_SAFE_CONTRACT_PATH else None)
+            _record_stage(receipt, STAGE_REVIEW_BUNDLE_PERSISTENCE, skip, reason=reason)
+        else:
+            if review_request is None:
+                review_request = _build_review_request(receipt, request)
+            _run_review_bundle_persistence(receipt, request, review_request, session_factory)
+
     # --- Stage: agent run record planning / persistence (intentionally deferred) ---
     if options.include_agent_run_record_planning:
         _record_stage(receipt, STAGE_AGENT_RUN_RECORD_PLANNING,
@@ -456,12 +501,152 @@ def _run_task_queue_persistence(receipt, request, agent_task_requests, session_f
     _record_stage(receipt, STAGE_AGENT_TASK_QUEUE_PERSISTENCE, stage, item_count=completed)
 
 
+def _gather_review_refs(receipt, request):
+    """Collect safe references for review planning — ids/receipt-ids only, never raw content.
+
+    Prefers persisted ids (when a persistence stage ran) and otherwise falls back to safe draft
+    references (e.g. per-task queue-draft idempotency keys). Always includes a deterministic
+    packet-processing receipt ref so there is at least one review subject.
+    """
+    src_ids = []
+    src_receipt = receipt.source_ingestion_persistence_receipt
+    if src_receipt is not None and getattr(src_receipt, "stored_record_id", None):
+        src_ids.append(src_receipt.stored_record_id)
+    ev_ids = [getattr(w, "stored_record_id", None) for w in receipt.evidence_persistence_receipts
+              if getattr(w, "stored_record_id", None)]
+    atq_ids = [getattr(w, "stored_record_id", None) for w in receipt.task_queue_write_receipts
+               if getattr(w, "stored_record_id", None)]
+    if not atq_ids:  # no DB rows yet — use safe per-task queue-draft references
+        atq_ids = [getattr(d, "idempotency_key", None) for d in receipt.task_queue_drafts
+                   if getattr(d, "idempotency_key", None)]
+    packet_ref = f"pktproc::{getattr(request, 'idempotency_key', None)}"
+    return src_ids, ev_ids, atq_ids, packet_ref
+
+
+def _build_review_request(receipt, request) -> PacketReviewOrchestrationRequest:
+    """Build a Phase 29 ``PacketReviewOrchestrationRequest`` from safe packet-processing refs."""
+    src_ids, ev_ids, atq_ids, packet_ref = _gather_review_refs(receipt, request)
+    return PacketReviewOrchestrationRequest(
+        owner_id=getattr(request, "owner_id", None),
+        client_id=getattr(request, "client_id", None),
+        engagement_id=getattr(request, "engagement_id", None),
+        requested_by=getattr(request, "requested_by", None),
+        requester_role=getattr(request, "requester_role", None),
+        authorization_scope=getattr(request, "authorization_scope", None),
+        idempotency_key=f"{getattr(request, 'idempotency_key', None)}::review",
+        packet_processing_receipt_ref=packet_ref,
+        source_ingestion_record_ids=src_ids,
+        evidence_reference_ids=ev_ids,
+        agent_task_queue_record_ids=atq_ids,
+        review_reason="packet-derived review",
+        strict_mode=True,
+        requested_action="prepare_packet_review_plan",
+        source_phase=getattr(request, "source_phase", None) or "phase31",
+        lifecycle_status=getattr(request, "lifecycle_status", None),
+    )
+
+
+def _run_review_orchestration(receipt, request) -> PacketReviewOrchestrationRequest:
+    """Run the Phase 29 review planner over safe refs (DB-free, approval-free). Returns the
+    review request built (so a later persistence stage can reuse it)."""
+    review_request = _build_review_request(receipt, request)
+    rresult = prepare_packet_review_plan(review_request)
+    receipt.review_orchestration_result = rresult
+    plan = getattr(rresult, "plan", None)
+    if plan is not None:
+        receipt.review_bundle_drafts = list(getattr(plan, "review_bundles", []) or [])
+        receipt.review_plan_items = list(getattr(plan, "review_plan_items", []) or [])
+        receipt.review_readiness_assessments = list(getattr(plan, "readiness_assessments", []) or [])
+    receipt.review_bundle_count = getattr(rresult, "review_bundle_count", 0)
+    receipt.review_plan_item_count = getattr(rresult, "review_plan_item_count", 0)
+    receipt.review_readiness_assessment_count = getattr(rresult, "readiness_assessment_count", 0)
+    receipt.review_subject_count = getattr(rresult, "subject_count", 0)
+    receipt.review_blocked_subject_count = getattr(rresult, "blocked_subject_count", 0)
+    receipt.warnings.extend(getattr(rresult, "warnings", []) or [])
+    if getattr(rresult, "permitted", False):
+        _record_stage(receipt, STAGE_REVIEW_ORCHESTRATION, StageOutcome.COMPLETED,
+                      item_count=receipt.review_bundle_count)
+    else:
+        _record_stage(receipt, STAGE_REVIEW_ORCHESTRATION, StageOutcome.DENIED,
+                      reason=getattr(rresult, "reason_code", None))
+    return review_request
+
+
+def _build_review_bundle_cwr(request, review_request, draft, index):
+    """Build a Phase 17 ``ControlledWriteRequest`` for a Phase 29 review bundle draft (plan-only
+    request object; the Phase 30 writer executes it under stored-Engagement authorization)."""
+    subject = ControlledWriteSubject(
+        subject_record_id=getattr(request, "engagement_id", None),
+        subject_record_type="engagement",
+        owner_id=getattr(request, "owner_id", None),
+        client_id=getattr(request, "client_id", None),
+        engagement_id=getattr(request, "engagement_id", None),
+        stored_authorization_scope=getattr(request, "authorization_scope", None),
+    )
+    return ControlledWriteRequest(
+        owner_id=getattr(request, "owner_id", None),
+        client_id=getattr(request, "client_id", None),
+        engagement_id=getattr(request, "engagement_id", None),
+        requested_by=getattr(request, "requested_by", None),
+        requester_role=getattr(request, "requester_role", None),
+        authorization_scope=getattr(request, "authorization_scope", None),
+        target_table="review_bundle_records",
+        requested_action="create_review_bundle_record",
+        subject=subject,
+        record_draft=draft,
+        source_phase=getattr(request, "source_phase", None) or "phase31",
+        lifecycle_status=getattr(request, "lifecycle_status", None),
+        idempotency_key=f"{getattr(review_request, 'idempotency_key', None)}::bundle::{index}",
+    )
+
+
+def _run_review_bundle_persistence(receipt, request, review_request, session_factory) -> None:
+    """Persist each Phase 29 review bundle draft via the Phase 30 narrow writer (only writer
+    called). Approves nothing, calls no Phase 22 writer, and creates no review_records row."""
+    from peak.db.review_bundle_writer import persist_review_bundle_record
+
+    stage_outcomes: List[str] = []
+    for i, draft in enumerate(receipt.review_bundle_drafts):
+        cwr = _build_review_bundle_cwr(request, review_request, draft, i)
+        w = persist_review_bundle_record(
+            cwr, session_factory=session_factory, review_request=review_request)
+        receipt.review_bundle_write_receipts.append(w)
+        stage_outcomes.append(_apply_writer_flags(receipt, w))
+        raw_outcome = getattr(w, "outcome", None)
+        if raw_outcome == "created":
+            receipt.review_bundle_persisted_count += 1
+        elif raw_outcome == "idempotent_replay":
+            receipt.review_bundle_replay_count += 1
+        if getattr(w, "reason_code", None) == "idempotency_conflict":
+            receipt.review_bundle_conflict_count += 1
+
+    completed = sum(1 for o in stage_outcomes if o == StageOutcome.COMPLETED)
+    failed = sum(1 for o in stage_outcomes if o in _FAILURE_OUTCOMES)
+    if completed and failed:
+        stage = StageOutcome.PARTIAL
+    elif completed:
+        stage = StageOutcome.COMPLETED
+    elif StageOutcome.WRITE_OUTCOME_UNCERTAIN in stage_outcomes:
+        stage = StageOutcome.WRITE_OUTCOME_UNCERTAIN
+    elif StageOutcome.FAILED_BEFORE_WRITE in stage_outcomes:
+        stage = StageOutcome.FAILED_BEFORE_WRITE
+    else:
+        stage = StageOutcome.DENIED
+    receipt.review_bundle_persistence_stage_outcome = stage
+    receipt.review_bundle_persistence_outcome = {
+        StageOutcome.COMPLETED: "persisted",
+        StageOutcome.PARTIAL: "partial",
+    }.get(stage, stage)
+    _record_stage(receipt, STAGE_REVIEW_BUNDLE_PERSISTENCE, stage, item_count=completed)
+
+
 def _finalize_outcome(receipt: PacketProcessingReceipt, options: OrchestrationStageOptions) -> None:
     """Set the aggregate orchestration outcome from the stage results."""
     persistence_stages = {
         STAGE_SOURCE_INGESTION_PERSISTENCE,
         STAGE_EVIDENCE_PERSISTENCE,
         STAGE_AGENT_TASK_QUEUE_PERSISTENCE,
+        STAGE_REVIEW_BUNDLE_PERSISTENCE,
         STAGE_AGENT_RUN_RECORD_PERSISTENCE,
     }
     failure_or_partial = _FAILURE_OUTCOMES | {StageOutcome.PARTIAL}

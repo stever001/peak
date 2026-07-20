@@ -112,3 +112,14 @@ single-head; `make db-check` now expects **exactly 13 tables**.
   publication; never updates or deletes.**
 - The Phase 29 `peak/review_orchestration` package stays **DB-free**; this writer lives in the DB
   layer.
+
+## Invoked by the Phase 25/28 orchestrator (Phase 31)
+
+**Phase 31** calls this writer from the packet processor's `review_bundle_persistence` stage — and
+only when `plan_only=false`, `include_review_bundle_persistence=true`, and a `session_factory` is
+supplied. The orchestrator builds one Phase 17 `ControlledWriteRequest` per Phase 29 review bundle
+draft and calls **only** `persist_review_bundle_record` (never a dynamically-dispatched writer,
+never Phase 22), surfacing this writer's outcomes (created / idempotent_replay / conflict / denial)
+on the packet receipt. Write-time stored-`Engagement` authorization stays authoritative here — a
+stored-scope mismatch is denied even when the orchestrator's preflight identity checks pass. See
+[`PACKET_TO_REVIEW_BUNDLE_ORCHESTRATION_INTEGRATION.md`](PACKET_TO_REVIEW_BUNDLE_ORCHESTRATION_INTEGRATION.md).

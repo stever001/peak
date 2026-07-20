@@ -804,6 +804,40 @@ and documentation accurately states integration status.
   (`make validate-phase30 PYTHON=.venv/bin/python` for the DB-backed suite; structural checks run on
   plain `python3`).
 
+**Packet → Review Bundle Orchestration Integration (Phase 31 — orchestration integration, not a new writer):**
+
+- [x] Wired the Phase 29 review orchestration boundary and the Phase 30 narrow writer into the
+  Phase 25/28 packet processor — **no new table, no migration** (Alembic head stays
+  `007_review_bundle_records`; still 13 tables), no new writer:
+  [`../peak/orchestration/packet_processor.py`](../peak/orchestration/packet_processor.py),
+  [`../peak/orchestration/contracts.py`](../peak/orchestration/contracts.py) and doc
+  [`PACKET_TO_REVIEW_BUNDLE_ORCHESTRATION_INTEGRATION.md`](PACKET_TO_REVIEW_BUNDLE_ORCHESTRATION_INTEGRATION.md).
+  After the existing Phase 23/24/14/18/21/13/26/27 path, the orchestrator gathers **safe references**
+  (persisted source/evidence/task-queue ids when persistence ran, else safe queue-draft refs, plus a
+  deterministic packet-processing receipt ref) and adds two stages: `review_orchestration` (DB-free,
+  approval-free — runs Phase 29 `prepare_packet_review_plan`, exposing review-gated, **not-approved**
+  review bundle drafts, review plan items, and readiness assessments + counts) and
+  `review_bundle_persistence` (builds a Phase 17 request per draft and calls **only** the Phase 30
+  `persist_review_bundle_record`). New options `include_review_orchestration` (default **true**) and
+  `include_review_bundle_persistence` (default **false**); persistence runs only when
+  `plan_only=false`, the option is on, a `session_factory` is supplied, and Phase 29 produced drafts —
+  otherwise `skipped_plan_only` / `skipped_missing_session_factory` / `skipped_not_requested` /
+  `skipped_no_safe_contract_path` (**no silent escalation**). In plan-only mode every side-effect flag
+  stays `false`. It **approves nothing** (no `approve_internal`, **no Phase 22 review writer call, no
+  `review_records` row**, `review_approval_made=false`, `ready_for_human_review` is not approval),
+  **executes nothing** (no agent/LLM/MockLLM/AgentNet/MCP/resolver/network, **no `agent_run_records`
+  row**), and creates no client-facing output / financial verification / capsule publication. **Stored
+  `Engagement` authorization stays authoritative** inside the Phase 30 writer (orchestrator preflight
+  is advisory; identity necessary but not sufficient); a stored-scope mismatch is denied by the writer
+  and surfaced as `partial`. New receipt fields: `review_orchestration_result`, `review_bundle_drafts`,
+  `review_plan_items`, `review_readiness_assessments`, `review_bundle_write_receipts`, and the
+  `review_bundle_*` / `review_*_count` fields; plus the `review_approval_made` flag. Source-ingestion
+  (Phase 24), evidence (Phase 18/21), and task-queue (Phase 27) persistence are regression-checked.
+  Checked by
+  [`../tests/validate_phase31_packet_review_bundle_integration.py`](../tests/validate_phase31_packet_review_bundle_integration.py)
+  (`make validate-phase31 PYTHON=.venv/bin/python` for the DB-backed layer; structural + plan-only
+  checks run on plain `python3`).
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

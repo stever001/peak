@@ -96,3 +96,7 @@ The packet-processing receipt and task queue outputs (safe references) may also 
 for DB-free human-review planning. Phase 29 approves nothing and writes nothing; the handoff is by
 contract only. **Phase 30** persists the resulting review bundle drafts into `review_bundle_records`
 via a narrow DB writer — review-gated, **not-approved**, and never a `review_records` write.
+**Phase 31** wired this into the orchestrator as the `review_orchestration` (plan-only, default-on)
+and `review_bundle_persistence` (opt-in) stages, under the same no-escalation gates as every other
+persistence stage; it approves nothing and never calls Phase 22. See
+[`PACKET_TO_REVIEW_BUNDLE_ORCHESTRATION_INTEGRATION.md`](PACKET_TO_REVIEW_BUNDLE_ORCHESTRATION_INTEGRATION.md).

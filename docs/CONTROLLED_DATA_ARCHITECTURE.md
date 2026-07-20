@@ -230,4 +230,6 @@ It stores nothing, approves nothing, and carries only ids/references — never r
 **Phase 30** persists those review bundle drafts into a controlled `review_bundle_records` table via
 a narrow DB writer ([`REVIEW_BUNDLE_CONTROLLED_WRITER.md`](REVIEW_BUNDLE_CONTROLLED_WRITER.md)) —
 review-gated, **not-approved** rows carrying safe references only (no raw client content, no review
-decision, no `review_records` row).
+decision, no `review_records` row). **Phase 31** sequences this whole path (ingest → readiness →
+review planning → optional persistence) through the Phase 25/28 orchestrator; see
+[`PACKET_TO_REVIEW_BUNDLE_ORCHESTRATION_INTEGRATION.md`](PACKET_TO_REVIEW_BUNDLE_ORCHESTRATION_INTEGRATION.md).

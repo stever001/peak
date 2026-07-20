@@ -120,4 +120,7 @@ The receipt this integration produces (packet-processing receipt ref, source-ing
 **Phase 29 Packet-Derived Review Orchestration Boundary**
 ([`PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md`](PACKET_DERIVED_REVIEW_ORCHESTRATION_BOUNDARY.md))
 to plan human review. Phase 29 is DB-free, approves nothing, and does not run inside this
-integration — the handoff is by contract only.
+integration — the handoff is by contract only. **Phase 31** completes that handoff inside the
+orchestrator (the `review_orchestration` / `review_bundle_persistence` stages), consuming this
+integration's task-queue outputs as safe references; see
+[`PACKET_TO_REVIEW_BUNDLE_ORCHESTRATION_INTEGRATION.md`](PACKET_TO_REVIEW_BUNDLE_ORCHESTRATION_INTEGRATION.md).

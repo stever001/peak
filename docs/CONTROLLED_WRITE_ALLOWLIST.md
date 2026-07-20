@@ -111,4 +111,6 @@ Phase 29 creates review bundle drafts only; **Phase 30 is the first phase where
 `review_bundle_records` has a live narrow DB writer**
 ([`REVIEW_BUNDLE_CONTROLLED_WRITER.md`](REVIEW_BUNDLE_CONTROLLED_WRITER.md)). This does **not**
 authorize approval, `review_records` creation, client-facing output, financial verification, or
-capsule publication — Phase 30 persists review-gated, not-approved records only.
+capsule publication — Phase 30 persists review-gated, not-approved records only. **Phase 31** added
+**no** table/action: it only invokes the Phase 30 writer for this same table/action from the
+orchestrator (opt-in controlled persistence).

@@ -129,3 +129,11 @@ would remain plan-only and no-side-effect.
 - **No agent / mock-agent / LLM / MockLLM / AgentNet / MCP / resolver / connector / network call**;
   **no `agent_run_records` and no `review_records` write.**
 - The package imports only stdlib.
+
+## Invoked by the Phase 25/28 orchestrator (Phase 31)
+
+**Phase 31** calls this boundary's `prepare_packet_review_plan` from the packet processor's
+`review_orchestration` stage (DB-free, default-on), over safe packet-processing references, and —
+only when explicitly requested with a `session_factory` — persists the drafts through the Phase 30
+writer. This boundary stays DB-free and approval-free; the orchestrator adds no approval. See
+[`PACKET_TO_REVIEW_BUNDLE_ORCHESTRATION_INTEGRATION.md`](PACKET_TO_REVIEW_BUNDLE_ORCHESTRATION_INTEGRATION.md).

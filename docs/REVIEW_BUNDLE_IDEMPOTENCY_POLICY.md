@@ -44,3 +44,9 @@ Idempotency governs **persistence** only. A replay never approves anything, neve
 22 review writer, never creates a `review_records` row, and never executes an agent or calls an
 LLM/AgentNet/resolver/network. Replays and conflicts alike leave the stored, review-gated,
 not-approved posture untouched.
+
+When the **Phase 31** orchestrator integration drives persistence, it builds one review bundle CWR
+per Phase 29 draft (keyed `<packet_idempotency_key>::review::bundle::<i>`) and surfaces this
+writer's replay/conflict outcomes on the packet receipt (`review_bundle_replay_count`,
+`review_bundle_conflict_count`); a conflict makes the orchestration outcome `partial` and writes no
+extra row.

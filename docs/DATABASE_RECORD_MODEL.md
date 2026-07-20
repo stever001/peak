@@ -317,4 +317,6 @@ persisted by the narrow Phase 30 writer
 universal governance axes + audit fields plus review-posture columns (`authoritative`,
 `approval_allowed`, `publication_allowed`, `financial_verified`, `requires_human_review`, …) always
 stored in the review-gated, **not-approved** posture; the writer creates exactly one row and never
-approves anything or creates a `review_records` row.
+approves anything or creates a `review_records` row. **Phase 31** added no table or migration — it
+only lets the Phase 25/28 orchestrator drive that existing writer (the DB still has 13 tables; head
+`007_review_bundle_records`).

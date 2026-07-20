@@ -156,4 +156,7 @@ can consume this receipt's **safe references** (the packet-processing receipt re
 / evidence / agent-task-queue ids) to plan human review — a DB-free, no-approval boundary. The
 handoff is by contract only; Phase 29 does not run inside this orchestrator. **Phase 30** persists
 the resulting review bundle drafts into a `review_bundle_records` row via a narrow DB writer —
-review-gated and **not-approved** (no `review_records` row, no approval).
+review-gated and **not-approved** (no `review_records` row, no approval). **Phase 31** wired this
+whole review path into the orchestrator as the `review_orchestration` (plan-only, default-on) and
+`review_bundle_persistence` (opt-in) stages — see
+[`PACKET_TO_REVIEW_BUNDLE_ORCHESTRATION_INTEGRATION.md`](PACKET_TO_REVIEW_BUNDLE_ORCHESTRATION_INTEGRATION.md).

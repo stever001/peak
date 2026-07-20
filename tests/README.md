@@ -10,7 +10,7 @@ objects are needed, the harnesses build **synthetic fixtures at runtime**
 directory that is auto-deleted. Nothing is stored. See
 [`../docs/FIXTURE_STRATEGY.md`](../docs/FIXTURE_STRATEGY.md).
 
-Thirty harnesses, run together by `make validate`:
+Thirty-one harnesses, run together by `make validate`:
 
 - `validate_phase1.py` — schemas + synthetic object fixtures.
 - `validate_phase2.py` — schemas + a synthetic `EngagementPacket`.
@@ -52,6 +52,8 @@ Thirty harnesses, run together by `make validate`:
   boundary check (stdlib-only; DB-free — no database layer).
 - `validate_phase30_review_bundle_writer.py` — controlled-DB review-bundle-writer check
   (structural always; DB-backed when SQLAlchemy is present).
+- `validate_phase31_packet_review_bundle_integration.py` — packet → review bundle orchestration
+  integration check (structural + plan-only always; DB-backed when SQLAlchemy is present).
 
 ## `synthetic_fixtures.py`
 
@@ -656,6 +658,32 @@ instructions if SQLAlchemy is absent (still exits 0). Run the full suite with
 [`../docs/REVIEW_BUNDLE_CONTROLLED_WRITER.md`](../docs/REVIEW_BUNDLE_CONTROLLED_WRITER.md) and
 [`../docs/REVIEW_BUNDLE_IDEMPOTENCY_POLICY.md`](../docs/REVIEW_BUNDLE_IDEMPOTENCY_POLICY.md).
 
+## `validate_phase31_packet_review_bundle_integration.py`
+
+Check for the Phase 31 **packet → review bundle orchestration integration** (`peak/orchestration/`)
+— wiring the Phase 29 review planner and Phase 30 writer into the Phase 25/28 packet processor.
+Three layers. The **structural** layer confirms the orchestration files + integration doc exist and
+compile; that the Phase 23 ingestion, Phase 26 task_queue, and Phase 29 review_orchestration
+packages stay **DB-free**; that the orchestrator imports no live LLM / MockLLM / executor / AgentNet
+/ MCP / resolver / network module, **no top-level** SQLAlchemy / `peak.db` (the Phase 30 writer is
+lazy-imported), and **no Phase 22 review writer**; that the Phase 30 commit is present; that **no
+Phase 31 migration** was added (head stays `007_review_bundle_records`); and that the docs carry the
+required language. The **plan-only** layer (stdlib-only) confirms default packet processing runs the
+Phase 29 review planner, exposes review-gated / not-approved review bundle drafts + plan items +
+readiness assessments with correct counts, keeps **every side-effect flag false**, approves nothing,
+executes nothing, writes no `review_records`/`agent_run_records`, leaks no raw payload sentinel, and
+**never silently escalates** persistence (`skipped_not_requested` / `skipped_plan_only` /
+`skipped_missing_session_factory`). The **DB-backed** layer (when SQLAlchemy is importable) builds a
+**temporary local SQLite database** (deleted afterward) and exercises controlled persistence
+**through the Phase 30 writer only** — create (rows == drafts, receipts attached, DB flags true,
+approval/execution flags false, **no `review_records`**, **no `agent_run_records`**), idempotent
+replay, conflict (same review key, different fingerprint → denied → orchestration `partial`),
+stored-`Engagement` scope mismatch denied by the writer and surfaced, and a regression check that
+source (Phase 24), evidence (Phase 18/21), and task-queue (Phase 27) persistence still work. Skips
+the DB layer with instructions if SQLAlchemy is absent (still exits 0). Run the full suite with
+`make validate-phase31 PYTHON=.venv/bin/python`. See
+[`../docs/PACKET_TO_REVIEW_BUNDLE_ORCHESTRATION_INTEGRATION.md`](../docs/PACKET_TO_REVIEW_BUNDLE_ORCHESTRATION_INTEGRATION.md).
+
 ## Running
 
 This machine uses `python3` (there is no bare `python`). From the repo root:
@@ -665,7 +693,7 @@ This machine uses `python3` (there is no bare `python`). From the repo root:
 make install-dev          # == python3 -m pip install -r requirements-dev.txt
 
 # run all harnesses
-make validate             # == phase1 … phase30
+make validate             # == phase1 … phase31
 
 # or run one at a time
 make validate-phase1
@@ -698,6 +726,7 @@ make validate-phase27   # DB-backed; add PYTHON=.venv/bin/python for the full su
 make validate-phase28   # structural+plan-only always; add PYTHON=.venv/bin/python for the DB layer
 make validate-phase29   # stdlib-only; DB-free (no database layer)
 make validate-phase30   # DB-backed; add PYTHON=.venv/bin/python for the full suite
+make validate-phase31   # structural+plan-only always; add PYTHON=.venv/bin/python for the DB layer
 ```
 
 Or invoke them directly, without the Makefile:
@@ -733,11 +762,12 @@ python3 tests/validate_phase26_agent_task_queue_readiness.py               # std
 .venv/bin/python tests/validate_phase28_packet_task_queue_integration.py   # structural+plan-only always; DB layer needs SQLAlchemy
 python3 tests/validate_phase29_review_orchestration_boundary.py             # stdlib-only, no dependency needed (DB-free)
 .venv/bin/python tests/validate_phase30_review_bundle_writer.py             # DB-backed (SQLAlchemy); skips DB layer on plain python3
+.venv/bin/python tests/validate_phase31_packet_review_bundle_integration.py # structural+plan-only always; DB layer needs SQLAlchemy
 ```
 
 ## Exit codes
 
-All thirty harnesses share the same convention:
+All thirty-one harnesses share the same convention:
 
 | Code | Meaning |
 | --- | --- |

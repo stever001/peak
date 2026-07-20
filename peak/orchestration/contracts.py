@@ -30,6 +30,9 @@ STAGE_AGENT_RUN_RECORD_PERSISTENCE = "agent_run_record_persistence"
 # Phase 28 — task queue integration stages.
 STAGE_AGENT_TASK_QUEUE_READINESS = "agent_task_queue_readiness"
 STAGE_AGENT_TASK_QUEUE_PERSISTENCE = "agent_task_queue_persistence"
+# Phase 31 — review bundle integration stages.
+STAGE_REVIEW_ORCHESTRATION = "review_orchestration"
+STAGE_REVIEW_BUNDLE_PERSISTENCE = "review_bundle_persistence"
 
 
 class StageOutcome:
@@ -76,6 +79,12 @@ class OrchestrationStageOptions:
     # tasks). Persistence stays off by default and never silently escalates plan-only mode.
     include_agent_task_queue_readiness: bool = True
     include_agent_task_queue_persistence: bool = False
+    # Phase 31 — review bundle integration. Review orchestration is DB-free and approval-free, so
+    # it is on by default (it plans review-gated, not-approved review bundle drafts from safe
+    # packet-processing references). Persistence stays off by default and never silently escalates
+    # plan-only mode; it never approves anything and never writes review_records.
+    include_review_orchestration: bool = True
+    include_review_bundle_persistence: bool = False
 
 
 @dataclass
@@ -129,6 +138,22 @@ class PacketProcessingReceipt:
     task_queue_conflict_count: int = 0
     task_queue_persistence_outcome: Optional[str] = None
     task_queue_persistence_stage_outcome: Optional[str] = None
+    # Phase 31 — review bundle integration payload (DB-free at plan time; never raw content).
+    review_orchestration_result: Optional[object] = None  # Phase 29 PacketReviewOrchestrationResult
+    review_bundle_drafts: List[object] = field(default_factory=list)  # Phase 29 ReviewBundleDraft
+    review_plan_items: List[object] = field(default_factory=list)
+    review_readiness_assessments: List[object] = field(default_factory=list)
+    review_bundle_write_receipts: List[object] = field(default_factory=list)  # Phase 30 receipts
+    review_bundle_count: int = 0
+    review_plan_item_count: int = 0
+    review_readiness_assessment_count: int = 0
+    review_subject_count: int = 0
+    review_blocked_subject_count: int = 0
+    review_bundle_persisted_count: int = 0
+    review_bundle_replay_count: int = 0
+    review_bundle_conflict_count: int = 0
+    review_bundle_persistence_outcome: Optional[str] = None
+    review_bundle_persistence_stage_outcome: Optional[str] = None
     # Aggregate side-effect flags (OR of any narrow-writer calls; all False in plan-only mode).
     database_connection_made: bool = False
     sql_execution_made: bool = False
@@ -140,6 +165,7 @@ class PacketProcessingReceipt:
     agentnet_call_made: bool = False
     resolver_call_made: bool = False
     network_call_made: bool = False
+    review_approval_made: bool = False
     client_facing_output_created: bool = False
     financial_verification_made: bool = False
     capsule_publication_made: bool = False

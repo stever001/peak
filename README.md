@@ -108,6 +108,7 @@ peak/
 │   ├── REVIEW_ORCHESTRATION_GOVERNANCE_POLICY.md   # Review-orchestration governance: readiness states, no approval (Phase 29)
 │   ├── REVIEW_BUNDLE_CONTROLLED_WRITER.md          # Sixth DB-backed writer, for review_bundle_records (Phase 30)
 │   ├── REVIEW_BUNDLE_IDEMPOTENCY_POLICY.md         # DB-enforced idempotency for review bundle rows (Phase 30)
+│   ├── PACKET_TO_REVIEW_BUNDLE_ORCHESTRATION_INTEGRATION.md # Packet processor ↔ Phase 29/30 review path integration (Phase 31)
 │   └── IMPLEMENTATION_PLAN.md
 ├── peak/                         # Python tooling layer (source only; no data)
 │   ├── db/                       # base, enums, models, session + agent_run (P20), evidence (P21), review (P22), source-ingestion (P24), agent-task-queue (P27) & review-bundle (P30) writers
@@ -843,6 +844,39 @@ rejected without echoing the value.
 ```bash
 make validate-phase30 PYTHON=.venv/bin/python   # full DB-backed suite (temporary SQLite)
 make validate-phase30                           # structural only on plain python3
+```
+
+### Packet → Review Bundle Orchestration Integration (Phase 31)
+
+Wires the Phase 29 review orchestration boundary and the Phase 30 narrow writer into the Phase
+25/28 packet processor. It is an **orchestration integration phase, not a new writer phase and not
+an approval phase** — no new table, no migration (head stays `007_review_bundle_records`; still 13
+tables), no new writer. After the existing Phase 23/24/14/18/21/13/26/27 path, the orchestrator
+gathers safe references and adds two stages: `review_orchestration` (Phase 29) and
+`review_bundle_persistence` (Phase 30).
+
+- **Plan-only (default):** runs Phase 29 `prepare_packet_review_plan` over safe refs and exposes
+  `review_bundle_drafts`, `review_plan_items`, `review_readiness_assessments`, and the
+  `review_*_count` fields — review-gated, **not-approved** — with every side-effect flag `false`
+  (Phase 29 is DB-free and approval-free).
+- **Controlled persistence:** only when `plan_only=false`, `include_review_bundle_persistence=true`,
+  and a `session_factory` is supplied does it build a Phase 17 request per draft and call **only**
+  `persist_review_bundle_record` (Phase 30), attaching receipts and aggregating DB flags from actual
+  writer calls; idempotent replay and conflict flow through Phase 30. No option silently escalates
+  plan-only.
+- **No approval / no execution:** approves nothing, never calls the Phase 22 review writer, creates
+  **no `review_records`** row, executes no agent, calls no LLM/MockLLM/AgentNet/MCP/resolver/network,
+  and creates **no `agent_run_records`** row. `ready_for_human_review` is not approval.
+- **Authorization:** orchestrator preflight is advisory; **stored `Engagement` authorization
+  remains authoritative** inside the Phase 30 writer (identity necessary but not sufficient).
+
+- [`peak/orchestration/packet_processor.py`](peak/orchestration/packet_processor.py) — the two new
+  stages (`review_orchestration`, `review_bundle_persistence`).
+- [`docs/PACKET_TO_REVIEW_BUNDLE_ORCHESTRATION_INTEGRATION.md`](docs/PACKET_TO_REVIEW_BUNDLE_ORCHESTRATION_INTEGRATION.md).
+
+```bash
+make validate-phase31 PYTHON=.venv/bin/python   # structural + plan-only + DB-backed (temporary SQLite)
+make validate-phase31                           # structural + plan-only on plain python3 (DB layer skipped)
 ```
 
 ## Design constraints
