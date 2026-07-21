@@ -127,3 +127,14 @@ writer**
 This does **not** authorize approval, `approve_internal`, `review_records` creation, client-facing
 output, financial verification, capsule publication, or execution — Phase 33 persists review-gated,
 **non-approval** records only. `ready_for_internal_use` is **not** approval.
+
+### `intake_note_records` (Phase 34 — now live)
+
+**Phase 34** added exactly `intake_note_records` / `create_intake_note_record` to `ALLOWED_TABLES` /
+`ALLOWED_ACTIONS` (no other change — no update/delete/upsert/raw-SQL action). This is the first
+first-class operational-note table; its narrow writer
+([`INTAKE_NOTE_CONTROLLED_WRITER.md`](INTAKE_NOTE_CONTROLLED_WRITER.md)) persists **review-gated,
+non-final** intake notes only and intentionally stores authorized operational `note_text` **in the
+managed DB only** (never in Git/fixtures/receipts). It does **not** authorize approval,
+`approve_internal`, `review_records` creation, client-facing output, financial verification, capsule
+publication, AgentNet publication, or execution.

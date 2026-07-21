@@ -331,3 +331,20 @@ It carries the universal governance axes + audit fields plus decision-posture co
 the review-gated, **non-approval** posture, plus the deterministic routing columns (`decision_intent`,
 `route_to`); the writer creates exactly one row and never approves anything, calls
 `approve_internal`, or creates a `review_records` row.
+
+**Phase 34** introduced the `intake_note_records` record group as a real table (migration
+`009_intake_note_records`; the controlled DB now has **15 tables**), persisted by the narrow Phase
+34 intake-note writer
+([`INTAKE_NOTE_CONTROLLED_WRITER.md`](INTAKE_NOTE_CONTROLLED_WRITER.md)). Intake notes are
+first-class operational records, and this is the first table to store authorized operational prose
+(`note_text`, a `TEXT` column) — acceptable **only in the managed DB**, never in Git/fixtures/logs/
+receipts, and never echoed in a receipt or denial reason. It carries the universal governance axes +
+audit fields, safe label/ref columns (`note_type`, `note_source`, `captured_by`, `source_ref`,
+`source_ingestion_record_id`, `related_evidence_reference_id`, `related_review_bundle_record_id`),
+and the non-final posture columns (`client_facing_approved`, `financial_verified`,
+`capsule_candidate_ready`, `publication_allowed`, `execution_allowed`, `requires_human_review`)
+always stored in the review-gated, non-final posture; the writer creates exactly one row and never
+approves, publishes, executes, or creates a `review_records`/`agent_run_records` row. Managed remote
+MySQL is the operational store; SQLite is only a structural-smoke path, **not** the
+production-readiness proof path (see
+[`MANAGED_MYSQL_PERSISTENCE_RUBRIC.md`](MANAGED_MYSQL_PERSISTENCE_RUBRIC.md)).

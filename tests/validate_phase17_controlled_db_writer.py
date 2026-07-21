@@ -57,6 +57,7 @@ EXPECTED_TABLES = {
     "agent_task_queue_records",
     "review_bundle_records",
     "internal_reviewer_decision_records",
+    "intake_note_records",
     "capsule_publication_candidates",
 }
 EXPECTED_ACTIONS = {
@@ -67,6 +68,7 @@ EXPECTED_ACTIONS = {
     "create_agent_task_queue_record",
     "create_review_bundle_record",
     "create_internal_reviewer_decision_record",
+    "create_intake_note_record",
     "create_capsule_candidate_draft",
     "update_review_status",
     "update_lifecycle_status",

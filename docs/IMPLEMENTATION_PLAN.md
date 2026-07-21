@@ -908,6 +908,60 @@ and documentation accurately states integration status.
   [`../tests/validate_phase33_internal_reviewer_decision_writer.py`](../tests/validate_phase33_internal_reviewer_decision_writer.py)
   (`make validate-phase33`; DB-backed via `.venv`).
 
+**Intake Note Controlled Writer + Managed MySQL Rubric (Phase 34 — eighth DB-backed writer +
+production-persistence consolidation):**
+
+- [x] **First-class intake notes.** A narrow live DB writer that persists **exactly one**
+  `intake_note_records` row from an `IntakeNoteDraft` through the Phase 17 `ControlledWriteRequest`
+  boundary — allowing only `intake_note_records` / `create_intake_note_record`.
+  [`../peak/db/intake_note_writer.py`](../peak/db/intake_note_writer.py), migration
+  [`../alembic/versions/009_intake_note_records.py`](../alembic/versions/009_intake_note_records.py),
+  and docs [`INTAKE_NOTE_CONTROLLED_WRITER.md`](INTAKE_NOTE_CONTROLLED_WRITER.md) /
+  [`INTAKE_NOTE_IDEMPOTENCY_POLICY.md`](INTAKE_NOTE_IDEMPOTENCY_POLICY.md).
+  `persist_intake_note_record(controlled_write_request, *, session_factory=None)` returns a typed
+  `IntakeNoteWriteReceipt`. It is the first table to store authorized operational `note_text`
+  (a `TEXT` column) — acceptable **only in the managed DB**, never in Git/fixtures/logs/receipts, and
+  **never echoed** in a receipt or denial reason (only field names + marker categories). `note_text`
+  accepts bounded ordinary prose (≤ 16,000 chars) but rejects credential assignments, DB URLs/DSNs,
+  raw SQL, private keys, stack traces, raw-content tokens, and raw-JSON dumps; short label/ref fields
+  and `note_summary` reuse the public `classify_prohibited_value_marker`. **Non-final posture:**
+  `review_status=needs_review`, `lifecycle_status=draft`, all approval/publication/execution
+  booleans false, `requires_human_review=true`. Write-time authorization loads the stored
+  `Engagement` (`request.authorization_scope == engagement.authorization_scope`; identity necessary
+  but not sufficient). Idempotency boundary `(owner_id, client_id, engagement_id, idempotency_key)` +
+  `payload_fingerprint` (the note body participates as a SHA-256 hash). Additive migration
+  `009_intake_note_records` (`down_revision = 008_internal_reviewer_decision_records`) creates one
+  table, no INSERT/seed; single Alembic head; the controlled DB now has **15 tables**. It approves,
+  publishes, and executes nothing; calls no Phase 22 writer / `approve_internal`; creates no
+  `review_records` / `agent_run_records` row; and makes no LLM/MockLLM/AgentNet/AgentNet-publication/
+  MCP/resolver/connector/network call.
+- [x] **Managed MySQL persistence rubric** (docs + safe opt-in scaffolding): managed remote MySQL is
+  the operational data store; **Client Isolation Option A** (shared managed DB per environment +
+  strict tenant columns + stored-`Engagement` authorization) is the default; environments are
+  separated (dev/test/staging/prod); **SQLite is only a fast local structural-smoke path, not the
+  production-readiness proof path**; managed MySQL test/staging validation is required for production
+  readiness; the production DB is not the main smoke-test target; and there is no broad production
+  delete/cleanup path. Credential-free, skip-safe Makefile targets (`db-check-managed-test`,
+  `managed-mysql-smoke`, `managed-mysql-migration-check`) delegate to
+  [`../tools/managed_mysql_check.py`](../tools/managed_mysql_check.py), read the DSN only from
+  `PEAK_MANAGED_MYSQL_{TEST,STAGING}_DSN` (never printed, never committed), refuse `prod` (fail
+  closed), and are **not** part of `make validate`. Docs
+  [`MANAGED_MYSQL_PERSISTENCE_RUBRIC.md`](MANAGED_MYSQL_PERSISTENCE_RUBRIC.md),
+  [`CLIENT_ISOLATION_MODEL.md`](CLIENT_ISOLATION_MODEL.md),
+  [`PRODUCTION_PARITY_DB_VALIDATION.md`](PRODUCTION_PARITY_DB_VALIDATION.md).
+- [x] **Peak-operated AgentNet publication policy** (policy only; **no publish code**): the client
+  authorizes Peak in the consulting agreement to act as the authorized capsule/node publisher;
+  clients operate no AgentNet publishing tools, hold no publishing credentials, and have no
+  client-facing publisher UI / resolver publication tools / direct publication path; publication
+  remains disabled until future controlled gates.
+  [`PEAK_OPERATED_AGENTNET_PUBLICATION_POLICY.md`](PEAK_OPERATED_AGENTNET_PUBLICATION_POLICY.md).
+  Checked by
+  [`../tests/validate_phase34_intake_note_writer.py`](../tests/validate_phase34_intake_note_writer.py)
+  and
+  [`../tests/validate_phase34_managed_mysql_rubric.py`](../tests/validate_phase34_managed_mysql_rubric.py)
+  (`make validate-phase34`; DB-backed via `.venv`; rubric check is credential-free with no live
+  network).
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

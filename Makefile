@@ -4,12 +4,12 @@
 
 PYTHON ?= python3
 
-.PHONY: help validate validate-phase1 validate-phase2 validate-phase3 validate-phase4 validate-phase5 validate-phase6 validate-phase7 validate-phase8 validate-phase9 validate-phase10 validate-phase11 validate-phase12 validate-phase13 validate-phase14 validate-phase15 validate-phase16 validate-phase17 validate-phase18 validate-phase19 validate-phase20 validate-phase21 validate-phase22 validate-phase23 validate-phase24 validate-phase25 validate-phase26 validate-phase27 validate-phase28 validate-phase29 validate-phase30 validate-phase31 validate-phase32 validate-phase33 db-check packet-summary install-dev
+.PHONY: help validate validate-phase1 validate-phase2 validate-phase3 validate-phase4 validate-phase5 validate-phase6 validate-phase7 validate-phase8 validate-phase9 validate-phase10 validate-phase11 validate-phase12 validate-phase13 validate-phase14 validate-phase15 validate-phase16 validate-phase17 validate-phase18 validate-phase19 validate-phase20 validate-phase21 validate-phase22 validate-phase23 validate-phase24 validate-phase25 validate-phase26 validate-phase27 validate-phase28 validate-phase29 validate-phase30 validate-phase31 validate-phase32 validate-phase33 validate-phase34 db-check db-check-managed-test managed-mysql-smoke managed-mysql-migration-check packet-summary install-dev
 
 help: ## Show available targets
 	@echo "Targets:"
 	@echo "  make install-dev        Install dev dependencies ($(PYTHON) -m pip install -r requirements-dev.txt)"
-	@echo "  make validate           Run all validation harnesses (Phase 1 through Phase 33)"
+	@echo "  make validate           Run all validation harnesses (Phase 1 through Phase 34)"
 	@echo "  make validate-phase1    Run only the Phase 1 object harness"
 	@echo "  make validate-phase2    Run only the Phase 2 EngagementPacket harness"
 	@echo "  make validate-phase3    Run only the Phase 3 prompt-contract inventory check"
@@ -43,13 +43,17 @@ help: ## Show available targets
 	@echo "  make validate-phase31   Run only the Phase 31 packet -> review-bundle orchestration integration check"
 	@echo "  make validate-phase32   Run only the Phase 32 internal reviewer decision boundary check"
 	@echo "  make validate-phase33   Run only the Phase 33 controlled-DB internal-reviewer-decision-writer check"
+	@echo "  make validate-phase34   Run only the Phase 34 intake-note-writer + managed-MySQL-rubric checks"
 	@echo "  make db-check           Alias for the Phase 11 database-scaffold check"
+	@echo "  make db-check-managed-test        Managed MySQL test-env rubric check (skips safely with no DSN)"
+	@echo "  make managed-mysql-smoke          Managed MySQL test-env smoke runbook (skips safely with no DSN)"
+	@echo "  make managed-mysql-migration-check Managed MySQL test-env migration runbook (skips safely with no DSN)"
 	@echo "  make packet-summary PACKET=/path/to/packet.json   Summarize a real packet (read-only; no LLM/API)"
 
 install-dev: ## Install development dependencies
 	$(PYTHON) -m pip install -r requirements-dev.txt
 
-validate: validate-phase1 validate-phase2 validate-phase3 validate-phase4 validate-phase5 validate-phase6 validate-phase7 validate-phase8 validate-phase9 validate-phase10 validate-phase11 validate-phase12 validate-phase13 validate-phase14 validate-phase15 validate-phase16 validate-phase17 validate-phase18 validate-phase19 validate-phase20 validate-phase21 validate-phase22 validate-phase23 validate-phase24 validate-phase25 validate-phase26 validate-phase27 validate-phase28 validate-phase29 validate-phase30 validate-phase31 validate-phase32 validate-phase33 ## Run all validation harnesses
+validate: validate-phase1 validate-phase2 validate-phase3 validate-phase4 validate-phase5 validate-phase6 validate-phase7 validate-phase8 validate-phase9 validate-phase10 validate-phase11 validate-phase12 validate-phase13 validate-phase14 validate-phase15 validate-phase16 validate-phase17 validate-phase18 validate-phase19 validate-phase20 validate-phase21 validate-phase22 validate-phase23 validate-phase24 validate-phase25 validate-phase26 validate-phase27 validate-phase28 validate-phase29 validate-phase30 validate-phase31 validate-phase32 validate-phase33 validate-phase34 ## Run all validation harnesses
 
 validate-phase1: ## Run the Phase 1 schema/example validation harness
 	$(PYTHON) tests/validate_phase1.py
@@ -150,8 +154,25 @@ validate-phase32: ## Run the Phase 32 internal reviewer decision boundary check 
 validate-phase33: ## Run the Phase 33 controlled-DB internal-reviewer-decision-writer check (DB-backed via .venv)
 	$(PYTHON) tests/validate_phase33_internal_reviewer_decision_writer.py
 
+validate-phase34: ## Run the Phase 34 intake-note-writer + managed-MySQL-rubric checks (DB-backed via .venv)
+	$(PYTHON) tests/validate_phase34_intake_note_writer.py
+	$(PYTHON) tests/validate_phase34_managed_mysql_rubric.py
+
 db-check: ## Validate the DB scaffold (alias for validate-phase11)
 	$(PYTHON) tests/validate_phase11_db_scaffold.py
+
+# --- Managed MySQL production-parity targets (opt-in; credential-free; skip safely with no DSN) ---
+# These are NOT part of `make validate`: they require an out-of-band managed test/staging DSN and
+# never print DSNs, never write to production, and never run destructive cleanup. See
+# docs/MANAGED_MYSQL_PERSISTENCE_RUBRIC.md and docs/PRODUCTION_PARITY_DB_VALIDATION.md.
+db-check-managed-test: ## Managed MySQL test-env rubric check (skips with guidance if no DSN)
+	$(PYTHON) tools/managed_mysql_check.py --env test --mode db-check
+
+managed-mysql-smoke: ## Managed MySQL test-env smoke runbook (skips with guidance if no DSN)
+	$(PYTHON) tools/managed_mysql_check.py --env test --mode smoke
+
+managed-mysql-migration-check: ## Managed MySQL test-env migration runbook (skips with guidance if no DSN)
+	$(PYTHON) tools/managed_mysql_check.py --env test --mode migration-check
 
 packet-summary: ## Summarize a real packet: make packet-summary PACKET=/path/to/packet.json
 	@if [ -z "$(PACKET)" ]; then \

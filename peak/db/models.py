@@ -370,6 +370,53 @@ class InternalReviewerDecisionRecord(Base, GovernanceMixin, AuditMixin):
     payload_fingerprint: Mapped[Optional[str]] = mapped_column(String(64))
 
 
+class IntakeNoteRecord(Base, GovernanceMixin, AuditMixin):
+    __tablename__ = "intake_note_records"
+    # Phase 34: first-class DB-backed intake notes. DB-enforced idempotency for the controlled
+    # intake-note writer; the uniqueness boundary includes identity context so an idempotency key
+    # cannot collide across owner / client / engagement. Unlike prior summary-only records, this
+    # table intentionally stores authorized operational note prose in ``note_text`` — acceptable
+    # **only** in the managed DB, never in Git/fixtures/examples/logs/receipts. See
+    # docs/INTAKE_NOTE_CONTROLLED_WRITER.md and docs/INTAKE_NOTE_IDEMPOTENCY_POLICY.md.
+    __table_args__ = (
+        UniqueConstraint(
+            "owner_id",
+            "client_id",
+            "engagement_id",
+            "idempotency_key",
+            name="uq_intake_note_records_idem",
+        ),
+        MYSQL_TABLE_ARGS,
+    )
+    # id convention: intn_<slug>
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    client_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    engagement_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    note_type: Mapped[Optional[str]] = mapped_column(String(48), index=True)
+    note_source: Mapped[Optional[str]] = mapped_column(String(48), index=True)
+    # Authorized operational note prose — bounded; stored in the managed DB only.
+    note_text: Mapped[Optional[str]] = mapped_column(Text)
+    note_summary: Mapped[Optional[str]] = mapped_column(String(500))
+    captured_by: Mapped[Optional[str]] = mapped_column(String(128))
+    captured_role: Mapped[Optional[str]] = mapped_column(String(64))
+    source_ref: Mapped[Optional[str]] = mapped_column(String(128))
+    source_ingestion_record_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    related_evidence_reference_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    related_review_bundle_record_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    # Governance / non-final posture — real columns (never JSON). "non-final" is enforced.
+    client_facing_approved: Mapped[bool] = mapped_column(Boolean, default=False)
+    financial_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    capsule_candidate_ready: Mapped[bool] = mapped_column(Boolean, default=False)
+    publication_allowed: Mapped[bool] = mapped_column(Boolean, default=False)
+    execution_allowed: Mapped[bool] = mapped_column(Boolean, default=False)
+    requires_human_review: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Phase 34 controlled-writer fields. idempotency_key + payload_fingerprint back
+    # replay/replay-conflict detection (the fingerprint hashes note_text, never storing it twice).
+    # Safe metadata (warnings, safe refs) lives in details_json — never a second copy of note_text.
+    idempotency_key: Mapped[Optional[str]] = mapped_column(String(128), index=True)
+    payload_fingerprint: Mapped[Optional[str]] = mapped_column(String(64))
+
+
 # Convenience list of all model classes (used by tooling/validation).
 ALL_MODELS = [
     Client,
@@ -386,4 +433,5 @@ ALL_MODELS = [
     AgentTaskQueueRecord,
     ReviewBundleRecord,
     InternalReviewerDecisionRecord,
+    IntakeNoteRecord,
 ]

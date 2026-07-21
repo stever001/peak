@@ -465,3 +465,120 @@ class SourceIngestionWriteReceipt:
     database_write_at: Optional[str] = None
     reasons: List[str] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
+
+
+class IntakeNoteWriteOutcome:
+    """Outcome codes for a controlled intake-note write (str constants; no Enum)."""
+
+    CREATED = "created"
+    IDEMPOTENT_REPLAY = "idempotent_replay"
+    DENIED = "denied"
+    FAILED_BEFORE_WRITE = "failed_before_write"
+    WRITE_OUTCOME_UNCERTAIN = "write_outcome_uncertain"
+
+
+# The single table/action the Phase 34 intake-note writer may target (Phase 17 subset).
+INTAKE_NOTE_TARGET_TABLE = "intake_note_records"
+INTAKE_NOTE_TARGET_ACTION = "create_intake_note_record"
+
+INTAKE_NOTE_ALL_OUTCOMES = (
+    IntakeNoteWriteOutcome.CREATED,
+    IntakeNoteWriteOutcome.IDEMPOTENT_REPLAY,
+    IntakeNoteWriteOutcome.DENIED,
+    IntakeNoteWriteOutcome.FAILED_BEFORE_WRITE,
+    IntakeNoteWriteOutcome.WRITE_OUTCOME_UNCERTAIN,
+)
+
+
+@dataclass
+class IntakeNoteDraft:
+    """A DB-free input draft for one authorized intake note (never persisted by itself).
+
+    Intake notes are **first-class operational records** (client interviews, consultant
+    observations, warehouse walkaround notes, discovery calls, source-intake comments, controlled
+    packet-ingestion outputs, consultant-authored notes). Unlike prior summary-only drafts, the
+    ``note_text`` field is intended to carry **authorized operational client prose** — which is
+    acceptable **only in the managed DB**, never in Git / fixtures / examples / sample packets /
+    logs / receipts / test data. ``intake_note_id`` and ``captured_at`` are server-controlled and
+    left ``None`` here. All approval/publication/execution posture flags default to the not-allowed
+    posture and ``requires_human_review`` defaults to ``True``.
+    """
+
+    intake_note_id: Optional[str] = None  # server-controlled; caller must leave None
+    owner_id: Optional[str] = None
+    client_id: Optional[str] = None
+    engagement_id: Optional[str] = None
+    authorization_scope: Optional[str] = None
+    note_type: Optional[str] = None      # short safe label (e.g. "interview", "walkaround")
+    note_source: Optional[str] = None    # short safe label (e.g. "discovery_call")
+    note_text: Optional[str] = None      # bounded operational prose (managed-DB storage only)
+    note_summary: Optional[str] = None   # short safe summary (optional)
+    captured_by: Optional[str] = None    # short safe label
+    captured_role: Optional[str] = None  # short safe label (optional)
+    source_ref: Optional[str] = None     # short safe reference (optional)
+    source_ingestion_record_id: Optional[str] = None
+    related_evidence_reference_id: Optional[str] = None
+    related_review_bundle_record_id: Optional[str] = None
+    review_status: str = "needs_review"
+    lifecycle_status: str = "draft"
+    client_facing_approved: bool = False
+    financial_verified: bool = False
+    capsule_candidate_ready: bool = False
+    publication_allowed: bool = False
+    execution_allowed: bool = False
+    requires_human_review: bool = True
+    warnings: List[str] = field(default_factory=list)
+    captured_at: Optional[str] = None  # reserved; server-stamped created_at is authoritative
+
+
+@dataclass
+class IntakeNoteWriteReceipt:
+    """A typed, auditable receipt for one controlled intake-note write attempt.
+
+    Contains no credentials, no SQL, no connection URL, and — critically — **never the stored
+    ``note_text`` / note body or any raw note content**. Denial reasons report only a field name /
+    marker *category*, never the offending value. The boolean flags describe what actually happened
+    during this attempt. This write persists a **review-gated, non-final** internal operational
+    record only — it approves nothing, publishes nothing, executes nothing, and creates no
+    ``review_records`` / ``agent_run_records`` row.
+    """
+
+    outcome: str = IntakeNoteWriteOutcome.DENIED
+    permitted: bool = False
+    reason_code: Optional[str] = None
+    target_table: str = INTAKE_NOTE_TARGET_TABLE
+    target_action: str = INTAKE_NOTE_TARGET_ACTION
+    # Stored identity — set only when safely known (created / idempotent_replay).
+    stored_record_id: Optional[str] = None
+    idempotency_key: Optional[str] = None  # the caller's key (not a secret); a safe reference
+    audit_trace_ref: Optional[str] = None
+    # Actual-behavior flags.
+    database_connection_made: bool = False
+    sql_execution_made: bool = False
+    database_write_made: bool = False
+    stored_record_created: bool = False
+    existing_record_returned: bool = False
+    transaction_committed: bool = False
+    outcome_uncertain: bool = False
+    # Safe routing labels of the record this write concerns (labels, never note content).
+    note_type: Optional[str] = None
+    note_source: Optional[str] = None
+    review_status: Optional[str] = None
+    lifecycle_status: Optional[str] = None
+    # Non-effect flags — always False (Phase 34 approves/publishes/executes nothing).
+    review_records_write_made: bool = False
+    review_approval_made: bool = False
+    client_facing_output_created: bool = False
+    financial_verification_made: bool = False
+    capsule_publication_made: bool = False
+    agentnet_publication_made: bool = False
+    agent_execution_made: bool = False
+    llm_call_made: bool = False
+    agentnet_call_made: bool = False
+    resolver_call_made: bool = False
+    network_call_made: bool = False
+    # Server-stamped timestamps read back from the DB (ISO strings), when known.
+    created_at: Optional[str] = None
+    database_write_at: Optional[str] = None
+    reasons: List[str] = field(default_factory=list)
+    warnings: List[str] = field(default_factory=list)

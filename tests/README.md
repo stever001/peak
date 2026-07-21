@@ -58,6 +58,10 @@ Thirty-two harnesses, run together by `make validate`:
   check (stdlib-only; DB-free — no database layer).
 - `validate_phase33_internal_reviewer_decision_writer.py` — controlled-DB
   internal-reviewer-decision-writer check (structural always; DB-backed when SQLAlchemy is present).
+- `validate_phase34_intake_note_writer.py` — controlled-DB intake-note-writer check (structural
+  always; DB-backed when SQLAlchemy is present).
+- `validate_phase34_managed_mysql_rubric.py` — managed-MySQL persistence rubric + Peak-operated
+  AgentNet publication policy check (stdlib-only; credential-free; no live network).
 
 ## `synthetic_fixtures.py`
 
@@ -744,6 +748,44 @@ value-safety rejections **without echoing values**; side-effect discipline (no
 [`../docs/INTERNAL_REVIEWER_DECISION_CONTROLLED_WRITER.md`](../docs/INTERNAL_REVIEWER_DECISION_CONTROLLED_WRITER.md) and
 [`../docs/INTERNAL_REVIEWER_DECISION_IDEMPOTENCY_POLICY.md`](../docs/INTERNAL_REVIEWER_DECISION_IDEMPOTENCY_POLICY.md).
 
+## `validate_phase34_intake_note_writer.py`
+
+Check for the Phase 34 **Intake Note Controlled Writer** (`peak/db/intake_note_writer.py`) — the
+eighth narrow live DB writer and the first to store authorized operational `note_text`. The
+**structural** layer (always, stdlib-only) confirms the writer/receipt/migration/doc files exist and
+compile; the writer imports no LLM/MockLLM/executor/AgentNet/MCP/resolver/connector/network client,
+credential, or Phase 22 review writer; the Phase 32 package stays DB-free and Phase 33 still uses the
+public classifier; migration `009_intake_note_records` is additive schema-only (`down_revision =
+008`); the Phase 17 allowlist gained exactly the one new table/action; and the docs carry the
+required language. The **DB-backed** layer (temporary SQLite — a fast structural smoke path, **not**
+production proof) exercises: successful create with `note_text` persisted but **never echoed** in the
+receipt; idempotent replay and conflict (an edited note under the same key conflicts); stored-
+`Engagement` authorization; identity/allowlist/posture rejections; `note_text` content-safety
+(ordinary prose passes; credential/DSN/SQL/private-key/stack-trace/JSON markers denied without
+echoing; over-length denied) plus label/summary safety; side-effect discipline; and
+transaction/failure/race semantics. Run `make validate-phase34 PYTHON=.venv/bin/python` for the DB
+layer. See [`../docs/INTAKE_NOTE_CONTROLLED_WRITER.md`](../docs/INTAKE_NOTE_CONTROLLED_WRITER.md) and
+[`../docs/INTAKE_NOTE_IDEMPOTENCY_POLICY.md`](../docs/INTAKE_NOTE_IDEMPOTENCY_POLICY.md).
+
+## `validate_phase34_managed_mysql_rubric.py`
+
+Check for the Phase 34 **managed MySQL persistence rubric** and **Peak-operated AgentNet publication
+policy** (stdlib-only, credential-free, no live network). It verifies the rubric/isolation/parity
+docs state that managed remote MySQL is the operational store, Client Isolation Option A is the
+default, **SQLite is not the production-readiness proof path**, managed MySQL test/staging is required
+for production readiness, the production DB is not the main smoke-test target, and there is no broad
+production delete/cleanup path; that the `PEAK_MANAGED_MYSQL_{TEST,STAGING,PROD}_DSN` env-var names
+are documented **without values**; that the AgentNet policy makes Peak the authorized publisher,
+forbids client-facing publisher UI / client-held credentials / client-operated resolver tools /
+direct client publication, and keeps publication disabled; that the opt-in
+`db-check-managed-test` / `managed-mysql-smoke` / `managed-mysql-migration-check` targets skip
+cleanly with no DSN, refuse `prod`, and never print a DSN (verified by running
+`tools/managed_mysql_check.py`); and that no credentials / `.env` / AgentNet publish code were
+committed. See [`../docs/MANAGED_MYSQL_PERSISTENCE_RUBRIC.md`](../docs/MANAGED_MYSQL_PERSISTENCE_RUBRIC.md),
+[`../docs/CLIENT_ISOLATION_MODEL.md`](../docs/CLIENT_ISOLATION_MODEL.md),
+[`../docs/PRODUCTION_PARITY_DB_VALIDATION.md`](../docs/PRODUCTION_PARITY_DB_VALIDATION.md), and
+[`../docs/PEAK_OPERATED_AGENTNET_PUBLICATION_POLICY.md`](../docs/PEAK_OPERATED_AGENTNET_PUBLICATION_POLICY.md).
+
 ## Running
 
 This machine uses `python3` (there is no bare `python`). From the repo root:
@@ -753,7 +795,7 @@ This machine uses `python3` (there is no bare `python`). From the repo root:
 make install-dev          # == python3 -m pip install -r requirements-dev.txt
 
 # run all harnesses
-make validate             # == phase1 … phase33
+make validate             # == phase1 … phase34
 
 # or run one at a time
 make validate-phase1
@@ -789,6 +831,11 @@ make validate-phase30   # DB-backed; add PYTHON=.venv/bin/python for the full su
 make validate-phase31   # structural+plan-only always; add PYTHON=.venv/bin/python for the DB layer
 make validate-phase32   # stdlib-only; DB-free (no database layer)
 make validate-phase33   # DB-backed; add PYTHON=.venv/bin/python for the full suite
+make validate-phase34   # DB-backed intake-note writer + managed-MySQL rubric; add PYTHON=.venv/bin/python
+# opt-in managed MySQL (credential-free; skip safely with no DSN; never part of `make validate`):
+make db-check-managed-test          # managed test-env rubric check
+make managed-mysql-smoke            # managed test-env smoke runbook
+make managed-mysql-migration-check  # managed test-env migration runbook
 ```
 
 Or invoke them directly, without the Makefile:
@@ -827,6 +874,8 @@ python3 tests/validate_phase29_review_orchestration_boundary.py             # st
 .venv/bin/python tests/validate_phase31_packet_review_bundle_integration.py # structural+plan-only always; DB layer needs SQLAlchemy
 python3 tests/validate_phase32_internal_reviewer_decision_boundary.py       # stdlib-only, no dependency needed (DB-free)
 .venv/bin/python tests/validate_phase33_internal_reviewer_decision_writer.py # DB-backed (SQLAlchemy); skips DB layer on plain python3
+.venv/bin/python tests/validate_phase34_intake_note_writer.py               # DB-backed (SQLAlchemy); skips DB layer on plain python3
+python3 tests/validate_phase34_managed_mysql_rubric.py                       # stdlib-only, credential-free, no live network
 ```
 
 ## Exit codes

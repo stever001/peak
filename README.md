@@ -113,9 +113,15 @@ peak/
 │   ├── INTERNAL_REVIEWER_DECISION_GOVERNANCE_POLICY.md # Reviewer-decision governance: intents, routing, no approval (Phase 32)
 │   ├── INTERNAL_REVIEWER_DECISION_CONTROLLED_WRITER.md # Seventh DB-backed writer, for internal_reviewer_decision_records (Phase 33)
 │   ├── INTERNAL_REVIEWER_DECISION_IDEMPOTENCY_POLICY.md # DB-enforced idempotency for reviewer decision rows (Phase 33)
+│   ├── INTAKE_NOTE_CONTROLLED_WRITER.md            # Eighth DB-backed writer, for intake_note_records (Phase 34)
+│   ├── INTAKE_NOTE_IDEMPOTENCY_POLICY.md           # DB-enforced idempotency for intake note rows (Phase 34)
+│   ├── MANAGED_MYSQL_PERSISTENCE_RUBRIC.md         # Managed remote MySQL is the operational store; SQLite ≠ prod proof (Phase 34)
+│   ├── CLIENT_ISOLATION_MODEL.md                   # Client Isolation Option A: shared managed DB per env + tenant columns (Phase 34)
+│   ├── PRODUCTION_PARITY_DB_VALIDATION.md          # Managed MySQL test/staging is the prod-readiness proof path (Phase 34)
+│   ├── PEAK_OPERATED_AGENTNET_PUBLICATION_POLICY.md # Peak (not clients) is the authorized publisher; publishing deferred (Phase 34)
 │   └── IMPLEMENTATION_PLAN.md
 ├── peak/                         # Python tooling layer (source only; no data)
-│   ├── db/                       # base, enums, models, session + agent_run (P20), evidence (P21), review (P22), source-ingestion (P24), agent-task-queue (P27), review-bundle (P30) & internal-reviewer-decision (P33) writers
+│   ├── db/                       # base, enums, models, session + agent_run (P20), evidence (P21), review (P22), source-ingestion (P24), agent-task-queue (P27), review-bundle (P30), internal-reviewer-decision (P33) & intake-note (P34) writers
 │   ├── agentnet/                 # Governance wrapper for the AgentNet MCP connector (no calls)
 │   ├── agents/                   # Agent execution harness (mock) + agent run persistence mapping (no live DB)
 │   ├── workers/                  # Production-shaped workers (evidence normalization; review-gated)
@@ -954,6 +960,49 @@ an approval phase.
 
 ```bash
 make validate-phase33   # controlled-DB internal-reviewer-decision-writer check (DB-backed via .venv)
+```
+
+### Intake Note Controlled Writer + Managed MySQL Rubric (Phase 34)
+
+The **eighth** narrow live DB writer plus a production-parity persistence rubric. The writer
+persists **exactly one** `intake_note_records` row from an `IntakeNoteDraft` through the Phase 17
+`ControlledWriteRequest` boundary — allowing only `intake_note_records` /
+`create_intake_note_record`. Intake notes are **first-class operational records** (interviews,
+walkaround notes, discovery calls, consultant notes), and this is the first table to store
+authorized operational `note_text`.
+
+- **note_text is stored — in the managed DB only.** Real note text belongs in the managed DB, never
+  in Git/fixtures/examples/logs/receipts/test data. **Receipts and denial reasons never echo
+  `note_text`** — only field names and marker categories. `note_text` accepts bounded ordinary prose
+  but rejects credential assignments, DB URLs/DSNs, raw SQL, private keys, stack traces, raw-content
+  tokens, and raw-JSON dumps (reusing the public `classify_prohibited_value_marker` for the short
+  label/summary fields).
+- **Non-final, review-gated.** `review_status=needs_review`, `lifecycle_status=draft`, and all of
+  `client_facing_approved`/`financial_verified`/`capsule_candidate_ready`/`publication_allowed`/
+  `execution_allowed` false with `requires_human_review=true`. It approves/publishes/executes
+  nothing, calls no Phase 22 writer, and creates no `review_records`/`agent_run_records` row.
+- **Public entry point:** `persist_intake_note_record(controlled_write_request, *,
+  session_factory=None) -> IntakeNoteWriteReceipt`. Write-time authorization loads the stored
+  `Engagement` (`request.authorization_scope == engagement.authorization_scope`; identity necessary
+  but not sufficient). Idempotency boundary `(owner_id, client_id, engagement_id, idempotency_key)`
+  with a `payload_fingerprint` that hashes the note body. Migration `009_intake_note_records`
+  (`down_revision = 008_…`) adds one table; single head; `make db-check` now expects **15 tables**.
+- **Managed MySQL persistence rubric.** Managed remote MySQL is the operational data store; **Client
+  Isolation Option A** (shared managed DB per environment + strict tenant columns) is the default;
+  **SQLite is only a structural smoke path, not the production-readiness proof path** — managed
+  MySQL test/staging validation is required for production readiness. Safe, opt-in, credential-free
+  targets (`db-check-managed-test`, `managed-mysql-smoke`, `managed-mysql-migration-check`) skip with
+  guidance when no DSN is set, never print DSNs, refuse `prod`, and are **not** part of `make
+  validate`. **AgentNet publication is Peak-operated and deferred** (policy only, no publish code).
+- [`peak/db/intake_note_writer.py`](peak/db/intake_note_writer.py),
+  [`docs/INTAKE_NOTE_CONTROLLED_WRITER.md`](docs/INTAKE_NOTE_CONTROLLED_WRITER.md),
+  [`docs/MANAGED_MYSQL_PERSISTENCE_RUBRIC.md`](docs/MANAGED_MYSQL_PERSISTENCE_RUBRIC.md),
+  [`docs/CLIENT_ISOLATION_MODEL.md`](docs/CLIENT_ISOLATION_MODEL.md),
+  [`docs/PRODUCTION_PARITY_DB_VALIDATION.md`](docs/PRODUCTION_PARITY_DB_VALIDATION.md), and
+  [`docs/PEAK_OPERATED_AGENTNET_PUBLICATION_POLICY.md`](docs/PEAK_OPERATED_AGENTNET_PUBLICATION_POLICY.md).
+
+```bash
+make validate-phase34   # intake-note-writer + managed-MySQL-rubric checks (DB-backed via .venv)
 ```
 
 ## Design constraints

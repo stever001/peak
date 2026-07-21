@@ -237,4 +237,19 @@ Structured internal reviewer decisions over those review bundles are planned by 
 Internal Reviewer Decision Boundary**
 ([`INTERNAL_REVIEWER_DECISION_BOUNDARY.md`](INTERNAL_REVIEWER_DECISION_BOUNDARY.md)): a **DB-free**
 boundary that stores nothing, approves nothing, and carries only safe references — never raw client
-content. A future Phase 33 may persist reviewer decisions under the same controlled-storage rules.
+content. **Phase 33** persists those reviewer decisions through the narrow
+`internal_reviewer_decision_records` writer (review-gated, non-approval), and **Phase 34** adds
+first-class `intake_note_records` — the first table to store authorized operational `note_text`
+(managed DB only, never echoed) — through its own narrow writer.
+
+**Operational store.** All of this operational data lives in **managed remote MySQL**, reached only
+through the narrow governed writers; **Client Isolation Option A** (shared managed DB per environment
++ strict tenant columns + stored-`Engagement` authorization) is the default. The temporary SQLite
+used by the DB-backed validators is only a fast structural-smoke path and is **not** the
+production-readiness proof path — managed MySQL test/staging validation is required before treating
+DB-backed functionality as production-ready. See
+[`MANAGED_MYSQL_PERSISTENCE_RUBRIC.md`](MANAGED_MYSQL_PERSISTENCE_RUBRIC.md),
+[`CLIENT_ISOLATION_MODEL.md`](CLIENT_ISOLATION_MODEL.md), and
+[`PRODUCTION_PARITY_DB_VALIDATION.md`](PRODUCTION_PARITY_DB_VALIDATION.md). AgentNet publication is
+**Peak-operated and deferred** (policy only; no publish code) —
+[`PEAK_OPERATED_AGENTNET_PUBLICATION_POLICY.md`](PEAK_OPERATED_AGENTNET_PUBLICATION_POLICY.md).

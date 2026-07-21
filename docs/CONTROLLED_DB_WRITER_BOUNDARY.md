@@ -182,4 +182,16 @@ touch this boundary: it is DB-free and produces **no** `ControlledWriteRequest` 
 — which routes an `InternalReviewerDecisionDraft` write through this boundary and the allowlisted
 `internal_reviewer_decision_records` / `create_internal_reviewer_decision_record` table/action,
 persisting one review-gated, **non-approval** row (never a `review_records` row, never an approval,
-never `approve_internal`). `ready_for_internal_use` is **not** approval.
+never `approve_internal`). `ready_for_internal_use` is **not** approval. **Phase 34** added the
+eighth narrow writer — the intake-note writer
+([`INTAKE_NOTE_CONTROLLED_WRITER.md`](INTAKE_NOTE_CONTROLLED_WRITER.md)) — which routes an
+`IntakeNoteDraft` write through this boundary and the allowlisted `intake_note_records` /
+`create_intake_note_record` table/action, persisting one review-gated, **non-final** operational
+note. It is the first table to store authorized `note_text` (managed DB only, never echoed), and it
+approves/publishes/executes nothing.
+
+Managed remote MySQL is the operational store for all of these writers; the temporary SQLite used by
+the DB-backed validators is only a fast local structural-smoke path and **not** the
+production-readiness proof path (see
+[`MANAGED_MYSQL_PERSISTENCE_RUBRIC.md`](MANAGED_MYSQL_PERSISTENCE_RUBRIC.md) and
+[`PRODUCTION_PARITY_DB_VALIDATION.md`](PRODUCTION_PARITY_DB_VALIDATION.md)).

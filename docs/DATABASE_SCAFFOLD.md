@@ -89,7 +89,7 @@ python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt      # SQLAlchemy / alembic / PyMySQL
 .venv/bin/python -m pip install -r requirements-dev.txt  # jsonschema (validation harness)
 
-# dependency-backed scaffold check (imports models, verifies the 14 tables and columns)
+# dependency-backed scaffold check (imports models, verifies the 15 tables and columns)
 .venv/bin/python tests/validate_phase11_db_scaffold.py
 
 # or run the whole validation suite through the venv interpreter
