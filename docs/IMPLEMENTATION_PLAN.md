@@ -962,6 +962,47 @@ production-persistence consolidation):**
   (`make validate-phase34`; DB-backed via `.venv`; rubric check is credential-free with no live
   network).
 
+**Governed Managed Record Workflow Integration (Phase 35 — workflow integration over the existing
+writers; no new persistence primitive):**
+
+- [x] **Governed six-stage workflow.** A DB-free sequencing layer
+  ([`../peak/workflows/`](../peak/workflows/)) that drives six already durable record types through
+  the narrow controlled writers that already exist — `intake_note_records` (P34) →
+  `source_ingestion_records` (P24) → `evidence_references` (P21) → `agent_task_queue_records` (P27)
+  → `review_bundle_records` (P30) → `internal_reviewer_decision_records` (P33). Public entry point
+  `run_managed_record_workflow(request, *, session_factory=None)` returns a typed
+  `ManagedRecordWorkflowResult`. Docs
+  [`MANAGED_RECORD_WORKFLOW_INTEGRATION.md`](MANAGED_RECORD_WORKFLOW_INTEGRATION.md) and
+  [`WORKFLOW_INTEGRATION_GOVERNANCE_POLICY.md`](WORKFLOW_INTEGRATION_GOVERNANCE_POLICY.md).
+- [x] **No new persistence primitive.** No DB table, model, or Alembic migration; **no new Phase 17
+  allowlist pair**; no generic CRUD, generic writer, arbitrary SQL executor, or broad repository.
+  Alembic head remains `009_intake_note_records` and `make db-check` still expects **15 tables**.
+- [x] **Explicit per-stage gates; plan-only default.** A stage persists only when
+  `persistence_gates[stage]` is `True`, its payload is present and safe, and a `session_factory` is
+  injected — **no ambient-DSN fallback**, so `make validate` needs no live credentials and no
+  network. Payload safety and identity checks also run in plan-only mode. No stage silently escalates.
+- [x] **Linear halting.** A denied / conflicted / failed stage sets `halted_after_stage` and marks
+  every later stage `halted`. `strict_mode=True` halts on any stage warning; non-strict collects the
+  warning with no approval, client-facing, publication, financial, or execution effect.
+- [x] **Authorization unchanged.** Each narrow writer still loads the stored `Engagement` and
+  compares the stored `authorization_scope`; identity matching is necessary but not sufficient.
+  Cross-tenant / cross-engagement payloads are denied before any write.
+- [x] **Stage-namespaced idempotency.** Every key is `wf35::<stage>::…`. An explicit per-stage key is
+  respected as the stage-local component; otherwise the key derives from `workflow_id` plus a
+  SHA-256 prefix over safe, **non-content** stage fields. Replay returns the writers'
+  `idempotent_replay` with no duplicate row; an explicit key reused with a changed payload yields
+  `idempotency_conflict` and halts the dependent stages.
+- [x] **Leak safety.** Results carry only stage names, safe record refs, counts, reason codes, and
+  marker categories. `note_text` may be passed to the intake writer but is **never echoed**;
+  prohibited keys/values are denied before any writer runs, reporting field name and category only.
+- [x] **Nothing escalates.** No Phase 22 review-writer call and no `review_records` /
+  `agent_run_records` row; no client-facing output, financial verification, capsule publication,
+  AgentNet publish, resolver/MCP call, LLM/MockLLM call, agent or mock-agent execution, production DB
+  write path, or cleanup/delete path. The managed-MySQL rubric and the Peak-operated AgentNet
+  publication policy are unchanged. Checked by
+  [`../tests/validate_phase35_managed_record_workflow.py`](../tests/validate_phase35_managed_record_workflow.py)
+  (`make validate-phase35`; structural + plan-only always, DB-backed via `.venv`).
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

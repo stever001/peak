@@ -195,3 +195,13 @@ the DB-backed validators is only a fast local structural-smoke path and **not** 
 production-readiness proof path (see
 [`MANAGED_MYSQL_PERSISTENCE_RUBRIC.md`](MANAGED_MYSQL_PERSISTENCE_RUBRIC.md) and
 [`PRODUCTION_PARITY_DB_VALIDATION.md`](PRODUCTION_PARITY_DB_VALIDATION.md)).
+
+---
+
+## Phase 35 — governed workflow integration (no new writer)
+
+The Phase 35 managed-record workflow layer ([`../peak/workflows/`](../peak/workflows/)) sequences six
+of the existing narrow writers behind explicit per-stage persistence gates. It adds **no new writer,
+no new table/action pair, no generic CRUD, and no arbitrary SQL** — it only builds one
+`ControlledWriteRequest` per stage and hands it to the writer that already owns that table. See
+[`MANAGED_RECORD_WORKFLOW_INTEGRATION.md`](MANAGED_RECORD_WORKFLOW_INTEGRATION.md).

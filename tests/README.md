@@ -62,6 +62,8 @@ Thirty-two harnesses, run together by `make validate`:
   always; DB-backed when SQLAlchemy is present).
 - `validate_phase34_managed_mysql_rubric.py` — managed-MySQL persistence rubric + Peak-operated
   AgentNet publication policy check (stdlib-only; credential-free; no live network).
+- `validate_phase35_managed_record_workflow.py` — governed managed-record workflow integration check
+  (structural + plan-only always; DB-backed when SQLAlchemy is present).
 
 ## `synthetic_fixtures.py`
 
@@ -786,6 +788,37 @@ committed. See [`../docs/MANAGED_MYSQL_PERSISTENCE_RUBRIC.md`](../docs/MANAGED_M
 [`../docs/PRODUCTION_PARITY_DB_VALIDATION.md`](../docs/PRODUCTION_PARITY_DB_VALIDATION.md), and
 [`../docs/PEAK_OPERATED_AGENTNET_PUBLICATION_POLICY.md`](../docs/PEAK_OPERATED_AGENTNET_PUBLICATION_POLICY.md).
 
+## `validate_phase35_managed_record_workflow.py`
+
+Check for the Phase 35 **governed managed-record workflow integration layer**
+(`peak/workflows/`) — the DB-free sequencing layer that drives six existing durable record types
+through their existing narrow controlled writers under explicit per-stage persistence gates.
+
+Structural: the package/contracts/docs exist and compile; the package imports no
+SQLAlchemy/Alembic/DB-model/migration at module scope (proved at runtime in a subprocess), no
+LLM/MockLLM/executor/AgentNet/MCP/resolver/connector/network client or credential, no Phase 22 review
+writer, no agent-run writer, no raw SQL, and no publication code; the Phase 17 allowlist gained **no**
+new table/action pair; **no migration `010`** was added and `db-check` still expects **15 tables**;
+the eight existing writers remain and Phases 32/33/34 are intact; the docs carry the required
+language; the managed-MySQL and AgentNet publication policies are unchanged; the repo stays
+source-only.
+
+Plan-only / DB-free: gate behavior (planned / skipped / denied), stage idempotency-key derivation and
+`wf35::<stage>::` prefixing, identity and `authorization_scope` pre-flight denial, prohibited
+key/value denial with **canary values that must never be echoed**, strict-mode halting vs non-strict
+warning collection, and `note_text` never appearing in a result.
+
+DB-backed (SQLAlchemy present, temporary local SQLite): a fully gated six-stage workflow persisting
+through the six narrow writers, per-stage gating, sanitized receipts and record refs,
+`table_write_counts`, idempotent replay with no duplicate rows, writer-denial and
+idempotency-conflict halting, stored-scope authorization still enforced by the writers, and
+side-effect discipline (**no `review_records` / `agent_run_records` row**). SQLite here is only a
+fast local structural smoke path — **not** the production-readiness proof path. Run
+`make validate-phase35 PYTHON=.venv/bin/python` for the DB layer. See
+[`../docs/MANAGED_RECORD_WORKFLOW_INTEGRATION.md`](../docs/MANAGED_RECORD_WORKFLOW_INTEGRATION.md)
+and
+[`../docs/WORKFLOW_INTEGRATION_GOVERNANCE_POLICY.md`](../docs/WORKFLOW_INTEGRATION_GOVERNANCE_POLICY.md).
+
 ## Running
 
 This machine uses `python3` (there is no bare `python`). From the repo root:
@@ -795,7 +828,7 @@ This machine uses `python3` (there is no bare `python`). From the repo root:
 make install-dev          # == python3 -m pip install -r requirements-dev.txt
 
 # run all harnesses
-make validate             # == phase1 … phase34
+make validate             # == phase1 … phase35
 
 # or run one at a time
 make validate-phase1
@@ -832,6 +865,7 @@ make validate-phase31   # structural+plan-only always; add PYTHON=.venv/bin/pyth
 make validate-phase32   # stdlib-only; DB-free (no database layer)
 make validate-phase33   # DB-backed; add PYTHON=.venv/bin/python for the full suite
 make validate-phase34   # DB-backed intake-note writer + managed-MySQL rubric; add PYTHON=.venv/bin/python
+make validate-phase35   # structural+plan-only always; add PYTHON=.venv/bin/python for the DB layer
 # opt-in managed MySQL (credential-free; skip safely with no DSN; never part of `make validate`):
 make db-check-managed-test          # managed test-env rubric check
 make managed-mysql-smoke            # managed test-env smoke runbook
@@ -876,6 +910,7 @@ python3 tests/validate_phase32_internal_reviewer_decision_boundary.py       # st
 .venv/bin/python tests/validate_phase33_internal_reviewer_decision_writer.py # DB-backed (SQLAlchemy); skips DB layer on plain python3
 .venv/bin/python tests/validate_phase34_intake_note_writer.py               # DB-backed (SQLAlchemy); skips DB layer on plain python3
 python3 tests/validate_phase34_managed_mysql_rubric.py                       # stdlib-only, credential-free, no live network
+.venv/bin/python tests/validate_phase35_managed_record_workflow.py           # structural+plan-only always; DB layer needs SQLAlchemy
 ```
 
 ## Exit codes

@@ -126,3 +126,12 @@ see [`MANAGED_MYSQL_PERSISTENCE_RUBRIC.md`](MANAGED_MYSQL_PERSISTENCE_RUBRIC.md)
 - **No agent / mock-agent / LLM / MockLLM / AgentNet / AgentNet publication / MCP / resolver /
   connector / network call; no `agent_run_records` write; no client-facing output, financial
   verification, or capsule publication; never updates or deletes.**
+
+---
+
+## Phase 35 — called from the managed-record workflow
+
+This writer is stage 1 of the Phase 35 managed-record workflow. The workflow layer may pass
+`note_text` through to this writer but **never echoes it** in its own result; content safety for
+`note_text` remains this writer's hardened scanner. See
+[`MANAGED_RECORD_WORKFLOW_INTEGRATION.md`](MANAGED_RECORD_WORKFLOW_INTEGRATION.md).

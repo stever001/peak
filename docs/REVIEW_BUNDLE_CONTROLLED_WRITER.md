@@ -129,3 +129,12 @@ Reviewer Decision Boundary**
 ([`INTERNAL_REVIEWER_DECISION_BOUNDARY.md`](INTERNAL_REVIEWER_DECISION_BOUNDARY.md)) consumes (as
 `review_bundle_record_id`) to plan a reviewer decision — DB-free, no approval, no `review_records`
 write.
+
+---
+
+## Phase 35 — called from the managed-record workflow
+
+This writer is stage 5 of the Phase 35 managed-record workflow, invoked only under an explicit
+`review_bundle` persistence gate with a stage-namespaced `wf35::review_bundle::…` idempotency key.
+The workflow layer approves nothing and still writes no `review_records` row. See
+[`MANAGED_RECORD_WORKFLOW_INTEGRATION.md`](MANAGED_RECORD_WORKFLOW_INTEGRATION.md).

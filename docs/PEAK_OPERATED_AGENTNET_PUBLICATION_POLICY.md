@@ -46,3 +46,12 @@ When a future phase implements Peak-operated publication, each publication gate 
 
 Until those gates exist and pass their own governance validation, **AgentNet publication is not
 available** and no code path performs it.
+
+---
+
+## Phase 35 — policy unchanged, publication still deferred
+
+The Phase 35 managed-record workflow integration layer **does not alter this policy** and adds no
+publishing code, no resolver call, and no capsule publication path. AgentNet publication remains
+Peak-operated and deferred behind future controlled publication gates. See
+[`WORKFLOW_INTEGRATION_GOVERNANCE_POLICY.md`](WORKFLOW_INTEGRATION_GOVERNANCE_POLICY.md).

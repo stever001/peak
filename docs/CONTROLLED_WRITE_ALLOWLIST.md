@@ -138,3 +138,16 @@ non-final** intake notes only and intentionally stores authorized operational `n
 managed DB only** (never in Git/fixtures/receipts). It does **not** authorize approval,
 `approve_internal`, `review_records` creation, client-facing output, financial verification, capsule
 publication, AgentNet publication, or execution.
+
+---
+
+## Phase 35 — allowlist unchanged
+
+Phase 35's managed-record workflow integration layer adds **no new table/action pair**. It targets
+only pairs that already exist: `intake_note_records`/`create_intake_note_record`,
+`source_ingestion_records`/`create_source_ingestion_record`, `evidence_references`/`create_draft`,
+`agent_task_queue_records`/`create_agent_task_queue_record`,
+`review_bundle_records`/`create_review_bundle_record`, and
+`internal_reviewer_decision_records`/`create_internal_reviewer_decision_record`. It never targets
+`review_records` or `agent_run_records`. See
+[`WORKFLOW_INTEGRATION_GOVERNANCE_POLICY.md`](WORKFLOW_INTEGRATION_GOVERNANCE_POLICY.md).

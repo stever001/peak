@@ -164,3 +164,11 @@ passes the request's `idempotency_key` straight through; it does not relax any c
 writer's write-time stored-`Engagement` authorization stays authoritative — a stored-scope
 mismatch is still denied even when the orchestrator's preflight identity checks pass, surfacing
 to the caller as an orchestration `partial` outcome.
+
+---
+
+## Phase 35 — called from the managed-record workflow
+
+This writer is stage 2 of the Phase 35 managed-record workflow, invoked only under an explicit
+`source_ingestion` persistence gate with a stage-namespaced `wf35::source_ingestion::…` idempotency
+key. See [`MANAGED_RECORD_WORKFLOW_INTEGRATION.md`](MANAGED_RECORD_WORKFLOW_INTEGRATION.md).

@@ -80,3 +80,15 @@ retention policy — never broad deletes.
 This is a documentation-and-scaffolding consolidation phase. It adds **no** live DB write path for
 tests, no production write path, no generic CRUD, no arbitrary SQL, no credentials, and no network
 requirement for `make validate`.
+
+---
+
+## Phase 35 — workflow integration under this rubric
+
+The Phase 35 managed-record workflow layer orchestrates durable records intended for these managed
+remote MySQL environments and changes **nothing** in this rubric. It adds no DSN, no production DB
+write path, no cleanup/delete path, and no managed target to `make validate`; a gated stage with no
+injected `session_factory` is denied rather than falling back to an ambient environment database URL,
+so standard validation needs **no live database credentials and no network**. Its temporary SQLite
+test path remains a local structural smoke path only — **SQLite is not the production-readiness proof
+path**. See [`MANAGED_RECORD_WORKFLOW_INTEGRATION.md`](MANAGED_RECORD_WORKFLOW_INTEGRATION.md).

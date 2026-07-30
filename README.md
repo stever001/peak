@@ -119,6 +119,8 @@ peak/
 │   ├── CLIENT_ISOLATION_MODEL.md                   # Client Isolation Option A: shared managed DB per env + tenant columns (Phase 34)
 │   ├── PRODUCTION_PARITY_DB_VALIDATION.md          # Managed MySQL test/staging is the prod-readiness proof path (Phase 34)
 │   ├── PEAK_OPERATED_AGENTNET_PUBLICATION_POLICY.md # Peak (not clients) is the authorized publisher; publishing deferred (Phase 34)
+│   ├── MANAGED_RECORD_WORKFLOW_INTEGRATION.md      # Governed six-stage workflow over the existing narrow writers (Phase 35)
+│   ├── WORKFLOW_INTEGRATION_GOVERNANCE_POLICY.md   # Workflow-integration governance: gates, halting, leak safety (Phase 35)
 │   └── IMPLEMENTATION_PLAN.md
 ├── peak/                         # Python tooling layer (source only; no data)
 │   ├── db/                       # base, enums, models, session + agent_run (P20), evidence (P21), review (P22), source-ingestion (P24), agent-task-queue (P27), review-bundle (P30), internal-reviewer-decision (P33) & intake-note (P34) writers
@@ -132,7 +134,8 @@ peak/
 │   ├── orchestration/            # Controlled packet-processing orchestrator: sequences existing boundaries (P25; plan-only default)
 │   ├── task_queue/               # Agent task queue / execution readiness boundary: plans queue drafts (P26; DB-free, no execution)
 │   ├── review_orchestration/     # Packet-derived review orchestration: plans human-review bundles (P29; DB-free, no approval)
-│   └── reviewer_decisions/       # Internal reviewer decision boundary: plans decision drafts + routing (P32; DB-free, no approval)
+│   ├── reviewer_decisions/       # Internal reviewer decision boundary: plans decision drafts + routing (P32; DB-free, no approval)
+│   └── workflows/                # Governed managed-record workflow integration over the existing narrow writers (P35; plan-only default)
 ├── alembic/                      # Alembic migrations (schema only; no data)
 ├── alembic.ini                   # Alembic config (URL from env, not the repo)
 ├── .env.example                  # Env placeholders only (PEAK_DATABASE_URL); .env ignored
@@ -1003,6 +1006,47 @@ authorized operational `note_text`.
 
 ```bash
 make validate-phase34   # intake-note-writer + managed-MySQL-rubric checks (DB-backed via .venv)
+```
+
+### Governed Managed Record Workflow Integration (Phase 35)
+
+A **workflow integration layer** over the durable records Peak already has — not a new persistence
+primitive. It sequences six existing record types through their existing narrow controlled writers
+under **explicit per-stage persistence gates**:
+`intake_note_records` → `source_ingestion_records` → `evidence_references` →
+`agent_task_queue_records` → `review_bundle_records` → `internal_reviewer_decision_records`.
+
+- **No new persistence primitive.** No DB table, model, or Alembic migration; **no new Phase 17
+  allowlist pair**; no generic CRUD, generic writer, arbitrary SQL executor, or broad repository.
+  Alembic head stays `009_intake_note_records` and `make db-check` still expects **15 tables**.
+- **Plan-only is the default and is no-side-effect.** A stage persists only when its gate is
+  explicitly `True`, its payload is present and safe, and a `session_factory` is injected — there is
+  **no ambient-DSN fallback**, so `make validate` needs no live credentials and no network. Payload
+  safety and identity checks run in plan-only mode too.
+- **Public entry point:** `run_managed_record_workflow(request, *, session_factory=None) ->
+  ManagedRecordWorkflowResult`. Stages are linearly dependent: a denied/conflicted/failed stage sets
+  `halted_after_stage` and marks every later stage `halted`. `strict_mode=True` halts on any stage
+  warning; non-strict collects it with no approval or client-facing effect.
+- **Authorization is unchanged.** Each narrow writer still loads the stored `Engagement` and compares
+  the stored `authorization_scope`; identity matching is necessary but not sufficient. Cross-tenant
+  and cross-engagement payloads are denied before any write.
+- **Idempotency.** Every key is stage-namespaced `wf35::<stage>::…`, so one string cannot collide
+  across tables. An explicit per-stage key is respected as the stage-local component; otherwise the
+  key derives from `workflow_id` + a SHA-256 prefix over safe, **non-content** stage fields. Replay
+  returns the writers' `idempotent_replay` with no duplicate row; an explicit key reused with a
+  changed payload produces `idempotency_conflict` and halts the dependent stages.
+- **Leak safety.** Results carry only stage names, safe record refs, counts, reason codes, and marker
+  categories. `note_text` may be passed to the intake writer but is **never echoed**; prohibited
+  keys/values are denied before any writer runs, reporting field name and category only.
+- **Nothing escalates.** No Phase 22 review writer call and no `review_records` / `agent_run_records`
+  row; no client-facing output, financial verification, capsule publication, AgentNet publish,
+  resolver/MCP call, LLM/mock-LLM call, or agent execution.
+- [`peak/workflows/`](peak/workflows/),
+  [`docs/MANAGED_RECORD_WORKFLOW_INTEGRATION.md`](docs/MANAGED_RECORD_WORKFLOW_INTEGRATION.md), and
+  [`docs/WORKFLOW_INTEGRATION_GOVERNANCE_POLICY.md`](docs/WORKFLOW_INTEGRATION_GOVERNANCE_POLICY.md).
+
+```bash
+make validate-phase35   # structural + plan-only always; DB-backed via .venv (temporary SQLite)
 ```
 
 ## Design constraints

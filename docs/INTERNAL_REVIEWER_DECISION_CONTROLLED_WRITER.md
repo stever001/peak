@@ -148,3 +148,12 @@ the new table/indexes/constraint. Alembic remains single-head; `make db-check` n
   publication; never updates or deletes.**
 - The Phase 32 `peak/reviewer_decisions` package stays **DB-free**; this writer lives in the DB
   layer and consumes only its DB-free contracts + non-echoing value scanner.
+
+---
+
+## Phase 35 — called from the managed-record workflow
+
+This writer is stage 6 (the final stage) of the Phase 35 managed-record workflow, invoked only under
+an explicit `reviewer_decision` persistence gate with a stage-namespaced `wf35::reviewer_decision::…`
+idempotency key. The workflow layer never calls `approve_internal` and writes no `review_records`
+row. See [`MANAGED_RECORD_WORKFLOW_INTEGRATION.md`](MANAGED_RECORD_WORKFLOW_INTEGRATION.md).

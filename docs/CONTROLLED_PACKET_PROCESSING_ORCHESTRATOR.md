@@ -164,3 +164,14 @@ The **Phase 32 Internal Reviewer Decision Boundary**
 ([`INTERNAL_REVIEWER_DECISION_BOUNDARY.md`](INTERNAL_REVIEWER_DECISION_BOUNDARY.md)) is a separate
 DB-free boundary that consumes the resulting review bundle refs to plan a reviewer decision; it does
 not run inside this orchestrator and approves nothing.
+
+---
+
+## Phase 35 — the downstream workflow integration layer
+
+The Phase 25/28/31 packet processor derives the stage drafts; the Phase 35 managed-record workflow
+layer ([`../peak/workflows/`](../peak/workflows/)) accepts already-shaped drafts and persists them
+through the existing narrow writers under explicit per-stage gates. The two are complementary and
+neither replaces the other: this orchestrator owns packet-derived planning, Phase 35 owns gated
+cross-record persistence sequencing. See
+[`MANAGED_RECORD_WORKFLOW_INTEGRATION.md`](MANAGED_RECORD_WORKFLOW_INTEGRATION.md).
