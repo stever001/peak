@@ -215,3 +215,13 @@ is **DB-free**: it adds no writer, no report table, no report-draft persistence,
 and it produces no `ControlledWriteRequest` objects. It consumes caller-supplied record references
 only. See
 [`INTERNAL_ASSESSMENT_REPORT_PLANNING_BOUNDARY.md`](INTERNAL_ASSESSMENT_REPORT_PLANNING_BOUNDARY.md).
+
+---
+
+## Phase 37 — the ninth narrow writer
+
+Phase 37 adds `persist_internal_assessment_report_draft`, targeting only
+`internal_assessment_report_drafts` / `create_internal_assessment_report_draft`. It follows the same
+shape as every prior writer: stored-`Engagement` authorization, DB-enforced idempotency, a typed
+non-echoing receipt, and no update/delete/raw-SQL path. See
+[`INTERNAL_ASSESSMENT_REPORT_DRAFT_CONTROLLED_WRITER.md`](INTERNAL_ASSESSMENT_REPORT_DRAFT_CONTROLLED_WRITER.md).

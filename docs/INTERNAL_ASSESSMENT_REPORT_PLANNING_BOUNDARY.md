@@ -268,3 +268,14 @@ writer, and never reads back a record — the caller passes the references.
 ```bash
 make validate-phase36   # stdlib-only; DB-free and network-free
 ```
+
+---
+
+## Phase 37 — persistence counterpart
+
+Phase 37 persists the plan this boundary produces as an internal-only
+`internal_assessment_report_drafts` row via
+[`INTERNAL_ASSESSMENT_REPORT_DRAFT_CONTROLLED_WRITER.md`](INTERNAL_ASSESSMENT_REPORT_DRAFT_CONTROLLED_WRITER.md).
+**This package stays DB-free:** the `ControlledWriteRequest` bridge lives in the Phase 37 DB layer,
+so `peak/reports` still imports no `peak.db` and calls no writer. The stored row records
+`output_status="plan_persisted"` — a persisted plan, never a drafted report.

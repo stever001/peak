@@ -12,7 +12,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import Boolean, DateTime, Numeric, String, Text, UniqueConstraint
+from sqlalchemy import JSON, Boolean, DateTime, Numeric, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .base import MYSQL_TABLE_ARGS, AuditMixin, Base, GovernanceMixin
@@ -417,6 +417,66 @@ class IntakeNoteRecord(Base, GovernanceMixin, AuditMixin):
     payload_fingerprint: Mapped[Optional[str]] = mapped_column(String(64))
 
 
+class InternalAssessmentReportDraftRecord(Base, GovernanceMixin, AuditMixin):
+    __tablename__ = "internal_assessment_report_drafts"
+    # Phase 37: the persistence counterpart to the Phase 36 internal assessment report planning
+    # boundary. Stores a governed, **internal-only** report *plan* artifact — section metadata,
+    # reference-only evidence traces, finding/recommendation candidate slots, open gaps, and
+    # future-gate placeholders. It stores **no report prose**: no final client-facing language, no
+    # raw note/packet/evidence/interview text, no generated agent output, no ROI figure, and no
+    # approval decision. ``output_status`` is fixed at ``plan_persisted`` so a row can never be
+    # misread as a drafted report. DB-enforced idempotency mirrors the prior writers: the
+    # uniqueness boundary includes identity context so a key cannot collide across
+    # owner / client / engagement. See docs/INTERNAL_ASSESSMENT_REPORT_DRAFT_CONTROLLED_WRITER.md
+    # and docs/INTERNAL_ASSESSMENT_REPORT_DRAFT_IDEMPOTENCY_POLICY.md.
+    __table_args__ = (
+        UniqueConstraint(
+            "owner_id",
+            "client_id",
+            "engagement_id",
+            "idempotency_key",
+            name="uq_internal_assessment_report_drafts_idem",
+        ),
+        MYSQL_TABLE_ARGS,
+    )
+    # id convention: iard_<slug>
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    client_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    engagement_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    # Provenance back to the Phase 36 plan that produced this row.
+    report_plan_id: Mapped[Optional[str]] = mapped_column(String(128), index=True)
+    plan_fingerprint: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    requested_by: Mapped[Optional[str]] = mapped_column(String(128))
+    requester_role: Mapped[Optional[str]] = mapped_column(String(64))
+    report_purpose: Mapped[Optional[str]] = mapped_column(String(255))
+    # Internal-only audience — a real column, never JSON. "internal" is the only accepted value.
+    audience: Mapped[str] = mapped_column(String(32), index=True, default="internal")
+    # Structured plan payload — references, labels, counts, and readiness states ONLY.
+    sections_json: Mapped[Optional[dict]] = mapped_column(JSON)
+    evidence_trace_map_json: Mapped[Optional[dict]] = mapped_column(JSON)
+    finding_candidates_json: Mapped[Optional[dict]] = mapped_column(JSON)
+    recommendation_candidates_json: Mapped[Optional[dict]] = mapped_column(JSON)
+    open_gaps_json: Mapped[Optional[dict]] = mapped_column(JSON)
+    blocked_items_json: Mapped[Optional[dict]] = mapped_column(JSON)
+    # Forward-looking placeholders naming FUTURE gates. Nothing is verified or published here.
+    future_financial_verification_items_json: Mapped[Optional[dict]] = mapped_column(JSON)
+    future_capsule_candidate_items_json: Mapped[Optional[dict]] = mapped_column(JSON)
+    reasons_json: Mapped[Optional[dict]] = mapped_column(JSON)
+    warnings_json: Mapped[Optional[dict]] = mapped_column(JSON)
+    # Governance / non-final posture — real columns (never JSON). "internal-only" is enforced.
+    output_status: Mapped[str] = mapped_column(String(32), index=True, default="plan_persisted")
+    client_facing_approved: Mapped[bool] = mapped_column(Boolean, default=False)
+    financial_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    capsule_candidate_ready: Mapped[bool] = mapped_column(Boolean, default=False)
+    publication_allowed: Mapped[bool] = mapped_column(Boolean, default=False)
+    execution_allowed: Mapped[bool] = mapped_column(Boolean, default=False)
+    requires_human_review: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Phase 37 controlled-writer fields. idempotency_key + payload_fingerprint back
+    # replay/replay-conflict detection.
+    idempotency_key: Mapped[Optional[str]] = mapped_column(String(128), index=True)
+    payload_fingerprint: Mapped[Optional[str]] = mapped_column(String(64))
+
+
 # Convenience list of all model classes (used by tooling/validation).
 ALL_MODELS = [
     Client,
@@ -434,4 +494,5 @@ ALL_MODELS = [
     ReviewBundleRecord,
     InternalReviewerDecisionRecord,
     IntakeNoteRecord,
+    InternalAssessmentReportDraftRecord,
 ]

@@ -191,8 +191,11 @@ def main() -> int:
     expected = list(getattr(p11mod, "EXPECTED_TABLES", []))
     check("db-check EXPECTED_TABLES includes intake_note_records",
           "intake_note_records" in expected)
-    check("db-check now expects exactly 15 tables (14 prior + intake_note_records)",
-          len(expected) == 15)
+    # Phase 34 took the schema to 15 tables. Later phases add their own tables additively (Phase 37
+    # adds internal_assessment_report_drafts), so this asserts the Phase 34 floor, not a frozen
+    # count — a fixed count would fail for reasons unrelated to Phase 34.
+    check("db-check expects at least the 15 tables Phase 34 established",
+          len(expected) >= 15)
 
     print("\n" + "=" * 68)
     print("Summary")

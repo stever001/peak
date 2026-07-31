@@ -301,24 +301,36 @@ def structural_checks() -> None:
               "internal_reviewer_decision_records"}
           and len(STAGE_TARGETS) == 6)
 
-    print("\n6. No new table / model / migration / allowlist pair")
+    print("\n6. Phase 35 itself adds no table / model / migration / allowlist pair")
+    # Scoped to what PHASE 35 contributed. Later phases add their own schema additively (Phase 37
+    # adds internal_assessment_report_drafts + migration 010), so a frozen global count or an exact
+    # allowlist set would fail for reasons unrelated to Phase 35.
     versions = sorted(f for f in os.listdir(os.path.join(REPO_ROOT, "alembic", "versions"))
                       if f.endswith(".py"))
-    check("no migration 010 (or later) added", not any(f[:3].isdigit() and int(f[:3]) >= 10
-                                                       for f in versions))
-    check("009_intake_note_records is still the newest migration",
-          versions and versions[-1].startswith("009_intake_note_records"))
+    # "Authored by" = the migration's own docstring header declares it. A later migration may
+    # legitimately *reference* Phase 35 as context without being a Phase 35 migration.
+    check("no migration was authored by Phase 35",
+          not any(re.match(r'\s*"""Phase 35\b',
+                           read(os.path.join("alembic", "versions", f)))
+                  for f in versions))
+    check("the workflow package defines no DB model / table",
+          not any(re.search(r"__tablename__|\(\s*Base\b", read(rel)) for rel in WORKFLOW_FILES))
     from peak.persistence.allowlist import ALLOWED_ACTIONS, ALLOWED_TABLES
-    check("Phase 17 allowlist tables unchanged (no new pair)",
-          set(ALLOWED_TABLES) == BASELINE_ALLOWED_TABLES)
-    check("Phase 17 allowlist actions unchanged (no new pair)",
-          set(ALLOWED_ACTIONS) == BASELINE_ALLOWED_ACTIONS)
+    check("Phase 17 allowlist still contains the Phase 35 baseline (nothing removed)",
+          BASELINE_ALLOWED_TABLES <= set(ALLOWED_TABLES)
+          and BASELINE_ALLOWED_ACTIONS <= set(ALLOWED_ACTIONS))
+    check("the workflow package targets only pre-existing allowlist pairs",
+          all(table in ALLOWED_TABLES and action in ALLOWED_ACTIONS
+              for table, action in STAGE_TARGETS.values())
+          and {t for t, _ in STAGE_TARGETS.values()} <= BASELINE_ALLOWED_TABLES)
+    check("the workflow package never mutates the allowlist",
+          not any("ALLOWED_TABLES" in read(rel) or "ALLOWED_ACTIONS" in read(rel)
+                  for rel in WORKFLOW_FILES))
     import importlib
     p11mod = importlib.import_module("tests.validate_phase11_db_scaffold")
     expected = list(getattr(p11mod, "EXPECTED_TABLES", []))
-    check("db-check still expects exactly 15 tables", len(expected) == 15)
-    check("no new model added in peak/db/models.py",
-          len(re.findall(r"^class\s+\w+\(.*Base", read("peak/db/models.py"), re.M)) == 15)
+    check("db-check expects at least the 15 tables present at the Phase 35 baseline",
+          len(expected) >= 15)
 
     print("\n7. Regression: the eight existing writers remain; earlier phases intact")
     for rel, fn in EXISTING_WRITERS:

@@ -159,3 +159,12 @@ only pairs that already exist: `intake_note_records`/`create_intake_note_record`
 The Phase 36 internal assessment report planning boundary is DB-free and writes nothing, so it adds
 **no new table/action pair**. There is no `report_*` table and no report writer. See
 [`INTERNAL_REPORT_ASSEMBLY_GOVERNANCE_POLICY.md`](INTERNAL_REPORT_ASSEMBLY_GOVERNANCE_POLICY.md).
+
+---
+
+## Phase 37 — one new pair
+
+Phase 37 adds exactly one table/action pair:
+`internal_assessment_report_drafts` / `create_internal_assessment_report_draft`. No update, delete,
+upsert, or raw-SQL action was added, and no other table was broadened. See
+[`INTERNAL_ASSESSMENT_REPORT_DRAFT_CONTROLLED_WRITER.md`](INTERNAL_ASSESSMENT_REPORT_DRAFT_CONTROLLED_WRITER.md).

@@ -66,6 +66,9 @@ Thirty-two harnesses, run together by `make validate`:
   (structural + plan-only always; DB-backed when SQLAlchemy is present).
 - `validate_phase36_internal_assessment_report_planning.py` — internal assessment report planning
   boundary check (stdlib-only; DB-free and network-free).
+- `validate_phase37_internal_assessment_report_draft_writer.py` — controlled-DB
+  internal-assessment-report-draft-writer check (structural always; DB-backed when SQLAlchemy is
+  present).
 
 ## `synthetic_fixtures.py`
 
@@ -852,6 +855,34 @@ before a plan is assembled, and a **canary value never reaches any reason, warni
 and
 [`../docs/INTERNAL_REPORT_ASSEMBLY_GOVERNANCE_POLICY.md`](../docs/INTERNAL_REPORT_ASSEMBLY_GOVERNANCE_POLICY.md).
 
+## `validate_phase37_internal_assessment_report_draft_writer.py`
+
+Check for the Phase 37 **Internal Assessment Report Draft Controlled Writer**
+(`peak/db/internal_assessment_report_draft_writer.py`) — the ninth narrow live DB writer and the
+persistence counterpart to Phase 36.
+
+Structural (always): the writer/receipt/model/migration/docs exist and compile; the writer imports no
+LLM/MockLLM/executor/AgentNet/MCP/resolver/connector/network client or credential and no Phase 22
+review writer or agent-run writer; it executes no raw SQL and has no update/delete path; the Phase 36
+`peak/reports` package **stays DB-free** (verified at runtime in a subprocess); the Phase 17 allowlist
+gained exactly one pair (11 tables / 13 actions); migration `010` is additive schema-only with
+`down_revision = 009_intake_note_records`, creates one table, has no INSERT/seed, and its downgrade
+drops only that table; the chain stays linear; `db-check` now expects **16 tables**.
+
+DB-backed (temporary local SQLite): migration upgrade/downgrade/re-upgrade; successful create with
+structure and references stored and **no prose, no raw-content key, and no ROI/currency figure**;
+the CWR helper bridge; idempotent replay and conflict; stored-`Engagement` authorization denials
+(missing subject, missing/mismatched stored scope, owner/client mismatch, blocked lifecycle);
+identity and posture denials (caller-supplied id/timestamp, non-internal audience, every elevated
+flag, non-`plan` output status, approved review status, non-draft lifecycle, client-facing nested
+candidate); allowlist denials (wrong table/action, update/delete/upsert/raw-SQL/publish/approve/send/
+verify actions); content-safety denials with a **canary that never reaches a receipt or a row**; and
+transaction/failure semantics. SQLite here is a structural smoke path only — **not** production
+proof. Run `make validate-phase37 PYTHON=.venv/bin/python` for the DB layer. See
+[`../docs/INTERNAL_ASSESSMENT_REPORT_DRAFT_CONTROLLED_WRITER.md`](../docs/INTERNAL_ASSESSMENT_REPORT_DRAFT_CONTROLLED_WRITER.md)
+and
+[`../docs/INTERNAL_ASSESSMENT_REPORT_DRAFT_IDEMPOTENCY_POLICY.md`](../docs/INTERNAL_ASSESSMENT_REPORT_DRAFT_IDEMPOTENCY_POLICY.md).
+
 ## Running
 
 This machine uses `python3` (there is no bare `python`). From the repo root:
@@ -861,7 +892,7 @@ This machine uses `python3` (there is no bare `python`). From the repo root:
 make install-dev          # == python3 -m pip install -r requirements-dev.txt
 
 # run all harnesses
-make validate             # == phase1 … phase36
+make validate             # == phase1 … phase37
 
 # or run one at a time
 make validate-phase1
@@ -900,6 +931,7 @@ make validate-phase33   # DB-backed; add PYTHON=.venv/bin/python for the full su
 make validate-phase34   # DB-backed intake-note writer + managed-MySQL rubric; add PYTHON=.venv/bin/python
 make validate-phase35   # structural+plan-only always; add PYTHON=.venv/bin/python for the DB layer
 make validate-phase36   # stdlib-only; DB-free and network-free
+make validate-phase37   # DB-backed; add PYTHON=.venv/bin/python for the full suite
 # opt-in managed MySQL (credential-free; skip safely with no DSN; never part of `make validate`):
 make db-check-managed-test          # managed test-env rubric check
 make managed-mysql-smoke            # managed test-env smoke runbook
@@ -946,6 +978,7 @@ python3 tests/validate_phase32_internal_reviewer_decision_boundary.py       # st
 python3 tests/validate_phase34_managed_mysql_rubric.py                       # stdlib-only, credential-free, no live network
 .venv/bin/python tests/validate_phase35_managed_record_workflow.py           # structural+plan-only always; DB layer needs SQLAlchemy
 python3 tests/validate_phase36_internal_assessment_report_planning.py        # stdlib-only, no dependency needed (DB-free)
+.venv/bin/python tests/validate_phase37_internal_assessment_report_draft_writer.py # DB-backed (SQLAlchemy); skips DB layer on plain python3
 ```
 
 ## Exit codes

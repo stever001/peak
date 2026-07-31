@@ -235,3 +235,14 @@ The **Phase 32 Internal Reviewer Decision Boundary**
 ([`INTERNAL_REVIEWER_DECISION_BOUNDARY.md`](INTERNAL_REVIEWER_DECISION_BOUNDARY.md)) touches the
 database not at all: it is DB-free, opens no connection, writes no row, approves nothing, and
 creates no `review_records` row. There is therefore no new access/audit surface in Phase 32.
+
+---
+
+## Phase 37 — report-draft writes are audited like every other controlled write
+
+`internal_assessment_report_drafts` rows carry the universal audit columns plus `requested_by` /
+`requester_role`, `report_plan_id` / `plan_fingerprint` provenance, and `idempotency_key` /
+`payload_fingerprint`. Every write returns a typed receipt whose flags report **actual** behavior and
+which never echoes report prose, raw content, credentials, DSNs, raw SQL, stack traces, or approval
+decisions. See
+[`INTERNAL_ASSESSMENT_REPORT_DRAFT_CONTROLLED_WRITER.md`](INTERNAL_ASSESSMENT_REPORT_DRAFT_CONTROLLED_WRITER.md).

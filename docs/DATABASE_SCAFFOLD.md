@@ -118,3 +118,13 @@ Resolver *access* (grounding lookups via the existing AgentNet MCP connector) is
 scaffolded separately as a governance boundary in
 [`AGENTNET_MCP_BOUNDARY.md`](AGENTNET_MCP_BOUNDARY.md) — also contracts only, with no live
 calls and no AgentNet integration.
+
+---
+
+## Phase 37 — internal_assessment_report_drafts (16th table)
+
+Migration `010_internal_assessment_report_drafts` adds the sixteenth table, backing the Phase 37
+controlled internal-assessment-report-draft writer. Schema only: no INSERT, no seed data, no
+destructive change; the downgrade drops only the new table. `make db-check` now expects **16
+tables**. See
+[`INTERNAL_ASSESSMENT_REPORT_DRAFT_CONTROLLED_WRITER.md`](INTERNAL_ASSESSMENT_REPORT_DRAFT_CONTROLLED_WRITER.md).

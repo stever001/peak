@@ -65,3 +65,14 @@ publishing code, no resolver call, and no capsule publication path. It may *name
 later become capsule candidates (`future_capsule_candidate_items`), but `capsule_candidate_ready`
 and `publication_allowed` remain false and no capsule candidate is created or published. See
 [`INTERNAL_REPORT_ASSEMBLY_GOVERNANCE_POLICY.md`](INTERNAL_REPORT_ASSEMBLY_GOVERNANCE_POLICY.md).
+
+---
+
+## Phase 37 — policy unchanged, publication still deferred
+
+The Phase 37 internal-assessment-report-draft writer **does not alter this policy** and adds no
+publishing code, no resolver call, and no capsule publication path. It may persist
+`future_capsule_candidate_items` as forward-looking placeholders, but `capsule_candidate_ready` and
+`publication_allowed` remain false on every stored row and no capsule candidate is created or
+published. See
+[`INTERNAL_ASSESSMENT_REPORT_DRAFT_CONTROLLED_WRITER.md`](INTERNAL_ASSESSMENT_REPORT_DRAFT_CONTROLLED_WRITER.md).

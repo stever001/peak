@@ -307,27 +307,33 @@ def structural_checks() -> None:
            "future_financial_verification_items", "future_capsule_candidate_items", "reasons",
            "warnings"} <= plan_fields)
 
-    print("\n6. No new table / model / migration / allowlist pair / report writer")
+    print("\n6. Phase 36 itself adds no table / model / migration / allowlist pair / writer")
+    # Scoped to what PHASE 36 contributed. Phase 36 is DB-free; later phases persist its output
+    # additively (Phase 37 adds internal_assessment_report_drafts + migration 010), so a frozen
+    # global count or an exact allowlist set would fail for reasons unrelated to Phase 36.
     versions = sorted(f for f in os.listdir(os.path.join(REPO_ROOT, "alembic", "versions"))
                       if f.endswith(".py"))
-    check("no migration 010 (or later) added",
-          not any(f[:3].isdigit() and int(f[:3]) >= 10 for f in versions))
-    check("009_intake_note_records is still the newest migration",
-          bool(versions) and versions[-1].startswith("009_intake_note_records"))
+    # "Authored by" = the migration's own docstring header declares it. A later migration may
+    # legitimately *reference* Phase 36 as context without being a Phase 36 migration.
+    check("no migration was authored by Phase 36",
+          not any(re.match(r'\s*"""Phase 36\b',
+                           read(os.path.join("alembic", "versions", f)))
+                  for f in versions))
+    check("the reports package defines no DB model / table",
+          not any(re.search(r"__tablename__|\(\s*Base\b", read(rel)) for rel in REPORT_FILES))
+    check("the reports package never mutates the allowlist",
+          not any("ALLOWED_TABLES" in read(rel) or "ALLOWED_ACTIONS" in read(rel)
+                  for rel in REPORT_FILES))
     from peak.persistence.allowlist import ALLOWED_ACTIONS, ALLOWED_TABLES
-    check("Phase 17 allowlist tables unchanged", set(ALLOWED_TABLES) == BASELINE_ALLOWED_TABLES)
-    check("Phase 17 allowlist actions unchanged", set(ALLOWED_ACTIONS) == BASELINE_ALLOWED_ACTIONS)
+    check("Phase 17 allowlist still contains the Phase 36 baseline (nothing removed)",
+          BASELINE_ALLOWED_TABLES <= set(ALLOWED_TABLES)
+          and BASELINE_ALLOWED_ACTIONS <= set(ALLOWED_ACTIONS))
     import importlib
     p11 = importlib.import_module("tests.validate_phase11_db_scaffold")
-    check("db-check still expects exactly 15 tables",
-          len(list(getattr(p11, "EXPECTED_TABLES", []))) == 15)
-    check("no new model added in peak/db/models.py",
-          len(re.findall(r"^class\s+\w+\(.*Base", read("peak/db/models.py"), re.M)) == 15)
-    table_names = re.findall(r'__tablename__\s*=\s*"([^"]+)"', read("peak/db/models.py"))
-    check("no report table in the DB models",
-          len(table_names) == 15 and not any("report" in t for t in table_names))
-    check("no report writer module added",
-          not any(f.startswith("report") for f in os.listdir(os.path.join(REPO_ROOT, "peak", "db"))))
+    check("db-check expects at least the 15 tables present at the Phase 36 baseline",
+          len(list(getattr(p11, "EXPECTED_TABLES", []))) >= 15)
+    check("the reports package contributes no writer module",
+          not any("persist_" in read(rel) for rel in REPORT_FILES))
 
     print("\n7. Regression: earlier phases intact")
     rd_imports = " ".join(_import_lines(read("peak/reviewer_decisions/governance.py"))) + " " + \

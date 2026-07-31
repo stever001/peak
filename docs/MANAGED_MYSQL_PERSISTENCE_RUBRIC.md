@@ -101,3 +101,14 @@ The Phase 36 internal assessment report planning boundary adds no table, model, 
 read path, or DSN, and reads no database. This rubric is unchanged, and standard `make validate`
 still requires **no live database credentials and no network**. See
 [`INTERNAL_ASSESSMENT_REPORT_PLANNING_BOUNDARY.md`](INTERNAL_ASSESSMENT_REPORT_PLANNING_BOUNDARY.md).
+
+---
+
+## Phase 37 — one new operational table under this rubric
+
+`internal_assessment_report_drafts` (Phase 37) is an operational table and follows this rubric in
+full: managed remote MySQL is its operational store, Client Isolation Option A applies (it carries
+`owner_id`, `client_id`, `engagement_id`, `authorization_scope`), and the temporary SQLite path used
+by its harness is a structural smoke path only — **not** production proof. Managed MySQL
+test/staging validation is required before treating the writer as production-ready. The controlled
+DB now has **16 tables**. No DSN, production write path, or cleanup/delete path was added.

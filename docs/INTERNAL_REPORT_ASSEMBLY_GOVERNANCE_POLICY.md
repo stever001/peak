@@ -196,3 +196,13 @@ enforces this policy: structural import bans, successful deterministic planning,
 behavior, evidence-trace and candidate behavior, gap behavior, the full denial matrix, content/leak
 safety with canary values, and the managed MySQL / AgentNet publication policy regressions. It runs
 as part of `make validate`.
+
+---
+
+## Phase 37 — persistence is a separate, narrow gate
+
+Persisting a plan is Phase 37's job, not this boundary's. Phase 37 adds one narrow writer and one
+allowlist pair (`internal_assessment_report_drafts` / `create_internal_assessment_report_draft`),
+re-verifies this policy's internal-only posture at the write boundary, and stores structure and
+references only. This package remains DB-free and produces no `ControlledWriteRequest`. See
+[`INTERNAL_ASSESSMENT_REPORT_DRAFT_CONTROLLED_WRITER.md`](INTERNAL_ASSESSMENT_REPORT_DRAFT_CONTROLLED_WRITER.md).

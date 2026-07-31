@@ -123,9 +123,11 @@ peak/
 │   ├── WORKFLOW_INTEGRATION_GOVERNANCE_POLICY.md   # Workflow-integration governance: gates, halting, leak safety (Phase 35)
 │   ├── INTERNAL_ASSESSMENT_REPORT_PLANNING_BOUNDARY.md # DB-free internal report assembly planning (Phase 36)
 │   ├── INTERNAL_REPORT_ASSEMBLY_GOVERNANCE_POLICY.md  # Report-planning governance: internal-only posture, leak safety (Phase 36)
+│   ├── INTERNAL_ASSESSMENT_REPORT_DRAFT_CONTROLLED_WRITER.md # Ninth DB-backed writer, for internal_assessment_report_drafts (Phase 37)
+│   ├── INTERNAL_ASSESSMENT_REPORT_DRAFT_IDEMPOTENCY_POLICY.md # DB-enforced idempotency for report-draft rows (Phase 37)
 │   └── IMPLEMENTATION_PLAN.md
 ├── peak/                         # Python tooling layer (source only; no data)
-│   ├── db/                       # base, enums, models, session + agent_run (P20), evidence (P21), review (P22), source-ingestion (P24), agent-task-queue (P27), review-bundle (P30), internal-reviewer-decision (P33) & intake-note (P34) writers
+│   ├── db/                       # base, enums, models, session + agent_run (P20), evidence (P21), review (P22), source-ingestion (P24), agent-task-queue (P27), review-bundle (P30), internal-reviewer-decision (P33), intake-note (P34) & internal-assessment-report-draft (P37) writers
 │   ├── agentnet/                 # Governance wrapper for the AgentNet MCP connector (no calls)
 │   ├── agents/                   # Agent execution harness (mock) + agent run persistence mapping (no live DB)
 │   ├── workers/                  # Production-shaped workers (evidence normalization; review-gated)
@@ -1091,6 +1093,43 @@ traceability, and readiness — **not a report draft record and not a client-fac
 
 ```bash
 make validate-phase36   # stdlib-only; DB-free and network-free
+```
+
+### Internal Assessment Report Draft Controlled Writer (Phase 37)
+
+The **ninth** narrow live DB writer and the persistence counterpart to the Phase 36 planning
+boundary. It persists **exactly one** `internal_assessment_report_drafts` row from an
+`InternalAssessmentReportPlan` through the Phase 17 `ControlledWriteRequest` boundary — allowing only
+`internal_assessment_report_drafts` / `create_internal_assessment_report_draft`.
+
+- **A persisted *plan*, not a drafted report.** `output_status` is fixed at **`plan_persisted`** so
+  a stored row can never be misread as report prose. The row holds section metadata,
+  reference-only evidence traces, finding/recommendation candidate slots, open gaps, blocked items,
+  and future-gate placeholders — and **no** final client-facing language, raw note/packet/evidence/
+  interview text, source bytes, generated output, ROI figure, approval decision, or capsule payload.
+- **Internal-only, review-gated posture** (all server-stamped): `audience=internal`,
+  `review_status=needs_review`, `lifecycle_status=draft`, with `client_facing_approved` /
+  `financial_verified` / `capsule_candidate_ready` / `publication_allowed` / `execution_allowed`
+  false and `requires_human_review=true`. The writer independently re-verifies the Phase 36 posture
+  and denies a non-internal audience or any elevated flag — including on nested candidates.
+- **Public entry point:** `persist_internal_assessment_report_draft(controlled_write_request, *,
+  session_factory=None, report_request=None) -> InternalAssessmentReportDraftWriteReceipt`.
+  Write-time authorization loads the stored `Engagement` (`request.authorization_scope ==
+  engagement.authorization_scope`; identity necessary but not sufficient). Idempotency boundary
+  `(owner_id, client_id, engagement_id, idempotency_key)` with a `payload_fingerprint`. The CWR
+  bridge lives in the DB layer by design, so **Phase 36 `peak/reports` stays DB-free**.
+- **Migration `010_internal_assessment_report_drafts`** (`down_revision = 009_…`) adds one table,
+  no INSERT/seed; single head; `make db-check` now expects **16 tables**. Exactly one new Phase 17
+  allowlist pair was added.
+- It approves nothing, verifies nothing financially, publishes nothing, executes nothing, calls no
+  Phase 22 writer, and creates no `review_records` / `agent_run_records` row.
+- [`peak/db/internal_assessment_report_draft_writer.py`](peak/db/internal_assessment_report_draft_writer.py),
+  [`docs/INTERNAL_ASSESSMENT_REPORT_DRAFT_CONTROLLED_WRITER.md`](docs/INTERNAL_ASSESSMENT_REPORT_DRAFT_CONTROLLED_WRITER.md),
+  and
+  [`docs/INTERNAL_ASSESSMENT_REPORT_DRAFT_IDEMPOTENCY_POLICY.md`](docs/INTERNAL_ASSESSMENT_REPORT_DRAFT_IDEMPOTENCY_POLICY.md).
+
+```bash
+make validate-phase37   # DB-backed via .venv (temporary SQLite structural smoke)
 ```
 
 ## Design constraints

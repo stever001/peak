@@ -348,3 +348,14 @@ approves, publishes, executes, or creates a `review_records`/`agent_run_records`
 MySQL is the operational store; SQLite is only a structural-smoke path, **not** the
 production-readiness proof path (see
 [`MANAGED_MYSQL_PERSISTENCE_RUBRIC.md`](MANAGED_MYSQL_PERSISTENCE_RUBRIC.md)).
+
+---
+
+## Phase 37 — internal_assessment_report_drafts
+
+Stores a governed, **internal-only** Phase 36 report *plan* artifact: section metadata,
+reference-only evidence traces, finding/recommendation candidate slots, open gaps, blocked items,
+and future-gate placeholders, plus `report_plan_id` / `plan_fingerprint` provenance and the
+controlled-writer idempotency columns. `output_status` is fixed at `plan_persisted`. It stores **no
+report prose** and no raw content. See
+[`INTERNAL_ASSESSMENT_REPORT_DRAFT_CONTROLLED_WRITER.md`](INTERNAL_ASSESSMENT_REPORT_DRAFT_CONTROLLED_WRITER.md).

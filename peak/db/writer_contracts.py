@@ -582,3 +582,95 @@ class IntakeNoteWriteReceipt:
     database_write_at: Optional[str] = None
     reasons: List[str] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
+
+
+class InternalAssessmentReportDraftWriteOutcome:
+    """Outcome codes for a controlled internal-assessment-report-draft write (str constants)."""
+
+    CREATED = "created"
+    IDEMPOTENT_REPLAY = "idempotent_replay"
+    DENIED = "denied"
+    FAILED_BEFORE_WRITE = "failed_before_write"
+    WRITE_OUTCOME_UNCERTAIN = "write_outcome_uncertain"
+
+
+# The single table/action the Phase 37 report-draft writer may target (Phase 17 subset).
+INTERNAL_ASSESSMENT_REPORT_DRAFT_TARGET_TABLE = "internal_assessment_report_drafts"
+INTERNAL_ASSESSMENT_REPORT_DRAFT_TARGET_ACTION = "create_internal_assessment_report_draft"
+
+INTERNAL_ASSESSMENT_REPORT_DRAFT_ALL_OUTCOMES = (
+    InternalAssessmentReportDraftWriteOutcome.CREATED,
+    InternalAssessmentReportDraftWriteOutcome.IDEMPOTENT_REPLAY,
+    InternalAssessmentReportDraftWriteOutcome.DENIED,
+    InternalAssessmentReportDraftWriteOutcome.FAILED_BEFORE_WRITE,
+    InternalAssessmentReportDraftWriteOutcome.WRITE_OUTCOME_UNCERTAIN,
+)
+
+
+@dataclass
+class InternalAssessmentReportDraftWriteReceipt:
+    """A typed, auditable receipt for one controlled internal-report-draft write attempt.
+
+    Contains no credentials, no SQL, no connection URL, and **no report prose** — no final
+    client-facing language, no raw intake-note/packet/evidence/interview text, no source bytes, no
+    generated agent output, no ROI or savings figure, no approval decision, and no capsule/AgentNet
+    publish payload. Denial reasons report only a field name / reference position / marker
+    *category*, never the offending value.
+
+    The boolean flags describe what actually happened during this attempt. This write persists a
+    **review-gated, internal-only, non-final** report *plan* record — it approves nothing, verifies
+    nothing, publishes nothing, executes nothing, calls no Phase 22 review writer, and creates no
+    ``review_records`` / ``agent_run_records`` row. ``output_status`` is fixed at
+    ``plan_persisted``: a stored row is a persisted plan, never a drafted report.
+    """
+
+    outcome: str = InternalAssessmentReportDraftWriteOutcome.DENIED
+    permitted: bool = False
+    reason_code: Optional[str] = None
+    target_table: str = INTERNAL_ASSESSMENT_REPORT_DRAFT_TARGET_TABLE
+    target_action: str = INTERNAL_ASSESSMENT_REPORT_DRAFT_TARGET_ACTION
+    # Stored identity — set only when safely known (created / idempotent_replay).
+    stored_record_id: Optional[str] = None
+    report_plan_id: Optional[str] = None      # a safe caller-supplied plan ref
+    plan_fingerprint: Optional[str] = None    # the Phase 36 deterministic plan digest
+    idempotency_key: Optional[str] = None     # the caller's key (not a secret); a safe reference
+    audit_trace_ref: Optional[str] = None
+    # Actual-behavior flags.
+    database_connection_made: bool = False
+    sql_execution_made: bool = False
+    database_write_made: bool = False
+    stored_record_created: bool = False
+    existing_record_returned: bool = False
+    transaction_committed: bool = False
+    outcome_uncertain: bool = False
+    # Internal-only posture of the record this write concerns (safe labels only).
+    audience: Optional[str] = None
+    output_status: Optional[str] = None
+    review_status: Optional[str] = None
+    lifecycle_status: Optional[str] = None
+    # Safe structural counts (never content).
+    section_count: int = 0
+    finding_candidate_count: int = 0
+    recommendation_candidate_count: int = 0
+    open_gap_count: int = 0
+    # Non-effect flags — always False (Phase 37 approves/verifies/publishes/executes nothing).
+    review_records_write_made: bool = False
+    agent_run_records_write_made: bool = False
+    review_approval_made: bool = False
+    client_facing_output_created: bool = False
+    client_facing_approval_made: bool = False
+    financial_verification_made: bool = False
+    capsule_candidate_created: bool = False
+    capsule_publication_made: bool = False
+    agentnet_publication_made: bool = False
+    agent_execution_made: bool = False
+    mock_agent_execution_made: bool = False
+    llm_call_made: bool = False
+    agentnet_call_made: bool = False
+    resolver_call_made: bool = False
+    network_call_made: bool = False
+    # Server-stamped timestamps read back from the DB (ISO strings), when known.
+    created_at: Optional[str] = None
+    database_write_at: Optional[str] = None
+    reasons: List[str] = field(default_factory=list)
+    warnings: List[str] = field(default_factory=list)

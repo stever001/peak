@@ -1046,6 +1046,54 @@ report draft, no client-facing deliverable):**
   [`../tests/validate_phase36_internal_assessment_report_planning.py`](../tests/validate_phase36_internal_assessment_report_planning.py)
   (`make validate-phase36`; stdlib-only, DB-free, network-free).
 
+**Internal Assessment Report Draft Controlled Writer (Phase 37 — ninth DB-backed writer;
+persistence counterpart to Phase 36):**
+
+- [x] **A persisted plan, not a drafted report.** A narrow live DB writer that persists **exactly
+  one** `internal_assessment_report_drafts` row from a Phase 36 `InternalAssessmentReportPlan`
+  through the Phase 17 `ControlledWriteRequest` boundary — allowing only
+  `internal_assessment_report_drafts` / `create_internal_assessment_report_draft`.
+  [`../peak/db/internal_assessment_report_draft_writer.py`](../peak/db/internal_assessment_report_draft_writer.py),
+  migration
+  [`../alembic/versions/010_internal_assessment_report_drafts.py`](../alembic/versions/010_internal_assessment_report_drafts.py),
+  docs [`INTERNAL_ASSESSMENT_REPORT_DRAFT_CONTROLLED_WRITER.md`](INTERNAL_ASSESSMENT_REPORT_DRAFT_CONTROLLED_WRITER.md)
+  / [`INTERNAL_ASSESSMENT_REPORT_DRAFT_IDEMPOTENCY_POLICY.md`](INTERNAL_ASSESSMENT_REPORT_DRAFT_IDEMPOTENCY_POLICY.md).
+  `output_status` is fixed at **`plan_persisted`** so a stored row can never be misread as report
+  prose. The row stores section metadata, reference-only evidence traces, finding/recommendation
+  candidate slots, open gaps, blocked items, and future-gate placeholders — and **no** final
+  client-facing language, raw note/packet/evidence/interview text, source bytes, generated output,
+  LLM prompt, credential, DSN, raw SQL, stack trace, approval decision, ROI/savings figure, or
+  capsule/AgentNet publish payload.
+- [x] **Internal-only, review-gated posture** (server-stamped, never copied from the caller):
+  `audience=internal`, `review_status=needs_review`, `lifecycle_status=draft`, with
+  `client_facing_approved` / `financial_verified` / `capsule_candidate_ready` /
+  `publication_allowed` / `execution_allowed` false and `requires_human_review=true`. The writer
+  independently re-verifies the Phase 36 posture — including on every nested finding and
+  recommendation candidate — and denies caller-supplied ids/timestamps, a non-internal audience, a
+  non-`plan` plan output status, an approved review status, a non-draft lifecycle, or any elevated
+  flag.
+- [x] **Write-time authorization.** Loads the stored `Engagement` and requires it to exist, to carry
+  an `authorization_scope`, to match `request.authorization_scope`, to match owner/client/engagement
+  identity, and to have a non-blocked lifecycle. **Identity matching is necessary but not
+  sufficient**; the Phase 36 plan/request is never the authorization source.
+- [x] **Idempotency.** Boundary `(owner_id, client_id, engagement_id, idempotency_key)` enforced by a
+  real UNIQUE index, plus a canonical `payload_fingerprint` over identity, provenance, structure,
+  references, and posture. Same key + same fingerprint → `idempotent_replay` (no mutation); same key
+  + different fingerprint → `idempotency_conflict` (no mutation); `IntegrityError` re-queries inline
+  to classify the race as replay / conflict / `write_outcome_uncertain`.
+- [x] **Schema.** Migration `010_internal_assessment_report_drafts`
+  (`down_revision = 009_intake_note_records`) creates one table with no INSERT/seed; the downgrade
+  drops only that table; the head stays single and linear; the controlled DB now has **16 tables**.
+  Exactly **one** new Phase 17 allowlist pair was added — no update/delete/upsert/raw-SQL action.
+- [x] **Phase 36 stays DB-free.** The `ControlledWriteRequest` bridge
+  (`build_internal_assessment_report_draft_write_request`) lives in the Phase 37 DB layer, mirroring
+  the Phase 33/34 precedent, so `peak/reports` imports no `peak.db` and calls no writer (verified at
+  runtime). Phase 37 approves nothing, verifies nothing financially, publishes nothing, executes
+  nothing, calls no Phase 22 writer, creates no `review_records`/`agent_run_records` row, and makes
+  no LLM/MockLLM/AgentNet/MCP/resolver/connector/network call. Checked by
+  [`../tests/validate_phase37_internal_assessment_report_draft_writer.py`](../tests/validate_phase37_internal_assessment_report_draft_writer.py)
+  (`make validate-phase37`; DB-backed via `.venv`).
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing
