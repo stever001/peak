@@ -418,10 +418,14 @@ def structural_checks() -> None:
              "docs/Peak_Investor_Overview_AI.docx"],
             capture_output=True, text=True, timeout=20).stdout.strip()
         check("docs/Peak_Investor_Overview_AI.docx has no pending diff", not docx_diff)
-        log = subprocess.run(["git", "-C", REPO_ROOT, "log", "--oneline", "-8"],
-                             capture_output=True, text=True, timeout=20).stdout
-        check("Phase 34 baseline commit a2bd5be present in recent history",
-              "a2bd5be" in log or "Phase 34" in log)
+        # Verify the pinned baseline commit by ancestry over the FULL history. A fixed
+        # `git log --oneline -N` window silently falls out of range as later phases land,
+        # which made this check fail (or pass by accident) for reasons unrelated to the
+        # baseline actually being present.
+        present = subprocess.run(
+            ["git", "-C", REPO_ROOT, "merge-base", "--is-ancestor", "a2bd5be", "HEAD"],
+            capture_output=True, timeout=20).returncode == 0
+        check("Phase 34 baseline commit a2bd5be present in history", present)
     except Exception:
         check("git-backed hygiene checks (git unavailable — skipped)", True)
 

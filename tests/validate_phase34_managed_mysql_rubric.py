@@ -170,10 +170,14 @@ def main() -> int:
 
     print("\n8. Baseline: Phase 33 commit present; single head 009; db-check expects 15 tables")
     try:
-        log = subprocess.run(["git", "-C", REPO_ROOT, "log", "--oneline", "-8"],
-                             capture_output=True, text=True, timeout=10).stdout
-        check("Phase 33 commit 2c0ef03 present in recent history",
-              "2c0ef03" in log or "Phase 33" in log)
+        # Verify the pinned baseline commit by ancestry over the FULL history. A fixed
+        # `git log --oneline -N` window silently falls out of range as later phases land,
+        # which made this check fail (or pass by accident) for reasons unrelated to the
+        # baseline actually being present.
+        present = subprocess.run(
+            ["git", "-C", REPO_ROOT, "merge-base", "--is-ancestor", "2c0ef03", "HEAD"],
+            capture_output=True, timeout=20).returncode == 0
+        check("Phase 33 baseline commit 2c0ef03 present in history", present)
     except Exception:
         check("Phase 33 commit present (git unavailable — skipped)", True)
     heads = [f for f in os.listdir(os.path.join(REPO_ROOT, "alembic", "versions"))

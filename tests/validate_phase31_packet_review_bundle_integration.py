@@ -161,10 +161,14 @@ def structural_checks() -> None:
 
     print("\n5. Baseline: Phase 30 present, no Phase 31 migration")
     try:
-        log = subprocess.check_output(
-            ["git", "-C", REPO_ROOT, "log", "--oneline", "-8"], text=True)
-        check("Phase 30 commit present in recent history",
-              "Phase 30" in log or "6a19439" in log)
+        # Verify the pinned baseline commit by ancestry over the FULL history. A fixed
+        # `git log --oneline -N` window silently falls out of range as later phases land,
+        # which made this check fail (or pass by accident) for reasons unrelated to the
+        # baseline actually being present.
+        present = subprocess.run(
+            ["git", "-C", REPO_ROOT, "merge-base", "--is-ancestor", "6a19439", "HEAD"],
+            capture_output=True, timeout=20).returncode == 0
+        check("Phase 30 baseline commit 6a19439 present in history", present)
     except Exception:
         check("Phase 30 commit present (git unavailable — skipped)", True)
     versions = sorted(v for v in os.listdir(os.path.join(REPO_ROOT, "alembic", "versions"))
