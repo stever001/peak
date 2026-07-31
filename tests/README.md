@@ -64,6 +64,8 @@ Thirty-two harnesses, run together by `make validate`:
   AgentNet publication policy check (stdlib-only; credential-free; no live network).
 - `validate_phase35_managed_record_workflow.py` — governed managed-record workflow integration check
   (structural + plan-only always; DB-backed when SQLAlchemy is present).
+- `validate_phase36_internal_assessment_report_planning.py` — internal assessment report planning
+  boundary check (stdlib-only; DB-free and network-free).
 
 ## `synthetic_fixtures.py`
 
@@ -819,6 +821,37 @@ fast local structural smoke path — **not** the production-readiness proof path
 and
 [`../docs/WORKFLOW_INTEGRATION_GOVERNANCE_POLICY.md`](../docs/WORKFLOW_INTEGRATION_GOVERNANCE_POLICY.md).
 
+## `validate_phase36_internal_assessment_report_planning.py`
+
+Check for the Phase 36 **Internal Assessment Report Assembly Planning Boundary**
+(`peak/reports/`) — the DB-free planner that turns governed record references and reviewer decisions
+into an internal report *assembly plan*. Stdlib-only: no database, no credentials, no network.
+
+Structural: the package/contracts/docs exist and compile; `peak/reports` imports no
+SQLAlchemy/Alembic/`peak.db`/DB-writer/AgentNet/MCP/resolver/connector/network/LLM/MockLLM/agent-
+executor/publication module and no random-id or timestamp source (import cleanliness is proved at
+runtime in a subprocess); the public entry point and every typed contract exist; the Phase 17
+allowlist gained **no** new pair; no migration `010`; `db-check` still expects **15 tables**; no
+report table or report writer was added; Phases 32/33/34/35 are intact.
+
+Behavioral: a valid request yields a deterministic plan with internal-only posture, all fourteen
+sections in canonical order, reference-only evidence traces, positional finding/recommendation slots,
+and gaps for every unsatisfied category; the fingerprint is stable across reference reordering and
+duplication but changes with the reference set or section selection; `future_financial_verification_items`
+and `future_capsule_candidate_items` exist while `financial_verified` / `capsule_candidate_ready` /
+`publication_allowed` stay false.
+
+Denials: missing identity/scope/plan-id, revoked scope, blocked lifecycle, unsupported or duplicate
+sections, unsupported audience (`client`/`external`), every elevated posture flag, cross-tenant /
+cross-engagement / cross-owner / scope-mismatched structured references, and unsafe
+(multiline/overlong/whitespace/quoted/non-string) references.
+
+Leak safety: ~28 prohibited keys and DSN/raw-SQL/raw-content/credential/stack-trace values are denied
+before a plan is assembled, and a **canary value never reaches any reason, warning, or result**. See
+[`../docs/INTERNAL_ASSESSMENT_REPORT_PLANNING_BOUNDARY.md`](../docs/INTERNAL_ASSESSMENT_REPORT_PLANNING_BOUNDARY.md)
+and
+[`../docs/INTERNAL_REPORT_ASSEMBLY_GOVERNANCE_POLICY.md`](../docs/INTERNAL_REPORT_ASSEMBLY_GOVERNANCE_POLICY.md).
+
 ## Running
 
 This machine uses `python3` (there is no bare `python`). From the repo root:
@@ -828,7 +861,7 @@ This machine uses `python3` (there is no bare `python`). From the repo root:
 make install-dev          # == python3 -m pip install -r requirements-dev.txt
 
 # run all harnesses
-make validate             # == phase1 … phase35
+make validate             # == phase1 … phase36
 
 # or run one at a time
 make validate-phase1
@@ -866,6 +899,7 @@ make validate-phase32   # stdlib-only; DB-free (no database layer)
 make validate-phase33   # DB-backed; add PYTHON=.venv/bin/python for the full suite
 make validate-phase34   # DB-backed intake-note writer + managed-MySQL rubric; add PYTHON=.venv/bin/python
 make validate-phase35   # structural+plan-only always; add PYTHON=.venv/bin/python for the DB layer
+make validate-phase36   # stdlib-only; DB-free and network-free
 # opt-in managed MySQL (credential-free; skip safely with no DSN; never part of `make validate`):
 make db-check-managed-test          # managed test-env rubric check
 make managed-mysql-smoke            # managed test-env smoke runbook
@@ -911,6 +945,7 @@ python3 tests/validate_phase32_internal_reviewer_decision_boundary.py       # st
 .venv/bin/python tests/validate_phase34_intake_note_writer.py               # DB-backed (SQLAlchemy); skips DB layer on plain python3
 python3 tests/validate_phase34_managed_mysql_rubric.py                       # stdlib-only, credential-free, no live network
 .venv/bin/python tests/validate_phase35_managed_record_workflow.py           # structural+plan-only always; DB layer needs SQLAlchemy
+python3 tests/validate_phase36_internal_assessment_report_planning.py        # stdlib-only, no dependency needed (DB-free)
 ```
 
 ## Exit codes

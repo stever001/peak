@@ -151,3 +151,11 @@ only pairs that already exist: `intake_note_records`/`create_intake_note_record`
 `internal_reviewer_decision_records`/`create_internal_reviewer_decision_record`. It never targets
 `review_records` or `agent_run_records`. See
 [`WORKFLOW_INTEGRATION_GOVERNANCE_POLICY.md`](WORKFLOW_INTEGRATION_GOVERNANCE_POLICY.md).
+
+---
+
+## Phase 36 — allowlist unchanged
+
+The Phase 36 internal assessment report planning boundary is DB-free and writes nothing, so it adds
+**no new table/action pair**. There is no `report_*` table and no report writer. See
+[`INTERNAL_REPORT_ASSEMBLY_GOVERNANCE_POLICY.md`](INTERNAL_REPORT_ASSEMBLY_GOVERNANCE_POLICY.md).

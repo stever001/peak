@@ -1003,6 +1003,49 @@ writers; no new persistence primitive):**
   [`../tests/validate_phase35_managed_record_workflow.py`](../tests/validate_phase35_managed_record_workflow.py)
   (`make validate-phase35`; structural + plan-only always, DB-backed via `.venv`).
 
+**Internal Assessment Report Assembly Planning Boundary (Phase 36 — DB-free report planning; no
+report draft, no client-facing deliverable):**
+
+- [x] **Report assembly planning.** A DB-free planning layer ([`../peak/reports/`](../peak/reports/))
+  that turns governed record references and reviewer decisions into an internal assessment report
+  *plan*: sections, evidence traceability, finding/recommendation candidate slots, gaps, and
+  readiness. Public entry point `prepare_internal_assessment_report_plan(request)` returns a typed
+  `InternalAssessmentReportPlanningResult`. Docs
+  [`INTERNAL_ASSESSMENT_REPORT_PLANNING_BOUNDARY.md`](INTERNAL_ASSESSMENT_REPORT_PLANNING_BOUNDARY.md)
+  and
+  [`INTERNAL_REPORT_ASSEMBLY_GOVERNANCE_POLICY.md`](INTERNAL_REPORT_ASSEMBLY_GOVERNANCE_POLICY.md).
+- [x] **Planning only — no persistence, no prose.** No DB table, model, or Alembic migration; **no
+  new Phase 17 allowlist pair**; no DB writer, report writer, report table, report-draft
+  persistence, generic CRUD, arbitrary SQL, broad repository, API, or frontend. It reads **no**
+  database — every reference is caller-supplied — and generates no narrative: section titles are
+  fixed internal planning labels, never client-facing language. Alembic head remains
+  `009_intake_note_records` and `make db-check` still expects **15 tables**.
+- [x] **Fourteen internal sections** in a fixed canonical order, each with a deterministic readiness
+  state (`ready_for_internal_drafting` / `partial_supporting_references` /
+  `blocked_no_supporting_references` / `synthesis_only`), an evidence trace holding **record ids
+  only**, and an `InternalReportGap` for every unsatisfied supporting category.
+- [x] **Internal-only posture.** `audience="internal"`, `output_status="plan"`,
+  `review_status="needs_review"`, `lifecycle_status="draft"`, with `client_facing_approved` /
+  `financial_verified` / `capsule_candidate_ready` / `publication_allowed` / `execution_allowed` all
+  false and `requires_human_review=true`. `audience=client|external` and any elevated posture flag
+  are denied; there is no send / share / export / client-approval path.
+- [x] **Identify, never perform.** `future_financial_verification_items` names items that would need
+  a future financial gate — **no ROI is calculated and no savings verified**.
+  `future_capsule_candidate_items` names possible future capsule candidates — **nothing is created
+  or published**, and no AgentNet / resolver / MCP / network / LLM / agent call is made.
+- [x] **Deterministic.** Canonical section order, sorted de-duplicated references, positional
+  candidate ids, and a SHA-256 `plan_fingerprint` — **no random ids and no timestamps**. The same
+  request always yields the same plan; reference reordering and duplication do not change it.
+- [x] **Leak safety.** References and short safe labels only. Prohibited keys/values (raw note text,
+  packet payload, raw evidence/interview text, source bytes, generated output, credentials, DSNs,
+  raw SQL, stack traces, approval/publication/client-facing intent) are denied before a plan is
+  assembled, and denials report only field names, reference positions, and marker categories —
+  never the value. Cross-tenant / cross-engagement / scope-mismatched structured references are
+  denied. The managed-MySQL rubric and Peak-operated AgentNet publication policy are unchanged.
+  Checked by
+  [`../tests/validate_phase36_internal_assessment_report_planning.py`](../tests/validate_phase36_internal_assessment_report_planning.py)
+  (`make validate-phase36`; stdlib-only, DB-free, network-free).
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

@@ -92,3 +92,12 @@ injected `session_factory` is denied rather than falling back to an ambient envi
 so standard validation needs **no live database credentials and no network**. Its temporary SQLite
 test path remains a local structural smoke path only — **SQLite is not the production-readiness proof
 path**. See [`MANAGED_RECORD_WORKFLOW_INTEGRATION.md`](MANAGED_RECORD_WORKFLOW_INTEGRATION.md).
+
+---
+
+## Phase 36 — DB-free, rubric unchanged
+
+The Phase 36 internal assessment report planning boundary adds no table, model, migration, writer,
+read path, or DSN, and reads no database. This rubric is unchanged, and standard `make validate`
+still requires **no live database credentials and no network**. See
+[`INTERNAL_ASSESSMENT_REPORT_PLANNING_BOUNDARY.md`](INTERNAL_ASSESSMENT_REPORT_PLANNING_BOUNDARY.md).

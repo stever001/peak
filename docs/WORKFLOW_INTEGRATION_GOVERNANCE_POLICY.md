@@ -185,3 +185,13 @@ enforces this policy: structural import bans, plan-only behavior, gate behavior,
 gated workflow against a temporary SQLite database, stage denial/halt semantics, idempotency
 derivation and replay/conflict behavior, content/leak safety with canary values, and the managed
 MySQL / AgentNet publication policy regressions. It runs as part of `make validate`.
+
+---
+
+## Phase 36 — report planning stays outside this boundary
+
+The Phase 36 internal assessment report planning boundary is DB-free and calls **no** writer, so it
+adds no stage to this workflow and no table/action pair to the allowlist. Report planning consumes
+this workflow's safe record refs; it never persists a report draft and never produces a
+client-facing deliverable. See
+[`INTERNAL_REPORT_ASSEMBLY_GOVERNANCE_POLICY.md`](INTERNAL_REPORT_ASSEMBLY_GOVERNANCE_POLICY.md).

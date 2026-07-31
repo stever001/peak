@@ -138,3 +138,12 @@ This writer is stage 5 of the Phase 35 managed-record workflow, invoked only und
 `review_bundle` persistence gate with a stage-namespaced `wf35::review_bundle::…` idempotency key.
 The workflow layer approves nothing and still writes no `review_records` row. See
 [`MANAGED_RECORD_WORKFLOW_INTEGRATION.md`](MANAGED_RECORD_WORKFLOW_INTEGRATION.md).
+
+---
+
+## Phase 36 — review bundles referenced, never re-read
+
+The Phase 36 internal assessment report planning boundary consumes `review_bundle_records`
+**references** to plan the review-status section and to support finding/recommendation candidate
+slots. It reads no row, approves nothing, and writes no `review_records`. See
+[`INTERNAL_ASSESSMENT_REPORT_PLANNING_BOUNDARY.md`](INTERNAL_ASSESSMENT_REPORT_PLANNING_BOUNDARY.md).

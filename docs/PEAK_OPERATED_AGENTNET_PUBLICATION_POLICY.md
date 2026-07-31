@@ -55,3 +55,13 @@ The Phase 35 managed-record workflow integration layer **does not alter this pol
 publishing code, no resolver call, and no capsule publication path. AgentNet publication remains
 Peak-operated and deferred behind future controlled publication gates. See
 [`WORKFLOW_INTEGRATION_GOVERNANCE_POLICY.md`](WORKFLOW_INTEGRATION_GOVERNANCE_POLICY.md).
+
+---
+
+## Phase 36 — policy unchanged, publication still deferred
+
+The Phase 36 internal assessment report planning boundary **does not alter this policy** and adds no
+publishing code, no resolver call, and no capsule publication path. It may *name* items that might
+later become capsule candidates (`future_capsule_candidate_items`), but `capsule_candidate_ready`
+and `publication_allowed` remain false and no capsule candidate is created or published. See
+[`INTERNAL_REPORT_ASSEMBLY_GOVERNANCE_POLICY.md`](INTERNAL_REPORT_ASSEMBLY_GOVERNANCE_POLICY.md).

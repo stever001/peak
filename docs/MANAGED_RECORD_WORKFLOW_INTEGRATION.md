@@ -280,3 +280,13 @@ make validate-phase35   # structural + plan-only always; DB-backed via .venv
 The DB-backed layer builds a **temporary local SQLite database** and is skipped with instructions
 when SQLAlchemy is absent (still exiting 0). SQLite here is a **local structural smoke path only,
 not production proof**.
+
+---
+
+## Phase 36 — the downstream report planning boundary
+
+Phase 35 persists the durable records and returns safe `created_record_refs`; the Phase 36 internal
+assessment report planning boundary ([`../peak/reports/`](../peak/reports/)) consumes those refs
+(plus reviewer decisions) to plan an internal report. Phase 36 never calls this workflow, never
+calls a writer, and never reads a record back — the caller passes the references. See
+[`INTERNAL_ASSESSMENT_REPORT_PLANNING_BOUNDARY.md`](INTERNAL_ASSESSMENT_REPORT_PLANNING_BOUNDARY.md).

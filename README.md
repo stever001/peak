@@ -121,6 +121,8 @@ peak/
 │   ├── PEAK_OPERATED_AGENTNET_PUBLICATION_POLICY.md # Peak (not clients) is the authorized publisher; publishing deferred (Phase 34)
 │   ├── MANAGED_RECORD_WORKFLOW_INTEGRATION.md      # Governed six-stage workflow over the existing narrow writers (Phase 35)
 │   ├── WORKFLOW_INTEGRATION_GOVERNANCE_POLICY.md   # Workflow-integration governance: gates, halting, leak safety (Phase 35)
+│   ├── INTERNAL_ASSESSMENT_REPORT_PLANNING_BOUNDARY.md # DB-free internal report assembly planning (Phase 36)
+│   ├── INTERNAL_REPORT_ASSEMBLY_GOVERNANCE_POLICY.md  # Report-planning governance: internal-only posture, leak safety (Phase 36)
 │   └── IMPLEMENTATION_PLAN.md
 ├── peak/                         # Python tooling layer (source only; no data)
 │   ├── db/                       # base, enums, models, session + agent_run (P20), evidence (P21), review (P22), source-ingestion (P24), agent-task-queue (P27), review-bundle (P30), internal-reviewer-decision (P33) & intake-note (P34) writers
@@ -135,7 +137,8 @@ peak/
 │   ├── task_queue/               # Agent task queue / execution readiness boundary: plans queue drafts (P26; DB-free, no execution)
 │   ├── review_orchestration/     # Packet-derived review orchestration: plans human-review bundles (P29; DB-free, no approval)
 │   ├── reviewer_decisions/       # Internal reviewer decision boundary: plans decision drafts + routing (P32; DB-free, no approval)
-│   └── workflows/                # Governed managed-record workflow integration over the existing narrow writers (P35; plan-only default)
+│   ├── workflows/                # Governed managed-record workflow integration over the existing narrow writers (P35; plan-only default)
+│   └── reports/                  # Internal assessment report assembly planning boundary (P36; DB-free, internal-only, no report draft)
 ├── alembic/                      # Alembic migrations (schema only; no data)
 ├── alembic.ini                   # Alembic config (URL from env, not the repo)
 ├── .env.example                  # Env placeholders only (PEAK_DATABASE_URL); .env ignored
@@ -1047,6 +1050,47 @@ under **explicit per-stage persistence gates**:
 
 ```bash
 make validate-phase35   # structural + plan-only always; DB-backed via .venv (temporary SQLite)
+```
+
+### Internal Assessment Report Assembly Planning Boundary (Phase 36)
+
+A **DB-free planning layer** that assembles an internal assessment report **plan** from governed
+record references and reviewer decisions. The output is a report *assembly plan* — structure,
+traceability, and readiness — **not a report draft record and not a client-facing deliverable**.
+
+- **Planning only.** No DB table, model, migration, DB writer, report writer, report table,
+  report-draft persistence, generic CRUD, arbitrary SQL, broad repository, API, or frontend. It
+  reads **no** database: every reference is caller-supplied. `peak/reports` imports only stdlib plus
+  the public, DB-free Phase 32 value classifier — verified at runtime to load no DB or network module.
+- **Public entry point:** `prepare_internal_assessment_report_plan(request) ->
+  InternalAssessmentReportPlanningResult`. Expected governance failures are typed denials.
+- **Fourteen internal sections** in a fixed canonical order (executive overview → next steps),
+  each with a readiness state (`ready_for_internal_drafting` / `partial_supporting_references` /
+  `blocked_no_supporting_references` / `synthesis_only`), an evidence trace holding **record ids
+  only**, and a gap for every unsatisfied supporting category.
+- **Internal-only posture.** `audience="internal"`, `output_status="plan"`,
+  `review_status="needs_review"`, `lifecycle_status="draft"`, with `client_facing_approved` /
+  `financial_verified` / `capsule_candidate_ready` / `publication_allowed` / `execution_allowed` all
+  false and `requires_human_review=true`. `audience=client|external` and any elevated posture flag
+  are denied. There is no send / share / export / client-approval path.
+- **Identify, never perform.** `future_financial_verification_items` names items that would need a
+  future financial gate — no ROI is calculated and no savings verified.
+  `future_capsule_candidate_items` names possible future capsule candidates — nothing is created or
+  published, and no AgentNet / resolver / MCP call is made.
+- **Deterministic.** Canonical section order, sorted de-duplicated references, positional candidate
+  ids, and a SHA-256 `plan_fingerprint` — **no random ids and no timestamps**. The same request
+  always yields the same plan.
+- **Leak safety.** References and short safe labels only. Prohibited keys/values (raw note text,
+  packet payload, raw evidence/interview text, source bytes, generated output, credentials, DSNs,
+  raw SQL, stack traces, approval/publication intent) are denied before a plan is assembled, and
+  denials report only field names and marker categories — never the value.
+- [`peak/reports/`](peak/reports/),
+  [`docs/INTERNAL_ASSESSMENT_REPORT_PLANNING_BOUNDARY.md`](docs/INTERNAL_ASSESSMENT_REPORT_PLANNING_BOUNDARY.md),
+  and
+  [`docs/INTERNAL_REPORT_ASSEMBLY_GOVERNANCE_POLICY.md`](docs/INTERNAL_REPORT_ASSEMBLY_GOVERNANCE_POLICY.md).
+
+```bash
+make validate-phase36   # stdlib-only; DB-free and network-free
 ```
 
 ## Design constraints

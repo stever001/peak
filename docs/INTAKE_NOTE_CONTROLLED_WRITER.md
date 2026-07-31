@@ -135,3 +135,13 @@ This writer is stage 1 of the Phase 35 managed-record workflow. The workflow lay
 `note_text` through to this writer but **never echoes it** in its own result; content safety for
 `note_text` remains this writer's hardened scanner. See
 [`MANAGED_RECORD_WORKFLOW_INTEGRATION.md`](MANAGED_RECORD_WORKFLOW_INTEGRATION.md).
+
+---
+
+## Phase 36 — intake notes referenced, never re-read
+
+The Phase 36 internal assessment report planning boundary consumes `intake_note_records`
+**references** (`intake_note_refs`) to plan the engagement-context and intake-summary sections. It
+never reads a row back and **never receives or echoes `note_text`** — a `note_text` key on a
+planning request is denied outright. See
+[`INTERNAL_ASSESSMENT_REPORT_PLANNING_BOUNDARY.md`](INTERNAL_ASSESSMENT_REPORT_PLANNING_BOUNDARY.md).

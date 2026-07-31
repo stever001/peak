@@ -157,3 +157,14 @@ This writer is stage 6 (the final stage) of the Phase 35 managed-record workflow
 an explicit `reviewer_decision` persistence gate with a stage-namespaced `wf35::reviewer_decision::…`
 idempotency key. The workflow layer never calls `approve_internal` and writes no `review_records`
 row. See [`MANAGED_RECORD_WORKFLOW_INTEGRATION.md`](MANAGED_RECORD_WORKFLOW_INTEGRATION.md).
+
+---
+
+## Phase 36 — reviewer decisions referenced, never re-read
+
+The Phase 36 internal assessment report planning boundary consumes
+`internal_reviewer_decision_records` **references** to open one internal-only recommendation
+candidate slot per decision. It reads no row and approves nothing: every recommendation candidate
+stays `audience="internal"` with `client_facing_approved` / `financial_verified` /
+`capsule_candidate_ready` / `publication_allowed` / `execution_allowed` all false. See
+[`INTERNAL_ASSESSMENT_REPORT_PLANNING_BOUNDARY.md`](INTERNAL_ASSESSMENT_REPORT_PLANNING_BOUNDARY.md).

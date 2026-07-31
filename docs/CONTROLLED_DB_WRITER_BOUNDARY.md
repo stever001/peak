@@ -205,3 +205,13 @@ of the existing narrow writers behind explicit per-stage persistence gates. It a
 no new table/action pair, no generic CRUD, and no arbitrary SQL** — it only builds one
 `ControlledWriteRequest` per stage and hands it to the writer that already owns that table. See
 [`MANAGED_RECORD_WORKFLOW_INTEGRATION.md`](MANAGED_RECORD_WORKFLOW_INTEGRATION.md).
+
+---
+
+## Phase 36 — report planning adds no writer
+
+The Phase 36 internal assessment report planning boundary ([`../peak/reports/`](../peak/reports/))
+is **DB-free**: it adds no writer, no report table, no report-draft persistence, and no read path,
+and it produces no `ControlledWriteRequest` objects. It consumes caller-supplied record references
+only. See
+[`INTERNAL_ASSESSMENT_REPORT_PLANNING_BOUNDARY.md`](INTERNAL_ASSESSMENT_REPORT_PLANNING_BOUNDARY.md).
