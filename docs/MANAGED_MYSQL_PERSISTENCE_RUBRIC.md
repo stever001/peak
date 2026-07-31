@@ -112,3 +112,18 @@ full: managed remote MySQL is its operational store, Client Isolation Option A a
 by its harness is a structural smoke path only — **not** production proof. Managed MySQL
 test/staging validation is required before treating the writer as production-ready. The controlled
 DB now has **16 tables**. No DSN, production write path, or cleanup/delete path was added.
+
+---
+
+## Phase 38 — one new operational table, and a concrete SQLite-parity lesson
+
+`internal_report_review_packets` (Phase 38) is an operational table and follows this rubric in full:
+managed remote MySQL is its operational store, Client Isolation Option A applies, and its temporary
+SQLite harness is a structural smoke path only. The controlled DB now has **17 tables**.
+
+Phase 38 also produced a concrete example of why **SQLite is not the production-readiness proof
+path**: the convention-derived index name
+`ix_internal_report_review_packets_internal_assessment_report_draft_id` is 69 characters, over
+MySQL's 64-character identifier limit. SQLite accepts it silently; managed MySQL would reject the
+DDL. The short name is pinned in both the model and the migration, and the Phase 38 harness asserts
+every index/constraint name fits the limit.

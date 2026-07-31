@@ -254,3 +254,14 @@ DB write path, or cleanup/delete path. It calls **no Phase 22 review writer** an
 ```bash
 make validate-phase37   # DB-backed via .venv (temporary SQLite structural smoke)
 ```
+
+---
+
+## Phase 38 — the downstream reviewer packet
+
+Phase 38 builds an internal-only **review packet** for a stored row of this table. It does **not**
+modify the report draft: it loads the row read-only and verifies tenant, scope, `audience=internal`,
+`output_status=plan_persisted`, review/lifecycle state, non-elevated posture, and provenance before
+persisting a separate `internal_report_review_packets` row. A packet's
+`report_draft_payload_fingerprint` is copied from this table's stored `payload_fingerprint`. See
+[`INTERNAL_REPORT_REVIEW_PACKET_CONTROLLED_WRITER.md`](INTERNAL_REPORT_REVIEW_PACKET_CONTROLLED_WRITER.md).

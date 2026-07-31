@@ -279,3 +279,13 @@ Phase 37 persists the plan this boundary produces as an internal-only
 **This package stays DB-free:** the `ControlledWriteRequest` bridge lives in the Phase 37 DB layer,
 so `peak/reports` still imports no `peak.db` and calls no writer. The stored row records
 `output_status="plan_persisted"` — a persisted plan, never a drafted report.
+
+---
+
+## Phase 38 — the reviewer packet built on a persisted plan
+
+Phase 37 persists the plan this boundary produces; Phase 38 then builds an internal-only reviewer
+packet over that stored row (section review checklist, evidence trace refs, open gaps, reviewer
+questions, readiness checklist, follow-up actions). This package remains DB-free throughout — the
+packet writer reads the stored report-draft row, never this boundary. See
+[`INTERNAL_REPORT_REVIEW_PACKET_CONTROLLED_WRITER.md`](INTERNAL_REPORT_REVIEW_PACKET_CONTROLLED_WRITER.md).

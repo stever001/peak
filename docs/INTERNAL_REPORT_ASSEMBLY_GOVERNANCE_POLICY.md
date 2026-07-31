@@ -206,3 +206,14 @@ allowlist pair (`internal_assessment_report_drafts` / `create_internal_assessmen
 re-verifies this policy's internal-only posture at the write boundary, and stores structure and
 references only. This package remains DB-free and produces no `ControlledWriteRequest`. See
 [`INTERNAL_ASSESSMENT_REPORT_DRAFT_CONTROLLED_WRITER.md`](INTERNAL_ASSESSMENT_REPORT_DRAFT_CONTROLLED_WRITER.md).
+
+---
+
+## Phase 38 — review packets are a separate, narrow gate
+
+Handing a persisted plan to a human reviewer is Phase 38's job. It adds one narrow writer and one
+allowlist pair (`internal_report_review_packets` / `create_internal_report_review_packet`),
+re-verifies the internal-only posture on both the packet and the stored report draft, and stores
+labels, statuses, and references only. A packet is **pre-decision**: it carries no approval and no
+reviewer outcome. See
+[`INTERNAL_REPORT_REVIEW_PACKET_CONTROLLED_WRITER.md`](INTERNAL_REPORT_REVIEW_PACKET_CONTROLLED_WRITER.md).

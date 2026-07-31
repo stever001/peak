@@ -246,3 +246,16 @@ creates no `review_records` row. There is therefore no new access/audit surface 
 which never echoes report prose, raw content, credentials, DSNs, raw SQL, stack traces, or approval
 decisions. See
 [`INTERNAL_ASSESSMENT_REPORT_DRAFT_CONTROLLED_WRITER.md`](INTERNAL_ASSESSMENT_REPORT_DRAFT_CONTROLLED_WRITER.md).
+
+---
+
+## Phase 38 — review-packet writes are audited like every other controlled write
+
+`internal_report_review_packets` rows carry the universal audit columns plus `requested_by` /
+`requester_role` / `assigned_reviewer`, full report-draft linkage and provenance, and
+`idempotency_key` / `payload_fingerprint`. The packet is an **audit artifact in its own right**: it
+records what a reviewer was shown, which is why the table has no update path — a changed packet is a
+new row and the prior one stays intact. Every write returns a typed receipt whose flags report
+**actual** behavior and which never echoes report prose, raw content, credentials, DSNs, raw SQL,
+stack traces, or approval decisions. See
+[`INTERNAL_REPORT_REVIEW_PACKET_CONTROLLED_WRITER.md`](INTERNAL_REPORT_REVIEW_PACKET_CONTROLLED_WRITER.md).

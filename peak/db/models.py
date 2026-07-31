@@ -12,7 +12,9 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import JSON, Boolean, DateTime, Numeric, String, Text, UniqueConstraint
+from sqlalchemy import (
+    JSON, Boolean, DateTime, Index, Numeric, String, Text, UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .base import MYSQL_TABLE_ARGS, AuditMixin, Base, GovernanceMixin
@@ -477,6 +479,83 @@ class InternalAssessmentReportDraftRecord(Base, GovernanceMixin, AuditMixin):
     payload_fingerprint: Mapped[Optional[str]] = mapped_column(String(64))
 
 
+class InternalReportReviewPacketRecord(Base, GovernanceMixin, AuditMixin):
+    __tablename__ = "internal_report_review_packets"
+    # Phase 38: the internal-only review packet handed to a Peak human reviewer for a Phase 37
+    # internal assessment report draft. It records **what the reviewer was shown and asked to
+    # evaluate** — a section review checklist, reference-only evidence traces, open gaps, blocked
+    # items, short internal reviewer questions, a readiness checklist, required follow-up actions,
+    # and future-gate placeholders. It stores **no report prose**: no final client-facing language,
+    # no raw note/packet/evidence/interview text, no generated agent output, no ROI figure, and no
+    # approval decision. ``packet_status`` is fixed at ``ready_for_internal_review`` and
+    # ``reviewer_decision_status`` at ``not_decided`` — a packet is created *before* any decision
+    # exists, so it can never be misread as a review outcome. DB-enforced idempotency mirrors the
+    # prior writers. See docs/INTERNAL_REPORT_REVIEW_PACKET_CONTROLLED_WRITER.md and
+    # docs/INTERNAL_REPORT_REVIEW_PACKET_IDEMPOTENCY_POLICY.md.
+    __table_args__ = (
+        UniqueConstraint(
+            "owner_id",
+            "client_id",
+            "engagement_id",
+            "idempotency_key",
+            name="uq_internal_report_review_packets_idem",
+        ),
+        # Named explicitly: the auto-generated
+        # ``ix_internal_report_review_packets_internal_assessment_report_draft_id`` would be 69
+        # characters, over MySQL's 64-character identifier limit. SQLite would accept it silently,
+        # so the short name is pinned here rather than discovered in managed MySQL.
+        Index("ix_internal_report_review_packets_report_draft",
+              "internal_assessment_report_draft_id"),
+        MYSQL_TABLE_ARGS,
+    )
+    # id convention: irrp_<slug>
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    client_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    engagement_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    # Linkage back to the Phase 37 stored report draft (verified against the stored row at write time).
+    internal_assessment_report_draft_id: Mapped[Optional[str]] = mapped_column(String(64))
+    source_report_draft_table: Mapped[Optional[str]] = mapped_column(String(64))
+    report_plan_id: Mapped[Optional[str]] = mapped_column(String(128), index=True)
+    plan_fingerprint: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    report_draft_payload_fingerprint: Mapped[Optional[str]] = mapped_column(String(64))
+    requested_by: Mapped[Optional[str]] = mapped_column(String(128))
+    requester_role: Mapped[Optional[str]] = mapped_column(String(64))
+    assigned_reviewer: Mapped[Optional[str]] = mapped_column(String(128))
+    packet_purpose: Mapped[Optional[str]] = mapped_column(String(255))
+    # Internal-only audience — a real column, never JSON. "internal" is the only accepted value.
+    audience: Mapped[str] = mapped_column(String(32), index=True, default="internal")
+    packet_status: Mapped[str] = mapped_column(
+        String(32), index=True, default="ready_for_internal_review")
+    # Reviewer decision linkage is populated by a *later* controlled path, never at creation.
+    reviewer_decision_record_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    reviewer_decision_status: Mapped[Optional[str]] = mapped_column(String(32), default="not_decided")
+    # Structured packet payload — labels, statuses, references, and counts ONLY.
+    section_review_checklist_json: Mapped[Optional[dict]] = mapped_column(JSON)
+    evidence_trace_refs_json: Mapped[Optional[dict]] = mapped_column(JSON)
+    open_gaps_json: Mapped[Optional[dict]] = mapped_column(JSON)
+    blocked_items_json: Mapped[Optional[dict]] = mapped_column(JSON)
+    reviewer_questions_json: Mapped[Optional[dict]] = mapped_column(JSON)
+    readiness_checklist_json: Mapped[Optional[dict]] = mapped_column(JSON)
+    required_followup_actions_json: Mapped[Optional[dict]] = mapped_column(JSON)
+    # Forward-looking placeholders naming FUTURE gates. Nothing is verified or published here.
+    future_financial_verification_items_json: Mapped[Optional[dict]] = mapped_column(JSON)
+    future_capsule_candidate_items_json: Mapped[Optional[dict]] = mapped_column(JSON)
+    reasons_json: Mapped[Optional[dict]] = mapped_column(JSON)
+    warnings_json: Mapped[Optional[dict]] = mapped_column(JSON)
+    # Governance / non-final posture — real columns (never JSON). "internal-only" is enforced.
+    client_facing_approved: Mapped[bool] = mapped_column(Boolean, default=False)
+    review_approval_made: Mapped[bool] = mapped_column(Boolean, default=False)
+    financial_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    capsule_candidate_ready: Mapped[bool] = mapped_column(Boolean, default=False)
+    publication_allowed: Mapped[bool] = mapped_column(Boolean, default=False)
+    execution_allowed: Mapped[bool] = mapped_column(Boolean, default=False)
+    requires_human_review: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Phase 38 controlled-writer fields. idempotency_key + payload_fingerprint back
+    # replay/replay-conflict detection.
+    idempotency_key: Mapped[Optional[str]] = mapped_column(String(128), index=True)
+    payload_fingerprint: Mapped[Optional[str]] = mapped_column(String(64))
+
+
 # Convenience list of all model classes (used by tooling/validation).
 ALL_MODELS = [
     Client,
@@ -495,4 +574,5 @@ ALL_MODELS = [
     InternalReviewerDecisionRecord,
     IntakeNoteRecord,
     InternalAssessmentReportDraftRecord,
+    InternalReportReviewPacketRecord,
 ]

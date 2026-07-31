@@ -1094,6 +1094,59 @@ persistence counterpart to Phase 36):**
   [`../tests/validate_phase37_internal_assessment_report_draft_writer.py`](../tests/validate_phase37_internal_assessment_report_draft_writer.py)
   (`make validate-phase37`; DB-backed via `.venv`).
 
+**Internal Report Review Packet Controlled Writer (Phase 38 — tenth DB-backed writer):**
+
+- [x] **A reviewer packet, not a review outcome.** A narrow live DB writer that persists **exactly
+  one** `internal_report_review_packets` row from an `InternalReportReviewPacketDraft` through the
+  Phase 17 `ControlledWriteRequest` boundary — allowing only `internal_report_review_packets` /
+  `create_internal_report_review_packet`.
+  [`../peak/db/internal_report_review_packet_writer.py`](../peak/db/internal_report_review_packet_writer.py),
+  migration
+  [`../alembic/versions/011_internal_report_review_packets.py`](../alembic/versions/011_internal_report_review_packets.py),
+  docs [`INTERNAL_REPORT_REVIEW_PACKET_CONTROLLED_WRITER.md`](INTERNAL_REPORT_REVIEW_PACKET_CONTROLLED_WRITER.md)
+  / [`INTERNAL_REPORT_REVIEW_PACKET_IDEMPOTENCY_POLICY.md`](INTERNAL_REPORT_REVIEW_PACKET_IDEMPOTENCY_POLICY.md).
+  The row records what a Peak human reviewer was *shown and asked to evaluate* for a Phase 37 report
+  draft: a section review checklist, reference-only evidence traces, open gaps, blocked items, short
+  internal reviewer questions, a readiness checklist, required follow-up actions, and future-gate
+  placeholders. It stores **no** report prose, raw note/packet/evidence/interview text, source bytes,
+  generated output, LLM prompt, credential, DSN, raw SQL, stack trace, approval decision,
+  ROI/savings figure, or capsule/AgentNet publish payload.
+- [x] **Internal-only, pre-decision posture** (server-stamped): `audience=internal`,
+  `packet_status=ready_for_internal_review`, `review_status=needs_review`,
+  `lifecycle_status=draft`, `reviewer_decision_record_id=NULL`,
+  `reviewer_decision_status=not_decided`, with `client_facing_approved` / `review_approval_made` /
+  `financial_verified` / `capsule_candidate_ready` / `publication_allowed` / `execution_allowed`
+  false and `requires_human_review=true`. A packet is created *before* any decision exists, so it
+  can never be misread as a review outcome.
+- [x] **Report-draft linkage mode B — the stored row is read, not trusted.** The writer loads the
+  referenced `InternalAssessmentReportDraftRecord` and verifies tenant, scope, `audience=internal`,
+  `output_status=plan_persisted`, `review_status=needs_review`, `lifecycle_status=draft`, every
+  non-elevated posture flag, `requires_human_review=true`, and provenance (`report_plan_id` /
+  `plan_fingerprint`), then copies `report_draft_payload_fingerprint` **from the stored row**. A
+  plain reference never proves stored posture.
+- [x] **Closed vocabularies and intent scanning.** Checklist items are strict dicts with a closed
+  status allowlist so an approval-flavoured status can never be stored. Reviewer questions — the
+  only prose-ish list — are bounded, single-line, marker-scanned **and** intent-scanned, so
+  client-facing/approval language is denied (`prohibited_packet_intent`).
+- [x] **Write-time authorization.** Loads the stored `Engagement` and requires it to exist, carry an
+  `authorization_scope`, match `request.authorization_scope`, match owner/client/engagement identity,
+  and have a non-blocked lifecycle. **Identity matching is necessary but not sufficient.**
+- [x] **Idempotency.** Boundary `(owner_id, client_id, engagement_id, idempotency_key)` enforced by a
+  real UNIQUE index, plus a canonical `payload_fingerprint` that binds the stored report-draft
+  payload. Replay / conflict / `IntegrityError` race handled exactly as in the prior writers.
+- [x] **Schema.** Migration `011_internal_report_review_packets`
+  (`down_revision = 010_internal_assessment_report_drafts`) creates one table with no INSERT/seed;
+  the downgrade drops only that table; the head stays single and linear; the controlled DB now has
+  **17 tables**. Exactly **one** new Phase 17 allowlist pair — no update/delete/upsert/raw-SQL
+  action. Index names are pinned short so every identifier fits MySQL's **64-character limit** (the
+  convention-derived report-draft index name would have been 69 characters and SQLite would have
+  accepted it silently).
+- [x] **Nothing escalates.** Phase 38 approves nothing, verifies nothing financially, publishes
+  nothing, executes nothing, calls no Phase 22 writer, creates no `review_records`/`agent_run_records`
+  row, and makes no LLM/MockLLM/AgentNet/MCP/resolver/connector/network call. Checked by
+  [`../tests/validate_phase38_internal_report_review_packet_writer.py`](../tests/validate_phase38_internal_report_review_packet_writer.py)
+  (`make validate-phase38`; DB-backed via `.venv`).
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

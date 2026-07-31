@@ -45,3 +45,14 @@ explicit `--connect` flag with a DSN present.
 DSNs are provided only via environment variables (`PEAK_MANAGED_MYSQL_TEST_DSN`,
 `PEAK_MANAGED_MYSQL_STAGING_DSN`, `PEAK_MANAGED_MYSQL_PROD_DSN`) — **never committed, never in
 `.env`, never printed**.
+
+---
+
+## Phase 38 — identifier-length parity is now asserted
+
+A concrete parity gap SQLite cannot catch: MySQL enforces a **64-character identifier limit** on
+index and constraint names, and SQLite does not. Phase 38's convention-derived report-draft index
+name would have been 69 characters and would have passed every local SQLite check while failing in
+managed MySQL. The short name is pinned in the model and the migration, and the Phase 38 harness
+asserts every index/constraint name fits the limit — for the model, for the migration source, and
+for the indexes actually applied. Treat this as a standing check for future tables with long names.

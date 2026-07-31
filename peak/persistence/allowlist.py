@@ -25,6 +25,7 @@ ALLOWED_TABLES = frozenset(
         "internal_reviewer_decision_records",
         "intake_note_records",
         "internal_assessment_report_drafts",
+        "internal_report_review_packets",
         "capsule_publication_candidates",
     }
 )
@@ -41,6 +42,7 @@ ALLOWED_ACTIONS = frozenset(
         "create_internal_reviewer_decision_record",
         "create_intake_note_record",
         "create_internal_assessment_report_draft",
+        "create_internal_report_review_packet",
         "create_capsule_candidate_draft",
         "update_review_status",
         "update_lifecycle_status",

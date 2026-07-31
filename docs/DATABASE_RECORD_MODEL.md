@@ -359,3 +359,15 @@ and future-gate placeholders, plus `report_plan_id` / `plan_fingerprint` provena
 controlled-writer idempotency columns. `output_status` is fixed at `plan_persisted`. It stores **no
 report prose** and no raw content. See
 [`INTERNAL_ASSESSMENT_REPORT_DRAFT_CONTROLLED_WRITER.md`](INTERNAL_ASSESSMENT_REPORT_DRAFT_CONTROLLED_WRITER.md).
+
+---
+
+## Phase 38 — internal_report_review_packets
+
+Stores the internal-only **review packet** handed to a Peak human reviewer for a Phase 37
+`internal_assessment_report_drafts` row: linkage and provenance refs, a section review checklist,
+reference-only evidence traces, open gaps, blocked items, short internal reviewer questions, a
+readiness checklist, required follow-up actions, future-gate placeholders, and the controlled-writer
+idempotency columns. `packet_status` is fixed at `ready_for_internal_review` and
+`reviewer_decision_status` at `not_decided`. It stores **no report prose** and no raw content. See
+[`INTERNAL_REPORT_REVIEW_PACKET_CONTROLLED_WRITER.md`](INTERNAL_REPORT_REVIEW_PACKET_CONTROLLED_WRITER.md).

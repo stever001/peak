@@ -225,3 +225,14 @@ Phase 37 adds `persist_internal_assessment_report_draft`, targeting only
 shape as every prior writer: stored-`Engagement` authorization, DB-enforced idempotency, a typed
 non-echoing receipt, and no update/delete/raw-SQL path. See
 [`INTERNAL_ASSESSMENT_REPORT_DRAFT_CONTROLLED_WRITER.md`](INTERNAL_ASSESSMENT_REPORT_DRAFT_CONTROLLED_WRITER.md).
+
+---
+
+## Phase 38 — the tenth narrow writer
+
+Phase 38 adds `persist_internal_report_review_packet`, targeting only
+`internal_report_review_packets` / `create_internal_report_review_packet`. It follows the same shape
+as every prior writer — stored-`Engagement` authorization, DB-enforced idempotency, a typed
+non-echoing receipt, no update/delete/raw-SQL path — and additionally performs a **read-only**
+verification of the stored Phase 37 report draft it references. See
+[`INTERNAL_REPORT_REVIEW_PACKET_CONTROLLED_WRITER.md`](INTERNAL_REPORT_REVIEW_PACKET_CONTROLLED_WRITER.md).

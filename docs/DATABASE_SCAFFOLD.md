@@ -128,3 +128,13 @@ controlled internal-assessment-report-draft writer. Schema only: no INSERT, no s
 destructive change; the downgrade drops only the new table. `make db-check` now expects **16
 tables**. See
 [`INTERNAL_ASSESSMENT_REPORT_DRAFT_CONTROLLED_WRITER.md`](INTERNAL_ASSESSMENT_REPORT_DRAFT_CONTROLLED_WRITER.md).
+
+---
+
+## Phase 38 — internal_report_review_packets (17th table)
+
+Migration `011_internal_report_review_packets` adds the seventeenth table, backing the Phase 38
+controlled internal-report-review-packet writer. Schema only: no INSERT, no seed data, no
+destructive change; the downgrade drops only the new table. `make db-check` now expects **17
+tables**. Index names are pinned short so every identifier fits MySQL's 64-character limit. See
+[`INTERNAL_REPORT_REVIEW_PACKET_CONTROLLED_WRITER.md`](INTERNAL_REPORT_REVIEW_PACKET_CONTROLLED_WRITER.md).

@@ -46,7 +46,7 @@ EXPECTED_TABLES = [
     "review_records", "agent_run_records", "capsule_publication_candidates",
     "source_ingestion_records", "agent_task_queue_records", "review_bundle_records",
     "internal_reviewer_decision_records", "intake_note_records",
-    "internal_assessment_report_drafts",
+    "internal_assessment_report_drafts", "internal_report_review_packets",
 ]
 
 # Phase 9 schemas are the source of truth for governance enum values.

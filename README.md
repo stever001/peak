@@ -125,9 +125,11 @@ peak/
 │   ├── INTERNAL_REPORT_ASSEMBLY_GOVERNANCE_POLICY.md  # Report-planning governance: internal-only posture, leak safety (Phase 36)
 │   ├── INTERNAL_ASSESSMENT_REPORT_DRAFT_CONTROLLED_WRITER.md # Ninth DB-backed writer, for internal_assessment_report_drafts (Phase 37)
 │   ├── INTERNAL_ASSESSMENT_REPORT_DRAFT_IDEMPOTENCY_POLICY.md # DB-enforced idempotency for report-draft rows (Phase 37)
+│   ├── INTERNAL_REPORT_REVIEW_PACKET_CONTROLLED_WRITER.md # Tenth DB-backed writer, for internal_report_review_packets (Phase 38)
+│   ├── INTERNAL_REPORT_REVIEW_PACKET_IDEMPOTENCY_POLICY.md # DB-enforced idempotency for review-packet rows (Phase 38)
 │   └── IMPLEMENTATION_PLAN.md
 ├── peak/                         # Python tooling layer (source only; no data)
-│   ├── db/                       # base, enums, models, session + agent_run (P20), evidence (P21), review (P22), source-ingestion (P24), agent-task-queue (P27), review-bundle (P30), internal-reviewer-decision (P33), intake-note (P34) & internal-assessment-report-draft (P37) writers
+│   ├── db/                       # base, enums, models, session + agent_run (P20), evidence (P21), review (P22), source-ingestion (P24), agent-task-queue (P27), review-bundle (P30), internal-reviewer-decision (P33), intake-note (P34), internal-assessment-report-draft (P37) & internal-report-review-packet (P38) writers
 │   ├── agentnet/                 # Governance wrapper for the AgentNet MCP connector (no calls)
 │   ├── agents/                   # Agent execution harness (mock) + agent run persistence mapping (no live DB)
 │   ├── workers/                  # Production-shaped workers (evidence normalization; review-gated)
@@ -1130,6 +1132,50 @@ boundary. It persists **exactly one** `internal_assessment_report_drafts` row fr
 
 ```bash
 make validate-phase37   # DB-backed via .venv (temporary SQLite structural smoke)
+```
+
+### Internal Report Review Packet Controlled Writer (Phase 38)
+
+The **tenth** narrow live DB writer. It persists **exactly one** `internal_report_review_packets`
+row — the internal-only review packet handed to a Peak human reviewer for a Phase 37
+`internal_assessment_report_drafts` row — through the Phase 17 `ControlledWriteRequest` boundary,
+allowing only `internal_report_review_packets` / `create_internal_report_review_packet`.
+
+- **A reviewer packet, not a review outcome.** It records what the reviewer was *shown and asked to
+  evaluate*: a section review checklist, reference-only evidence traces, open gaps, blocked items,
+  short internal reviewer questions, a readiness checklist, required follow-up actions, and
+  future-gate placeholders. `packet_status` is fixed at **`ready_for_internal_review`** and
+  `reviewer_decision_status` at **`not_decided`**; `reviewer_decision_record_id` must be absent at
+  creation. It stores **no** report prose, raw note/packet/evidence/interview text, source bytes,
+  generated output, ROI figure, approval decision, or capsule payload.
+- **The stored report draft is read, not trusted** (linkage mode B). The writer loads the referenced
+  `InternalAssessmentReportDraftRecord` and verifies its tenant, scope, `audience=internal`,
+  `output_status=plan_persisted`, review/lifecycle state, non-elevated posture, and provenance
+  (`report_plan_id` / `plan_fingerprint`), then copies `report_draft_payload_fingerprint` from the
+  stored row. A plain ref never proves stored posture.
+- **Closed status vocabularies.** Checklist items are strict dicts; statuses come from a closed
+  allowlist (`not_started` / `in_review` / `needs_followup` / `complete`, and `open` /
+  `in_progress` / `blocked` / `done`) so an approval-flavoured status can never be stored.
+- **Reviewer questions are intent-scanned.** The only prose-ish list is bounded to 240 chars,
+  single-line, marker-scanned **and** scanned for client-facing/approval language, so a question
+  like "send to client once approved" is denied.
+- **Public entry point:** `persist_internal_report_review_packet(controlled_write_request, *,
+  session_factory=None) -> InternalReportReviewPacketWriteReceipt`. Stored-`Engagement`
+  authorization; idempotency boundary `(owner_id, client_id, engagement_id, idempotency_key)` with a
+  `payload_fingerprint` that binds the stored report-draft payload.
+- **Migration `011_internal_report_review_packets`** (`down_revision = 010_…`) adds one table, no
+  INSERT/seed; single head; `make db-check` now expects **17 tables**. Exactly one new Phase 17
+  allowlist pair. Index names are pinned short so they fit MySQL's 64-character identifier limit —
+  a concrete reminder that SQLite is not the production-readiness proof path.
+- It approves nothing, verifies nothing financially, publishes nothing, executes nothing, calls no
+  Phase 22 writer, and creates no `review_records` / `agent_run_records` row.
+- [`peak/db/internal_report_review_packet_writer.py`](peak/db/internal_report_review_packet_writer.py),
+  [`docs/INTERNAL_REPORT_REVIEW_PACKET_CONTROLLED_WRITER.md`](docs/INTERNAL_REPORT_REVIEW_PACKET_CONTROLLED_WRITER.md),
+  and
+  [`docs/INTERNAL_REPORT_REVIEW_PACKET_IDEMPOTENCY_POLICY.md`](docs/INTERNAL_REPORT_REVIEW_PACKET_IDEMPOTENCY_POLICY.md).
+
+```bash
+make validate-phase38   # DB-backed via .venv (temporary SQLite structural smoke)
 ```
 
 ## Design constraints
