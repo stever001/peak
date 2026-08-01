@@ -60,6 +60,7 @@ EXPECTED_TABLES = {
     "intake_note_records",
     "internal_assessment_report_drafts",
     "internal_report_review_packets",
+    "internal_report_review_packet_decisions",
     "capsule_publication_candidates",
 }
 EXPECTED_ACTIONS = {
@@ -73,6 +74,7 @@ EXPECTED_ACTIONS = {
     "create_intake_note_record",
     "create_internal_assessment_report_draft",
     "create_internal_report_review_packet",
+    "create_internal_report_review_packet_decision",
     "create_capsule_candidate_draft",
     "update_review_status",
     "update_lifecycle_status",

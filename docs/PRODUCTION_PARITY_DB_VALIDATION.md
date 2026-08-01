@@ -56,3 +56,14 @@ name would have been 69 characters and would have passed every local SQLite chec
 managed MySQL. The short name is pinned in the model and the migration, and the Phase 38 harness
 asserts every index/constraint name fits the limit — for the model, for the migration source, and
 for the indexes actually applied. Treat this as a standing check for future tables with long names.
+
+---
+
+## Phase 39 — the identifier-length check is now a standing practice
+
+Phase 39 applied the Phase 38 finding proactively. Its table name is 39 characters, so the
+convention-derived `ix_internal_report_review_packet_decisions_<col>` would have reached **78**
+characters — over MySQL's 64-character limit, and silently accepted by SQLite. A short explicit
+`ix_irrpd_` prefix was chosen up front, and the Phase 39 harness asserts every identifier fits for
+the model, the migration source, and the applied indexes. Treat this as the standing pattern for any
+new table whose name exceeds roughly 25 characters.

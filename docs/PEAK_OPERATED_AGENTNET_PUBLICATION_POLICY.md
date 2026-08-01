@@ -87,3 +87,13 @@ publishing code, no resolver call, and no capsule publication path. It may persi
 `publication_allowed` remain false on every stored row and no capsule candidate is created or
 published. See
 [`INTERNAL_REPORT_REVIEW_PACKET_CONTROLLED_WRITER.md`](INTERNAL_REPORT_REVIEW_PACKET_CONTROLLED_WRITER.md).
+
+---
+
+## Phase 39 — policy unchanged, publication still deferred
+
+The Phase 39 packet-decision writer **does not alter this policy** and adds no publishing code, no
+resolver call, and no capsule publication path. `capsule_candidate_ready` and `publication_allowed`
+remain false on every stored decision, and `publish_capsule` / `agentnet_publish` are denied both as
+decision intents and as draft attributes. See
+[`INTERNAL_REPORT_REVIEW_PACKET_DECISION_CONTROLLED_WRITER.md`](INTERNAL_REPORT_REVIEW_PACKET_DECISION_CONTROLLED_WRITER.md).

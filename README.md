@@ -127,9 +127,11 @@ peak/
 │   ├── INTERNAL_ASSESSMENT_REPORT_DRAFT_IDEMPOTENCY_POLICY.md # DB-enforced idempotency for report-draft rows (Phase 37)
 │   ├── INTERNAL_REPORT_REVIEW_PACKET_CONTROLLED_WRITER.md # Tenth DB-backed writer, for internal_report_review_packets (Phase 38)
 │   ├── INTERNAL_REPORT_REVIEW_PACKET_IDEMPOTENCY_POLICY.md # DB-enforced idempotency for review-packet rows (Phase 38)
+│   ├── INTERNAL_REPORT_REVIEW_PACKET_DECISION_CONTROLLED_WRITER.md # Eleventh DB-backed writer, for packet decisions (Phase 39)
+│   ├── INTERNAL_REPORT_REVIEW_PACKET_DECISION_IDEMPOTENCY_POLICY.md # DB-enforced idempotency for packet-decision rows (Phase 39)
 │   └── IMPLEMENTATION_PLAN.md
 ├── peak/                         # Python tooling layer (source only; no data)
-│   ├── db/                       # base, enums, models, session + agent_run (P20), evidence (P21), review (P22), source-ingestion (P24), agent-task-queue (P27), review-bundle (P30), internal-reviewer-decision (P33), intake-note (P34), internal-assessment-report-draft (P37) & internal-report-review-packet (P38) writers
+│   ├── db/                       # base, enums, models, session + agent_run (P20), evidence (P21), review (P22), source-ingestion (P24), agent-task-queue (P27), review-bundle (P30), internal-reviewer-decision (P33), intake-note (P34), internal-assessment-report-draft (P37), internal-report-review-packet (P38) & packet-decision (P39) writers
 │   ├── agentnet/                 # Governance wrapper for the AgentNet MCP connector (no calls)
 │   ├── agents/                   # Agent execution harness (mock) + agent run persistence mapping (no live DB)
 │   ├── workers/                  # Production-shaped workers (evidence normalization; review-gated)
@@ -1176,6 +1178,48 @@ allowing only `internal_report_review_packets` / `create_internal_report_review_
 
 ```bash
 make validate-phase38   # DB-backed via .venv (temporary SQLite structural smoke)
+```
+
+### Internal Report Review Packet Decision Controlled Writer (Phase 39)
+
+The **eleventh** narrow live DB writer. It persists **exactly one**
+`internal_report_review_packet_decisions` row — a Peak human reviewer's **internal-only decision**
+on a Phase 38 review packet — closing the internal report review loop.
+
+- **Why a new table.** Phase 39 was first specified as a bridge over the Phase 33
+  `internal_reviewer_decision_records` writer. That was verified empirically and does not work: the
+  Phase 33 writer hard-requires a review-bundle reference (a packet decision has none, and the
+  packet table has no bundle column), and its explicit record mapping silently drops packet /
+  report-draft / plan linkage. A decision written that way could not answer *which review packet was
+  this decision about?* Phase 33 is untouched and remains the writer for review-bundle decisions.
+- **The audit chain is preserved**: packet → report draft → report plan, with both upstream payload
+  fingerprints copied from the **stored** rows.
+- **Insert-only.** The writer performs three reads (Engagement, packet, report draft) and one
+  insert. It never updates the packet or report-draft row — the receipt reports
+  `packet_row_updated=false` / `report_draft_row_updated=false`, and the tests assert both rows are
+  byte-for-byte unchanged after a decision is written.
+- **Closed decision vocabulary.** It reuses the Phase 32 `ALLOWED_DECISION_INTENTS` set verbatim, so
+  approval-like and external-facing intents are denied automatically.
+  **`ready_for_internal_use` is internal readiness, not client-facing approval.**
+  `decision_status` (`decision_recorded` / `needs_followup`) is **server-derived** from the intent;
+  the governed `review_status` / `lifecycle_status` axes stay inside the Phase 9 vocabulary.
+- **Public entry point:** `persist_internal_report_review_packet_decision(controlled_write_request,
+  *, session_factory=None) -> InternalReportReviewPacketDecisionWriteReceipt`. Stored-`Engagement`
+  authorization; idempotency boundary `(owner_id, client_id, engagement_id, idempotency_key)` with a
+  `payload_fingerprint` binding both upstream artifacts.
+- **Migration `012_internal_report_review_packet_decisions`** (`down_revision = 011_…`) adds one
+  table, no INSERT/seed; single head; `make db-check` now expects **18 tables**. Exactly one new
+  Phase 17 allowlist pair. Index names use a short `ix_irrpd_` prefix — the convention-derived names
+  would reach 78 characters, over MySQL's 64-char limit (applying the Phase 38 finding proactively).
+- It approves nothing for client use, verifies nothing financially, publishes nothing, executes
+  nothing, calls no Phase 22 writer, and creates no `review_records` / `agent_run_records` row.
+- [`peak/db/internal_report_review_packet_decision_writer.py`](peak/db/internal_report_review_packet_decision_writer.py),
+  [`docs/INTERNAL_REPORT_REVIEW_PACKET_DECISION_CONTROLLED_WRITER.md`](docs/INTERNAL_REPORT_REVIEW_PACKET_DECISION_CONTROLLED_WRITER.md),
+  and
+  [`docs/INTERNAL_REPORT_REVIEW_PACKET_DECISION_IDEMPOTENCY_POLICY.md`](docs/INTERNAL_REPORT_REVIEW_PACKET_DECISION_IDEMPOTENCY_POLICY.md).
+
+```bash
+make validate-phase39   # DB-backed via .venv (temporary SQLite structural smoke)
 ```
 
 ## Design constraints

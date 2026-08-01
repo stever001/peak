@@ -1147,6 +1147,58 @@ persistence counterpart to Phase 36):**
   [`../tests/validate_phase38_internal_report_review_packet_writer.py`](../tests/validate_phase38_internal_report_review_packet_writer.py)
   (`make validate-phase38`; DB-backed via `.venv`).
 
+**Internal Report Review Packet Decision Controlled Writer (Phase 39 — eleventh DB-backed writer;
+closes the internal report review loop):**
+
+- [x] **A justified new table, not drift.** Phase 39 was first specified as a *bridge* over the
+  Phase 33 `internal_reviewer_decision_records` writer, to be used only if that writer could safely
+  represent a packet decision. It was verified empirically that it **cannot**: the Phase 33 writer
+  hard-requires `review_bundle_ref`/`review_bundle_record_id` (an honest packet decision has
+  neither, and `internal_report_review_packets` has no bundle column), and its explicit record
+  mapping has a closed `details_json` key set that **silently drops** packet / report-draft / plan
+  linkage — so the row could not answer *which review packet was this decision about?* The only
+  workarounds were to write a packet id into a column named and indexed as a review-bundle
+  reference, or to lose the linkage. A separate narrow table was approved on that evidence.
+  **Phase 33 is untouched** and remains the writer for review-bundle reviewer decisions.
+- [x] **The narrow writer.** Persists **exactly one**
+  `internal_report_review_packet_decisions` row through the Phase 17 boundary — allowing only
+  `internal_report_review_packet_decisions` / `create_internal_report_review_packet_decision`.
+  [`../peak/db/internal_report_review_packet_decision_writer.py`](../peak/db/internal_report_review_packet_decision_writer.py),
+  migration
+  [`../alembic/versions/012_internal_report_review_packet_decisions.py`](../alembic/versions/012_internal_report_review_packet_decisions.py),
+  docs
+  [`INTERNAL_REPORT_REVIEW_PACKET_DECISION_CONTROLLED_WRITER.md`](INTERNAL_REPORT_REVIEW_PACKET_DECISION_CONTROLLED_WRITER.md)
+  / [`INTERNAL_REPORT_REVIEW_PACKET_DECISION_IDEMPOTENCY_POLICY.md`](INTERNAL_REPORT_REVIEW_PACKET_DECISION_IDEMPOTENCY_POLICY.md).
+- [x] **Audit chain preserved.** The row stores `internal_report_review_packet_id`,
+  `internal_assessment_report_draft_id`, `report_plan_id`, `plan_fingerprint`, both source-table
+  labels, and both upstream payload fingerprints — the latter copied from the **stored** rows.
+- [x] **Insert-only; nothing upstream is mutated.** Three reads (Engagement, packet, report draft)
+  and one insert. The packet's `reviewer_decision_status` / `reviewer_decision_record_id` are **not**
+  advanced; linking a packet back to its decision is deliberately left to a later controlled path.
+  Tests assert both upstream rows are byte-for-byte unchanged.
+- [x] **Closed decision vocabulary.** Reuses Phase 32 `ALLOWED_DECISION_INTENTS` verbatim, so
+  approval-like and external-facing intents are denied automatically. **`ready_for_internal_use` is
+  internal readiness, not client-facing approval.** `decision_status`
+  (`decision_recorded` / `needs_followup`) is **server-derived** from the intent and participates in
+  the fingerprint; the governed `review_status` / `lifecycle_status` axes stay inside the Phase 9
+  vocabulary rather than absorbing decision-specific values.
+- [x] **Write-time authorization and linkage.** Stored `Engagement` gate (scope, identity,
+  lifecycle; identity necessary but not sufficient), then read-only verification of the stored
+  packet (tenant, scope, linkage, `ready_for_internal_review`, pre-decision, non-elevated posture)
+  and the stored report draft (tenant, scope, linkage, `plan_persisted`, non-elevated posture).
+- [x] **Schema.** Migration `012` (`down_revision = 011_internal_report_review_packets`) creates one
+  table with no INSERT/seed; the downgrade drops only that table; the head stays single and linear;
+  the controlled DB now has **18 tables**; exactly **one** new allowlist pair (13 tables / 15
+  actions). Index names use a short `ix_irrpd_` prefix because the convention-derived names would
+  reach **78** characters — over MySQL's 64-char limit. This applies the Phase 38 finding
+  proactively rather than discovering it in managed MySQL.
+- [x] **Nothing escalates.** No approval for client use, client-facing output, financial/ROI
+  verification, capsule publication, AgentNet publish, LLM/MockLLM, agent or mock-agent execution,
+  MCP/resolver/network call, generic CRUD, or update/delete/upsert path; no Phase 22 writer call and
+  no `review_records`/`agent_run_records` row. Checked by
+  [`../tests/validate_phase39_internal_report_review_packet_decision_writer.py`](../tests/validate_phase39_internal_report_review_packet_decision_writer.py)
+  (`make validate-phase39`; DB-backed via `.venv`).
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

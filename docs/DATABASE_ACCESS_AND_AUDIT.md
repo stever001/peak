@@ -259,3 +259,15 @@ new row and the prior one stays intact. Every write returns a typed receipt whos
 **actual** behavior and which never echoes report prose, raw content, credentials, DSNs, raw SQL,
 stack traces, or approval decisions. See
 [`INTERNAL_REPORT_REVIEW_PACKET_CONTROLLED_WRITER.md`](INTERNAL_REPORT_REVIEW_PACKET_CONTROLLED_WRITER.md).
+
+---
+
+## Phase 39 — decisions are append-only audit facts
+
+`internal_report_review_packet_decisions` rows carry the universal audit columns plus
+`requested_by` / `requester_role` / `reviewer_ref`, the full packet -> report-draft -> report-plan
+chain, both upstream payload fingerprints, and `idempotency_key` / `payload_fingerprint`. The table
+has **no update path**: a reviewer changing their mind writes a new row under a new key, and the
+prior decision stays intact — what a reviewer decided, and when, is a historical fact. The writer is
+insert-only and never modifies the packet or report-draft row. See
+[`INTERNAL_REPORT_REVIEW_PACKET_DECISION_CONTROLLED_WRITER.md`](INTERNAL_REPORT_REVIEW_PACKET_DECISION_CONTROLLED_WRITER.md).

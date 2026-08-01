@@ -1,8 +1,8 @@
-# Internal Report Review Packet Idempotency Policy (Phase 38)
+# Internal Report Review Packet Decision Idempotency Policy (Phase 39)
 
-DB-enforced idempotency for `internal_report_review_packets`, mirroring the policy every prior
-controlled writer follows. The writer itself is documented in
-[`INTERNAL_REPORT_REVIEW_PACKET_CONTROLLED_WRITER.md`](INTERNAL_REPORT_REVIEW_PACKET_CONTROLLED_WRITER.md).
+DB-enforced idempotency for `internal_report_review_packet_decisions`, mirroring the policy every
+prior controlled writer follows. The writer itself is documented in
+[`INTERNAL_REPORT_REVIEW_PACKET_DECISION_CONTROLLED_WRITER.md`](INTERNAL_REPORT_REVIEW_PACKET_DECISION_CONTROLLED_WRITER.md).
 
 ---
 
@@ -12,7 +12,8 @@ controlled writer follows. The writer itself is documented in
 UNIQUE (owner_id, client_id, engagement_id, idempotency_key)
 ```
 
-Index name: `uq_internal_report_review_packets_idem`.
+Index name: `uq_internal_report_review_packet_decisions_idem` (47 characters — within MySQL's
+64-character identifier limit).
 
 The boundary includes identity context, so an idempotency key **cannot collide across
 owner / client / engagement**. Two different engagements may safely reuse the same caller key. The
@@ -29,26 +30,27 @@ the exact payload that will be stored:
 - identity and authorization: `owner_id`, `client_id`, `engagement_id`, `authorization_scope`
 - requester: `requested_by`, `requester_role`
 - controlled-write target: `target_table`, `requested_action`, `idempotency_key`
-- report-draft linkage: `internal_assessment_report_draft_id`, `source_report_draft_table`,
-  `report_plan_id`, `plan_fingerprint`, `report_draft_payload_fingerprint`
-- packet labels: `assigned_reviewer`, `packet_purpose`
-- packet content: `section_review_checklist`, `evidence_trace_refs`, `open_gaps`, `blocked_items`,
-  `reviewer_questions`, `readiness_checklist`, `required_followup_actions`
-- future-gate placeholders: `future_financial_verification_items`,
-  `future_capsule_candidate_items`
-- stored posture: `audience`, `packet_status`, `review_status`, `lifecycle_status`,
-  `reviewer_decision_status`, and every posture boolean
+- audit chain: `internal_report_review_packet_id`, `source_packet_table`,
+  `internal_assessment_report_draft_id`, `source_report_draft_table`, `report_plan_id`,
+  `plan_fingerprint`, `packet_payload_fingerprint`, `report_draft_payload_fingerprint`
+- decision content: `reviewer_ref`, `decision_intent`, `safe_decision_summary`,
+  `requested_followup_actions`
+- stored posture: `decision_status`, `decision_scope`, `audience`, `review_status`,
+  `lifecycle_status`, and every posture boolean
 
 The serialization is `sort_keys=True` with compact separators, so it is deterministic and
 order-independent at the key level.
 
-**`report_draft_payload_fingerprint` is taken from the stored Phase 37 row, not from the caller.**
-That means the digest is bound to the report-draft payload the packet was actually built against: if
-the underlying report draft differs, the packet fingerprint differs, and a replay under the same key
+**Both upstream fingerprints are taken from the stored rows, not from the caller.** The digest is
+therefore bound to the exact packet *and* report-draft payloads the decision was made against: if
+either upstream artifact differs, the decision fingerprint differs, and a replay under the same key
 becomes a conflict rather than a silent match.
 
+**`decision_status` participates** even though it is server-derived — so a decision recorded under
+`needs_more_evidence` can never silently replay as one recorded under `ready_for_internal_use`.
+
 **No raw content participates.** The fingerprint is computed over references, labels, statuses, and
-short internal prompts — the same material the row stores.
+one bounded internal summary — the same material the row stores.
 
 ---
 
@@ -60,13 +62,16 @@ short internal prompts — the same material the row stores.
 | Same boundary + same key + **same** fingerprint | `idempotent_replay` | existing row id returned, **nothing modified** |
 | Same boundary + same key + **different** fingerprint | `denied` / `idempotency_conflict` | **no mutation**, no row returned |
 | Governance failure before the DB | `denied` | no connection opened, no SQL executed |
-| Stored engagement or report-draft check fails | `denied` | connection opened for the read; **no write** |
+| Stored engagement / packet / report-draft check fails | `denied` | connection opened for the reads; **no write** |
 | Infrastructure failure before insert | `failed_before_write` | no row created |
 | Commit outcome unconfirmable | `write_outcome_uncertain` | never claims a row does or does not exist |
 
 A replay is a **read**, not a write: the receipt reports
 `database_connection_made=true`, `sql_execution_made=true`, `database_write_made=false`,
 `stored_record_created=false`, `existing_record_returned=true`, `transaction_committed=false`.
+
+In **every** outcome — including a successful create — `packet_row_updated` and
+`report_draft_row_updated` remain false. Phase 39 is insert-only.
 
 ---
 
@@ -85,37 +90,29 @@ can still win the race between the pre-check and the commit, so the insert is wr
 
 An unexpected `SQLAlchemyError` is converted into a safe structured result: `commit_uncertain`
 (`write_outcome_uncertain`) if a commit had been attempted, otherwise `failed_before_write`. Only
-the exception **class name** is reported — never SQL, a connection URL, or packet content.
+the exception **class name** is reported — never SQL, a connection URL, or decision content.
 
 ---
 
 ## Choosing a key
 
 The caller owns the key. It must be a string of at most 128 characters and is stored verbatim as a
-safe reference (it is not a secret). A stable, meaningful choice is the report-draft id the packet
-covers — for example `packet::<internal_assessment_report_draft_id>` — so re-issuing a packet for
-the same draft replays rather than duplicating.
+safe reference (it is not a secret). A stable, meaningful choice is the packet the decision covers —
+for example `packet_decision::<internal_report_review_packet_id>` — so re-issuing the same decision
+replays rather than duplicating.
 
-Reusing a key with a materially different packet is a **conflict, not an overwrite** — this table
-has no update path. Re-issuing a changed packet means writing a new row under a new key, leaving the
-prior packet intact for audit: what a reviewer was shown is a historical fact.
+Reusing a key with a materially different decision is a **conflict, not an overwrite** — this table
+has no update path. A reviewer changing their mind writes a **new** row under a new key; the prior
+decision stays intact. What a reviewer decided, and when, is a historical fact.
 
 ---
 
 ## Related
 
+- [`INTERNAL_REPORT_REVIEW_PACKET_DECISION_CONTROLLED_WRITER.md`](INTERNAL_REPORT_REVIEW_PACKET_DECISION_CONTROLLED_WRITER.md)
 - [`INTERNAL_REPORT_REVIEW_PACKET_CONTROLLED_WRITER.md`](INTERNAL_REPORT_REVIEW_PACKET_CONTROLLED_WRITER.md)
-- [`INTERNAL_ASSESSMENT_REPORT_DRAFT_CONTROLLED_WRITER.md`](INTERNAL_ASSESSMENT_REPORT_DRAFT_CONTROLLED_WRITER.md)
+- [`INTERNAL_REVIEWER_DECISION_CONTROLLED_WRITER.md`](INTERNAL_REVIEWER_DECISION_CONTROLLED_WRITER.md) —
+  the Phase 33 writer for **review-bundle** reviewer decisions, which is a different artifact
 - [`CONTROLLED_WRITE_ALLOWLIST.md`](CONTROLLED_WRITE_ALLOWLIST.md)
 - [`MANAGED_MYSQL_PERSISTENCE_RUBRIC.md`](MANAGED_MYSQL_PERSISTENCE_RUBRIC.md) — **SQLite is not the
   production-readiness proof path**; managed MySQL test/staging validation is required.
-
----
-
-## Phase 39 — decisions bind to this table's payload fingerprint
-
-A Phase 39 packet decision copies this table's stored `payload_fingerprint` into its own
-`packet_payload_fingerprint`, and that value participates in the decision's fingerprint. A decision
-is therefore bound to the exact packet it was made against: if the packet differs, the decision
-fingerprint differs and a replay under the same key becomes a conflict. See
-[`INTERNAL_REPORT_REVIEW_PACKET_DECISION_IDEMPOTENCY_POLICY.md`](INTERNAL_REPORT_REVIEW_PACKET_DECISION_IDEMPOTENCY_POLICY.md).

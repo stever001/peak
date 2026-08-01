@@ -168,3 +168,21 @@ candidate slot per decision. It reads no row and approves nothing: every recomme
 stays `audience="internal"` with `client_facing_approved` / `financial_verified` /
 `capsule_candidate_ready` / `publication_allowed` / `execution_allowed` all false. See
 [`INTERNAL_ASSESSMENT_REPORT_PLANNING_BOUNDARY.md`](INTERNAL_ASSESSMENT_REPORT_PLANNING_BOUNDARY.md).
+
+---
+
+## Phase 39 — this writer is for review-bundle decisions, not packet decisions
+
+Phase 39 needed to record a reviewer decision on a Phase 38 **internal report review packet**. This
+writer cannot represent that artifact, which was verified empirically:
+
+1. it hard-requires `review_bundle_ref` or `review_bundle_record_id`, and a packet decision has
+   neither (`internal_report_review_packets` carries no review-bundle column);
+2. `_build_record` is an explicit mapping with a closed `details_json` key set, so packet /
+   report-draft / plan / fingerprint refs attached to the draft are **silently dropped**;
+3. the resulting row could not answer *which review packet was this decision about?*
+
+Rather than overload `review_bundle_record_id` (a column named and **indexed** as a
+`review_bundle_records` reference) or lose the linkage, Phase 39 added a separate narrow table.
+**This writer is unchanged** and remains the writer for review-bundle reviewer decisions. See
+[`INTERNAL_REPORT_REVIEW_PACKET_DECISION_CONTROLLED_WRITER.md`](INTERNAL_REPORT_REVIEW_PACKET_DECISION_CONTROLLED_WRITER.md).

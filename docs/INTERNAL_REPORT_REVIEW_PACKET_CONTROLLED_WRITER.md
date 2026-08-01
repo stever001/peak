@@ -286,3 +286,17 @@ review writer** and creates **no `review_records` or `agent_run_records` row**.
 ```bash
 make validate-phase38   # DB-backed via .venv (temporary SQLite structural smoke)
 ```
+
+---
+
+## Phase 39 — the downstream reviewer decision
+
+Phase 39 records a reviewer's internal-only decision on a packet in a separate
+`internal_report_review_packet_decisions` row. It **reads this table only** — it verifies the
+packet's tenant, scope, linkage, `ready_for_internal_review` status, pre-decision state
+(`reviewer_decision_status = not_decided` and a null `reviewer_decision_record_id`), and
+non-elevated posture, then copies the packet's `payload_fingerprint` into the decision row.
+
+**The packet row is never modified by Phase 39.** Advancing `reviewer_decision_status` or setting
+`reviewer_decision_record_id` is deliberately left to a later controlled path. See
+[`INTERNAL_REPORT_REVIEW_PACKET_DECISION_CONTROLLED_WRITER.md`](INTERNAL_REPORT_REVIEW_PACKET_DECISION_CONTROLLED_WRITER.md).

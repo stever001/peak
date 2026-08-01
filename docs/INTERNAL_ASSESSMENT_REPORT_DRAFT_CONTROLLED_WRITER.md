@@ -265,3 +265,14 @@ modify the report draft: it loads the row read-only and verifies tenant, scope, 
 persisting a separate `internal_report_review_packets` row. A packet's
 `report_draft_payload_fingerprint` is copied from this table's stored `payload_fingerprint`. See
 [`INTERNAL_REPORT_REVIEW_PACKET_CONTROLLED_WRITER.md`](INTERNAL_REPORT_REVIEW_PACKET_CONTROLLED_WRITER.md).
+
+---
+
+## Phase 39 — read again at decision time
+
+Phase 39 re-verifies this table read-only when a reviewer decision is recorded: existence, the id
+matching the packet's reference, tenant/scope, `report_plan_id` / `plan_fingerprint`,
+`audience=internal`, `output_status=plan_persisted`, review/lifecycle state, and non-elevated
+posture. The draft's `payload_fingerprint` is copied into the decision row. **This table is never
+modified by Phase 39.** See
+[`INTERNAL_REPORT_REVIEW_PACKET_DECISION_CONTROLLED_WRITER.md`](INTERNAL_REPORT_REVIEW_PACKET_DECISION_CONTROLLED_WRITER.md).

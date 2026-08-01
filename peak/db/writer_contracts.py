@@ -837,3 +837,149 @@ class InternalReportReviewPacketWriteReceipt:
     database_write_at: Optional[str] = None
     reasons: List[str] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
+
+
+class InternalReportReviewPacketDecisionWriteOutcome:
+    """Outcome codes for a controlled packet-decision write (str constants)."""
+
+    CREATED = "created"
+    IDEMPOTENT_REPLAY = "idempotent_replay"
+    DENIED = "denied"
+    FAILED_BEFORE_WRITE = "failed_before_write"
+    WRITE_OUTCOME_UNCERTAIN = "write_outcome_uncertain"
+
+
+# The single table/action the Phase 39 packet-decision writer may target (Phase 17 subset).
+PACKET_DECISION_TARGET_TABLE = "internal_report_review_packet_decisions"
+PACKET_DECISION_TARGET_ACTION = "create_internal_report_review_packet_decision"
+
+PACKET_DECISION_ALL_OUTCOMES = (
+    InternalReportReviewPacketDecisionWriteOutcome.CREATED,
+    InternalReportReviewPacketDecisionWriteOutcome.IDEMPOTENT_REPLAY,
+    InternalReportReviewPacketDecisionWriteOutcome.DENIED,
+    InternalReportReviewPacketDecisionWriteOutcome.FAILED_BEFORE_WRITE,
+    InternalReportReviewPacketDecisionWriteOutcome.WRITE_OUTCOME_UNCERTAIN,
+)
+
+# Fixed stored values (see docs/INTERNAL_REPORT_REVIEW_PACKET_DECISION_CONTROLLED_WRITER.md).
+PACKET_DECISION_SCOPE = "internal_report_review_packet"
+PACKET_DECISION_SOURCE_PACKET_TABLE = "internal_report_review_packets"
+PACKET_DECISION_SOURCE_REPORT_DRAFT_TABLE = "internal_assessment_report_drafts"
+# Decision-specific axis, server-derived from decision_intent (never caller-supplied).
+PACKET_DECISION_STATUS_RECORDED = "decision_recorded"
+PACKET_DECISION_STATUS_NEEDS_FOLLOWUP = "needs_followup"
+
+
+@dataclass
+class InternalReportReviewPacketDecisionDraft:
+    """A DB-free input draft for one internal-only packet-review decision (never persisted alone).
+
+    Records a Peak human reviewer's decision on a Phase 38 ``internal_report_review_packets`` row,
+    preserving the audit chain packet -> report draft -> report plan. It carries **short safe
+    labels, references, and one bounded internal summary only** — never final client-facing
+    language, raw intake-note / packet / evidence / interview text, source bytes, generated agent
+    output, LLM prompts, credentials, DSNs, raw SQL, stack traces, client-facing approvals, ROI or
+    savings figures, or capsule / AgentNet publish payloads.
+
+    ``decision_record_id`` and ``created_at`` are server-controlled and must be left ``None``.
+    ``decision_status``, ``decision_scope``, ``audience``, ``review_status``, and
+    ``lifecycle_status`` are all server-stamped by the writer and are not caller inputs.
+
+    ``requested_followup_actions`` is a list of strict dicts ``{"action_id", "status"}``.
+    """
+
+    decision_record_id: Optional[str] = None  # server-controlled; caller must leave None
+    owner_id: Optional[str] = None
+    client_id: Optional[str] = None
+    engagement_id: Optional[str] = None
+    authorization_scope: Optional[str] = None
+    # Audit chain (each verified against the stored rows at write time).
+    internal_report_review_packet_id: Optional[str] = None
+    internal_assessment_report_draft_id: Optional[str] = None
+    report_plan_id: Optional[str] = None
+    plan_fingerprint: Optional[str] = None
+    report_draft_payload_fingerprint: Optional[str] = None
+    packet_payload_fingerprint: Optional[str] = None
+    reviewer_ref: Optional[str] = None       # short safe reviewer label/ref (optional)
+    decision_intent: Optional[str] = None    # closed Phase 32 internal-only vocabulary
+    safe_decision_summary: Optional[str] = None  # short single-line internal note (optional)
+    requested_followup_actions: List[dict] = field(default_factory=list)
+    audience: str = "internal"
+    client_facing_approved: bool = False
+    review_approval_made: bool = False
+    financial_verified: bool = False
+    capsule_candidate_ready: bool = False
+    publication_allowed: bool = False
+    execution_allowed: bool = False
+    requires_human_review: bool = True
+    reasons: List[str] = field(default_factory=list)
+    warnings: List[str] = field(default_factory=list)
+    created_at: Optional[str] = None  # server-stamped created_at is authoritative
+
+
+@dataclass
+class InternalReportReviewPacketDecisionWriteReceipt:
+    """A typed, auditable receipt for one controlled packet-decision write attempt.
+
+    Contains no credentials, no SQL, no connection URL, and **no report prose**. Denial reasons
+    report only a field name, an item position, or a marker *category*, never the offending value.
+
+    This write persists an **internal-only** reviewer decision. It approves nothing for client use,
+    verifies nothing financially, publishes nothing, executes nothing, updates **no** packet or
+    report-draft row, calls no Phase 22 review writer, and creates no ``review_records`` /
+    ``agent_run_records`` row.
+    """
+
+    outcome: str = InternalReportReviewPacketDecisionWriteOutcome.DENIED
+    permitted: bool = False
+    reason_code: Optional[str] = None
+    target_table: str = PACKET_DECISION_TARGET_TABLE
+    target_action: str = PACKET_DECISION_TARGET_ACTION
+    # Stored identity — set only when safely known (created / idempotent_replay).
+    stored_record_id: Optional[str] = None
+    internal_report_review_packet_id: Optional[str] = None
+    internal_assessment_report_draft_id: Optional[str] = None
+    report_plan_id: Optional[str] = None
+    plan_fingerprint: Optional[str] = None
+    decision_intent: Optional[str] = None
+    idempotency_key: Optional[str] = None
+    audit_trace_ref: Optional[str] = None
+    # Actual-behavior flags.
+    database_connection_made: bool = False
+    sql_execution_made: bool = False
+    database_write_made: bool = False
+    stored_record_created: bool = False
+    existing_record_returned: bool = False
+    transaction_committed: bool = False
+    outcome_uncertain: bool = False
+    # Internal-only posture of the record this write concerns (safe labels only).
+    audience: Optional[str] = None
+    decision_scope: Optional[str] = None
+    decision_status: Optional[str] = None
+    review_status: Optional[str] = None
+    lifecycle_status: Optional[str] = None
+    requested_followup_action_count: int = 0
+    # Non-effect flags — always False (Phase 39 approves/verifies/publishes/executes nothing and
+    # mutates no other row).
+    packet_row_updated: bool = False
+    report_draft_row_updated: bool = False
+    review_records_write_made: bool = False
+    agent_run_records_write_made: bool = False
+    review_approval_made: bool = False
+    client_facing_output_created: bool = False
+    client_facing_approval_made: bool = False
+    financial_verification_made: bool = False
+    capsule_candidate_created: bool = False
+    capsule_publication_made: bool = False
+    agentnet_publication_made: bool = False
+    agent_execution_made: bool = False
+    mock_agent_execution_made: bool = False
+    llm_call_made: bool = False
+    agentnet_call_made: bool = False
+    resolver_call_made: bool = False
+    network_call_made: bool = False
+    # Server-stamped timestamps read back from the DB (ISO strings), when known.
+    created_at: Optional[str] = None
+    database_write_at: Optional[str] = None
+    reasons: List[str] = field(default_factory=list)
+    warnings: List[str] = field(default_factory=list)

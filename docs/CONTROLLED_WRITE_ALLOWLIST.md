@@ -177,3 +177,13 @@ Phase 38 adds exactly one table/action pair:
 `internal_report_review_packets` / `create_internal_report_review_packet`. No update, delete,
 upsert, or raw-SQL action was added, and no other table was broadened. See
 [`INTERNAL_REPORT_REVIEW_PACKET_CONTROLLED_WRITER.md`](INTERNAL_REPORT_REVIEW_PACKET_CONTROLLED_WRITER.md).
+
+---
+
+## Phase 39 — one new pair
+
+Phase 39 adds exactly one table/action pair:
+`internal_report_review_packet_decisions` / `create_internal_report_review_packet_decision`
+(13 tables / 15 actions). No update, delete, upsert, or raw-SQL action was added, and no other table
+was broadened. See
+[`INTERNAL_REPORT_REVIEW_PACKET_DECISION_CONTROLLED_WRITER.md`](INTERNAL_REPORT_REVIEW_PACKET_DECISION_CONTROLLED_WRITER.md).

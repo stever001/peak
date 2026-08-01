@@ -65,6 +65,23 @@ REPORTS_FILES = [
 
 TABLE = "internal_report_review_packets"
 ACTION = "create_internal_report_review_packet"
+# The Phase 17 allowlist exactly as Phase 38 left it (12 tables / 14 actions). Later phases may
+# only ADD to this; removal of any entry is a regression.
+PHASE38_BASELINE_TABLES = {
+    "evidence_references", "engagement_records", "review_records", "agent_run_records",
+    "source_ingestion_records", "agent_task_queue_records", "review_bundle_records",
+    "internal_reviewer_decision_records", "intake_note_records",
+    "internal_assessment_report_drafts", "internal_report_review_packets",
+    "capsule_publication_candidates",
+}
+PHASE38_BASELINE_ACTIONS = {
+    "create_draft", "create_review_record", "create_agent_run_record",
+    "create_source_ingestion_record", "create_agent_task_queue_record",
+    "create_review_bundle_record", "create_internal_reviewer_decision_record",
+    "create_intake_note_record", "create_internal_assessment_report_draft",
+    "create_internal_report_review_packet", "create_capsule_candidate_draft",
+    "update_review_status", "update_lifecycle_status", "mark_superseded",
+}
 PACKET_STATUS = "ready_for_internal_review"
 DECISION_STATUS = "not_decided"
 MYSQL_IDENTIFIER_LIMIT = 64
@@ -227,8 +244,12 @@ def structural_checks() -> None:
     from peak.persistence.allowlist import ALLOWED_ACTIONS, ALLOWED_TABLES
     check(f"'{TABLE}' on the allowlist", TABLE in ALLOWED_TABLES)
     check(f"'{ACTION}' on the allowlist", ACTION in ALLOWED_ACTIONS)
-    check("exactly one new table added (12 total)", len(ALLOWED_TABLES) == 12)
-    check("exactly one new action added (14 total)", len(ALLOWED_ACTIONS) == 14)
+    # Scoped to what PHASE 38 contributed. Later phases add their own pairs additively (Phase 39
+    # adds internal_report_review_packet_decisions), so this pins the Phase 38 baseline as a
+    # SUBSET — nothing Phase 38 established may be removed — not a frozen global count.
+    check("Phase 38 allowlist baseline still present (nothing removed)",
+          PHASE38_BASELINE_TABLES <= set(ALLOWED_TABLES)
+          and PHASE38_BASELINE_ACTIONS <= set(ALLOWED_ACTIONS))
     check("no update/delete/upsert/raw-SQL action added",
           not any(re.search(r"upsert|raw_sql|hard_delete", a) for a in ALLOWED_ACTIONS))
 
@@ -248,8 +269,8 @@ def structural_checks() -> None:
           mig.split("def downgrade")[1].count("op.drop_table(") == 1)
     versions = sorted(f for f in os.listdir(os.path.join(REPO_ROOT, "alembic", "versions"))
                       if f.endswith(".py"))
-    check("011 is the newest migration",
-          versions[-1].startswith("011_internal_report_review_packets"))
+    check("migration 011 is present (later phases append their own additively)",
+          any(v.startswith("011_internal_report_review_packets") for v in versions))
     downs = [re.search(r'down_revision\s*=\s*"?([^"\s]+)"?',
                        read(os.path.join("alembic", "versions", f))).group(1) for f in versions]
     check("migration chain stays linear (no duplicate down_revision)",
@@ -267,8 +288,8 @@ def structural_checks() -> None:
     p11 = importlib.import_module("tests.validate_phase11_db_scaffold")
     expected = list(getattr(p11, "EXPECTED_TABLES", []))
     check("db-check EXPECTED_TABLES includes the new table", TABLE in expected)
-    check("db-check now expects exactly 17 tables (16 prior + the review-packet table)",
-          len(expected) == 17)
+    check("db-check expects at least the 17 tables present at the Phase 38 baseline",
+          len(expected) >= 17)
     models_src = read("peak/db/models.py")
     check("model source declares the new table", f'__tablename__ = "{TABLE}"' in models_src)
     check("model source registers the new class in ALL_MODELS",
@@ -297,7 +318,7 @@ def _model_checks(Rec, all_models) -> None:
     if Rec is None:
         return
     check("InternalReportReviewPacketRecord in ALL_MODELS", Rec in all_models)
-    check("seventeen models registered", len(all_models) == 17)
+    check("at least the 17 models present at the Phase 38 baseline", len(all_models) >= 17)
     check(f"__tablename__ == {TABLE}", Rec.__tablename__ == TABLE)
     cols = set(Rec.__table__.columns.keys())
     required = {

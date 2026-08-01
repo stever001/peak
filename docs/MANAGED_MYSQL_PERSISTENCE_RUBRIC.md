@@ -127,3 +127,16 @@ path**: the convention-derived index name
 MySQL's 64-character identifier limit. SQLite accepts it silently; managed MySQL would reject the
 DDL. The short name is pinned in both the model and the migration, and the Phase 38 harness asserts
 every index/constraint name fits the limit.
+
+---
+
+## Phase 39 — one new operational table; the identifier-length check applied proactively
+
+`internal_report_review_packet_decisions` (Phase 39) is an operational table and follows this rubric
+in full. The controlled DB now has **18 tables**.
+
+The Phase 38 identifier-length lesson was applied **before** writing the migration rather than
+discovered afterwards: the table name is 39 characters, so convention-derived index names would have
+reached **78** characters, over MySQL's 64-character limit. Every index uses a short explicit
+`ix_irrpd_` prefix, and the harness asserts the limit for the model, the migration source, and the
+indexes actually applied.

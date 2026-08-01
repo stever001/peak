@@ -138,3 +138,13 @@ controlled internal-report-review-packet writer. Schema only: no INSERT, no seed
 destructive change; the downgrade drops only the new table. `make db-check` now expects **17
 tables**. Index names are pinned short so every identifier fits MySQL's 64-character limit. See
 [`INTERNAL_REPORT_REVIEW_PACKET_CONTROLLED_WRITER.md`](INTERNAL_REPORT_REVIEW_PACKET_CONTROLLED_WRITER.md).
+
+---
+
+## Phase 39 — internal_report_review_packet_decisions (18th table)
+
+Migration `012_internal_report_review_packet_decisions` adds the eighteenth table, backing the
+Phase 39 controlled packet-decision writer. Schema only: no INSERT, no seed data, no destructive
+change; the downgrade drops only the new table. `make db-check` now expects **18 tables**. Index
+names use a short `ix_irrpd_` prefix so every identifier fits MySQL's 64-character limit. See
+[`INTERNAL_REPORT_REVIEW_PACKET_DECISION_CONTROLLED_WRITER.md`](INTERNAL_REPORT_REVIEW_PACKET_DECISION_CONTROLLED_WRITER.md).

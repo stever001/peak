@@ -556,6 +556,93 @@ class InternalReportReviewPacketRecord(Base, GovernanceMixin, AuditMixin):
     payload_fingerprint: Mapped[Optional[str]] = mapped_column(String(64))
 
 
+class InternalReportReviewPacketDecisionRecord(Base, GovernanceMixin, AuditMixin):
+    __tablename__ = "internal_report_review_packet_decisions"
+    # Phase 39: a Peak human reviewer's **internal-only** decision on a Phase 38
+    # ``internal_report_review_packets`` row. A separate narrow table exists because the Phase 33
+    # ``internal_reviewer_decision_records`` writer cannot represent this artifact: it hard-requires
+    # a review-bundle reference (a packet decision has none), and its explicit record mapping has no
+    # slot for packet / report-draft / plan linkage, so that provenance would be silently dropped.
+    # This row therefore preserves the audit chain packet -> report draft -> report plan.
+    #
+    # It stores **no report prose**: no final client-facing language, no raw note/packet/evidence/
+    # interview text, no generated agent output, no ROI figure, no client-facing approval, and no
+    # capsule/AgentNet payload. ``decision_scope`` is fixed at ``internal_report_review_packet`` and
+    # ``audience`` at ``internal``. ``review_status`` / ``lifecycle_status`` stay inside the Phase 9
+    # governed vocabulary; the decision-specific axis is the separate ``decision_status`` column.
+    #
+    # Index naming: the table name is 39 characters, so the convention-derived
+    # ``ix_internal_report_review_packet_decisions_<col>`` would reach 78 characters for the longest
+    # columns — over MySQL's 64-character identifier limit. Every index therefore uses the short
+    # explicit ``ix_irrpd_<col>`` prefix (max 44). See the Phase 38 identifier-length finding in
+    # docs/PRODUCTION_PARITY_DB_VALIDATION.md.
+    __table_args__ = (
+        UniqueConstraint(
+            "owner_id",
+            "client_id",
+            "engagement_id",
+            "idempotency_key",
+            name="uq_internal_report_review_packet_decisions_idem",
+        ),
+        Index("ix_irrpd_client_id", "client_id"),
+        Index("ix_irrpd_engagement_id", "engagement_id"),
+        Index("ix_irrpd_owner_id", "owner_id"),
+        Index("ix_irrpd_authorization_scope", "authorization_scope"),
+        Index("ix_irrpd_review_status", "review_status"),
+        Index("ix_irrpd_lifecycle_status", "lifecycle_status"),
+        Index("ix_irrpd_agent_run_id", "agent_run_id"),
+        Index("ix_irrpd_packet_id", "internal_report_review_packet_id"),
+        Index("ix_irrpd_report_draft_id", "internal_assessment_report_draft_id"),
+        Index("ix_irrpd_report_plan_id", "report_plan_id"),
+        Index("ix_irrpd_plan_fingerprint", "plan_fingerprint"),
+        Index("ix_irrpd_audience", "audience"),
+        Index("ix_irrpd_decision_scope", "decision_scope"),
+        Index("ix_irrpd_decision_intent", "decision_intent"),
+        Index("ix_irrpd_decision_status", "decision_status"),
+        Index("ix_irrpd_idempotency_key", "idempotency_key"),
+        MYSQL_TABLE_ARGS,
+    )
+    # id convention: irrpd_<slug>
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    client_id: Mapped[Optional[str]] = mapped_column(String(64))
+    engagement_id: Mapped[Optional[str]] = mapped_column(String(64))
+    # Audit chain: packet -> report draft -> report plan (all verified against stored rows).
+    internal_report_review_packet_id: Mapped[Optional[str]] = mapped_column(String(64))
+    source_packet_table: Mapped[Optional[str]] = mapped_column(String(64))
+    internal_assessment_report_draft_id: Mapped[Optional[str]] = mapped_column(String(64))
+    source_report_draft_table: Mapped[Optional[str]] = mapped_column(String(64))
+    report_plan_id: Mapped[Optional[str]] = mapped_column(String(128))
+    plan_fingerprint: Mapped[Optional[str]] = mapped_column(String(64))
+    report_draft_payload_fingerprint: Mapped[Optional[str]] = mapped_column(String(64))
+    packet_payload_fingerprint: Mapped[Optional[str]] = mapped_column(String(64))
+    requested_by: Mapped[Optional[str]] = mapped_column(String(128))
+    requester_role: Mapped[Optional[str]] = mapped_column(String(64))
+    reviewer_ref: Mapped[Optional[str]] = mapped_column(String(128))
+    # Reviewer selections — short safe labels only, from a closed vocabulary.
+    decision_intent: Mapped[Optional[str]] = mapped_column(String(48))
+    safe_decision_summary: Mapped[Optional[str]] = mapped_column(String(255))
+    requested_followup_actions_json: Mapped[Optional[dict]] = mapped_column(JSON)
+    # Decision-specific axis, server-derived from decision_intent. Kept separate so the governed
+    # review_status / lifecycle_status axes stay inside the Phase 9 vocabulary.
+    decision_status: Mapped[Optional[str]] = mapped_column(String(32))
+    decision_scope: Mapped[str] = mapped_column(
+        String(48), default="internal_report_review_packet")
+    audience: Mapped[str] = mapped_column(String(32), default="internal")
+    reasons_json: Mapped[Optional[dict]] = mapped_column(JSON)
+    warnings_json: Mapped[Optional[dict]] = mapped_column(JSON)
+    # Governance / non-approval posture — real columns (never JSON).
+    client_facing_approved: Mapped[bool] = mapped_column(Boolean, default=False)
+    review_approval_made: Mapped[bool] = mapped_column(Boolean, default=False)
+    financial_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    capsule_candidate_ready: Mapped[bool] = mapped_column(Boolean, default=False)
+    publication_allowed: Mapped[bool] = mapped_column(Boolean, default=False)
+    execution_allowed: Mapped[bool] = mapped_column(Boolean, default=False)
+    requires_human_review: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Phase 39 controlled-writer fields.
+    idempotency_key: Mapped[Optional[str]] = mapped_column(String(128))
+    payload_fingerprint: Mapped[Optional[str]] = mapped_column(String(64))
+
+
 # Convenience list of all model classes (used by tooling/validation).
 ALL_MODELS = [
     Client,
@@ -575,4 +662,5 @@ ALL_MODELS = [
     IntakeNoteRecord,
     InternalAssessmentReportDraftRecord,
     InternalReportReviewPacketRecord,
+    InternalReportReviewPacketDecisionRecord,
 ]

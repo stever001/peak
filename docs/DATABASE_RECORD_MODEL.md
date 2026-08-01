@@ -371,3 +371,16 @@ readiness checklist, required follow-up actions, future-gate placeholders, and t
 idempotency columns. `packet_status` is fixed at `ready_for_internal_review` and
 `reviewer_decision_status` at `not_decided`. It stores **no report prose** and no raw content. See
 [`INTERNAL_REPORT_REVIEW_PACKET_CONTROLLED_WRITER.md`](INTERNAL_REPORT_REVIEW_PACKET_CONTROLLED_WRITER.md).
+
+---
+
+## Phase 39 — internal_report_review_packet_decisions
+
+Stores a Peak human reviewer's **internal-only decision** on a Phase 38 review packet, preserving
+the audit chain packet -> report draft -> report plan (with both upstream payload fingerprints
+copied from the stored rows), plus `decision_intent` from the closed Phase 32 vocabulary, a
+server-derived `decision_status`, one bounded internal summary, follow-up action labels/statuses, and
+the controlled-writer idempotency columns. `decision_scope` is fixed at
+`internal_report_review_packet` and `audience` at `internal`. It stores **no report prose**, no raw
+content, and no client-facing approval. See
+[`INTERNAL_REPORT_REVIEW_PACKET_DECISION_CONTROLLED_WRITER.md`](INTERNAL_REPORT_REVIEW_PACKET_DECISION_CONTROLLED_WRITER.md).

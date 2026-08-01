@@ -236,3 +236,15 @@ as every prior writer — stored-`Engagement` authorization, DB-enforced idempot
 non-echoing receipt, no update/delete/raw-SQL path — and additionally performs a **read-only**
 verification of the stored Phase 37 report draft it references. See
 [`INTERNAL_REPORT_REVIEW_PACKET_CONTROLLED_WRITER.md`](INTERNAL_REPORT_REVIEW_PACKET_CONTROLLED_WRITER.md).
+
+---
+
+## Phase 39 — the eleventh narrow writer
+
+Phase 39 adds `persist_internal_report_review_packet_decision`, targeting only
+`internal_report_review_packet_decisions` / `create_internal_report_review_packet_decision`. It
+follows the established shape — stored-`Engagement` authorization, DB-enforced idempotency, a typed
+non-echoing receipt, no update/delete/raw-SQL path — and additionally performs **read-only**
+verification of the stored Phase 38 packet and Phase 37 report draft it links to. It is
+**insert-only**: neither upstream row is modified. See
+[`INTERNAL_REPORT_REVIEW_PACKET_DECISION_CONTROLLED_WRITER.md`](INTERNAL_REPORT_REVIEW_PACKET_DECISION_CONTROLLED_WRITER.md).
