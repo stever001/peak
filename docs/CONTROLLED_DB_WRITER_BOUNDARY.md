@@ -264,3 +264,14 @@ the Phase 38 review packet, and the Phase 39 packet decision rows with `session.
 The eleven narrow writers remain the **only** paths that write to the controlled database. Phase 40
 closes the Phase 39 packet-row gap by **deriving** the current review state from the decision table
 — not by introducing an update path.
+
+---
+
+## Phase 41 — no writer; parity validation only
+
+Phase 41 adds validation tooling and documentation only: no writer, no table/action pair, no
+migration, no update/delete/upsert path, no generic CRUD, and no SQL executor. The parity checker
+opens no database connection and executes no SQL in its default offline mode; its staging mode is
+opt-in, fails closed, and is deliberately excluded from `make validate`.
+
+The eleven narrow writers remain the only paths that write to the controlled database.

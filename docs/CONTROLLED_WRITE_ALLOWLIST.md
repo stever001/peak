@@ -196,3 +196,11 @@ Phase 40 adds **no** table/action pair. It is a read-only workflow integration l
 nothing, so it needs no allowlist entry at all: the allowlist stays at **13 tables / 15 actions**.
 No update, delete, upsert, or raw-SQL action was added, and no existing table was broadened. See
 [`INTERNAL_REPORT_REVIEW_WORKFLOW_INTEGRATION.md`](INTERNAL_REPORT_REVIEW_WORKFLOW_INTEGRATION.md).
+
+---
+
+## Phase 41 — no new pair
+
+Phase 41 adds **no** table/action pair. It is a validation-and-documentation phase that writes
+nothing, so it needs no allowlist entry: the allowlist stays at **13 tables / 15 actions**. No
+update, delete, upsert, or raw-SQL action was added, and no existing table was broadened.

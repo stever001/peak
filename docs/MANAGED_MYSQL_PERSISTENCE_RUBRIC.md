@@ -140,3 +140,24 @@ discovered afterwards: the table name is 39 characters, so convention-derived in
 reached **78** characters, over MySQL's 64-character limit. Every index uses a short explicit
 `ix_irrpd_` prefix, and the harness asserts the limit for the model, the migration source, and the
 indexes actually applied.
+
+---
+
+## Phase 41 — parity validation under this rubric
+
+Phase 41 adds no operational table. It adds the automated production-parity checks this rubric has
+always required in prose: MySQL identifier-length limits, migration schema-only/bounded-downgrade
+policy, charset/engine pinning, and a documented collation posture. Everything runs **offline** —
+no credentials, no network, no `.env`, no DSN — so `make validate` stays safe on a laptop with no
+managed DB access.
+
+The rubric is unchanged: **managed remote MySQL remains the operational data store**, Client
+Isolation Option A remains the default, and **SQLite is not the production-readiness proof path**.
+Phase 41 makes the gap between the two layers explicit and machine-checked rather than relying on
+reviewer memory.
+
+One **open finding** is recorded rather than silently patched: no collation is pinned anywhere, so
+the managed server's default decides case/accent sensitivity for identity, authorization, and
+idempotency columns. That cannot be resolved by reading the repository and no migration is proposed
+here. See
+[`MANAGED_MYSQL_PRODUCTION_PARITY_VALIDATION.md`](MANAGED_MYSQL_PRODUCTION_PARITY_VALIDATION.md).

@@ -67,3 +67,25 @@ characters — over MySQL's 64-character limit, and silently accepted by SQLite.
 `ix_irrpd_` prefix was chosen up front, and the Phase 39 harness asserts every identifier fits for
 the model, the migration source, and the applied indexes. Treat this as the standing pattern for any
 new table whose name exceeds roughly 25 characters.
+
+---
+
+## Phase 41 — the identifier check became an automated control
+
+Phases 38 and 39 caught overlong identifiers **by hand**. Catching a defect by hand is not a
+control. Phase 41 turns the lesson into an automated, offline check:
+[`tools/managed_mysql_parity_check.py`](../tools/managed_mysql_parity_check.py), wired into
+`make validate` via `make validate-phase41` and available directly as `make mysql-parity-static`.
+
+The hard part is that migrations build identifiers **at runtime** (f-strings over module
+constants), so scanning source text cannot see the names MySQL would actually receive. The static
+checker therefore *simulates* each migration's `upgrade()`/`downgrade()` against a recording
+stand-in for `op` that executes no SQL and opens no connection — yielding the exact identifier set
+offline. It is a real control, not a smoke test: the Phase 41 harness injects a 69-character index
+name into a throwaway copy of the migrations and asserts the checker **fails**.
+
+`make mysql-parity-staging` is the opt-in, fail-closed counterpart: with no configuration it prints
+a sanitized skip and exits 0, importing no driver and reading no `.env`. It refuses a production
+target and refuses a configured-but-not-disposable target. See
+[`MANAGED_MYSQL_PRODUCTION_PARITY_VALIDATION.md`](MANAGED_MYSQL_PRODUCTION_PARITY_VALIDATION.md),
+which also records the **open collation gap** that only a managed-MySQL runtime check can settle.

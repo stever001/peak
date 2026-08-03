@@ -130,6 +130,7 @@ peak/
 │   ├── INTERNAL_REPORT_REVIEW_PACKET_DECISION_CONTROLLED_WRITER.md # Eleventh DB-backed writer, for packet decisions (Phase 39)
 │   ├── INTERNAL_REPORT_REVIEW_PACKET_DECISION_IDEMPOTENCY_POLICY.md # DB-enforced idempotency for packet-decision rows (Phase 39)
 │   ├── INTERNAL_REPORT_REVIEW_WORKFLOW_INTEGRATION.md # Read-only end-to-end internal report review workflow state (Phase 40)
+│   ├── MANAGED_MYSQL_PRODUCTION_PARITY_VALIDATION.md # Offline MySQL parity checks + opt-in staging gate (Phase 41)
 │   └── IMPLEMENTATION_PLAN.md
 ├── peak/                         # Python tooling layer (source only; no data)
 │   ├── db/                       # base, enums, models, session + agent_run (P20), evidence (P21), review (P22), source-ingestion (P24), agent-task-queue (P27), review-bundle (P30), internal-reviewer-decision (P33), intake-note (P34), internal-assessment-report-draft (P37), internal-report-review-packet (P38) & packet-decision (P39) writers
@@ -1263,6 +1264,47 @@ answers one question — *where is this internal report review right now?* — a
 
 ```bash
 make validate-phase40   # structural always; DB-backed via .venv (temporary SQLite)
+```
+
+### Managed MySQL Production-Parity Validation (Phase 41)
+
+A **validation and documentation** phase — no schema, no writer, no migration, no allowlist pair.
+It turns the Phase 38 defect class into an automated control.
+
+- **The motivating bug.** MySQL limits identifiers to **64 characters**; SQLite does not. Phase 38's
+  convention-derived index name was **69** characters and Phase 39's would have been **78** — both
+  passed every local SQLite check and would have failed `alembic upgrade head` against managed
+  MySQL. They were caught by hand. Catching a defect by hand is not a control.
+- **Offline static checks.** `tools/managed_mysql_parity_check.py --mode static` runs with **no
+  credentials, no network, no DNS, no TLS, no `.env`, no DSN, and no database**. Because migrations
+  build identifiers at runtime (f-strings over module constants), source scanning cannot see the
+  names MySQL would receive — so the checker *simulates* each `upgrade()`/`downgrade()` against a
+  recording stand-in for `op` that executes no SQL and opens no connection.
+- **It is a real control.** The harness injects a 69-character index name into a throwaway copy of
+  the migrations and asserts the checker **fails**, so a green run means something.
+- **What it proves:** every model and migration identifier fits 64 chars; no indexed column relies
+  on a convention-derived name that would overflow; `InnoDB` + `utf8mb4` are pinned everywhere; the
+  migration chain is linear with one base and one pinned head; migrations are schema-only with no
+  `INSERT`/seed/`op.execute`; every `downgrade()` is scoped to what its own `upgrade()` created.
+- **Open finding, reported not patched.** No collation is pinned anywhere, so the managed server's
+  default decides case/accent sensitivity for identity, authorization, and **idempotency** columns.
+  MySQL 8 defaults to a case-**insensitive** collation while SQLite compares case-**sensitively** —
+  which would let `idem-key-1` and `idem-KEY-1` collapse into one idempotency key. This cannot be
+  settled by reading the repo, so it is a `WARN` plus documentation, and **no migration is proposed**.
+- **Opt-in staging gate, fail-closed.** `make mysql-parity-staging` skips safely with no
+  configuration (exit 0, no driver imported, no `.env` read), **refuses** a production target, and
+  **refuses** a configured-but-not-disposable target. It is deliberately **not** part of
+  `make validate`. No live run is executed by this phase.
+- **No secret ever printed.** Every output line is sanitized: DSN-shaped strings, `password=` /
+  `token=` / `api_key=` pairs, `user:pass@host` forms, and PEM blocks become `[secret withheld]`. Failures
+  report the exception **type** only, because exception messages routinely embed the DSN.
+- [`tools/managed_mysql_parity_check.py`](tools/managed_mysql_parity_check.py) and
+  [`docs/MANAGED_MYSQL_PRODUCTION_PARITY_VALIDATION.md`](docs/MANAGED_MYSQL_PRODUCTION_PARITY_VALIDATION.md).
+
+```bash
+make validate-phase41    # offline; no credentials, no network
+make mysql-parity-static # the checker directly (add PYTHON=.venv/bin/python for model+simulation)
+make mysql-parity-staging # opt-in; skips safely with no disposable-staging configuration
 ```
 
 ## Design constraints

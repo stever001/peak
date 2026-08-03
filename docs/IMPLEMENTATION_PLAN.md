@@ -1236,6 +1236,44 @@ adds no persistence primitive):**
   [`../tests/validate_phase40_internal_report_review_workflow.py`](../tests/validate_phase40_internal_report_review_workflow.py)
   (`make validate-phase40`; DB-backed via `.venv`).
 
+**Managed MySQL Production-Parity Validation (Phase 41 — validation tooling and docs only;
+no schema, no writer, no migration):**
+
+- [x] **The Phase 38 lesson became a control.** MySQL limits identifiers to 64 characters and
+  SQLite does not; Phase 38's convention-derived index name was **69** characters and Phase 39's
+  would have been **78**. Both were caught by hand, which is not a control. Phase 41 adds
+  [`../tools/managed_mysql_parity_check.py`](../tools/managed_mysql_parity_check.py), wired into
+  `make validate` and available as `make mysql-parity-static`.
+- [x] **Offline by default.** No credentials, no network, no DNS, no TLS, no `.env`, no DSN, no
+  database. `make validate` and `make db-check` remain safe on a machine with no managed DB access.
+- [x] **Runtime-built identifiers are resolved without a database.** Migrations build index names
+  from f-strings over module constants, so source scanning cannot see what MySQL would receive. The
+  checker simulates each `upgrade()`/`downgrade()` against a recording stand-in for `op` that
+  executes no SQL and opens no connection — 657 identifiers across 12 migrations, all verified
+  against the 64-character limit.
+- [x] **It is a real control, not a green light.** The harness injects the actual 69-character
+  Phase 38 index name into a throwaway copy of the migrations and asserts the checker **fails**
+  with exit 1.
+- [x] **Static checks:** model + migration identifier lengths; no reliance on convention-derived
+  names that would overflow; `InnoDB` + `utf8mb4` pinned everywhere and no legacy 3-byte `utf8`;
+  linear migration chain with one base and a pinned head; schema-only migrations with no
+  `INSERT`/seed/`op.execute`/arbitrary SQL; every `downgrade()` scoped to what its own `upgrade()`
+  created.
+- [x] **Open finding, reported not patched.** No collation is pinned anywhere, so the managed
+  server default decides case/accent sensitivity for identity, authorization, and idempotency
+  columns — which could let `idem-key-1` and `idem-KEY-1` collapse into one idempotency key under
+  MySQL 8's default. It cannot be settled by reading the repo, so it is a `WARN` plus
+  documentation; **no migration is proposed**, and fixing it would be its own reviewed phase.
+- [x] **Opt-in staging gate, fail-closed.** `make mysql-parity-staging` skips (exit 0) with no
+  configuration, importing no DB driver and reading no `.env`; **refuses** `--env prod` and a
+  configured-but-not-disposable target (exit 2); and **holds** rather than auto-running when fully
+  configured. It is excluded from `make validate`. No live run was executed in this phase.
+- [x] **No secret leakage.** Every emitted line is sanitized (DSN forms, `password=`/`token=`/
+  `api_key=` pairs, `user:pass@host`, PEM blocks -> `[secret withheld]`); failures report the exception
+  **type** only. A canary DSN/secret is asserted absent from every mode's output. Checked by
+  [`../tests/validate_phase41_managed_mysql_production_parity.py`](../tests/validate_phase41_managed_mysql_production_parity.py)
+  (`make validate-phase41`; offline).
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

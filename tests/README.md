@@ -76,6 +76,8 @@ Thirty-two harnesses, run together by `make validate`:
   packet-decision-writer check (structural always; DB-backed when SQLAlchemy is present).
 - `validate_phase40_internal_report_review_workflow.py` — end-to-end internal report review
   workflow integration check (structural always; DB-backed when SQLAlchemy is present).
+- `validate_phase41_managed_mysql_production_parity.py` — managed MySQL production-parity check
+  (stdlib-only; offline, credential-free, no network).
 
 ## `synthetic_fixtures.py`
 
@@ -984,6 +986,37 @@ determinism; and read-failure semantics. SQLite here is a structural smoke path 
 production proof. Run `make validate-phase40 PYTHON=.venv/bin/python` for the DB layer. See
 [`../docs/INTERNAL_REPORT_REVIEW_WORKFLOW_INTEGRATION.md`](../docs/INTERNAL_REPORT_REVIEW_WORKFLOW_INTEGRATION.md).
 
+---
+
+## `validate_phase41_managed_mysql_production_parity.py`
+
+Check for the Phase 41 **managed MySQL production-parity validation layer**
+([`../tools/managed_mysql_parity_check.py`](../tools/managed_mysql_parity_check.py)). Stdlib-only,
+offline, credential-free — it needs no managed database and makes no network call.
+
+Verifies the parity tool is validation-only (no writer, no CRUD, no SQL execution, no database
+connection, no DB driver at module scope, no LLM/agent/AgentNet/network path, no `.env` read, no
+committed DSN or credential); that static mode runs offline and exits 0 even with a DSN exported;
+that the identifier limit is genuinely **enforced** — a throwaway copy of the migrations is
+injected with the real 69-character Phase 38 index name and the checker must **fail** with exit 1,
+so a green run means something; that the collation gap is surfaced as a warning naming its
+idempotency consequence and proposing no migration; that a tier which cannot run declares itself
+skipped rather than reporting a pass it did not earn.
+
+Also verifies the staging gate is skip-safe and fail-closed (exit 0 with no configuration, importing
+no DB driver and reading no `.env`; **REFUSED** with exit 2 for `--env prod` and for a DSN that is
+not marked disposable; **HOLD** rather than an automatic live run when fully configured), that a
+**canary DSN and secret are never echoed in any mode**, that `make validate` stays offline while
+every DB-capable target stays out of it, and the standing baseline regressions (head `012`, 12
+migrations, no `013`, 18 tables, 13 allowlist tables / 15 actions, 11 writers, no new
+table/model/migration/writer/allowlist pair, and the managed-MySQL / Client Isolation Option A /
+AgentNet publication policies intact).
+
+Run `make validate-phase41`. No `PYTHON=.venv/bin/python` variant is required — the harness is
+offline in both interpreters, though the venv adds the tool's model-introspection and
+migration-simulation tiers. See
+[`../docs/MANAGED_MYSQL_PRODUCTION_PARITY_VALIDATION.md`](../docs/MANAGED_MYSQL_PRODUCTION_PARITY_VALIDATION.md).
+
 ## Running
 
 This machine uses `python3` (there is no bare `python`). From the repo root:
@@ -993,7 +1026,7 @@ This machine uses `python3` (there is no bare `python`). From the repo root:
 make install-dev          # == python3 -m pip install -r requirements-dev.txt
 
 # run all harnesses
-make validate             # == phase1 … phase40
+make validate             # == phase1 … phase41
 
 # or run one at a time
 make validate-phase1
@@ -1036,10 +1069,13 @@ make validate-phase37   # DB-backed; add PYTHON=.venv/bin/python for the full su
 make validate-phase38   # DB-backed; add PYTHON=.venv/bin/python for the full suite
 make validate-phase39   # DB-backed; add PYTHON=.venv/bin/python for the full suite
 make validate-phase40   # structural always; add PYTHON=.venv/bin/python for the DB layer
+make validate-phase41   # offline; no credentials, no network (venv adds the simulation tiers)
 # opt-in managed MySQL (credential-free; skip safely with no DSN; never part of `make validate`):
 make db-check-managed-test          # managed test-env rubric check
 make managed-mysql-smoke            # managed test-env smoke runbook
 make managed-mysql-migration-check  # managed test-env migration runbook
+make mysql-parity-static            # offline MySQL parity checks (safe; no credentials)
+make mysql-parity-staging           # opt-in disposable-staging parity gate (skips with no DSN)
 ```
 
 Or invoke them directly, without the Makefile:
@@ -1086,6 +1122,7 @@ python3 tests/validate_phase36_internal_assessment_report_planning.py        # s
 .venv/bin/python tests/validate_phase38_internal_report_review_packet_writer.py   # DB-backed (SQLAlchemy); skips DB layer on plain python3
 .venv/bin/python tests/validate_phase39_internal_report_review_packet_decision_writer.py # DB-backed (SQLAlchemy); skips DB layer on plain python3
 .venv/bin/python tests/validate_phase40_internal_report_review_workflow.py # DB-backed (SQLAlchemy); skips DB layer on plain python3
+python3 tests/validate_phase41_managed_mysql_production_parity.py # offline; credential-free; no network
 ```
 
 ## Exit codes

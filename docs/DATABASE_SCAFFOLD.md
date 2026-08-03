@@ -148,3 +148,18 @@ Phase 39 controlled packet-decision writer. Schema only: no INSERT, no seed data
 change; the downgrade drops only the new table. `make db-check` now expects **18 tables**. Index
 names use a short `ix_irrpd_` prefix so every identifier fits MySQL's 64-character limit. See
 [`INTERNAL_REPORT_REVIEW_PACKET_DECISION_CONTROLLED_WRITER.md`](INTERNAL_REPORT_REVIEW_PACKET_DECISION_CONTROLLED_WRITER.md).
+
+---
+
+## Phase 41 — MySQL parity is checked automatically
+
+The scaffold targets MySQL, but local validation runs on SQLite, and the two disagree in ways
+SQLite will not report — most concretely MySQL's **64-character identifier limit**. Since Phase 41
+that gap is machine-checked offline by
+[`tools/managed_mysql_parity_check.py`](../tools/managed_mysql_parity_check.py)
+(`make mysql-parity-static`, and part of `make validate` via `make validate-phase41`).
+
+When adding a table whose name approaches ~25 characters, do not rely on convention-derived index
+names: `ix_<table>_<column>` overflows quickly. Pin a short explicit prefix, as
+`internal_report_review_packet_decisions` does with `ix_irrpd_*`. See
+[`MANAGED_MYSQL_PRODUCTION_PARITY_VALIDATION.md`](MANAGED_MYSQL_PRODUCTION_PARITY_VALIDATION.md).
