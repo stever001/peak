@@ -1199,6 +1199,43 @@ closes the internal report review loop):**
   [`../tests/validate_phase39_internal_report_review_packet_decision_writer.py`](../tests/validate_phase39_internal_report_review_packet_decision_writer.py)
   (`make validate-phase39`; DB-backed via `.venv`).
 
+**End-to-End Internal Report Review Workflow Integration (Phase 40 — read-only consolidation;
+adds no persistence primitive):**
+
+- [x] **Workflow integration, not a new primitive.** No DB table, model, or Alembic migration (head
+  stays `012_internal_report_review_packet_decisions`; `make db-check` stays at **18 tables**); **no
+  new Phase 17 allowlist pair** (13 tables / 15 actions); no writer, no update/delete/upsert path,
+  no generic CRUD, no arbitrary SQL executor, no broad repository.
+- [x] **Closes the Phase 39 gap by derivation, not mutation.** Phase 39 is insert-only and never
+  advances the packet's `reviewer_decision_status` / `reviewer_decision_record_id`. Phase 40
+  *computes* the current internal review state from the Phase 39 decision table. The packet row and
+  the report-draft row are **never updated** — the harness asserts both are byte-for-byte unchanged
+  and that no row is inserted, updated, or deleted. A packet row whose decision columns the located
+  decision records cannot explain is a blocker, not something to repair.
+- [x] **Public entry point.** `summarize_internal_report_review_workflow(request, *,
+  session_factory=None) -> InternalReportReviewWorkflowResult`, with typed
+  request / result / trace contracts. `session_factory` is required and there is **no ambient-DSN
+  fallback**, so standard validation needs no live credentials and no network.
+- [x] **Read-only enforcement.** `session.get` / ORM `session.query` only — no `session.add`,
+  `delete`, `merge`, `flush`, `commit`, `update()`, or raw SQL, and no writer import. Checked
+  against tokenized source so prose naming a forbidden call cannot mask a real one.
+- [x] **Authorization unchanged.** The stored `Engagement` is the authorization subject and
+  identity matching is necessary but not sufficient; the stored draft and packet must still carry
+  their internal-only, non-elevated posture.
+- [x] **Closed internal-only computed vocabulary** of thirteen states — six `blocked_*`,
+  `awaiting_reviewer_decision`, five `decision_recorded_*`, and `conflicting_decisions`. No
+  approval / published / verified state exists; **`ready_for_internal_use` is internal readiness,
+  not client-facing approval.** The `decision_intent` → state map covers the whole Phase 32
+  vocabulary and stays in lockstep with Phase 39's server-derived `decision_status`.
+- [x] **Conflicts surfaced, never resolved.** Rows expressing the same decision collapse to one
+  state; materially different decisions produce `conflicting_decisions` with
+  `requires_human_review=true` and no automatic resolution.
+- [x] **Nothing escalates.** No approval for client use, client-facing output, financial/ROI
+  verification, capsule publication, AgentNet publish, LLM/MockLLM, agent or mock-agent execution,
+  MCP/resolver/network call, or `review_records` / `agent_run_records` write. Checked by
+  [`../tests/validate_phase40_internal_report_review_workflow.py`](../tests/validate_phase40_internal_report_review_workflow.py)
+  (`make validate-phase40`; DB-backed via `.venv`).
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

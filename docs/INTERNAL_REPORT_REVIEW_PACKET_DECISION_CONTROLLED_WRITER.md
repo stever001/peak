@@ -301,3 +301,18 @@ review writer** and creates **no `review_records` or `agent_run_records` row**.
 ```bash
 make validate-phase39   # DB-backed via .venv (temporary SQLite structural smoke)
 ```
+
+---
+
+## Phase 40 — how the insert-only packet-row gap is closed
+
+This writer is insert-only: it records *which* review packet was decided but deliberately never
+updates the Phase 38 packet row's `reviewer_decision_status` / `reviewer_decision_record_id`. That
+is intentional, and it stays that way.
+
+Phase 40 closes the resulting operational gap by **derivation, not mutation**: the read-only
+`summarize_internal_report_review_workflow` entry point computes the current internal review state
+from the rows in this table, and never writes to the packet row, this table, or anything else. A
+stored packet row whose decision columns the located decision records cannot explain is reported as
+a blocker rather than repaired. See
+[`INTERNAL_REPORT_REVIEW_WORKFLOW_INTEGRATION.md`](INTERNAL_REPORT_REVIEW_WORKFLOW_INTEGRATION.md).

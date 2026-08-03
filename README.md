@@ -129,6 +129,7 @@ peak/
 │   ├── INTERNAL_REPORT_REVIEW_PACKET_IDEMPOTENCY_POLICY.md # DB-enforced idempotency for review-packet rows (Phase 38)
 │   ├── INTERNAL_REPORT_REVIEW_PACKET_DECISION_CONTROLLED_WRITER.md # Eleventh DB-backed writer, for packet decisions (Phase 39)
 │   ├── INTERNAL_REPORT_REVIEW_PACKET_DECISION_IDEMPOTENCY_POLICY.md # DB-enforced idempotency for packet-decision rows (Phase 39)
+│   ├── INTERNAL_REPORT_REVIEW_WORKFLOW_INTEGRATION.md # Read-only end-to-end internal report review workflow state (Phase 40)
 │   └── IMPLEMENTATION_PLAN.md
 ├── peak/                         # Python tooling layer (source only; no data)
 │   ├── db/                       # base, enums, models, session + agent_run (P20), evidence (P21), review (P22), source-ingestion (P24), agent-task-queue (P27), review-bundle (P30), internal-reviewer-decision (P33), intake-note (P34), internal-assessment-report-draft (P37), internal-report-review-packet (P38) & packet-decision (P39) writers
@@ -143,7 +144,7 @@ peak/
 │   ├── task_queue/               # Agent task queue / execution readiness boundary: plans queue drafts (P26; DB-free, no execution)
 │   ├── review_orchestration/     # Packet-derived review orchestration: plans human-review bundles (P29; DB-free, no approval)
 │   ├── reviewer_decisions/       # Internal reviewer decision boundary: plans decision drafts + routing (P32; DB-free, no approval)
-│   ├── workflows/                # Governed managed-record workflow integration over the existing narrow writers (P35; plan-only default)
+│   ├── workflows/                # Workflow integration: governed managed-record writes (P35; plan-only default) + read-only internal report review state (P40)
 │   └── reports/                  # Internal assessment report assembly planning boundary (P36; DB-free, internal-only, no report draft)
 ├── alembic/                      # Alembic migrations (schema only; no data)
 ├── alembic.ini                   # Alembic config (URL from env, not the repo)
@@ -1220,6 +1221,48 @@ on a Phase 38 review packet — closing the internal report review loop.
 
 ```bash
 make validate-phase39   # DB-backed via .venv (temporary SQLite structural smoke)
+```
+
+### End-to-End Internal Report Review Workflow Integration (Phase 40)
+
+A **read-only workflow integration and consolidation layer** over records Peak already stores. It
+answers one question — *where is this internal report review right now?* — across
+`internal_assessment_report_drafts` (Phase 37) → `internal_report_review_packets` (Phase 38) →
+`internal_report_review_packet_decisions` (Phase 39).
+
+- **No new persistence primitive.** No DB table, model, or Alembic migration; **no new Phase 17
+  allowlist pair**; no writer, no update/delete/upsert path, no generic CRUD, no arbitrary SQL
+  executor, no broad repository. Alembic head stays `012_internal_report_review_packet_decisions`
+  and `make db-check` still expects **18 tables**.
+- **It closes the Phase 39 gap by derivation, not mutation.** Phase 39 is insert-only: it records
+  which packet was decided but never updates the packet row's `reviewer_decision_status` /
+  `reviewer_decision_record_id`. Phase 40 *computes* the current state from the decision table. The
+  packet row and the report-draft row are **never updated** — the tests assert both are
+  byte-for-byte unchanged after a summary, and that no row is inserted, updated, or deleted.
+- **Public entry point:** `summarize_internal_report_review_workflow(request, *,
+  session_factory=None) -> InternalReportReviewWorkflowResult`. `session_factory` is required and
+  there is **no ambient-DSN fallback**, so `make validate` needs no live credentials and no network.
+- **Read-only means read-only.** `session.get` / ORM `session.query` only — no `session.add`,
+  `delete`, `merge`, `flush`, `commit`, `update()`, or raw SQL, and no writer import.
+- **Authorization is unchanged.** The stored `Engagement` is the authorization subject; identity
+  matching is necessary but not sufficient. The stored draft and packet must still carry their
+  internal-only, non-elevated posture, or the result is a typed blocker.
+- **Closed internal-only computed vocabulary** — `awaiting_reviewer_decision`,
+  `decision_recorded_ready_for_internal_use`, `…_needs_followup`, `…_return_for_revision`,
+  `…_rejected_for_policy`, `…_blocked`, `conflicting_decisions`, plus six `blocked_*` states. There
+  is **no** approval/published/verified state: `ready_for_internal_use` is internal readiness, **not
+  client-facing approval**.
+- **Conflicts are surfaced, never resolved.** Rows expressing the same decision collapse to one
+  state; materially different decisions produce `conflicting_decisions` with
+  `requires_human_review=true` and no automatic resolution.
+- **Leak safety.** Results carry only refs, ids, closed-vocabulary statuses, counts, and safe reason
+  codes. A blocker names the field and the *expected* value, never what was found.
+- [`peak/workflows/internal_report_review_workflow.py`](peak/workflows/internal_report_review_workflow.py)
+  and
+  [`docs/INTERNAL_REPORT_REVIEW_WORKFLOW_INTEGRATION.md`](docs/INTERNAL_REPORT_REVIEW_WORKFLOW_INTEGRATION.md).
+
+```bash
+make validate-phase40   # structural always; DB-backed via .venv (temporary SQLite)
 ```
 
 ## Design constraints

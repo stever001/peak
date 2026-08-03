@@ -195,3 +195,27 @@ adds no stage to this workflow and no table/action pair to the allowlist. Report
 this workflow's safe record refs; it never persists a report draft and never produces a
 client-facing deliverable. See
 [`INTERNAL_REPORT_ASSEMBLY_GOVERNANCE_POLICY.md`](INTERNAL_REPORT_ASSEMBLY_GOVERNANCE_POLICY.md).
+
+---
+
+## Phase 40 — the read-only workflow integration layer
+
+`peak/workflows` now hosts a second integration layer with a different posture from the Phase 35
+gated write path: the Phase 40 end-to-end internal report review workflow is **read-only**. The
+governance rules carry over unchanged, with three additions specific to a read path:
+
+1. **No gate exists, because nothing can be persisted.** There is no `persistence_gates` map, no
+   writer call, and no idempotency key — only `session.get` and ORM `session.query`. Every
+   side-effect flag on the result is a permanent `False` except `database_connection_made` and
+   `sql_execution_made`.
+2. **No ambient DSN, same as Phase 35.** A missing `session_factory` is a denial, not a fallback,
+   so standard validation still needs no live credentials and no network.
+3. **Derived state is labelled as derived.** A computed state never overwrites, and is never
+   confused with, a stored column: the result reports the packet row's own stored decision columns
+   alongside the computed state so the difference stays auditable. Stored values are never echoed —
+   a blocker names the field and the expected value, never what was found.
+
+The internal-only rule is unchanged: `ready_for_internal_use` is internal readiness and is **not**
+client-facing approval, and no computed state may use approval, publication, or verification
+vocabulary. See
+[`INTERNAL_REPORT_REVIEW_WORKFLOW_INTEGRATION.md`](INTERNAL_REPORT_REVIEW_WORKFLOW_INTEGRATION.md).

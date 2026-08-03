@@ -248,3 +248,19 @@ non-echoing receipt, no update/delete/raw-SQL path — and additionally performs
 verification of the stored Phase 38 packet and Phase 37 report draft it links to. It is
 **insert-only**: neither upstream row is modified. See
 [`INTERNAL_REPORT_REVIEW_PACKET_DECISION_CONTROLLED_WRITER.md`](INTERNAL_REPORT_REVIEW_PACKET_DECISION_CONTROLLED_WRITER.md).
+
+---
+
+## Phase 40 — no twelfth writer
+
+Phase 40 is a **read-only workflow integration layer**
+([`INTERNAL_REPORT_REVIEW_WORKFLOW_INTEGRATION.md`](INTERNAL_REPORT_REVIEW_WORKFLOW_INTEGRATION.md)),
+not a writer. It adds **no** writer function, no table/action pair, no update/delete/upsert path, no
+generic CRUD, and no raw-SQL executor. It loads the stored `Engagement`, the Phase 37 report draft,
+the Phase 38 review packet, and the Phase 39 packet decision rows with `session.get` / ORM
+`session.query` only, and never calls `session.add`, `session.delete`, `session.merge`,
+`session.flush`, or `session.commit`.
+
+The eleven narrow writers remain the **only** paths that write to the controlled database. Phase 40
+closes the Phase 39 packet-row gap by **deriving** the current review state from the decision table
+— not by introducing an update path.

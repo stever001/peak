@@ -300,3 +300,16 @@ non-elevated posture, then copies the packet's `payload_fingerprint` into the de
 **The packet row is never modified by Phase 39.** Advancing `reviewer_decision_status` or setting
 `reviewer_decision_record_id` is deliberately left to a later controlled path. See
 [`INTERNAL_REPORT_REVIEW_PACKET_DECISION_CONTROLLED_WRITER.md`](INTERNAL_REPORT_REVIEW_PACKET_DECISION_CONTROLLED_WRITER.md).
+
+---
+
+## Phase 40 — reading the packet's decision state
+
+`packet_status` is fixed at `ready_for_internal_review` and `reviewer_decision_status` at
+`not_decided` when a packet is created, and **no controlled path updates them afterwards** — the
+Phase 39 decision writer is insert-only.
+
+Do not read a packet row's `reviewer_decision_status` as the current review state. The current
+state is **computed** from the Phase 39 packet decision rows by the read-only Phase 40 workflow
+layer, which never updates this row. See
+[`INTERNAL_REPORT_REVIEW_WORKFLOW_INTEGRATION.md`](INTERNAL_REPORT_REVIEW_WORKFLOW_INTEGRATION.md).

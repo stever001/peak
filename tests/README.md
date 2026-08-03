@@ -74,6 +74,8 @@ Thirty-two harnesses, run together by `make validate`:
   present).
 - `validate_phase39_internal_report_review_packet_decision_writer.py` — controlled-DB
   packet-decision-writer check (structural always; DB-backed when SQLAlchemy is present).
+- `validate_phase40_internal_report_review_workflow.py` — end-to-end internal report review
+  workflow integration check (structural always; DB-backed when SQLAlchemy is present).
 
 ## `synthetic_fixtures.py`
 
@@ -947,6 +949,41 @@ structural smoke path only — **not** production proof. Run
 and
 [`../docs/INTERNAL_REPORT_REVIEW_PACKET_DECISION_IDEMPOTENCY_POLICY.md`](../docs/INTERNAL_REPORT_REVIEW_PACKET_DECISION_IDEMPOTENCY_POLICY.md).
 
+---
+
+## `validate_phase40_internal_report_review_workflow.py`
+
+Check for the Phase 40 **end-to-end internal report review workflow integration layer**
+([`../peak/workflows/internal_report_review_workflow.py`](../peak/workflows/internal_report_review_workflow.py)) —
+a **read-only** consolidation over the Phase 37 report draft, Phase 38 review packet, and Phase 39
+packet decision rows.
+
+Structural (always, stdlib-only): the module/doc/harness exist and compile; the module imports no
+LLM/MockLLM/executor/AgentNet/MCP/resolver/connector/network client, no credential, and **no writer
+function**; it has no `session.add`/`delete`/`merge`/`flush`/`commit`, no `update()`/`delete` path,
+and no raw SQL (boundary claims are checked against tokenized code, so a docstring naming the
+forbidden thing cannot pass or fail the check by accident); `import peak.workflows` still loads no
+DB driver and a DB-free denial needs none; the public entry point and the typed
+request/result/trace contracts exist; the baseline is unchanged (Alembic head `012`, 18 tables, 13
+allowlist tables / 15 actions, no migration `013`, no new table/model/writer/allowlist pair, and no
+pending diff on the Phase 37/38/39 writers, `peak/db/models.py`, the allowlist, or
+`alembic/versions`); Phase 36 `peak/reports` stays DB-free; the closed computed vocabularies cover
+the whole Phase 32 decision vocabulary and stay in lockstep with Phase 39's server-side
+`decision_status` derivation; the docs carry the required language; the repo stays source-only.
+
+DB-backed (temporary local SQLite, over a genuine Phase 37 → 38 → 39 chain): a successful read-only
+summary; **proof that no row is inserted, updated, or deleted and that the packet and report-draft
+rows are byte-for-byte unchanged**; the full `decision_intent` → computed-state mapping across the
+whole closed vocabulary; the awaiting-decision path; the conflicting-decisions path with no
+automatic resolution; idempotent duplicates collapsing to one state; inconsistent / non-internal /
+out-of-scope decision rows excluded with non-echoing warnings and `strict_mode` escalation; **eight**
+stored-`Engagement` blockers, **eighteen** stored-report-draft blockers, and **twenty-two**
+stored-review-packet blockers (including the packet-decision-column reconciliation that is never
+repaired by writing); non-echoing content safety with a **canary that never reaches a result**;
+determinism; and read-failure semantics. SQLite here is a structural smoke path only — **not**
+production proof. Run `make validate-phase40 PYTHON=.venv/bin/python` for the DB layer. See
+[`../docs/INTERNAL_REPORT_REVIEW_WORKFLOW_INTEGRATION.md`](../docs/INTERNAL_REPORT_REVIEW_WORKFLOW_INTEGRATION.md).
+
 ## Running
 
 This machine uses `python3` (there is no bare `python`). From the repo root:
@@ -956,7 +993,7 @@ This machine uses `python3` (there is no bare `python`). From the repo root:
 make install-dev          # == python3 -m pip install -r requirements-dev.txt
 
 # run all harnesses
-make validate             # == phase1 … phase39
+make validate             # == phase1 … phase40
 
 # or run one at a time
 make validate-phase1
@@ -998,6 +1035,7 @@ make validate-phase36   # stdlib-only; DB-free and network-free
 make validate-phase37   # DB-backed; add PYTHON=.venv/bin/python for the full suite
 make validate-phase38   # DB-backed; add PYTHON=.venv/bin/python for the full suite
 make validate-phase39   # DB-backed; add PYTHON=.venv/bin/python for the full suite
+make validate-phase40   # structural always; add PYTHON=.venv/bin/python for the DB layer
 # opt-in managed MySQL (credential-free; skip safely with no DSN; never part of `make validate`):
 make db-check-managed-test          # managed test-env rubric check
 make managed-mysql-smoke            # managed test-env smoke runbook
@@ -1047,6 +1085,7 @@ python3 tests/validate_phase36_internal_assessment_report_planning.py        # s
 .venv/bin/python tests/validate_phase37_internal_assessment_report_draft_writer.py # DB-backed (SQLAlchemy); skips DB layer on plain python3
 .venv/bin/python tests/validate_phase38_internal_report_review_packet_writer.py   # DB-backed (SQLAlchemy); skips DB layer on plain python3
 .venv/bin/python tests/validate_phase39_internal_report_review_packet_decision_writer.py # DB-backed (SQLAlchemy); skips DB layer on plain python3
+.venv/bin/python tests/validate_phase40_internal_report_review_workflow.py # DB-backed (SQLAlchemy); skips DB layer on plain python3
 ```
 
 ## Exit codes

@@ -187,3 +187,12 @@ Phase 39 adds exactly one table/action pair:
 (13 tables / 15 actions). No update, delete, upsert, or raw-SQL action was added, and no other table
 was broadened. See
 [`INTERNAL_REPORT_REVIEW_PACKET_DECISION_CONTROLLED_WRITER.md`](INTERNAL_REPORT_REVIEW_PACKET_DECISION_CONTROLLED_WRITER.md).
+
+---
+
+## Phase 40 — no new pair
+
+Phase 40 adds **no** table/action pair. It is a read-only workflow integration layer that writes
+nothing, so it needs no allowlist entry at all: the allowlist stays at **13 tables / 15 actions**.
+No update, delete, upsert, or raw-SQL action was added, and no existing table was broadened. See
+[`INTERNAL_REPORT_REVIEW_WORKFLOW_INTEGRATION.md`](INTERNAL_REPORT_REVIEW_WORKFLOW_INTEGRATION.md).
