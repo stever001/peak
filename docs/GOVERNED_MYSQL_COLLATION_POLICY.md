@@ -205,10 +205,16 @@ repo disagree with reality.
 - **MySQL may rebuild indexes** on the affected columns. On a populated table this is a blocking or
   online-DDL operation depending on server version and configuration — it must be timed
   deliberately, not run casually.
-- **Behavioral change on existing data:** if any table already contains rows whose governed values
-  differ only by case, tightening the collation will surface them as **new duplicate-key
-  violations** during the `ALTER`. That is the migration detecting pre-existing ambiguity, not
-  creating it. Staging verification must check for such rows *before* the change.
+- **Direction matters, and it is the safe direction** *(corrected in Phase 43)*. Moving from a
+  case-**insensitive** collation to a case-**sensitive** one makes the unique index *more*
+  discriminating: values that previously collided become distinct. Every existing row was already
+  unique under the looser rule, so it remains unique under the stricter one. **This direction
+  cannot produce new duplicate-key violations.** (The reverse — sensitive to insensitive — could,
+  which is why it is not the remediation.)
+- **The real behavioral change** is that lookups become case-sensitive. Any caller that previously
+  relied on `owner_id`, `client_id`, `engagement_id`, or `idempotency_key` matching in a different
+  case will stop matching. Peak's writers persist and compare these verbatim, so no such reliance
+  is expected — but production verification should confirm it rather than assume it.
 
 ### Downgrade posture
 
@@ -225,8 +231,10 @@ of last resort rather than a routine reversal.
 2. Apply migrations to head on an **empty disposable** schema and confirm the `ALTER` set applies
    cleanly.
 3. Confirm no index exceeds byte limits after the change.
-4. Scan for governed values differing only by case (expected: none, in an empty schema; this step
-   exists for the eventual populated environments).
+4. Scan for governed values differing only by case. Under a case-insensitive collation the unique
+   index already prevents them on the boundary columns, so the informative target is governed
+   columns *outside* a unique constraint, where case variants can coexist and equality lookups
+   would change behavior.
 5. Verify each controlled writer's authorized-create, idempotent-replay, and conflict paths still
    behave identically.
 6. Confirm the Alembic head remains single and linear after `upgrade` and after `downgrade` +
@@ -239,9 +247,10 @@ of last resort rather than a routine reversal.
 - **No client data.** Verification runs against an empty disposable schema — never a copy of client
   data, never a production snapshot, never a pseudo-client fixture.
 - **No seed data** is created by the migration or its verification.
-- **Backup and rollback:** take a verified backup of any populated environment before applying, and
-  confirm restore works, because the duplicate-key surfacing described above can abort the `ALTER`
-  mid-flight on populated tables.
+- **Backup and rollback:** take a verified backup of any populated environment before applying and
+  confirm restore works. The uniqueness direction is safe (above), but an `ALTER` that rebuilds
+  indexes on populated tables can still fail part-way for unrelated reasons — disk, timeout, or
+  lock contention — so a tested restore path is required regardless.
 - **Approval required.** Migration `013` must not be implemented until the user explicitly approves
   both the remediation and the specific collation selected.
 
@@ -281,3 +290,21 @@ are unchanged.
 - [PRODUCTION_PARITY_DB_VALIDATION.md](PRODUCTION_PARITY_DB_VALIDATION.md) — the two-layer validation model
 - [MANAGED_MYSQL_PERSISTENCE_RUBRIC.md](MANAGED_MYSQL_PERSISTENCE_RUBRIC.md) — managed remote MySQL as the operational store
 - [CONTROLLED_DB_WRITER_BOUNDARY.md](CONTROLLED_DB_WRITER_BOUNDARY.md) — the eleven narrow writers whose idempotency boundary is at risk
+
+---
+
+## Phase 43 — verifying this policy against production
+
+This document specifies the policy and the candidate migration. Phase 43 adds the read-only tool
+that determines whether the risk is **live** in the real deployed database:
+`make production-mysql-collation-verify`
+([`PRODUCTION_MYSQL_COLLATION_VERIFICATION.md`](PRODUCTION_MYSQL_COLLATION_VERIFICATION.md)).
+
+Its outcome drives the go/no-go decision for migration `013`:
+
+- `verified_risk_live_remediation_required` → **GO**, subject to approval, a tested restore, a
+  maintenance window, and a rehearsal.
+- `verified_safe_no_remediation_required` → **NO-GO**; keep policy rule 5 for future columns.
+- `verified_inconclusive` → **NO-GO for now**; never migrate on inconclusive evidence.
+
+Migration `013` remains unimplemented. Phase 43 does not create, propose as code, or execute it.

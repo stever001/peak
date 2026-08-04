@@ -132,6 +132,7 @@ peak/
 │   ├── INTERNAL_REPORT_REVIEW_WORKFLOW_INTEGRATION.md # Read-only end-to-end internal report review workflow state (Phase 40)
 │   ├── MANAGED_MYSQL_PRODUCTION_PARITY_VALIDATION.md # Offline MySQL parity checks + opt-in staging gate (Phase 41)
 │   ├── GOVERNED_MYSQL_COLLATION_POLICY.md          # Governed column classification + migration 013 plan (Phase 42)
+│   ├── PRODUCTION_MYSQL_COLLATION_VERIFICATION.md  # Read-only production collation verification + go/no-go (Phase 43)
 │   └── IMPLEMENTATION_PLAN.md
 ├── peak/                         # Python tooling layer (source only; no data)
 │   ├── db/                       # base, enums, models, session + agent_run (P20), evidence (P21), review (P22), source-ingestion (P24), agent-task-queue (P27), review-bundle (P30), internal-reviewer-decision (P33), intake-note (P34), internal-assessment-report-draft (P37), internal-report-review-packet (P38) & packet-decision (P39) writers
@@ -1346,6 +1347,46 @@ Phase 41's single collation warning into a precise, machine-checked classificati
 ```bash
 make validate-phase42        # offline; no credentials, no network
 make mysql-collation-audit   # the audit directly (add PYTHON=.venv/bin/python for the model tier)
+```
+
+### Production MySQL Collation Verification (Phase 43)
+
+Peak now builds on the **real deployed database**. Phase 42 measured the collation risk offline but
+could not tell whether it is *live* — that depends on the running production server. Phase 43 reads
+it, **read-only**.
+
+- **Read-only by construction, not by convention.** Every statement the tool can issue is a
+  hard-coded constant in a query allowlist; `assert_read_only()` runs before each execution and
+  again at the driver boundary, requiring the statement to *be* an allowlisted constant, to begin
+  with `SELECT`/`SHOW`, and to contain no mutating verb or statement separator. A read-only query
+  that is merely *not on the allowlist* is still refused. There is no code path that accepts SQL
+  from a CLI argument, an environment variable, or a file.
+- **Fail-closed gating.** Unconfigured → sanitized skip, exit 0, no driver imported, no `.env` read.
+  Connection setting present but no `PEAK_PRODUCTION_DB_READONLY_CONFIRM` → **REFUSED**, exit 2,
+  **no connection attempted**. It is deliberately **not** part of `make validate`.
+- **What it checks:** server version family, database charset/collation, table and column
+  collations, whether each governed column (reusing the **Phase 42 classifier**, so the two cannot
+  drift) compares deterministically, whether the 11 idempotency-boundary tables are safe, the
+  Alembic head, plus an **empirical cross-check** — `SELECT ('a' COLLATE <c>) = ('A' COLLATE <c>)`,
+  a literal comparison touching no table — confirming behavior rather than inferring it from a
+  collation's name.
+- **No secrets, no client data.** Never prints a DSN, host, user, password, token, cert, or
+  environment value; never emits a production row value. The opt-in collision probe returns
+  **counts only**. Failures report the exception *type*, because driver messages embed the DSN.
+- **Go/no-go, not action.** `verified_risk_live_remediation_required` → **GO** for migration `013`,
+  subject to approval, a **tested restore**, a maintenance window, and a rehearsal.
+  `verified_safe…` → **NO-GO**. `verified_inconclusive` → never migrate on inconclusive evidence.
+  **Migration `013` is not created, proposed as code, or executed by this phase.**
+- **A Phase 42 correction.** Phase 42 claimed tightening the collation could surface new
+  duplicate-key violations. That was backwards: insensitive → sensitive makes a unique index *more*
+  discriminating, so previously-colliding values become distinct and **no new violations are
+  possible**. Corrected in the policy doc.
+- [`tools/production_mysql_collation_verify.py`](tools/production_mysql_collation_verify.py) and
+  [`docs/PRODUCTION_MYSQL_COLLATION_VERIFICATION.md`](docs/PRODUCTION_MYSQL_COLLATION_VERIFICATION.md).
+
+```bash
+make validate-phase43                   # offline; no credentials, no network
+make production-mysql-collation-verify  # opt-in; skips safely unless explicitly configured
 ```
 
 ## Design constraints

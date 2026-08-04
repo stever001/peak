@@ -236,3 +236,16 @@ Two corrections to this document's Phase 41 framing:
 
 Remediation is candidate migration `013`, documented but **not implemented**; it requires explicit
 approval and managed-MySQL staging verification first.
+
+---
+
+## Phase 43 — the open question moved to production
+
+Phase 41 found the gap; Phase 42 measured its shape offline (211 governed columns, 0 pinned);
+Phase 43 reads the answer from the running production server, read-only.
+
+The offline checks here are unchanged and still run in `make validate`. What Phase 43 adds is the
+one thing they structurally cannot provide: production's **effective** collation, plus an empirical
+cross-check (`SELECT ('a' COLLATE <c>) = ('A' COLLATE <c>)`) that confirms the behavior rather than
+inferring it from a collation's name. See
+[`PRODUCTION_MYSQL_COLLATION_VERIFICATION.md`](PRODUCTION_MYSQL_COLLATION_VERIFICATION.md).

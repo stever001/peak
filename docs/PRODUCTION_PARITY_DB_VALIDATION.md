@@ -89,3 +89,23 @@ a sanitized skip and exits 0, importing no driver and reading no `.env`. It refu
 target and refuses a configured-but-not-disposable target. See
 [`MANAGED_MYSQL_PRODUCTION_PARITY_VALIDATION.md`](MANAGED_MYSQL_PRODUCTION_PARITY_VALIDATION.md),
 which also records the **open collation gap** that only a managed-MySQL runtime check can settle.
+
+---
+
+## Phase 43 — production is now the target for the collation question
+
+Peak is building on the **real deployed database**. The two-layer model above still holds for
+schema-shape rehearsal, but it could not answer the Phase 42 question — *is the collation risk
+live?* — because that depends on the running production server's effective collation, which no
+local or disposable environment can report.
+
+Phase 43 adds a **read-only** production verification path:
+[`PRODUCTION_MYSQL_COLLATION_VERIFICATION.md`](PRODUCTION_MYSQL_COLLATION_VERIFICATION.md) and
+`make production-mysql-collation-verify`. It issues only hard-coded `SELECT`/`SHOW` metadata
+queries, performs no schema mutation, data write, migration, or cleanup, prints no DSN, and emits
+no production row value.
+
+`make validate` is **unchanged and still fully offline** — no credentials, no network, no `.env`.
+The production target is deliberately excluded from it and fails closed: unconfigured it skips
+(exit 0) without importing a driver; configured without an explicit read-only affirmation it
+refuses (exit 2) without connecting.

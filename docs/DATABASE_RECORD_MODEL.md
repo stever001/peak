@@ -403,3 +403,13 @@ their comparisons **decide**:
 
 The controlled schema does not currently pin a collation on any of them. See
 [`GOVERNED_MYSQL_COLLATION_POLICY.md`](GOVERNED_MYSQL_COLLATION_POLICY.md).
+
+---
+
+## Phase 43 — governed columns are now verifiable against production
+
+The governed / enum / ordinary / JSON classification above is no longer only a repository-side
+model. Phase 43 reads each column's **effective collation from production** and reports which
+governed columns compare non-deterministically there, reusing the Phase 42 classifier directly so
+the two cannot drift. See
+[`PRODUCTION_MYSQL_COLLATION_VERIFICATION.md`](PRODUCTION_MYSQL_COLLATION_VERIFICATION.md).

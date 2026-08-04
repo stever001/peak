@@ -1307,6 +1307,41 @@ change, no migration):**
   [`../tests/validate_phase42_governed_mysql_collation_policy.py`](../tests/validate_phase42_governed_mysql_collation_policy.py)
   (`make validate-phase42`; offline).
 
+**Production MySQL Collation Verification (Phase 43 — read-only production verification and a
+go/no-go decision; no schema change, no migration):**
+
+- [x] **Production became the target.** Peak now builds on the real deployed database. Phase 42
+  measured the collation risk offline but could not tell whether it is *live*, because that depends
+  on the running production server's effective collation. Phase 43 reads it via
+  [`../tools/production_mysql_collation_verify.py`](../tools/production_mysql_collation_verify.py)
+  (`make production-mysql-collation-verify`), under a strict read-only boundary.
+- [x] **Read-only by construction, not convention.** A hard-coded query allowlist; an
+  `assert_read_only()` guard before every execution and again at the driver boundary, requiring the
+  statement to *be* an allowlisted constant, begin with `SELECT`/`SHOW`, and contain no mutating
+  verb or separator. No code path accepts SQL from argv, environment, or file. A read-only
+  statement that is merely off-allowlist is still refused.
+- [x] **Fails closed.** Unconfigured → skip (exit 0), no driver imported, no `.env` read. A
+  connection setting without `PEAK_PRODUCTION_DB_READONLY_CONFIRM` → **REFUSED** (exit 2), no
+  connection attempted. Deliberately excluded from `make validate`, which stays fully offline.
+- [x] **Checks:** server version family, database charset/collation, table and column collations,
+  governed-column determinism (reusing the **Phase 42 classifier**, so the two cannot drift), the
+  11 idempotency-boundary tables, the Alembic head, and an **empirical cross-check**
+  (`SELECT ('a' COLLATE <c>) = ('A' COLLATE <c>)`) that confirms behavior rather than inferring it
+  from a collation name.
+- [x] **No secrets, no client data.** No DSN, host, user, password, token, cert, or environment
+  value is printed; no production row value is emitted; the opt-in collision probe returns counts
+  only; failures report the exception *type*, because driver messages embed the DSN.
+- [x] **Go/no-go, not action.** `verified_risk_live_remediation_required` → GO for migration `013`
+  subject to approval, a tested restore, a maintenance window, and a rehearsal;
+  `verified_safe…` → NO-GO; `verified_inconclusive` → never migrate on inconclusive evidence.
+  **Migration `013` is not created, proposed as code, or executed.**
+- [x] **A Phase 42 correction.** Phase 42 claimed tightening the collation could surface new
+  duplicate-key violations. That was backwards — insensitive → sensitive makes a unique index more
+  discriminating, so previously-colliding values become distinct and no new violations are
+  possible. Corrected in the policy doc. Checked by
+  [`../tests/validate_phase43_production_mysql_collation_verification.py`](../tests/validate_phase43_production_mysql_collation_verification.py)
+  (`make validate-phase43`; offline).
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

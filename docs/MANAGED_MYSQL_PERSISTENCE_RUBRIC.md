@@ -178,3 +178,25 @@ recorded as `NEEDS_REMEDIATION` rather than silently fixed. See
 
 The rubric itself is unchanged: managed remote MySQL remains the operational data store, Client
 Isolation Option A remains the default, and SQLite is not the production-readiness proof path.
+
+---
+
+## Phase 43 — production-as-target, under a read-only boundary
+
+This rubric's disposable test/staging guidance remains correct for **rehearsing a migration**. It
+is not the right instrument for **observing production's current state**, which is what the Phase 42
+collation finding required.
+
+From Phase 43 onward, Peak treats the real deployed database as the target of record, with a strict
+split:
+
+- **Read-only production introspection** — permitted, via
+  `make production-mysql-collation-verify` (hard-coded `SELECT`/`SHOW` only, fail-closed gating,
+  no secrets or row values in output).
+- **Production schema mutation, migration execution, data writes, destructive cleanup** — still
+  **not permitted** without a separate, explicitly approved phase.
+
+Unchanged: managed remote MySQL is the operational data store, Client Isolation Option A is the
+default, SQLite is not the production-readiness proof path, and **standard validation still requires
+no live credentials and no network**. See
+[`PRODUCTION_MYSQL_COLLATION_VERIFICATION.md`](PRODUCTION_MYSQL_COLLATION_VERIFICATION.md).

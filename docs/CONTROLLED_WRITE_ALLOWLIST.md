@@ -212,3 +212,11 @@ update, delete, upsert, or raw-SQL action was added, and no existing table was b
 Phase 42 adds **no** table/action pair. It is a policy, audit, and planning phase that writes
 nothing, so it needs no allowlist entry: the allowlist stays at **13 tables / 15 actions**. No
 update, delete, upsert, or raw-SQL action was added, and no existing table was broadened.
+
+---
+
+## Phase 43 — no new pair
+
+Phase 43 adds **no** table/action pair. It is a read-only verification phase that writes nothing, so
+it needs no allowlist entry: the allowlist stays at **13 tables / 15 actions**. No update, delete,
+upsert, or raw-SQL action was added, and no existing table was broadened.

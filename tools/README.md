@@ -11,6 +11,11 @@ are excluded from `make validate`: `managed_mysql_check.py --connect` (read-only
 `managed_mysql_parity_check.py --mode staging`. Neither ever prints a DSN, and neither is selectable
 against production.
 
+Since Phase 43 one tool *is* pointed at production, deliberately and read-only:
+`production_mysql_collation_verify.py`. It issues only hard-coded `SELECT`/`SHOW` metadata queries,
+performs no schema mutation, data write, migration, or cleanup, and fails closed without an explicit
+read-only affirmation.
+
 ## `packet_runner.py`
 
 A read-only helper that takes an `EngagementPacket` and orients a consultant toward the
@@ -125,3 +130,35 @@ column out of governed scope.
 
 It proposes no schema and writes no migration. See
 [`../docs/GOVERNED_MYSQL_COLLATION_POLICY.md`](../docs/GOVERNED_MYSQL_COLLATION_POLICY.md).
+
+---
+
+## `production_mysql_collation_verify.py`
+
+The Phase 43 **read-only** production collation verification tool. Answers the question Phase 42
+could not settle from source: is the collation risk live in the real deployed database?
+
+```bash
+make production-mysql-collation-verify                          # skips safely if unconfigured
+make production-mysql-collation-verify PYTHON=.venv/bin/python  # SQLAlchemy needed to connect
+```
+
+Requires **two** environment variables, supplied out-of-band (names only shown here; values are
+never printed): `PEAK_PRODUCTION_DB_URL` (or `PEAK_DATABASE_URL`) and
+`PEAK_PRODUCTION_DB_READONLY_CONFIRM=1`. Optional: `--collision-probe` (bounded `COUNT`-only
+aggregates) and `--verbose` (query *names* only).
+
+**Read-only by construction.** Every statement is a hard-coded constant in a query allowlist;
+`assert_read_only()` runs before each execution and again at the driver boundary. No code path
+accepts SQL from a caller. `INSERT`/`UPDATE`/`DELETE`/`ALTER`/`DROP`/`TRUNCATE`/`CREATE`/`GRANT`/
+`REVOKE`/`LOCK`/`CALL`/`LOAD`/`OUTFILE`/`SET`, multi-statement execution, and migration execution
+are all unreachable.
+
+**Fails closed.** Unconfigured → skip (exit 0), no driver imported, no `.env` read. Connection
+setting without the affirmation → **REFUSED** (exit 2), no connection attempted.
+
+**No secrets, no row values.** Never prints a DSN, host, user, password, token, cert, or
+environment value; never emits a production row value. Failures report the exception *type* only.
+
+It recommends; it never acts. Migration `013` is not created or executed. See
+[`../docs/PRODUCTION_MYSQL_COLLATION_VERIFICATION.md`](../docs/PRODUCTION_MYSQL_COLLATION_VERIFICATION.md).

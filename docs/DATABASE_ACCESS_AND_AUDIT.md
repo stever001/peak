@@ -284,3 +284,17 @@ not the intent.
 The controlled schema currently leaves these comparisons to the managed server's default collation.
 This is a recorded open finding, not an accepted position. See
 [`GOVERNED_MYSQL_COLLATION_POLICY.md`](GOVERNED_MYSQL_COLLATION_POLICY.md).
+
+---
+
+## Phase 43 — read-only production introspection
+
+Peak now inspects the real deployed database directly, under a boundary that is enforced
+structurally rather than by convention: a hard-coded query allowlist, a guard that runs before
+every execution, and a second check at the driver boundary. Only `SELECT`/`SHOW` metadata queries
+are reachable; no code path exists that accepts SQL from a caller.
+
+Access rules for this path: no schema mutation, no data write, no migration execution, no cleanup or
+delete, no DSN or credential in output, and **no production row value in output** — aggregates
+return counts only. The tool fails closed without an explicit read-only affirmation. See
+[`PRODUCTION_MYSQL_COLLATION_VERIFICATION.md`](PRODUCTION_MYSQL_COLLATION_VERIFICATION.md).

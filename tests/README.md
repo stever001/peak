@@ -80,6 +80,8 @@ Thirty-two harnesses, run together by `make validate`:
   (stdlib-only; offline, credential-free, no network).
 - `validate_phase42_governed_mysql_collation_policy.py` — governed MySQL collation policy +
   audit check (stdlib-only; offline, credential-free, no network).
+- `validate_phase43_production_mysql_collation_verification.py` — production MySQL collation
+  verification check (stdlib-only; offline, credential-free, no network).
 
 ## `synthetic_fixtures.py`
 
@@ -1059,6 +1061,46 @@ Run `make validate-phase42`. Offline in both interpreters; the venv adds the mod
 tier. See
 [`../docs/GOVERNED_MYSQL_COLLATION_POLICY.md`](../docs/GOVERNED_MYSQL_COLLATION_POLICY.md).
 
+---
+
+## `validate_phase43_production_mysql_collation_verification.py`
+
+Check for the Phase 43 **read-only production collation verification tool**
+([`../tools/production_mysql_collation_verify.py`](../tools/production_mysql_collation_verify.py)).
+Stdlib-only and offline: it needs no production credentials and connects to nothing.
+
+Proves the tool is structurally incapable of mutating production — no mutating SQL anywhere in the
+source, no writer, no migration runner or `op.*` call, no ORM session or `create_all`, no DB driver
+at module scope, no `.env` read, and no code path accepting SQL from argv, environment, or file.
+The read-only guard is then **exercised directly** against 19 hostile statements (DDL, DML,
+multi-statement, `OUTFILE`, `LOAD DATA`, `CALL`, `SET`, `GRANT`/`REVOKE`, a read-only statement
+that is simply not on the allowlist, and one that would return governed row values) — all must be
+refused — while every allowlisted query must be accepted, must be `SELECT`/`SHOW`, and must not
+return a governed column in its **select list** (a `GROUP BY` key is fine; a returned value is not).
+Identifier injection is refused, and the sanitizer and `safe_error()` are checked against a canary.
+
+Verifies fail-closed gating: unconfigured skips (exit 0) importing no driver and reading no `.env`;
+a connection setting without `PEAK_PRODUCTION_DB_READONLY_CONFIRM` **refuses** (exit 2) with
+`production_connection_attempted=False`; affirmation without a connection setting skips. A canary
+DSN, username, host, and secret are never echoed in any mode.
+
+A **fake cursor drives the complete query path with no database**, proving the tool classifies a
+case-insensitive production as `verified_risk_live_remediation_required` and a deterministic one as
+`verified_safe_no_remediation_required`, counts exactly **11** idempotency boundaries (not all 18
+tables), issues only read-only `INFORMATION_SCHEMA` statements, reports the server version as a
+family only, keeps the collision probe **opt-in and off by default**, returns integer counts only,
+and emits no production row value.
+
+Also verifies the docs state the production posture, the required env vars **by name only**, the
+go/no-go rule, and backup/tested-restore/maintenance-window requirements; that the Phase 42
+duplicate-key direction claim was corrected; that **no migration `013` exists**; that nothing
+changed under `alembic/`, `schemas/`, or `peak/`; that the production target stays out of
+`make validate`; and the standing baseline and policy regressions.
+
+Run `make validate-phase43`. Offline in both interpreters; the venv adds the query-path simulation.
+See
+[`../docs/PRODUCTION_MYSQL_COLLATION_VERIFICATION.md`](../docs/PRODUCTION_MYSQL_COLLATION_VERIFICATION.md).
+
 ## Running
 
 This machine uses `python3` (there is no bare `python`). From the repo root:
@@ -1068,7 +1110,7 @@ This machine uses `python3` (there is no bare `python`). From the repo root:
 make install-dev          # == python3 -m pip install -r requirements-dev.txt
 
 # run all harnesses
-make validate             # == phase1 … phase42
+make validate             # == phase1 … phase43
 
 # or run one at a time
 make validate-phase1
@@ -1113,6 +1155,7 @@ make validate-phase39   # DB-backed; add PYTHON=.venv/bin/python for the full su
 make validate-phase40   # structural always; add PYTHON=.venv/bin/python for the DB layer
 make validate-phase41   # offline; no credentials, no network (venv adds the simulation tiers)
 make validate-phase42   # offline; no credentials, no network (venv adds the model tier)
+make validate-phase43   # offline; no credentials, no network (venv adds the query simulation)
 # opt-in managed MySQL (credential-free; skip safely with no DSN; never part of `make validate`):
 make db-check-managed-test          # managed test-env rubric check
 make managed-mysql-smoke            # managed test-env smoke runbook
@@ -1120,6 +1163,7 @@ make managed-mysql-migration-check  # managed test-env migration runbook
 make mysql-parity-static            # offline MySQL parity checks (safe; no credentials)
 make mysql-parity-staging           # opt-in disposable-staging parity gate (skips with no DSN)
 make mysql-collation-audit          # offline governed-collation audit (safe; no credentials)
+make production-mysql-collation-verify  # READ-ONLY production check (opt-in; skips unless configured)
 ```
 
 Or invoke them directly, without the Makefile:
@@ -1168,6 +1212,7 @@ python3 tests/validate_phase36_internal_assessment_report_planning.py        # s
 .venv/bin/python tests/validate_phase40_internal_report_review_workflow.py # DB-backed (SQLAlchemy); skips DB layer on plain python3
 python3 tests/validate_phase41_managed_mysql_production_parity.py # offline; credential-free; no network
 python3 tests/validate_phase42_governed_mysql_collation_policy.py # offline; credential-free; no network
+python3 tests/validate_phase43_production_mysql_collation_verification.py # offline; credential-free; no network
 ```
 
 ## Exit codes

@@ -294,3 +294,16 @@ into an idempotent replay, or a legitimate write is rejected as a conflict. Writ
 No collation is currently pinned. Phase 42 adds no writer and changes no boundary; it records the
 dependency and the remediation plan. See
 [`GOVERNED_MYSQL_COLLATION_POLICY.md`](GOVERNED_MYSQL_COLLATION_POLICY.md).
+
+---
+
+## Phase 43 — the boundary is now checkable against production
+
+The `UNIQUE (owner_id, client_id, engagement_id, idempotency_key)` constraint that every one of the
+eleven writers depends on can now be checked where it actually runs. Phase 43's read-only
+verification reports, per table, whether that boundary uses a deterministic collation in production
+— counting a table as a boundary only if it truly carries `idempotency_key` (the 11 tables with the
+composite UNIQUE), not merely `owner_id`.
+
+Phase 43 adds no writer and changes no boundary. See
+[`PRODUCTION_MYSQL_COLLATION_VERIFICATION.md`](PRODUCTION_MYSQL_COLLATION_VERIFICATION.md).
