@@ -100,3 +100,28 @@ and skips (exit 0) with no configuration — importing no database driver and re
 live run requires separate explicit approval of a specific disposable target.
 
 See [`../docs/MANAGED_MYSQL_PRODUCTION_PARITY_VALIDATION.md`](../docs/MANAGED_MYSQL_PRODUCTION_PARITY_VALIDATION.md).
+
+---
+
+## `governed_mysql_collation_audit.py`
+
+The Phase 42 governed-collation audit. Classifies every string column in the controlled schema by
+**what its comparisons decide** — identity, authorization, uniqueness, integrity, or nothing — and
+reports which governed columns still inherit their collation from the managed server.
+
+```bash
+make mysql-collation-audit                          # offline; no credentials, network, .env, or DSN
+make mysql-collation-audit PYTHON=.venv/bin/python  # full model introspection (authoritative)
+```
+
+Fully offline: it opens no database connection, imports no MySQL driver, reads no `.env`, and
+prints no DSN. Without SQLAlchemy it falls back to a source scan and **declares itself
+non-authoritative** rather than drawing a conclusion it cannot support.
+
+It exits **0** while reporting `NEEDS_REMEDIATION` — the unpinned-collation finding is a known,
+documented open item, not a build failure. It exits **1** only if the audit itself is broken: a
+required governed column missing or misclassified, so a future refactor cannot silently drop a
+column out of governed scope.
+
+It proposes no schema and writes no migration. See
+[`../docs/GOVERNED_MYSQL_COLLATION_POLICY.md`](../docs/GOVERNED_MYSQL_COLLATION_POLICY.md).

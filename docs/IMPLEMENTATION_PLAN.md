@@ -1274,6 +1274,39 @@ no schema, no writer, no migration):**
   [`../tests/validate_phase41_managed_mysql_production_parity.py`](../tests/validate_phase41_managed_mysql_production_parity.py)
   (`make validate-phase41`; offline).
 
+**Governed MySQL Collation Policy (Phase 42 — policy, audit, and remediation plan; no schema
+change, no migration):**
+
+- [x] **The Phase 41 warning became a measurement.** Phase 41 reported the unpinned-collation gap
+  over a hand-written column list. Phase 42 classifies **all 308 string columns across 18 tables**
+  by what their comparisons decide, via
+  [`../tools/governed_mysql_collation_audit.py`](../tools/governed_mysql_collation_audit.py)
+  (`make mysql-collation-audit`, wired into `make validate`).
+- [x] **Result: `NEEDS_REMEDIATION`.** **211 governed columns** (45 distinct names) require
+  deterministic comparison; **none pins a collation**; **62 sit inside a UNIQUE constraint or
+  primary key**. The rule adopted: *a column whose comparison decides identity, authorization,
+  uniqueness, or integrity must not inherit its collation from the server* — and every future
+  migration adding a governed string column must state its collation explicitly.
+- [x] **Risk ranked honestly.** The `UNIQUE (owner_id, client_id, engagement_id, idempotency_key)`
+  boundary on 11 tables is the top risk: writers persist the key **verbatim**, so a case-insensitive
+  collation would collapse `idem-key-1` and `idem-KEY-1` into one key. Enum/status columns rank
+  lower — controlled writers already gate them against closed vocabularies with case-sensitive
+  Python membership tests, so a case variant cannot be persisted.
+- [x] **Two Phase 41 corrections.** `packet_hash` is **not a column** (a Phase 23 ingestion-draft
+  field folded into `details_json`), and enum/status columns were over-weighted. Both are now
+  asserted by the audit rather than assumed.
+- [x] **Migration `013` planned, not written.** `013_governed_identifier_collation_policy` is
+  specified to affected tables/columns, index byte math (1536 of InnoDB's 3072 bytes — no index
+  needs shortening), duplicate-key surfacing risk on populated tables, downgrade posture, and
+  staging verification steps. **No `alembic/versions/013_*.py` exists** and the harness asserts its
+  absence. Collation selection is deliberately deferred — the repo pins no MySQL major version, so
+  `utf8mb4_bin` leads (governed values are ASCII by construction) without being declared final.
+- [x] **Offline and self-checking.** The audit needs no credentials, network, `.env`, DSN, or DB
+  driver; exits 0 while reporting `NEEDS_REMEDIATION`; and exits 1 only when the audit itself is
+  broken — proven by a negative test that removes a required governed column. Checked by
+  [`../tests/validate_phase42_governed_mysql_collation_policy.py`](../tests/validate_phase42_governed_mysql_collation_policy.py)
+  (`make validate-phase42`; offline).
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

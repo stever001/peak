@@ -4,12 +4,12 @@
 
 PYTHON ?= python3
 
-.PHONY: help validate validate-phase1 validate-phase2 validate-phase3 validate-phase4 validate-phase5 validate-phase6 validate-phase7 validate-phase8 validate-phase9 validate-phase10 validate-phase11 validate-phase12 validate-phase13 validate-phase14 validate-phase15 validate-phase16 validate-phase17 validate-phase18 validate-phase19 validate-phase20 validate-phase21 validate-phase22 validate-phase23 validate-phase24 validate-phase25 validate-phase26 validate-phase27 validate-phase28 validate-phase29 validate-phase30 validate-phase31 validate-phase32 validate-phase33 validate-phase34 validate-phase35 validate-phase36 validate-phase37 validate-phase38 validate-phase39 validate-phase40 validate-phase41 db-check mysql-parity-static mysql-parity-staging db-check-managed-test managed-mysql-smoke managed-mysql-migration-check packet-summary install-dev
+.PHONY: help validate validate-phase1 validate-phase2 validate-phase3 validate-phase4 validate-phase5 validate-phase6 validate-phase7 validate-phase8 validate-phase9 validate-phase10 validate-phase11 validate-phase12 validate-phase13 validate-phase14 validate-phase15 validate-phase16 validate-phase17 validate-phase18 validate-phase19 validate-phase20 validate-phase21 validate-phase22 validate-phase23 validate-phase24 validate-phase25 validate-phase26 validate-phase27 validate-phase28 validate-phase29 validate-phase30 validate-phase31 validate-phase32 validate-phase33 validate-phase34 validate-phase35 validate-phase36 validate-phase37 validate-phase38 validate-phase39 validate-phase40 validate-phase41 validate-phase42 db-check mysql-parity-static mysql-parity-staging mysql-collation-audit db-check-managed-test managed-mysql-smoke managed-mysql-migration-check packet-summary install-dev
 
 help: ## Show available targets
 	@echo "Targets:"
 	@echo "  make install-dev        Install dev dependencies ($(PYTHON) -m pip install -r requirements-dev.txt)"
-	@echo "  make validate           Run all validation harnesses (Phase 1 through Phase 41)"
+	@echo "  make validate           Run all validation harnesses (Phase 1 through Phase 42)"
 	@echo "  make validate-phase1    Run only the Phase 1 object harness"
 	@echo "  make validate-phase2    Run only the Phase 2 EngagementPacket harness"
 	@echo "  make validate-phase3    Run only the Phase 3 prompt-contract inventory check"
@@ -51,6 +51,7 @@ help: ## Show available targets
 	@echo "  make validate-phase39   Run only the Phase 39 controlled-DB packet-decision-writer check"
 	@echo "  make validate-phase40   Run only the Phase 40 internal report review workflow integration check"
 	@echo "  make validate-phase41   Run only the Phase 41 managed MySQL production-parity check"
+	@echo "  make validate-phase42   Run only the Phase 42 governed MySQL collation policy check"
 	@echo "  make db-check           Alias for the Phase 11 database-scaffold check"
 	@echo "  make db-check-managed-test        Managed MySQL test-env rubric check (skips safely with no DSN)"
 	@echo "  make managed-mysql-smoke          Managed MySQL test-env smoke runbook (skips safely with no DSN)"
@@ -60,7 +61,7 @@ help: ## Show available targets
 install-dev: ## Install development dependencies
 	$(PYTHON) -m pip install -r requirements-dev.txt
 
-validate: validate-phase1 validate-phase2 validate-phase3 validate-phase4 validate-phase5 validate-phase6 validate-phase7 validate-phase8 validate-phase9 validate-phase10 validate-phase11 validate-phase12 validate-phase13 validate-phase14 validate-phase15 validate-phase16 validate-phase17 validate-phase18 validate-phase19 validate-phase20 validate-phase21 validate-phase22 validate-phase23 validate-phase24 validate-phase25 validate-phase26 validate-phase27 validate-phase28 validate-phase29 validate-phase30 validate-phase31 validate-phase32 validate-phase33 validate-phase34 validate-phase35 validate-phase36 validate-phase37 validate-phase38 validate-phase39 validate-phase40 validate-phase41 ## Run all validation harnesses
+validate: validate-phase1 validate-phase2 validate-phase3 validate-phase4 validate-phase5 validate-phase6 validate-phase7 validate-phase8 validate-phase9 validate-phase10 validate-phase11 validate-phase12 validate-phase13 validate-phase14 validate-phase15 validate-phase16 validate-phase17 validate-phase18 validate-phase19 validate-phase20 validate-phase21 validate-phase22 validate-phase23 validate-phase24 validate-phase25 validate-phase26 validate-phase27 validate-phase28 validate-phase29 validate-phase30 validate-phase31 validate-phase32 validate-phase33 validate-phase34 validate-phase35 validate-phase36 validate-phase37 validate-phase38 validate-phase39 validate-phase40 validate-phase41 validate-phase42 ## Run all validation harnesses
 
 validate-phase1: ## Run the Phase 1 schema/example validation harness
 	$(PYTHON) tests/validate_phase1.py
@@ -186,6 +187,9 @@ validate-phase40: ## Run the Phase 40 end-to-end internal report review workflow
 validate-phase41: ## Run the Phase 41 managed MySQL production-parity check (offline; no credentials/network)
 	$(PYTHON) tests/validate_phase41_managed_mysql_production_parity.py
 
+validate-phase42: ## Run the Phase 42 governed MySQL collation policy check (offline; no credentials/network)
+	$(PYTHON) tests/validate_phase42_governed_mysql_collation_policy.py
+
 db-check: ## Validate the DB scaffold (alias for validate-phase11)
 	$(PYTHON) tests/validate_phase11_db_scaffold.py
 
@@ -198,6 +202,12 @@ mysql-parity-static: ## Offline MySQL parity checks (identifiers/migrations/char
 
 mysql-parity-staging: ## Opt-in disposable-staging MySQL parity gate (skips safely with no DSN)
 	$(PYTHON) tools/managed_mysql_parity_check.py --mode staging
+
+# Offline governed-collation audit (Phase 42). No credentials, network, .env, DSN, or DB driver.
+# Reports NEEDS_REMEDIATION as a WARNING and still exits 0: the unpinned-collation finding is a
+# known, documented open item, not a build failure. See docs/GOVERNED_MYSQL_COLLATION_POLICY.md.
+mysql-collation-audit: ## Offline governed-collation audit (classification + remediation status)
+	$(PYTHON) tools/governed_mysql_collation_audit.py
 
 # --- Managed MySQL production-parity targets (opt-in; credential-free; skip safely with no DSN) ---
 # These are NOT part of `make validate`: they require an out-of-band managed test/staging DSN and

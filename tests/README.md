@@ -78,6 +78,8 @@ Thirty-two harnesses, run together by `make validate`:
   workflow integration check (structural always; DB-backed when SQLAlchemy is present).
 - `validate_phase41_managed_mysql_production_parity.py` — managed MySQL production-parity check
   (stdlib-only; offline, credential-free, no network).
+- `validate_phase42_governed_mysql_collation_policy.py` — governed MySQL collation policy +
+  audit check (stdlib-only; offline, credential-free, no network).
 
 ## `synthetic_fixtures.py`
 
@@ -1017,6 +1019,46 @@ offline in both interpreters, though the venv adds the tool's model-introspectio
 migration-simulation tiers. See
 [`../docs/MANAGED_MYSQL_PRODUCTION_PARITY_VALIDATION.md`](../docs/MANAGED_MYSQL_PRODUCTION_PARITY_VALIDATION.md).
 
+---
+
+## `validate_phase42_governed_mysql_collation_policy.py`
+
+Check for the Phase 42 **governed MySQL collation policy and offline audit**
+([`../tools/governed_mysql_collation_audit.py`](../tools/governed_mysql_collation_audit.py)).
+Stdlib-only, offline, credential-free.
+
+Verifies the audit is analysis-only (no writer, no CRUD, no SQL, no database connection, no DB
+driver at module scope, no `.env` read, no committed DSN, and no `op.*`/`ALTER TABLE` that would
+constitute a schema proposal); that it runs on both interpreter tiers and **declares which tier
+ran** — with the source-scan fallback forced deterministically via a `None` entry in `sys.modules`
+so the non-authoritative tier is genuinely exercised and asserts it draws no policy conclusion.
+
+Verifies the audit classifies every string column, places each required governed column
+(`id`, `owner_id`, `client_id`, `engagement_id`, `authorization_scope`, `idempotency_key`, and the
+four fingerprints) in its expected class, separates `ordinary_text` and `json_or_details_text`,
+ranks enum/status as deterministic-**preferred** rather than required, reports CRITICAL/HIGH/MEDIUM
+risk tiers, names the `UNIQUE (owner_id, client_id, engagement_id, idempotency_key)` boundary with
+its concrete `idem-key-1` / `idem-KEY-1` consequence, and keeps `packet_hash` correctly outside the
+column set. Output is asserted **byte-identical across runs** (deterministic) and free of any
+canary DSN even when one is exported.
+
+The audit is a real control: a negative test renames a required governed column in a throwaway copy
+of the models and asserts the audit **fails with exit 1** — while the ordinary unpinned-collation
+finding exits **0** as `NEEDS_REMEDIATION`, because a known documented finding is not a build
+failure.
+
+Also verifies the policy doc states its rules and constraints (server-default collation
+insufficient for governed boundaries; future governed columns must state collation explicitly;
+remediation needs approval; production is not a smoke-test target; no client or seed data; downgrade
+posture; index byte math; additive ALTER-only), that **no migration `013` exists**, that nothing
+changed under `alembic/`, `schemas/`, or `peak/`, that the Phase 41 checker still passes with a
+*more precise* (not weakened) warning that now references this audit, and the standing baseline and
+policy regressions.
+
+Run `make validate-phase42`. Offline in both interpreters; the venv adds the model-introspection
+tier. See
+[`../docs/GOVERNED_MYSQL_COLLATION_POLICY.md`](../docs/GOVERNED_MYSQL_COLLATION_POLICY.md).
+
 ## Running
 
 This machine uses `python3` (there is no bare `python`). From the repo root:
@@ -1026,7 +1068,7 @@ This machine uses `python3` (there is no bare `python`). From the repo root:
 make install-dev          # == python3 -m pip install -r requirements-dev.txt
 
 # run all harnesses
-make validate             # == phase1 … phase41
+make validate             # == phase1 … phase42
 
 # or run one at a time
 make validate-phase1
@@ -1070,12 +1112,14 @@ make validate-phase38   # DB-backed; add PYTHON=.venv/bin/python for the full su
 make validate-phase39   # DB-backed; add PYTHON=.venv/bin/python for the full suite
 make validate-phase40   # structural always; add PYTHON=.venv/bin/python for the DB layer
 make validate-phase41   # offline; no credentials, no network (venv adds the simulation tiers)
+make validate-phase42   # offline; no credentials, no network (venv adds the model tier)
 # opt-in managed MySQL (credential-free; skip safely with no DSN; never part of `make validate`):
 make db-check-managed-test          # managed test-env rubric check
 make managed-mysql-smoke            # managed test-env smoke runbook
 make managed-mysql-migration-check  # managed test-env migration runbook
 make mysql-parity-static            # offline MySQL parity checks (safe; no credentials)
 make mysql-parity-staging           # opt-in disposable-staging parity gate (skips with no DSN)
+make mysql-collation-audit          # offline governed-collation audit (safe; no credentials)
 ```
 
 Or invoke them directly, without the Makefile:
@@ -1123,6 +1167,7 @@ python3 tests/validate_phase36_internal_assessment_report_planning.py        # s
 .venv/bin/python tests/validate_phase39_internal_report_review_packet_decision_writer.py # DB-backed (SQLAlchemy); skips DB layer on plain python3
 .venv/bin/python tests/validate_phase40_internal_report_review_workflow.py # DB-backed (SQLAlchemy); skips DB layer on plain python3
 python3 tests/validate_phase41_managed_mysql_production_parity.py # offline; credential-free; no network
+python3 tests/validate_phase42_governed_mysql_collation_policy.py # offline; credential-free; no network
 ```
 
 ## Exit codes

@@ -271,3 +271,16 @@ has **no update path**: a reviewer changing their mind writes a new row under a 
 prior decision stays intact — what a reviewer decided, and when, is a historical fact. The writer is
 insert-only and never modifies the packet or report-draft row. See
 [`INTERNAL_REPORT_REVIEW_PACKET_DECISION_CONTROLLED_WRITER.md`](INTERNAL_REPORT_REVIEW_PACKET_DECISION_CONTROLLED_WRITER.md).
+
+---
+
+## Phase 42 — comparison semantics are an audit concern
+
+Audit trails depend on identity comparisons being exact. If `owner_id`, `client_id`,
+`engagement_id`, or `idempotency_key` compare case-insensitively, then two audit records that
+should be distinct can be merged by the database itself — and the audit trail records the merge,
+not the intent.
+
+The controlled schema currently leaves these comparisons to the managed server's default collation.
+This is a recorded open finding, not an accepted position. See
+[`GOVERNED_MYSQL_COLLATION_POLICY.md`](GOVERNED_MYSQL_COLLATION_POLICY.md).

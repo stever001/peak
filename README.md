@@ -131,6 +131,7 @@ peak/
 │   ├── INTERNAL_REPORT_REVIEW_PACKET_DECISION_IDEMPOTENCY_POLICY.md # DB-enforced idempotency for packet-decision rows (Phase 39)
 │   ├── INTERNAL_REPORT_REVIEW_WORKFLOW_INTEGRATION.md # Read-only end-to-end internal report review workflow state (Phase 40)
 │   ├── MANAGED_MYSQL_PRODUCTION_PARITY_VALIDATION.md # Offline MySQL parity checks + opt-in staging gate (Phase 41)
+│   ├── GOVERNED_MYSQL_COLLATION_POLICY.md          # Governed column classification + migration 013 plan (Phase 42)
 │   └── IMPLEMENTATION_PLAN.md
 ├── peak/                         # Python tooling layer (source only; no data)
 │   ├── db/                       # base, enums, models, session + agent_run (P20), evidence (P21), review (P22), source-ingestion (P24), agent-task-queue (P27), review-bundle (P30), internal-reviewer-decision (P33), intake-note (P34), internal-assessment-report-draft (P37), internal-report-review-packet (P38) & packet-decision (P39) writers
@@ -1305,6 +1306,46 @@ It turns the Phase 38 defect class into an automated control.
 make validate-phase41    # offline; no credentials, no network
 make mysql-parity-static # the checker directly (add PYTHON=.venv/bin/python for model+simulation)
 make mysql-parity-staging # opt-in; skips safely with no disposable-staging configuration
+```
+
+### Governed MySQL Collation Policy (Phase 42)
+
+A **policy and remediation-planning** phase — no schema change, no migration, no writer. It turns
+Phase 41's single collation warning into a precise, machine-checked classification.
+
+- **The question.** Phase 41 found that nothing pins a collation, so the managed server's default
+  decides comparison semantics. MySQL 8 defaults `utf8mb4` to a case- **and** accent-**insensitive**
+  collation; SQLite compares case-**sensitively**. Which columns does that actually endanger?
+- **The answer, measured.** Of **308 string columns across 18 tables**, **211 are governed** (45
+  distinct names) and require deterministic comparison. **None pins a collation.** **62 sit inside a
+  UNIQUE constraint or primary key.** Status: `NEEDS_REMEDIATION`.
+- **Policy classes:** `governed_identifier`, `governed_scope`, `governed_idempotency`,
+  `governed_hash_or_fingerprint`, `governed_security_token_or_secret_hash` (deterministic
+  **required**); `governed_enum_status` (preferred); `ordinary_text` and `json_or_details_text`
+  (server default fine). The rule: *a column whose comparison decides identity, authorization,
+  uniqueness, or integrity must not inherit its collation from the server.*
+- **Highest-risk boundary.** `UNIQUE (owner_id, client_id, engagement_id, idempotency_key)` on **11
+  tables**. Case-insensitively, `idem-key-1` and `idem-KEY-1` are one key — two intentionally
+  distinct writes collapse into an idempotent replay. Writers store the key **verbatim**, so nothing
+  upstream mitigates it. Enum columns rank lower: they are already gated case-sensitively in Python.
+- **Two Phase 41 corrections.** `packet_hash` is **not a column** (it lives in `details_json`), and
+  enum/status columns were over-weighted. Both are now asserted, not assumed.
+- **Migration `013` is planned, not written.** `013_governed_identifier_collation_policy` is
+  specified down to affected columns, index byte math (1536 of 3072 bytes — no index needs
+  shortening), downgrade posture, and staging verification steps. **No `alembic/versions/013_*.py`
+  exists**, and the harness asserts its absence. Collation *selection* is deliberately deferred:
+  the repo pins no MySQL major version, so `utf8mb4_bin` leads (governed values are ASCII by
+  construction) but is not declared final.
+- **Offline and honest.** `make mysql-collation-audit` needs no credentials, network, `.env`, DSN,
+  or DB driver. It exits **0** while reporting `NEEDS_REMEDIATION` — a known finding is not a build
+  failure — and exits **1** only if the audit itself breaks, proven by a negative test that removes
+  a required governed column.
+- [`tools/governed_mysql_collation_audit.py`](tools/governed_mysql_collation_audit.py) and
+  [`docs/GOVERNED_MYSQL_COLLATION_POLICY.md`](docs/GOVERNED_MYSQL_COLLATION_POLICY.md).
+
+```bash
+make validate-phase42        # offline; no credentials, no network
+make mysql-collation-audit   # the audit directly (add PYTHON=.venv/bin/python for the model tier)
 ```
 
 ## Design constraints

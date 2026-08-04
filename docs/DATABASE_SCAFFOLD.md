@@ -163,3 +163,16 @@ When adding a table whose name approaches ~25 characters, do not rely on convent
 names: `ix_<table>_<column>` overflows quickly. Pin a short explicit prefix, as
 `internal_report_review_packet_decisions` does with `ix_irrpd_*`. See
 [`MANAGED_MYSQL_PRODUCTION_PARITY_VALIDATION.md`](MANAGED_MYSQL_PRODUCTION_PARITY_VALIDATION.md).
+
+---
+
+## Phase 42 — state the collation on governed columns
+
+The scaffold pins `InnoDB` and `utf8mb4` but **no collation**, so the managed server's default
+currently decides case sensitivity for every comparison.
+
+When adding a governed string column — an id, a tenant/engagement ref, an authorization scope, an
+idempotency key, or a fingerprint — **state its collation explicitly**. Silence means "whatever the
+server happens to default to", which is not a decision. See
+[`GOVERNED_MYSQL_COLLATION_POLICY.md`](GOVERNED_MYSQL_COLLATION_POLICY.md) and run
+`make mysql-collation-audit`.

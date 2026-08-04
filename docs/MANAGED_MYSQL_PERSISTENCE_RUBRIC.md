@@ -161,3 +161,20 @@ the managed server's default decides case/accent sensitivity for identity, autho
 idempotency columns. That cannot be resolved by reading the repository and no migration is proposed
 here. See
 [`MANAGED_MYSQL_PRODUCTION_PARITY_VALIDATION.md`](MANAGED_MYSQL_PRODUCTION_PARITY_VALIDATION.md).
+
+---
+
+## Phase 42 — governed collation policy under this rubric
+
+Phase 42 adds no operational table and no migration. It adds the **governed collation policy** this
+rubric implied but never stated: a column whose comparison decides identity, authorization,
+uniqueness, or integrity must pin a deterministic collation explicitly, and **every future
+migration that adds a governed string column must state its collation** rather than inheriting the
+server default.
+
+The current schema does not yet meet that policy — 211 governed columns, none pinned — which is
+recorded as `NEEDS_REMEDIATION` rather than silently fixed. See
+[`GOVERNED_MYSQL_COLLATION_POLICY.md`](GOVERNED_MYSQL_COLLATION_POLICY.md).
+
+The rubric itself is unchanged: managed remote MySQL remains the operational data store, Client
+Isolation Option A remains the default, and SQLite is not the production-readiness proof path.

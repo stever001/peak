@@ -86,10 +86,19 @@ KNOWN_OVERLONG_IDENTIFIERS = (
 #: Columns whose comparison semantics are security- or identity-relevant. If the managed server's
 #: default collation is case-insensitive, two values differing only in case collapse into one —
 #: which would merge distinct idempotency keys and weaken identity/scope matching.
+#:
+#: This is the illustrative headline set. The authoritative, complete classification of all 308
+#: string columns lives in the Phase 42 companion audit
+#: (``tools/governed_mysql_collation_audit.py`` / ``make mysql-collation-audit``); this tool defers
+#: to it rather than duplicating the column inventory.
+#:
+#: ``packet_hash`` deliberately does NOT appear here: Phase 42 established it is not a column at
+#: all but a Phase 23 ingestion-draft field folded into ``details_json``, so it carries no
+#: collation.
 COMPARISON_SENSITIVE_COLUMNS = (
     "id", "owner_id", "client_id", "engagement_id", "authorization_scope",
     "idempotency_key", "payload_fingerprint", "plan_fingerprint",
-    "report_draft_payload_fingerprint", "packet_payload_fingerprint", "packet_hash",
+    "report_draft_payload_fingerprint", "packet_payload_fingerprint",
 )
 
 #: Environment variables that may carry a DSN. Their *values* are never read into output.
@@ -609,7 +618,11 @@ def check_collation_policy(report: Report) -> None:
         + ", ".join(COMPARISON_SENSITIVE_COLUMNS)
         + ". Consequence if the default is case-insensitive: the UNIQUE "
         "(owner_id, client_id, engagement_id, idempotency_key) idempotency boundary would treat "
-        "keys differing only in case as the SAME key. No migration is proposed here — see "
+        "keys differing only in case as the SAME key. Phase 42 classified the full surface: 211 "
+        "governed columns across 18 tables, 62 of them CRITICAL (unique/primary-key boundary), "
+        "none pinning a collation — run `make mysql-collation-audit` for the authoritative "
+        "breakdown. No migration is proposed here — see "
+        "docs/GOVERNED_MYSQL_COLLATION_POLICY.md and "
         "docs/MANAGED_MYSQL_PRODUCTION_PARITY_VALIDATION.md.")
 
 

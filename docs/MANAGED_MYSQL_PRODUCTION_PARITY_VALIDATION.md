@@ -211,3 +211,28 @@ are unchanged by this phase.
 - [PRODUCTION_PARITY_DB_VALIDATION.md](PRODUCTION_PARITY_DB_VALIDATION.md) — the two-layer model (Phase 34)
 - [MANAGED_MYSQL_PERSISTENCE_RUBRIC.md](MANAGED_MYSQL_PERSISTENCE_RUBRIC.md) — managed remote MySQL as the operational store
 - [`tools/managed_mysql_check.py`](../tools/managed_mysql_check.py) — the Phase 34 runbook/connectivity helper this checker complements
+
+---
+
+## Phase 42 — the collation gap, classified
+
+Phase 41 reported the unpinned-collation gap as a single warning over a hand-written column list.
+Phase 42 replaced that with a deterministic classification of **all 308 string columns across all
+18 tables** — see [`GOVERNED_MYSQL_COLLATION_POLICY.md`](GOVERNED_MYSQL_COLLATION_POLICY.md) and
+`make mysql-collation-audit`.
+
+Result: **211 governed columns** (45 distinct names) require deterministic comparison, **none**
+pins a collation, and **62 of them sit inside a UNIQUE constraint or primary key**. The status is
+`NEEDS_REMEDIATION`.
+
+Two corrections to this document's Phase 41 framing:
+
+- `packet_hash` was listed among comparison-sensitive **columns**. It is not a column — it is a
+  Phase 23 ingestion-draft field folded into `details_json`, so it carries no collation. The audit
+  now asserts it stays a non-column.
+- Enum/status columns are **lower** priority than first implied: controlled writers gate them
+  against closed vocabularies with case-sensitive Python membership tests, so a case variant cannot
+  be persisted. `idempotency_key` has no such mitigation — it is stored verbatim.
+
+Remediation is candidate migration `013`, documented but **not implemented**; it requires explicit
+approval and managed-MySQL staging verification first.

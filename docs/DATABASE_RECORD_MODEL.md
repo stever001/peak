@@ -384,3 +384,22 @@ the controlled-writer idempotency columns. `decision_scope` is fixed at
 `internal_report_review_packet` and `audience` at `internal`. It stores **no report prose**, no raw
 content, and no client-facing approval. See
 [`INTERNAL_REPORT_REVIEW_PACKET_DECISION_CONTROLLED_WRITER.md`](INTERNAL_REPORT_REVIEW_PACKET_DECISION_CONTROLLED_WRITER.md).
+
+---
+
+## Phase 42 — governed columns and comparison semantics
+
+Not every string column in a record carries the same weight. Phase 42 classifies them by what
+their comparisons **decide**:
+
+- **Governed** (`id`, `owner_id`, `client_id`, `engagement_id`, `authorization_scope`,
+  `idempotency_key`, `*_fingerprint`, record refs): comparisons decide identity, authorization,
+  uniqueness, or integrity. These require deterministic, case-sensitive comparison.
+- **Enum/status**: closed vocabularies, already gated case-sensitively in Python before
+  persistence.
+- **Ordinary text** (summaries, labels, descriptors): human-facing prose; case-insensitive
+  comparison is fine.
+- **JSON/detail**: must never participate in an equality, uniqueness, or authorization boundary.
+
+The controlled schema does not currently pin a collation on any of them. See
+[`GOVERNED_MYSQL_COLLATION_POLICY.md`](GOVERNED_MYSQL_COLLATION_POLICY.md).

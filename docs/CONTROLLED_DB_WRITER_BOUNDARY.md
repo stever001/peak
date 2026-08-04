@@ -275,3 +275,22 @@ opens no database connection and executes no SQL in its default offline mode; it
 opt-in, fails closed, and is deliberately excluded from `make validate`.
 
 The eleven narrow writers remain the only paths that write to the controlled database.
+
+---
+
+## Phase 42 — the idempotency boundary depends on collation
+
+Every one of the eleven narrow writers enforces replay safety through the same DB constraint:
+
+```
+UNIQUE (owner_id, client_id, engagement_id, idempotency_key)
+```
+
+That constraint is only as precise as the collation underneath it. Under a case-insensitive
+collation, `idem-key-1` and `idem-KEY-1` are one key: two intentionally distinct writes collapse
+into an idempotent replay, or a legitimate write is rejected as a conflict. Writers persist the key
+**verbatim**, with no case normalization, so nothing upstream mitigates this.
+
+No collation is currently pinned. Phase 42 adds no writer and changes no boundary; it records the
+dependency and the remediation plan. See
+[`GOVERNED_MYSQL_COLLATION_POLICY.md`](GOVERNED_MYSQL_COLLATION_POLICY.md).
