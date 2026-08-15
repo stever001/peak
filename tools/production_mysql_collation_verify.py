@@ -107,7 +107,7 @@ _SAFE_IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9_]{1,64}$")
 
 # --------------------------------------------------------------------------- expectations
 
-EXPECTED_ALEMBIC_HEAD = "012_internal_report_review_packet_decisions"
+EXPECTED_ALEMBIC_HEAD = "013_governed_identifier_collation_policy"
 EXPECTED_TABLE_COUNT = 18
 REQUIRED_CHARSET = "utf8mb4"
 
@@ -469,9 +469,9 @@ def _classify_outcome(result: VerificationResult, at_risk_names) -> None:
                 "engagement_id, idempotency_key) constraint is not case-sensitive there")
         result.recommended_next_step = (
             "GO for migration 013 (013_governed_identifier_collation_policy): the risk is live. "
-            "Migration 013 is NOT implemented or executed by this phase — it requires explicit "
-            "approval, a backup, and a maintenance window. See "
-            "docs/GOVERNED_MYSQL_COLLATION_POLICY.md")
+            "Migration 013 is implemented in source control but is NOT executed by this tool — "
+            "production execution requires explicit approval, a backup, and a maintenance "
+            "window. See docs/GOVERNED_MYSQL_COLLATION_POLICY.md")
     else:
         result.outcome = VERIFIED_SAFE
         result.reason_code = "all_governed_columns_deterministic"
@@ -647,7 +647,8 @@ def render(result: VerificationResult, *, verbose: bool = False) -> None:
             emit(f"  - {name}")
     emit("")
     emit("This tool performs no schema mutation, no data write, no migration, and no cleanup or")
-    emit("delete path. Migration 013 is NOT implemented or executed by Phase 43.")
+    emit("delete path. Migration 013 is implemented in source control but is NOT executed by this")
+    emit("tool; production execution remains a separately approved operation.")
 
 
 def main(argv=None) -> int:

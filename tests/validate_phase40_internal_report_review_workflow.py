@@ -62,11 +62,14 @@ COMPILE_FILES = [MODULE, PACKAGE_INIT, HARNESS]
 SCANNED_FILES = [MODULE, PACKAGE_INIT]
 
 #: Sources Phase 40 must not have touched at all.
+#: Sources Phase 40 must not have touched. ``peak/db/models.py`` and ``alembic/versions`` were
+#: originally in this list; Phase 44 legitimately owns both (governed-collation metadata and
+#: migration 013), so they moved out. The real guarantee — that the three narrow writers and the
+#: controlled-write allowlist are untouched — is unchanged and still enforced here.
 UNCHANGED_SOURCES = [
     "peak/db/internal_assessment_report_draft_writer.py",
     "peak/db/internal_report_review_packet_writer.py",
     "peak/db/internal_report_review_packet_decision_writer.py",
-    "peak/db/models.py",
     "peak/persistence/allowlist.py",
 ]
 REPORTS_FILES = [
@@ -74,7 +77,10 @@ REPORTS_FILES = [
     "peak/reports/internal_assessment_planner.py",
 ]
 
+#: The head Phase 40 was built on and records in its own doc. Historical and correct as written.
 ALEMBIC_HEAD = "012_internal_report_review_packet_decisions"
+#: The current newest migration. Phase 44 added 013 (governed collation).
+CURRENT_HEAD = "013_governed_identifier_collation_policy"
 DECISION_TABLE = "internal_report_review_packet_decisions"
 PACKET_TABLE = "internal_report_review_packets"
 DRAFT_TABLE = "internal_assessment_report_drafts"
@@ -408,11 +414,11 @@ def _baseline_regressions() -> None:
     print("\n7. Baseline regressions: no new table / model / migration / allowlist pair / writer")
     versions_dir = os.path.join(REPO_ROOT, "alembic", "versions")
     versions = sorted(f for f in os.listdir(versions_dir) if f.endswith(".py"))
-    check("no migration 013 (or later) added",
-          not any(re.match(r"^0*1[3-9]_|^0*[2-9]\d_", f) for f in versions))
-    check(f"{ALEMBIC_HEAD} is still the newest migration",
-          versions[-1].startswith("012_internal_report_review_packet_decisions"))
-    check("exactly 12 migrations", len(versions) == 12)
+    check("no migration 014 (or later) added",
+          not any(re.match(r"^0*1[4-9]_|^0*[2-9]\d_", f) for f in versions))
+    check(f"{CURRENT_HEAD} is the newest migration",
+          versions[-1].startswith("013_governed_identifier_collation_policy"))
+    check("exactly 13 migrations", len(versions) == 13)
 
     from peak.persistence.allowlist import ALLOWED_ACTIONS, ALLOWED_TABLES
     check("allowlist still has exactly 13 tables", len(ALLOWED_TABLES) == 13)
@@ -464,10 +470,9 @@ def _baseline_regressions() -> None:
     check("importing peak.reports still loads no DB module", "CLEAN_OK" in proc.stdout)
     try:
         changed = subprocess.run(
-            ["git", "-C", REPO_ROOT, "diff", "--name-only", "HEAD", "--"] + UNCHANGED_SOURCES
-            + ["alembic/versions"],
+            ["git", "-C", REPO_ROOT, "diff", "--name-only", "HEAD", "--"] + UNCHANGED_SOURCES,
             capture_output=True, text=True, timeout=20).stdout.strip()
-        check("Phase 37/38/39 writers, models.py, allowlist, and migrations have no pending diff",
+        check("Phase 37/38/39 writers and the allowlist have no pending diff",
               not changed)
     except Exception:
         check("git-backed unchanged-source check (git unavailable — skipped)", True)

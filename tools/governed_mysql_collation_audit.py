@@ -174,6 +174,10 @@ RISK_MEDIUM = "MEDIUM"       # governed but neither unique nor indexed
 
 STATUS_OK = "OK"
 STATUS_NEEDS_REMEDIATION = "NEEDS_REMEDIATION"
+#: Phase 44 pinned the model/migration policy, but source control cannot prove the deployed
+#: database was migrated. This is the honest middle state: the repo is correct, production is
+#: unverified until ``make production-mysql-collation-verify`` says otherwise.
+STATUS_MODEL_POLICY_SATISFIED = "MODEL_POLICY_SATISFIED_PRODUCTION_UNVERIFIED"
 
 
 def classify(column_name: str, type_name: str) -> str:
@@ -214,8 +218,21 @@ def repo_pins_any_collation() -> bool:
 
 
 def column_collation(column) -> str:
-    """Return an explicitly declared collation for a column, or '' when it defers to the server."""
-    collation = getattr(getattr(column, "type", None), "collation", None)
+    """Return the effective declared collation for a column, or '' when it defers to the server.
+
+    Governed columns attach their collation through a MySQL ``with_variant`` (see
+    ``peak.db.base.GovernedString``), because a bare ``String(collation=...)`` renders
+    ``COLLATE`` on every dialect and SQLite rejects it. So the variant is checked first, then the
+    base type.
+    """
+    type_ = getattr(column, "type", None)
+    variants = getattr(type_, "_variant_mapping", None) or {}
+    for dialect in ("mysql", "mariadb"):
+        variant = variants.get(dialect)
+        collation = getattr(variant, "collation", None)
+        if collation:
+            return str(collation)
+    collation = getattr(type_, "collation", None)
     return str(collation) if collation else ""
 
 
@@ -448,7 +465,24 @@ def run_audit(verbose: bool = False) -> int:
 
     # --- 6. Verdict ---
     print("\n6. Verdict")
-    if governed_unpinned:
+    if not governed_unpinned and governed:
+        status = STATUS_MODEL_POLICY_SATISFIED
+        audit.ok(f"{status}: all {len(governed)} governed column(s) pin a deterministic collation "
+                 "in the model/migration source (Phase 44)")
+        audit.info("  Source control is correct. It does NOT prove the deployed database was "
+                   "migrated:")
+        audit.info("    - migration 013 must still be executed against production, under separate "
+                   "approval;")
+        audit.info("    - run `make production-mysql-collation-verify` to read production's "
+                   "effective collation;")
+        audit.info("    - production verification remains required AFTER production migration "
+                   "execution.")
+        audit.info("  The idempotency boundary UNIQUE (owner_id, client_id, engagement_id, "
+                   "idempotency_key) is the reason this matters: under a case-insensitive "
+                   "collation 'idem-key-1' and 'idem-KEY-1' are one key, and writers persist the "
+                   "key verbatim with no case normalization. See "
+                   "docs/GOVERNED_MYSQL_COLLATION_POLICY.md.")
+    elif governed_unpinned:
         status = STATUS_NEEDS_REMEDIATION
         audit.warn(
             f"{status}: {len(governed_unpinned)} governed column(s) defer comparison semantics to "
@@ -460,7 +494,7 @@ def run_audit(verbose: bool = False) -> int:
                    "server's effective default collation cannot be read from this repository.")
     else:
         status = STATUS_OK
-        audit.ok(f"{status}: every governed column pins a deterministic collation")
+        audit.ok(f"{status}: no governed columns were found to assess")
 
     if verbose:
         print("\n7. Governed columns without explicit collation (table.column [risk])")

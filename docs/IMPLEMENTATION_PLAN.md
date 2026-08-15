@@ -1342,6 +1342,33 @@ go/no-go decision; no schema change, no migration):**
   [`../tests/validate_phase43_production_mysql_collation_verification.py`](../tests/validate_phase43_production_mysql_collation_verification.py)
   (`make validate-phase43`; offline).
 
+**Governed Identifier Collation Migration (Phase 44 — migration 013 + model metadata; no
+production execution):**
+
+- [x] **The policy became code.** Migration `013_governed_identifier_collation_policy`
+  (`down_revision = 012`) and the model metadata pin **`utf8mb4_bin`** on all **211 governed
+  columns** across 18 tables. Head moved 012 → 013; table count, model entities, writers, and the
+  allowlist are unchanged.
+- [x] **Scope is exactly the deterministic-required classes** — identifier (156), scope (27),
+  hash/fingerprint (17), idempotency (11). `ordinary_text` (9) and `json_or_details_text` (3) carry
+  no equality boundary; `governed_enum_status` (85) is deterministic-*preferred* because controlled
+  writers already gate it case-sensitively in Python, and was deliberately left out of scope.
+- [x] **A repo-level blocker was found and solved.** `String(collation=...)` renders `COLLATE` on
+  every dialect and SQLite rejects it (`no such collation sequence`), which would have broken a
+  dozen structural-smoke harnesses. Models use `GovernedString`, attaching the collation through a
+  MySQL `with_variant`: identical MySQL DDL, SQLite untouched.
+- [x] **ALTER-only migration.** 211 `ALTER … MODIFY … COLLATE utf8mb4_bin` statements with lengths
+  and nullability preserved; no CREATE/DROP, no data operation, no raw SQL, no index or constraint
+  rename, no earlier migration edited. SQLite is a deliberate no-op. The mapping is a static
+  literal — the harness parses it with `ast` rather than importing, proving it is reviewable and
+  not built at runtime — and is compared **both ways** against the live models.
+- [x] **Status is now `MODEL_POLICY_SATISFIED_PRODUCTION_UNVERIFIED`.** Source control is correct;
+  the deployed database has **not** been migrated. Phase 44 executed nothing against production,
+  and a production execution checklist (verify → approve → backup with tested restore → rehearse →
+  window → execute → re-verify) is recorded in the policy doc. Checked by
+  [`../tests/validate_phase44_governed_identifier_collation_migration.py`](../tests/validate_phase44_governed_identifier_collation_migration.py)
+  (`make validate-phase44`; offline).
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

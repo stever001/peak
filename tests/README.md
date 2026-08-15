@@ -82,6 +82,8 @@ Thirty-two harnesses, run together by `make validate`:
   audit check (stdlib-only; offline, credential-free, no network).
 - `validate_phase43_production_mysql_collation_verification.py` — production MySQL collation
   verification check (stdlib-only; offline, credential-free, no network).
+- `validate_phase44_governed_identifier_collation_migration.py` — governed identifier collation
+  migration check (offline, credential-free, no network).
 
 ## `synthetic_fixtures.py`
 
@@ -1101,6 +1103,44 @@ Run `make validate-phase43`. Offline in both interpreters; the venv adds the que
 See
 [`../docs/PRODUCTION_MYSQL_COLLATION_VERIFICATION.md`](../docs/PRODUCTION_MYSQL_COLLATION_VERIFICATION.md).
 
+---
+
+## `validate_phase44_governed_identifier_collation_migration.py`
+
+Check for the Phase 44 **governed identifier collation migration** — migration
+`013_governed_identifier_collation_policy` plus the model metadata that pins `utf8mb4_bin` on the
+211 governed columns. Offline and credential-free.
+
+Verifies the baseline moved correctly (head 012 → 013, 13 migrations, still 18 tables, no new
+table/model entity or allowlist pair, 11 writers, only `peak/db/models.py` and `peak/db/base.py`
+changed under `peak/`, no earlier migration edited); that migration `013` is **ALTER-only** (no
+`create_table`/`drop_table`/`add_column`/`drop_column`/`create_index`/`drop_index`/`bulk_insert`/
+`execute`, no INSERT/UPDATE/DELETE/TRUNCATE/GRANT/REVOKE, no raw `text()`, no seed or client data,
+no index or constraint name anywhere) and correctly dialect-gated so SQLite is a deliberate no-op.
+
+The mapping is extracted with `ast` rather than by importing the migration — which both works
+without Alembic installed and *proves the literal is static*, since a runtime-built list would fail
+`literal_eval`. It is then compared **both directions** against the live models: every governed
+model column appears in the migration, every mapped column exists in the model with matching length
+and nullability, and no `ordinary_text`, `json_or_details_text`, or `governed_enum_status` column
+was swept in.
+
+Model policy is checked on effective types: exactly 211 governed columns resolve to `utf8mb4_bin`,
+zero remain unpinned, zero non-governed columns were forced into a binary collation, all 11
+idempotency-boundary tables and every hash/fingerprint and scope column are deterministic, MySQL DDL
+carries `COLLATE utf8mb4_bin` while SQLite DDL carries none, and `create_all` still builds all 18
+tables on SQLite. The migration is then applied, reversed, and re-applied on a temporary SQLite
+database.
+
+Finally it confirms the audit reports `MODEL_POLICY_SATISFIED_PRODUCTION_UNVERIFIED` (not
+`NEEDS_REMEDIATION`) while still saying production is unverified and migration 013 must still run
+there, that the parity checker and production verifier still pass and skip safely, and the standing
+forbidden-path and policy guarantees.
+
+Run `make validate-phase44`. Offline in both interpreters; the venv adds the model-comparison and
+migration-run tiers. See
+[`../docs/GOVERNED_MYSQL_COLLATION_POLICY.md`](../docs/GOVERNED_MYSQL_COLLATION_POLICY.md).
+
 ## Running
 
 This machine uses `python3` (there is no bare `python`). From the repo root:
@@ -1110,7 +1150,7 @@ This machine uses `python3` (there is no bare `python`). From the repo root:
 make install-dev          # == python3 -m pip install -r requirements-dev.txt
 
 # run all harnesses
-make validate             # == phase1 … phase43
+make validate             # == phase1 … phase44
 
 # or run one at a time
 make validate-phase1
@@ -1156,6 +1196,7 @@ make validate-phase40   # structural always; add PYTHON=.venv/bin/python for the
 make validate-phase41   # offline; no credentials, no network (venv adds the simulation tiers)
 make validate-phase42   # offline; no credentials, no network (venv adds the model tier)
 make validate-phase43   # offline; no credentials, no network (venv adds the query simulation)
+make validate-phase44   # offline; no credentials, no network (venv adds model + migration tiers)
 # opt-in managed MySQL (credential-free; skip safely with no DSN; never part of `make validate`):
 make db-check-managed-test          # managed test-env rubric check
 make managed-mysql-smoke            # managed test-env smoke runbook

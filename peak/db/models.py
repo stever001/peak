@@ -17,14 +17,14 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
-from .base import MYSQL_TABLE_ARGS, AuditMixin, Base, GovernanceMixin
+from .base import MYSQL_TABLE_ARGS, AuditMixin, Base, GovernanceMixin, GovernedString
 
 
 class Client(Base, GovernanceMixin, AuditMixin):
     __tablename__ = "clients"
     __table_args__ = MYSQL_TABLE_ARGS
     # id convention: client_<slug>
-    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    id: Mapped[str] = mapped_column(GovernedString(64), primary_key=True)
     organization_label: Mapped[Optional[str]] = mapped_column(String(255))
 
 
@@ -32,8 +32,8 @@ class Engagement(Base, GovernanceMixin, AuditMixin):
     __tablename__ = "engagements"
     __table_args__ = MYSQL_TABLE_ARGS
     # id convention: eng_<slug>
-    id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    client_id: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    id: Mapped[str] = mapped_column(GovernedString(64), primary_key=True)
+    client_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
     engagement_label: Mapped[Optional[str]] = mapped_column(String(255))
     status: Mapped[Optional[str]] = mapped_column(String(32))  # prospective/active/on_hold/complete/closed
 
@@ -42,10 +42,10 @@ class EngagementRecord(Base, GovernanceMixin, AuditMixin):
     __tablename__ = "engagement_records"
     __table_args__ = MYSQL_TABLE_ARGS
     # id convention: engrec_<slug>
-    id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    client_id: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
-    engagement_id: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
-    data_class: Mapped[Optional[str]] = mapped_column(String(32))  # live_client_data
+    id: Mapped[str] = mapped_column(GovernedString(64), primary_key=True)
+    client_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    engagement_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    data_class: Mapped[Optional[str]] = mapped_column(GovernedString(32))  # live_client_data
 
 
 class EvidenceReference(Base, GovernanceMixin, AuditMixin):
@@ -64,9 +64,9 @@ class EvidenceReference(Base, GovernanceMixin, AuditMixin):
         MYSQL_TABLE_ARGS,
     )
     # id convention: evid_<slug>
-    id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    client_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
-    engagement_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    id: Mapped[str] = mapped_column(GovernedString(64), primary_key=True)
+    client_id: Mapped[Optional[str]] = mapped_column(GovernedString(64), index=True)
+    engagement_id: Mapped[Optional[str]] = mapped_column(GovernedString(64), index=True)
     evidence_type: Mapped[Optional[str]] = mapped_column(String(48))
     source_type: Mapped[Optional[str]] = mapped_column(String(48))
     reliability: Mapped[Optional[str]] = mapped_column(String(16))
@@ -77,19 +77,19 @@ class EvidenceReference(Base, GovernanceMixin, AuditMixin):
     # column, not JSON); idempotency_key + payload_fingerprint back replay/replay-conflict
     # detection. Normalized detail (title, areas, etc.) remains in details_json.
     output_status: Mapped[str] = mapped_column(String(32), index=True, default="draft")
-    idempotency_key: Mapped[Optional[str]] = mapped_column(String(128), index=True)
-    payload_fingerprint: Mapped[Optional[str]] = mapped_column(String(64))
+    idempotency_key: Mapped[Optional[str]] = mapped_column(GovernedString(128), index=True)
+    payload_fingerprint: Mapped[Optional[str]] = mapped_column(GovernedString(64))
 
 
 class SourceSystemReference(Base, GovernanceMixin, AuditMixin):
     __tablename__ = "source_system_references"
     __table_args__ = MYSQL_TABLE_ARGS
     # id convention: src_<slug>
-    id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    client_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
-    engagement_id: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    id: Mapped[str] = mapped_column(GovernedString(64), primary_key=True)
+    client_id: Mapped[Optional[str]] = mapped_column(GovernedString(64), index=True)
+    engagement_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
     source_type: Mapped[Optional[str]] = mapped_column(String(32))
-    sensitivity_class: Mapped[Optional[str]] = mapped_column(String(16))
+    sensitivity_class: Mapped[Optional[str]] = mapped_column(GovernedString(16))
     source_system_access_status: Mapped[str] = mapped_column(String(24), index=True, default="not_requested")
     location_descriptor: Mapped[Optional[str]] = mapped_column(String(255))
 
@@ -98,10 +98,10 @@ class FinancialImpactEstimate(Base, GovernanceMixin, AuditMixin):
     __tablename__ = "financial_impact_estimates"
     __table_args__ = MYSQL_TABLE_ARGS
     # id convention: fie_<slug>
-    id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    client_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
-    engagement_id: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
-    related_finding_id: Mapped[Optional[str]] = mapped_column(String(64))
+    id: Mapped[str] = mapped_column(GovernedString(64), primary_key=True)
+    client_id: Mapped[Optional[str]] = mapped_column(GovernedString(64), index=True)
+    engagement_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    related_finding_id: Mapped[Optional[str]] = mapped_column(GovernedString(64))
     impact_type: Mapped[Optional[str]] = mapped_column(String(24))
     amount_low: Mapped[Optional[float]] = mapped_column(Numeric(18, 2))
     amount_high: Mapped[Optional[float]] = mapped_column(Numeric(18, 2))
@@ -116,11 +116,11 @@ class ResolverCapsuleRecord(Base, GovernanceMixin, AuditMixin):
     __tablename__ = "resolver_capsule_records"
     __table_args__ = MYSQL_TABLE_ARGS
     # id convention: cap_<slug>
-    id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    client_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
-    engagement_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
-    capsule_scope: Mapped[Optional[str]] = mapped_column(String(24))  # peak_methodology/client_private/fixture_test
-    sensitivity_class: Mapped[Optional[str]] = mapped_column(String(16))
+    id: Mapped[str] = mapped_column(GovernedString(64), primary_key=True)
+    client_id: Mapped[Optional[str]] = mapped_column(GovernedString(64), index=True)
+    engagement_id: Mapped[Optional[str]] = mapped_column(GovernedString(64), index=True)
+    capsule_scope: Mapped[Optional[str]] = mapped_column(GovernedString(24))  # peak_methodology/client_private/fixture_test
+    sensitivity_class: Mapped[Optional[str]] = mapped_column(GovernedString(16))
     capsule_status: Mapped[str] = mapped_column(String(32), index=True, default="draft_capsule")
 
 
@@ -140,24 +140,24 @@ class ReviewRecord(Base, GovernanceMixin, AuditMixin):
         MYSQL_TABLE_ARGS,
     )
     # id convention: rev_<slug>
-    id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    client_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
-    engagement_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
-    target_id: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    id: Mapped[str] = mapped_column(GovernedString(64), primary_key=True)
+    client_id: Mapped[Optional[str]] = mapped_column(GovernedString(64), index=True)
+    engagement_id: Mapped[Optional[str]] = mapped_column(GovernedString(64), index=True)
+    target_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
     previous_status: Mapped[Optional[str]] = mapped_column(String(32))
     new_status: Mapped[Optional[str]] = mapped_column(String(32))
-    reviewer: Mapped[Optional[str]] = mapped_column(String(128))
+    reviewer: Mapped[Optional[str]] = mapped_column(GovernedString(128))
     reason: Mapped[Optional[str]] = mapped_column(Text)
     # Phase 22 controlled-writer fields. decision + authoritative are governance-relevant
     # (real columns); output_status mirrors Phases 20/21; subject_record_type disambiguates
     # the reviewed target (whose id is target_id). idempotency_key + payload_fingerprint back
     # replay/replay-conflict detection.
     decision: Mapped[Optional[str]] = mapped_column(String(48), index=True)
-    subject_record_type: Mapped[Optional[str]] = mapped_column(String(48))
+    subject_record_type: Mapped[Optional[str]] = mapped_column(GovernedString(48))
     authoritative: Mapped[bool] = mapped_column(Boolean, default=False)
     output_status: Mapped[str] = mapped_column(String(32), index=True, default="draft")
-    idempotency_key: Mapped[Optional[str]] = mapped_column(String(128), index=True)
-    payload_fingerprint: Mapped[Optional[str]] = mapped_column(String(64))
+    idempotency_key: Mapped[Optional[str]] = mapped_column(GovernedString(128), index=True)
+    payload_fingerprint: Mapped[Optional[str]] = mapped_column(GovernedString(64))
 
 
 class AgentRunRecord(Base, GovernanceMixin, AuditMixin):
@@ -176,10 +176,10 @@ class AgentRunRecord(Base, GovernanceMixin, AuditMixin):
         MYSQL_TABLE_ARGS,
     )
     # id convention: arun_<slug>
-    id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    client_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
-    engagement_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
-    prompt_contract_ref: Mapped[Optional[str]] = mapped_column(String(255))
+    id: Mapped[str] = mapped_column(GovernedString(64), primary_key=True)
+    client_id: Mapped[Optional[str]] = mapped_column(GovernedString(64), index=True)
+    engagement_id: Mapped[Optional[str]] = mapped_column(GovernedString(64), index=True)
+    prompt_contract_ref: Mapped[Optional[str]] = mapped_column(GovernedString(255))
     model_label: Mapped[Optional[str]] = mapped_column(String(128))
     started_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
     finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
@@ -187,8 +187,8 @@ class AgentRunRecord(Base, GovernanceMixin, AuditMixin):
     # column, not JSON); idempotency_key + payload_fingerprint back replay/replay-conflict
     # detection. agent_name/workflow/input ids remain non-governance detail in details_json.
     output_status: Mapped[str] = mapped_column(String(32), index=True, default="draft")
-    idempotency_key: Mapped[Optional[str]] = mapped_column(String(128), index=True)
-    payload_fingerprint: Mapped[Optional[str]] = mapped_column(String(64))
+    idempotency_key: Mapped[Optional[str]] = mapped_column(GovernedString(128), index=True)
+    payload_fingerprint: Mapped[Optional[str]] = mapped_column(GovernedString(64))
     # input/output record ids live in details_json (non-governance detail).
 
 
@@ -196,11 +196,11 @@ class CapsulePublicationCandidate(Base, GovernanceMixin, AuditMixin):
     __tablename__ = "capsule_publication_candidates"
     __table_args__ = MYSQL_TABLE_ARGS
     # id convention: capc_<slug>
-    id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    client_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
-    engagement_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
-    capsule_id: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
-    resolver_target: Mapped[Optional[str]] = mapped_column(String(32))  # public_but_segregated / private
+    id: Mapped[str] = mapped_column(GovernedString(64), primary_key=True)
+    client_id: Mapped[Optional[str]] = mapped_column(GovernedString(64), index=True)
+    engagement_id: Mapped[Optional[str]] = mapped_column(GovernedString(64), index=True)
+    capsule_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    resolver_target: Mapped[Optional[str]] = mapped_column(GovernedString(32))  # public_but_segregated / private
     client_facing_approval_status: Mapped[Optional[str]] = mapped_column(String(32))
     approval_decision: Mapped[Optional[str]] = mapped_column(String(32))
 
@@ -221,18 +221,18 @@ class SourceIngestionRecord(Base, GovernanceMixin, AuditMixin):
         MYSQL_TABLE_ARGS,
     )
     # id convention: ing_<slug>
-    id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    client_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
-    engagement_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
-    source_reference_id: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    id: Mapped[str] = mapped_column(GovernedString(64), primary_key=True)
+    client_id: Mapped[Optional[str]] = mapped_column(GovernedString(64), index=True)
+    engagement_id: Mapped[Optional[str]] = mapped_column(GovernedString(64), index=True)
+    source_reference_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
     captured_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
     # Phase 24 controlled-writer fields. output_status is governance-relevant (a real column,
     # not JSON); idempotency_key + payload_fingerprint back replay/replay-conflict detection.
     # Packet metadata (schema, source type, location reference, hash) lives in details_json —
     # never the full packet payload or raw content.
     output_status: Mapped[str] = mapped_column(String(32), index=True, default="draft")
-    idempotency_key: Mapped[Optional[str]] = mapped_column(String(128), index=True)
-    payload_fingerprint: Mapped[Optional[str]] = mapped_column(String(64))
+    idempotency_key: Mapped[Optional[str]] = mapped_column(GovernedString(128), index=True)
+    payload_fingerprint: Mapped[Optional[str]] = mapped_column(GovernedString(64))
 
 
 class AgentTaskQueueRecord(Base, GovernanceMixin, AuditMixin):
@@ -251,13 +251,13 @@ class AgentTaskQueueRecord(Base, GovernanceMixin, AuditMixin):
         MYSQL_TABLE_ARGS,
     )
     # id convention: atq_<slug>
-    id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    client_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
-    engagement_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    id: Mapped[str] = mapped_column(GovernedString(64), primary_key=True)
+    client_id: Mapped[Optional[str]] = mapped_column(GovernedString(64), index=True)
+    engagement_id: Mapped[Optional[str]] = mapped_column(GovernedString(64), index=True)
     agent_name: Mapped[str] = mapped_column(String(128), index=True, nullable=False)
     task_type: Mapped[Optional[str]] = mapped_column(String(64))
     requested_action: Mapped[Optional[str]] = mapped_column(String(64))
-    source_ingestion_record_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    source_ingestion_record_id: Mapped[Optional[str]] = mapped_column(GovernedString(64), index=True)
     # Governance / execution-posture — real columns (never JSON). "not-executed" is enforced.
     readiness_state: Mapped[Optional[str]] = mapped_column(String(48), index=True)
     output_status: Mapped[str] = mapped_column(String(32), index=True, default="draft")
@@ -275,8 +275,8 @@ class AgentTaskQueueRecord(Base, GovernanceMixin, AuditMixin):
     # replay/replay-conflict detection. Safe references (task_input_ref, safe_input_summary,
     # evidence_reference_ids, packet_processing_run_ref, orchestration_ref, prompt_contract_path,
     # reasons, warnings) live in details_json — never raw payload/content.
-    idempotency_key: Mapped[Optional[str]] = mapped_column(String(128), index=True)
-    payload_fingerprint: Mapped[Optional[str]] = mapped_column(String(64))
+    idempotency_key: Mapped[Optional[str]] = mapped_column(GovernedString(128), index=True)
+    payload_fingerprint: Mapped[Optional[str]] = mapped_column(GovernedString(64))
 
 
 class ReviewBundleRecord(Base, GovernanceMixin, AuditMixin):
@@ -295,13 +295,13 @@ class ReviewBundleRecord(Base, GovernanceMixin, AuditMixin):
         MYSQL_TABLE_ARGS,
     )
     # id convention: rvb_<slug>
-    id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    client_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
-    engagement_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
-    packet_processing_receipt_ref: Mapped[Optional[str]] = mapped_column(String(128))
+    id: Mapped[str] = mapped_column(GovernedString(64), primary_key=True)
+    client_id: Mapped[Optional[str]] = mapped_column(GovernedString(64), index=True)
+    engagement_id: Mapped[Optional[str]] = mapped_column(GovernedString(64), index=True)
+    packet_processing_receipt_ref: Mapped[Optional[str]] = mapped_column(GovernedString(128))
     reviewer_role: Mapped[Optional[str]] = mapped_column(String(64), index=True)
     review_reason: Mapped[Optional[str]] = mapped_column(String(255))
-    review_scope: Mapped[Optional[str]] = mapped_column(String(48))
+    review_scope: Mapped[Optional[str]] = mapped_column(GovernedString(48))
     # Governance / review-posture — real columns (never JSON). "not-approved" is enforced.
     output_status: Mapped[str] = mapped_column(String(32), index=True, default="draft")
     authoritative: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -316,8 +316,8 @@ class ReviewBundleRecord(Base, GovernanceMixin, AuditMixin):
     # replay/replay-conflict detection. Safe references (source/evidence/task-queue ids,
     # subject_refs, reasons, warnings) live in details_json — never raw payload/content or a
     # final review decision.
-    idempotency_key: Mapped[Optional[str]] = mapped_column(String(128), index=True)
-    payload_fingerprint: Mapped[Optional[str]] = mapped_column(String(64))
+    idempotency_key: Mapped[Optional[str]] = mapped_column(GovernedString(128), index=True)
+    payload_fingerprint: Mapped[Optional[str]] = mapped_column(GovernedString(64))
 
 
 class InternalReviewerDecisionRecord(Base, GovernanceMixin, AuditMixin):
@@ -336,13 +336,13 @@ class InternalReviewerDecisionRecord(Base, GovernanceMixin, AuditMixin):
         MYSQL_TABLE_ARGS,
     )
     # id convention: ird_<slug>
-    id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    client_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
-    engagement_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    id: Mapped[str] = mapped_column(GovernedString(64), primary_key=True)
+    client_id: Mapped[Optional[str]] = mapped_column(GovernedString(64), index=True)
+    engagement_id: Mapped[Optional[str]] = mapped_column(GovernedString(64), index=True)
     # Safe upstream references (never raw content).
-    review_bundle_ref: Mapped[Optional[str]] = mapped_column(String(128))
-    review_bundle_record_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
-    review_bundle_draft_ref: Mapped[Optional[str]] = mapped_column(String(128))
+    review_bundle_ref: Mapped[Optional[str]] = mapped_column(GovernedString(128))
+    review_bundle_record_id: Mapped[Optional[str]] = mapped_column(GovernedString(64), index=True)
+    review_bundle_draft_ref: Mapped[Optional[str]] = mapped_column(GovernedString(128))
     # Reviewer selections — short safe labels only.
     reviewer_role: Mapped[Optional[str]] = mapped_column(String(64), index=True)
     decision_intent: Mapped[Optional[str]] = mapped_column(String(48), index=True)
@@ -368,8 +368,8 @@ class InternalReviewerDecisionRecord(Base, GovernanceMixin, AuditMixin):
     # replay/replay-conflict detection. Safe references (review-plan/evidence/source/task-queue
     # ids, requested_followup_actions, reasons, warnings) live in details_json — never raw
     # payload/content or a final review approval/decision.
-    idempotency_key: Mapped[Optional[str]] = mapped_column(String(128), index=True)
-    payload_fingerprint: Mapped[Optional[str]] = mapped_column(String(64))
+    idempotency_key: Mapped[Optional[str]] = mapped_column(GovernedString(128), index=True)
+    payload_fingerprint: Mapped[Optional[str]] = mapped_column(GovernedString(64))
 
 
 class IntakeNoteRecord(Base, GovernanceMixin, AuditMixin):
@@ -391,20 +391,20 @@ class IntakeNoteRecord(Base, GovernanceMixin, AuditMixin):
         MYSQL_TABLE_ARGS,
     )
     # id convention: intn_<slug>
-    id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    client_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
-    engagement_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    id: Mapped[str] = mapped_column(GovernedString(64), primary_key=True)
+    client_id: Mapped[Optional[str]] = mapped_column(GovernedString(64), index=True)
+    engagement_id: Mapped[Optional[str]] = mapped_column(GovernedString(64), index=True)
     note_type: Mapped[Optional[str]] = mapped_column(String(48), index=True)
     note_source: Mapped[Optional[str]] = mapped_column(String(48), index=True)
     # Authorized operational note prose — bounded; stored in the managed DB only.
     note_text: Mapped[Optional[str]] = mapped_column(Text)
     note_summary: Mapped[Optional[str]] = mapped_column(String(500))
-    captured_by: Mapped[Optional[str]] = mapped_column(String(128))
+    captured_by: Mapped[Optional[str]] = mapped_column(GovernedString(128))
     captured_role: Mapped[Optional[str]] = mapped_column(String(64))
-    source_ref: Mapped[Optional[str]] = mapped_column(String(128))
-    source_ingestion_record_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
-    related_evidence_reference_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
-    related_review_bundle_record_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    source_ref: Mapped[Optional[str]] = mapped_column(GovernedString(128))
+    source_ingestion_record_id: Mapped[Optional[str]] = mapped_column(GovernedString(64), index=True)
+    related_evidence_reference_id: Mapped[Optional[str]] = mapped_column(GovernedString(64), index=True)
+    related_review_bundle_record_id: Mapped[Optional[str]] = mapped_column(GovernedString(64), index=True)
     # Governance / non-final posture — real columns (never JSON). "non-final" is enforced.
     client_facing_approved: Mapped[bool] = mapped_column(Boolean, default=False)
     financial_verified: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -415,8 +415,8 @@ class IntakeNoteRecord(Base, GovernanceMixin, AuditMixin):
     # Phase 34 controlled-writer fields. idempotency_key + payload_fingerprint back
     # replay/replay-conflict detection (the fingerprint hashes note_text, never storing it twice).
     # Safe metadata (warnings, safe refs) lives in details_json — never a second copy of note_text.
-    idempotency_key: Mapped[Optional[str]] = mapped_column(String(128), index=True)
-    payload_fingerprint: Mapped[Optional[str]] = mapped_column(String(64))
+    idempotency_key: Mapped[Optional[str]] = mapped_column(GovernedString(128), index=True)
+    payload_fingerprint: Mapped[Optional[str]] = mapped_column(GovernedString(64))
 
 
 class InternalAssessmentReportDraftRecord(Base, GovernanceMixin, AuditMixin):
@@ -442,17 +442,17 @@ class InternalAssessmentReportDraftRecord(Base, GovernanceMixin, AuditMixin):
         MYSQL_TABLE_ARGS,
     )
     # id convention: iard_<slug>
-    id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    client_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
-    engagement_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    id: Mapped[str] = mapped_column(GovernedString(64), primary_key=True)
+    client_id: Mapped[Optional[str]] = mapped_column(GovernedString(64), index=True)
+    engagement_id: Mapped[Optional[str]] = mapped_column(GovernedString(64), index=True)
     # Provenance back to the Phase 36 plan that produced this row.
-    report_plan_id: Mapped[Optional[str]] = mapped_column(String(128), index=True)
-    plan_fingerprint: Mapped[Optional[str]] = mapped_column(String(64), index=True)
-    requested_by: Mapped[Optional[str]] = mapped_column(String(128))
+    report_plan_id: Mapped[Optional[str]] = mapped_column(GovernedString(128), index=True)
+    plan_fingerprint: Mapped[Optional[str]] = mapped_column(GovernedString(64), index=True)
+    requested_by: Mapped[Optional[str]] = mapped_column(GovernedString(128))
     requester_role: Mapped[Optional[str]] = mapped_column(String(64))
     report_purpose: Mapped[Optional[str]] = mapped_column(String(255))
     # Internal-only audience — a real column, never JSON. "internal" is the only accepted value.
-    audience: Mapped[str] = mapped_column(String(32), index=True, default="internal")
+    audience: Mapped[str] = mapped_column(GovernedString(32), index=True, default="internal")
     # Structured plan payload — references, labels, counts, and readiness states ONLY.
     sections_json: Mapped[Optional[dict]] = mapped_column(JSON)
     evidence_trace_map_json: Mapped[Optional[dict]] = mapped_column(JSON)
@@ -475,8 +475,8 @@ class InternalAssessmentReportDraftRecord(Base, GovernanceMixin, AuditMixin):
     requires_human_review: Mapped[bool] = mapped_column(Boolean, default=True)
     # Phase 37 controlled-writer fields. idempotency_key + payload_fingerprint back
     # replay/replay-conflict detection.
-    idempotency_key: Mapped[Optional[str]] = mapped_column(String(128), index=True)
-    payload_fingerprint: Mapped[Optional[str]] = mapped_column(String(64))
+    idempotency_key: Mapped[Optional[str]] = mapped_column(GovernedString(128), index=True)
+    payload_fingerprint: Mapped[Optional[str]] = mapped_column(GovernedString(64))
 
 
 class InternalReportReviewPacketRecord(Base, GovernanceMixin, AuditMixin):
@@ -509,25 +509,25 @@ class InternalReportReviewPacketRecord(Base, GovernanceMixin, AuditMixin):
         MYSQL_TABLE_ARGS,
     )
     # id convention: irrp_<slug>
-    id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    client_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
-    engagement_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    id: Mapped[str] = mapped_column(GovernedString(64), primary_key=True)
+    client_id: Mapped[Optional[str]] = mapped_column(GovernedString(64), index=True)
+    engagement_id: Mapped[Optional[str]] = mapped_column(GovernedString(64), index=True)
     # Linkage back to the Phase 37 stored report draft (verified against the stored row at write time).
-    internal_assessment_report_draft_id: Mapped[Optional[str]] = mapped_column(String(64))
-    source_report_draft_table: Mapped[Optional[str]] = mapped_column(String(64))
-    report_plan_id: Mapped[Optional[str]] = mapped_column(String(128), index=True)
-    plan_fingerprint: Mapped[Optional[str]] = mapped_column(String(64), index=True)
-    report_draft_payload_fingerprint: Mapped[Optional[str]] = mapped_column(String(64))
-    requested_by: Mapped[Optional[str]] = mapped_column(String(128))
+    internal_assessment_report_draft_id: Mapped[Optional[str]] = mapped_column(GovernedString(64))
+    source_report_draft_table: Mapped[Optional[str]] = mapped_column(GovernedString(64))
+    report_plan_id: Mapped[Optional[str]] = mapped_column(GovernedString(128), index=True)
+    plan_fingerprint: Mapped[Optional[str]] = mapped_column(GovernedString(64), index=True)
+    report_draft_payload_fingerprint: Mapped[Optional[str]] = mapped_column(GovernedString(64))
+    requested_by: Mapped[Optional[str]] = mapped_column(GovernedString(128))
     requester_role: Mapped[Optional[str]] = mapped_column(String(64))
-    assigned_reviewer: Mapped[Optional[str]] = mapped_column(String(128))
+    assigned_reviewer: Mapped[Optional[str]] = mapped_column(GovernedString(128))
     packet_purpose: Mapped[Optional[str]] = mapped_column(String(255))
     # Internal-only audience — a real column, never JSON. "internal" is the only accepted value.
-    audience: Mapped[str] = mapped_column(String(32), index=True, default="internal")
+    audience: Mapped[str] = mapped_column(GovernedString(32), index=True, default="internal")
     packet_status: Mapped[str] = mapped_column(
         String(32), index=True, default="ready_for_internal_review")
     # Reviewer decision linkage is populated by a *later* controlled path, never at creation.
-    reviewer_decision_record_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    reviewer_decision_record_id: Mapped[Optional[str]] = mapped_column(GovernedString(64), index=True)
     reviewer_decision_status: Mapped[Optional[str]] = mapped_column(String(32), default="not_decided")
     # Structured packet payload — labels, statuses, references, and counts ONLY.
     section_review_checklist_json: Mapped[Optional[dict]] = mapped_column(JSON)
@@ -552,8 +552,8 @@ class InternalReportReviewPacketRecord(Base, GovernanceMixin, AuditMixin):
     requires_human_review: Mapped[bool] = mapped_column(Boolean, default=True)
     # Phase 38 controlled-writer fields. idempotency_key + payload_fingerprint back
     # replay/replay-conflict detection.
-    idempotency_key: Mapped[Optional[str]] = mapped_column(String(128), index=True)
-    payload_fingerprint: Mapped[Optional[str]] = mapped_column(String(64))
+    idempotency_key: Mapped[Optional[str]] = mapped_column(GovernedString(128), index=True)
+    payload_fingerprint: Mapped[Optional[str]] = mapped_column(GovernedString(64))
 
 
 class InternalReportReviewPacketDecisionRecord(Base, GovernanceMixin, AuditMixin):
@@ -603,21 +603,21 @@ class InternalReportReviewPacketDecisionRecord(Base, GovernanceMixin, AuditMixin
         MYSQL_TABLE_ARGS,
     )
     # id convention: irrpd_<slug>
-    id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    client_id: Mapped[Optional[str]] = mapped_column(String(64))
-    engagement_id: Mapped[Optional[str]] = mapped_column(String(64))
+    id: Mapped[str] = mapped_column(GovernedString(64), primary_key=True)
+    client_id: Mapped[Optional[str]] = mapped_column(GovernedString(64))
+    engagement_id: Mapped[Optional[str]] = mapped_column(GovernedString(64))
     # Audit chain: packet -> report draft -> report plan (all verified against stored rows).
-    internal_report_review_packet_id: Mapped[Optional[str]] = mapped_column(String(64))
-    source_packet_table: Mapped[Optional[str]] = mapped_column(String(64))
-    internal_assessment_report_draft_id: Mapped[Optional[str]] = mapped_column(String(64))
-    source_report_draft_table: Mapped[Optional[str]] = mapped_column(String(64))
-    report_plan_id: Mapped[Optional[str]] = mapped_column(String(128))
-    plan_fingerprint: Mapped[Optional[str]] = mapped_column(String(64))
-    report_draft_payload_fingerprint: Mapped[Optional[str]] = mapped_column(String(64))
-    packet_payload_fingerprint: Mapped[Optional[str]] = mapped_column(String(64))
-    requested_by: Mapped[Optional[str]] = mapped_column(String(128))
+    internal_report_review_packet_id: Mapped[Optional[str]] = mapped_column(GovernedString(64))
+    source_packet_table: Mapped[Optional[str]] = mapped_column(GovernedString(64))
+    internal_assessment_report_draft_id: Mapped[Optional[str]] = mapped_column(GovernedString(64))
+    source_report_draft_table: Mapped[Optional[str]] = mapped_column(GovernedString(64))
+    report_plan_id: Mapped[Optional[str]] = mapped_column(GovernedString(128))
+    plan_fingerprint: Mapped[Optional[str]] = mapped_column(GovernedString(64))
+    report_draft_payload_fingerprint: Mapped[Optional[str]] = mapped_column(GovernedString(64))
+    packet_payload_fingerprint: Mapped[Optional[str]] = mapped_column(GovernedString(64))
+    requested_by: Mapped[Optional[str]] = mapped_column(GovernedString(128))
     requester_role: Mapped[Optional[str]] = mapped_column(String(64))
-    reviewer_ref: Mapped[Optional[str]] = mapped_column(String(128))
+    reviewer_ref: Mapped[Optional[str]] = mapped_column(GovernedString(128))
     # Reviewer selections — short safe labels only, from a closed vocabulary.
     decision_intent: Mapped[Optional[str]] = mapped_column(String(48))
     safe_decision_summary: Mapped[Optional[str]] = mapped_column(String(255))
@@ -626,8 +626,8 @@ class InternalReportReviewPacketDecisionRecord(Base, GovernanceMixin, AuditMixin
     # review_status / lifecycle_status axes stay inside the Phase 9 vocabulary.
     decision_status: Mapped[Optional[str]] = mapped_column(String(32))
     decision_scope: Mapped[str] = mapped_column(
-        String(48), default="internal_report_review_packet")
-    audience: Mapped[str] = mapped_column(String(32), default="internal")
+        GovernedString(48), default="internal_report_review_packet")
+    audience: Mapped[str] = mapped_column(GovernedString(32), default="internal")
     reasons_json: Mapped[Optional[dict]] = mapped_column(JSON)
     warnings_json: Mapped[Optional[dict]] = mapped_column(JSON)
     # Governance / non-approval posture — real columns (never JSON).
@@ -639,8 +639,8 @@ class InternalReportReviewPacketDecisionRecord(Base, GovernanceMixin, AuditMixin
     execution_allowed: Mapped[bool] = mapped_column(Boolean, default=False)
     requires_human_review: Mapped[bool] = mapped_column(Boolean, default=True)
     # Phase 39 controlled-writer fields.
-    idempotency_key: Mapped[Optional[str]] = mapped_column(String(128))
-    payload_fingerprint: Mapped[Optional[str]] = mapped_column(String(64))
+    idempotency_key: Mapped[Optional[str]] = mapped_column(GovernedString(128))
+    payload_fingerprint: Mapped[Optional[str]] = mapped_column(GovernedString(64))
 
 
 # Convenience list of all model classes (used by tooling/validation).

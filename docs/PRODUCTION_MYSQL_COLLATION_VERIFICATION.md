@@ -231,3 +231,23 @@ are unchanged.
 - [MANAGED_MYSQL_PRODUCTION_PARITY_VALIDATION.md](MANAGED_MYSQL_PRODUCTION_PARITY_VALIDATION.md) — Phase 41 offline parity checks
 - [PRODUCTION_PARITY_DB_VALIDATION.md](PRODUCTION_PARITY_DB_VALIDATION.md) — the validation-layer model
 - [DATABASE_ACCESS_AND_AUDIT.md](DATABASE_ACCESS_AND_AUDIT.md) — access and audit posture
+
+---
+
+## Phase 44 — the remediation now exists; production still has not been migrated
+
+Migration `013_governed_identifier_collation_policy` is committed, pinning `utf8mb4_bin` on all 211
+governed columns. That changes what this verifier is *for*, without changing what it does:
+
+- **Before execution** — it answers whether the risk is live in production, and therefore whether
+  executing `013` is warranted.
+- **After execution** — it is the only way to confirm the migration actually took effect on the
+  deployed database.
+
+Nothing about the read-only boundary changed: hard-coded query allowlist, guard before every
+execution, fail-closed gating, no DSN or row value in output, and **no migration execution**. The
+tool's expected Alembic head moved 012 → 013, so a production database still reporting 012 will now
+be flagged — which is exactly the signal that the migration has not been run there yet.
+
+**Phase 44 did not execute migration 013 against production.** See the production execution
+checklist in [`GOVERNED_MYSQL_COLLATION_POLICY.md`](GOVERNED_MYSQL_COLLATION_POLICY.md).

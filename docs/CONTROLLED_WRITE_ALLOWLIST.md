@@ -220,3 +220,11 @@ update, delete, upsert, or raw-SQL action was added, and no existing table was b
 Phase 43 adds **no** table/action pair. It is a read-only verification phase that writes nothing, so
 it needs no allowlist entry: the allowlist stays at **13 tables / 15 actions**. No update, delete,
 upsert, or raw-SQL action was added, and no existing table was broadened.
+
+---
+
+## Phase 44 — no new pair
+
+Phase 44 adds **no** table/action pair. It alters the collation of existing governed columns; it
+creates no table and no new write path, so it needs no allowlist entry. The allowlist stays at
+**13 tables / 15 actions**.

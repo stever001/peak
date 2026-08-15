@@ -307,3 +307,16 @@ composite UNIQUE), not merely `owner_id`.
 
 Phase 43 adds no writer and changes no boundary. See
 [`PRODUCTION_MYSQL_COLLATION_VERIFICATION.md`](PRODUCTION_MYSQL_COLLATION_VERIFICATION.md).
+
+---
+
+## Phase 44 — the idempotency boundary is now deterministic in source
+
+The `UNIQUE (owner_id, client_id, engagement_id, idempotency_key)` constraint that all eleven
+writers depend on now has an explicit deterministic collation on every participating column, across
+all 11 boundary tables (migration `013`). Writers are unchanged — no writer was added, removed, or
+modified — and the constraint itself is untouched; only the comparison semantics beneath it are now
+stated rather than inherited.
+
+This is true **in source control**. Whether the deployed database has been migrated is a separate
+question answered only by `make production-mysql-collation-verify`.

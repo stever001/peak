@@ -1389,6 +1389,44 @@ make validate-phase43                   # offline; no credentials, no network
 make production-mysql-collation-verify  # opt-in; skips safely unless explicitly configured
 ```
 
+### Governed Identifier Collation Migration (Phase 44)
+
+Migration **`013_governed_identifier_collation_policy`** implements the Phase 42 policy: **211
+governed columns** across all 18 tables now pin **`utf8mb4_bin`** in source control.
+
+- **Scope is exactly the deterministic-required classes** — `governed_identifier` (156),
+  `governed_scope` (27), `governed_hash_or_fingerprint` (17), `governed_idempotency` (11).
+  Excluded: `ordinary_text` (9) and `json_or_details_text` (3), which carry no equality boundary,
+  and `governed_enum_status` (85), which the audit ranks deterministic-*preferred* because
+  controlled writers already gate those values case-sensitively in Python.
+- **`utf8mb4_bin`, not `utf8mb4_0900_as_cs`.** Governed values are ASCII by construction, so
+  Unicode-aware ordering buys nothing and byte comparison is the strictest guarantee — and
+  `utf8mb4_bin` works on MySQL 5.7 as well as 8.x. The `_0900_as_cs` alternative stays documented,
+  not selected.
+- **The obvious implementation would have broken the test suite.** `String(collation=...)` renders
+  `COLLATE` on *every* dialect, and SQLite — which backs a dozen structural-smoke harnesses —
+  rejects it with `no such collation sequence`. Models use `GovernedString`, which attaches the
+  collation through a MySQL `with_variant`: identical MySQL DDL, SQLite untouched, local validation
+  still honest.
+- **Migration 013 is ALTER-only.** 211 `ALTER TABLE … MODIFY … COLLATE utf8mb4_bin` statements,
+  lengths and nullability preserved. No CREATE/DROP TABLE, no INSERT/UPDATE/DELETE, no seed or
+  client data, no raw SQL, no index or constraint rename, and no earlier migration rewritten. On
+  SQLite it is a deliberate no-op — a green local run proves the chain applies, and **nothing**
+  about MySQL collation.
+- **The audit now reports `MODEL_POLICY_SATISFIED_PRODUCTION_UNVERIFIED`**, not
+  `NEEDS_REMEDIATION`. Read it precisely: source control is correct; the **deployed database has
+  not been migrated**. Only `make production-mysql-collation-verify` can settle that.
+- **Production execution was not performed** and remains a separately approved operation, with a
+  checklist (verify → approve → backup with *tested restore* → rehearse → window → execute →
+  re-verify) in the policy doc.
+- [`alembic/versions/013_governed_identifier_collation_policy.py`](alembic/versions/013_governed_identifier_collation_policy.py)
+  and [`docs/GOVERNED_MYSQL_COLLATION_POLICY.md`](docs/GOVERNED_MYSQL_COLLATION_POLICY.md).
+
+```bash
+make validate-phase44                              # offline; no credentials, no network
+make mysql-collation-audit PYTHON=.venv/bin/python # MODEL_POLICY_SATISFIED_PRODUCTION_UNVERIFIED
+```
+
 ## Design constraints
 
 - **Lightweight first.** Scaffolding and clear docs before complex agent logic.

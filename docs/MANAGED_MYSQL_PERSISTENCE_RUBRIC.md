@@ -200,3 +200,16 @@ Unchanged: managed remote MySQL is the operational data store, Client Isolation 
 default, SQLite is not the production-readiness proof path, and **standard validation still requires
 no live credentials and no network**. See
 [`PRODUCTION_MYSQL_COLLATION_VERIFICATION.md`](PRODUCTION_MYSQL_COLLATION_VERIFICATION.md).
+
+---
+
+## Phase 44 — governed collation pinned in source, production pending
+
+The governed-collation policy this rubric adopted is now implemented: migration `013` and the model
+metadata pin `utf8mb4_bin` on the 211 governed columns. No operational table, model entity, or
+allowlist pair was added.
+
+The rubric's split is unchanged and now matters more, not less: source control being correct is
+**not** evidence that the deployed database is. `make validate` remains offline and cannot prove
+production collation; `make production-mysql-collation-verify` is the read-only way to check; and
+executing the migration against production remains a separately approved operation.

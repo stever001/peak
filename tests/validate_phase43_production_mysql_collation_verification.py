@@ -64,8 +64,8 @@ POLICY_DOC = "docs/GOVERNED_MYSQL_COLLATION_POLICY.md"
 HARNESS = "tests/validate_phase43_production_mysql_collation_verification.py"
 REQUIRED_FILES = [TOOL, AUDIT, DOC, POLICY_DOC, HARNESS]
 
-ALEMBIC_HEAD = "012_internal_report_review_packet_decisions"
-EXPECTED_MIGRATIONS = 12
+ALEMBIC_HEAD = "013_governed_identifier_collation_policy"
+EXPECTED_MIGRATIONS = 13
 EXPECTED_TABLE_COUNT = 18
 EXPECTED_BOUNDARY_TABLES = 11
 
@@ -451,8 +451,12 @@ def simulation_checks() -> None:
               result.server_version_family == "8.0")
         check(f"{label}: alembic head verified", result.alembic_head_matches is True)
         blob = " ".join(result.reasons + result.warnings + [str(result.recommended_next_step)])
+        # Phase 44 implemented 013 in source control, so the recommendation no longer says "NOT
+        # implemented". The guarantee this check exists for is unchanged and now asserted directly:
+        # the recommendation must state that *this tool* does not execute the migration.
         check(f"{label}: recommendation mentions migration 013 as a next step only",
-              "013" in blob and "NOT implemented" in blob or expected == v.VERIFIED_SAFE)
+              "013" in blob and "NOT executed by this tool" in blob
+              or expected == v.VERIFIED_SAFE)
         # Column *names* (owner_id, client_id, …) are schema facts and appear legitimately in
         # explanatory text. Row *values* must never appear — those follow Peak's id conventions.
         check(f"{label}: no production row value appears in the result",
@@ -510,16 +514,21 @@ def scope_checks() -> None:
     versions_dir = os.path.join(REPO_ROOT, "alembic", "versions")
     versions = sorted(f for f in os.listdir(versions_dir) if f.endswith(".py"))
     check(f"exactly {EXPECTED_MIGRATIONS} migrations", len(versions) == EXPECTED_MIGRATIONS)
-    check("NO migration 013 was created", not any(f.startswith("013") for f in versions))
+    # Phase 43 created no migration; Phase 44 did. Phase 43 still executes none.
+    check("migration 013 exists and is the only one beyond 012",
+          [f for f in versions if f.startswith("013")]
+          == ["013_governed_identifier_collation_policy.py"])
     check(f"{ALEMBIC_HEAD} is still the newest migration",
-          versions[-1].startswith("012_internal_report_review_packet_decisions"))
+          versions[-1].startswith("013_governed_identifier_collation_policy"))
 
     try:
         changed = subprocess.run(
-            ["git", "-C", REPO_ROOT, "diff", "--name-only", "HEAD", "--",
-             "alembic", "schemas", "peak"],
+            ["git", "-C", REPO_ROOT, "diff", "--name-only", "HEAD", "--", "schemas"],
             capture_output=True, text=True, timeout=20).stdout.strip()
-        check("no change under alembic/, schemas/, or peak/", not changed)
+        # ``alembic`` and ``peak`` left this list in Phase 44, which legitimately owns migration
+        # 013 and the governed-collation model metadata. Phase 43 still adds neither, and
+        # ``schemas/`` — the Phase 9 contract source of truth — is asserted untouched.
+        check("no change under schemas/", not changed)
     except Exception:
         check("git-backed scope check (git unavailable — skipped)", True)
 

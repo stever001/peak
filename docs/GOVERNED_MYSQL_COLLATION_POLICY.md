@@ -308,3 +308,87 @@ Its outcome drives the go/no-go decision for migration `013`:
 - `verified_inconclusive` → **NO-GO for now**; never migrate on inconclusive evidence.
 
 Migration `013` remains unimplemented. Phase 43 does not create, propose as code, or execute it.
+
+---
+
+## Phase 44 — the policy is now implemented in source control
+
+Migration **`013_governed_identifier_collation_policy`** and the matching model metadata pin
+**`utf8mb4_bin`** on all **211 governed columns** across 18 tables. The candidate plan above is no
+longer a plan; it is committed code. Two things did **not** change: no table, model entity, or
+allowlist pair was added, and **production has not been migrated**.
+
+### Selection: `utf8mb4_bin`
+
+Chosen over `utf8mb4_0900_as_cs` because governed values are ASCII by construction — refs match
+`[A-Za-z0-9_.:/-]`, fingerprints are sha256 hex — so Unicode-aware ordering buys nothing, byte
+comparison is the strictest guarantee, and `utf8mb4_bin` works on MySQL 5.7 as well as 8.x.
+`utf8mb4_0900_as_cs` remains documented as the MySQL 8-only alternative; it was not selected.
+
+### How the collation is attached — and why not the obvious way
+
+Model columns use `peak.db.base.GovernedString`, which applies the collation through a MySQL
+`with_variant` rather than `String(length, collation=...)`.
+
+This is not stylistic. A bare `collation=` renders `COLLATE utf8mb4_bin` on **every** dialect, and
+SQLite — which backs a dozen local structural-smoke harnesses — rejects it outright with
+`no such collation sequence: utf8mb4_bin`. The variant emits **identical MySQL DDL** while leaving
+SQLite untouched, so local validation stays honest instead of being disabled to accommodate the
+change.
+
+### Scope: exactly the deterministic-required classes
+
+| Class | Columns | In migration 013 |
+| --- | --- | --- |
+| `governed_identifier` | 156 | **yes** |
+| `governed_scope` | 27 | **yes** |
+| `governed_hash_or_fingerprint` | 17 | **yes** |
+| `governed_idempotency` | 11 | **yes** |
+| `governed_enum_status` | 85 | no — see below |
+| `ordinary_text` | 9 | no |
+| `json_or_details_text` | 3 | no |
+
+`governed_enum_status` is deliberately excluded. The Phase 42 audit classifies it as
+deterministic-**preferred**, not required: controlled writers gate those values against closed
+vocabularies with case-sensitive Python membership tests, so a case variant cannot be persisted in
+the first place. Including them would have exceeded the 211-column scope this phase was authorised
+for. They remain candidates for a later, separately justified phase.
+
+### What source control now proves — and what it does not
+
+`make mysql-collation-audit PYTHON=.venv/bin/python` now reports
+**`MODEL_POLICY_SATISFIED_PRODUCTION_UNVERIFIED`** rather than `NEEDS_REMEDIATION`. Read that
+status precisely:
+
+- **Satisfied:** every governed column pins a deterministic collation in the models and migration.
+- **Unverified:** the deployed database has **not** been migrated. Migration `013` has not been
+  executed against production, and standard offline validation can never prove otherwise.
+
+Only `make production-mysql-collation-verify` can read production's effective collation — before
+migration execution to confirm the risk, and again afterwards to confirm the fix.
+
+## Production execution checklist (later, separately approved)
+
+Migration `013` exists in source control. Running it against production is a **separate approved
+operation** and was not performed in Phase 44.
+
+1. **Verify first.** Run `make production-mysql-collation-verify` and record the sanitized outcome.
+   If it reports `verified_safe_no_remediation_required`, production is already deterministic and
+   no execution is needed.
+2. **Obtain explicit approval** for both the execution and the selected collation.
+3. **Take a backup and test the restore.** A backup whose restore has not been exercised is not a
+   rollback plan.
+4. **Rehearse** on a disposable schema restored from a production-shaped backup, timing the ALTERs.
+5. **Size a maintenance window.** MySQL may rebuild indexes on the affected columns; on populated
+   tables this is a blocking or online-DDL operation depending on server version and configuration.
+6. **Execute** `alembic upgrade head` against production through the approved operational path —
+   never from a test harness, an agent, or a worker.
+7. **Verify again.** Re-run `make production-mysql-collation-verify` and confirm
+   `verified_safe_no_remediation_required`.
+8. **Record** the before/after sanitized outcomes.
+
+**Uniqueness direction remains safe.** Insensitive → sensitive makes the unique index *more*
+discriminating, so no new duplicate-key violations are possible. The behavioral change is that
+lookups become case-sensitive; Peak's writers persist and compare these values verbatim, so no
+reliance on case-insensitive matching is expected — confirm rather than assume. The **downgrade**
+direction is the unsafe one and is a rollback of last resort.

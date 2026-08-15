@@ -58,15 +58,20 @@ if REPO_ROOT not in sys.path:
 MYSQL_IDENTIFIER_LIMIT = 64
 
 #: The pinned Alembic head for this baseline. A new migration must update this deliberately.
-EXPECTED_HEAD = "012_internal_report_review_packet_decisions"
-EXPECTED_MIGRATION_COUNT = 12
+EXPECTED_HEAD = "013_governed_identifier_collation_policy"
+EXPECTED_MIGRATION_COUNT = 13
 
 #: Required MySQL table options on every created table.
 REQUIRED_TABLE_ARGS = {"mysql_engine": "InnoDB", "mysql_charset": "utf8mb4"}
 
 #: Alembic operations a schema-only migration may use. Anything else is reported.
+#: ``alter_column`` and ``get_bind`` were added for Phase 44's migration 013, which re-declares
+#: existing columns with an explicit collation and must branch on the dialect to do it. Both are
+#: schema/introspection operations; neither reads or writes a row, so the "no data operations"
+#: guarantee below is unchanged.
 ALLOWED_MIGRATION_OPS = frozenset({
     "create_table", "create_index", "drop_index", "drop_table", "add_column", "drop_column",
+    "alter_column", "get_bind",
 })
 #: Operations that would insert data or run arbitrary SQL. None may ever appear.
 FORBIDDEN_MIGRATION_OPS = frozenset({
@@ -247,8 +252,8 @@ def check_migration_chain(report: Report) -> None:
     report.check(f"exactly {EXPECTED_MIGRATION_COUNT} migrations present",
                  len(files) == EXPECTED_MIGRATION_COUNT,
                  f"found {len(files)}")
-    report.check("no migration 013 or later added",
-                 not any(re.match(r"^0*(?:1[3-9]|[2-9]\d)_", f) for f in files))
+    report.check("no migration 014 or later added",
+                 not any(re.match(r"^0*(?:1[4-9]|[2-9]\d)_", f) for f in files))
 
     revisions, downs = {}, {}
     for name in files:
@@ -407,6 +412,18 @@ class _RecordingOp:
     def add_column(self, table_name, column=None, **kw):
         self.columns.append((str(table_name), str(getattr(column, "name", column))))
 
+    def alter_column(self, table_name, column_name=None, **kw):
+        # Records the identifier so a re-declared column is still length-checked. Alters no data.
+        self.columns.append((str(table_name), str(column_name)))
+
+    def get_bind(self):
+        """Report a MySQL-shaped bind so dialect-gated migrations take their MySQL branch.
+
+        The simulation exists to see the identifiers MySQL would receive, so the MySQL branch is
+        the one worth walking. Nothing is connected to and no SQL is emitted.
+        """
+        return _FakeBind()
+
     # --- removal (recorded so downgrade scope can be verified) ---
     def drop_index(self, name, table_name=None, **kw):
         self.dropped.append(("drop_index", str(name)))
@@ -424,6 +441,16 @@ class _RecordingOp:
         def _recorder(*args, **kwargs):
             self.unexpected.append(item)
         return _recorder
+
+
+class _FakeDialect:
+    name = "mysql"
+
+
+class _FakeBind:
+    """A bind stand-in exposing only ``.dialect.name``. Opens nothing, executes nothing."""
+
+    dialect = _FakeDialect()
 
 
 def _load_migration_module(filename: str):

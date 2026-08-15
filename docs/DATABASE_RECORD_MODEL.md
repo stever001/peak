@@ -413,3 +413,12 @@ model. Phase 43 reads each column's **effective collation from production** and 
 governed columns compare non-deterministically there, reusing the Phase 42 classifier directly so
 the two cannot drift. See
 [`PRODUCTION_MYSQL_COLLATION_VERIFICATION.md`](PRODUCTION_MYSQL_COLLATION_VERIFICATION.md).
+
+---
+
+## Phase 44 — governed columns now declare their comparison semantics
+
+Governed columns are declared with `peak.db.base.GovernedString`, which pins `utf8mb4_bin` on
+MySQL. When adding a governed column — an id, tenant/engagement ref, authorization scope,
+idempotency key, or fingerprint — use `GovernedString`, not a bare `String`. Ordinary prose and
+JSON/detail text keep plain `String`/`Text`: they carry no equality boundary.

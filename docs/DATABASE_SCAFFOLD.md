@@ -176,3 +176,12 @@ idempotency key, or a fingerprint — **state its collation explicitly**. Silenc
 server happens to default to", which is not a decision. See
 [`GOVERNED_MYSQL_COLLATION_POLICY.md`](GOVERNED_MYSQL_COLLATION_POLICY.md) and run
 `make mysql-collation-audit`.
+
+---
+
+## Phase 44 — use GovernedString for governed columns
+
+The scaffold now states comparison semantics explicitly. `peak.db.base.GovernedString(length)`
+pins `utf8mb4_bin` on MySQL via `with_variant` and leaves SQLite untouched, so the local
+structural-smoke path keeps working. Use it for any column whose comparison decides identity,
+authorization, uniqueness, or integrity; use plain `String`/`Text` for prose and JSON detail.

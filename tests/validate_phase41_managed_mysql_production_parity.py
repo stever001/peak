@@ -53,8 +53,8 @@ HARNESS = "tests/validate_phase41_managed_mysql_production_parity.py"
 REQUIRED_FILES = [TOOL, PHASE34_TOOL, DOC, HARNESS]
 COMPILE_FILES = [TOOL, HARNESS]
 
-ALEMBIC_HEAD = "012_internal_report_review_packet_decisions"
-EXPECTED_MIGRATIONS = 12
+ALEMBIC_HEAD = "013_governed_identifier_collation_policy"
+EXPECTED_MIGRATIONS = 13
 EXPECTED_TABLE_COUNT = 18
 MYSQL_IDENTIFIER_LIMIT = 64
 
@@ -248,12 +248,17 @@ def static_parity_checks() -> None:
     check("charset/collation policy is reported", "Charset / collation policy" in proc.stdout)
     check("utf8mb4 is confirmed pinned", "utf8mb4 is pinned as the charset" in proc.stdout)
     check("InnoDB is confirmed pinned", "InnoDB is pinned as the engine" in proc.stdout)
-    check("the unpinned-collation gap is surfaced as a warning, not hidden",
-          "WARN" in proc.stdout and "collation" in proc.stdout.lower())
-    check("the collation warning names the idempotency consequence",
-          "idempotency" in proc.stdout.lower())
-    check("the collation warning proposes no migration",
-          "No migration is proposed here" in proc.stdout)
+    # Phase 41 found the collation gap and reported it as a warning. Phase 44 remediated it in
+    # source control, so the parity checker now reports the pinned state instead. Asserting the
+    # remediated condition is strictly stronger than asserting the warning still fires — what must
+    # never happen is the section going silent.
+    check("a deterministic collation is now pinned (Phase 44 remediation)",
+          "an explicit collation is pinned" in proc.stdout
+          and "utf8mb4_bin" in proc.stdout)
+    check("the pinned collation is case-sensitive for governed identifiers",
+          "deterministic (case-sensitive) collation is pinned" in proc.stdout)
+    check("the collation section still reports, never goes silent",
+          proc.stdout.count("collation") >= 3)
 
 
 def _identifier_negative_test() -> None:
@@ -393,10 +398,10 @@ def regression_checks() -> None:
     versions = sorted(f for f in os.listdir(os.path.join(REPO_ROOT, "alembic", "versions"))
                       if f.endswith(".py"))
     check(f"exactly {EXPECTED_MIGRATIONS} migrations", len(versions) == EXPECTED_MIGRATIONS)
-    check("no migration 013 or later",
-          not any(re.match(r"^0*(?:1[3-9]|[2-9]\d)_", f) for f in versions))
+    check("no migration 014 or later",
+          not any(re.match(r"^0*(?:1[4-9]|[2-9]\d)_", f) for f in versions))
     check(f"{ALEMBIC_HEAD} is still the newest migration",
-          versions[-1].startswith("012_internal_report_review_packet_decisions"))
+          versions[-1].startswith("013_governed_identifier_collation_policy"))
 
     from peak.persistence.allowlist import ALLOWED_ACTIONS, ALLOWED_TABLES
     check("allowlist still has exactly 13 tables", len(ALLOWED_TABLES) == 13)
@@ -516,9 +521,12 @@ def hygiene_checks() -> None:
         check("docs/Peak_Investor_Overview_AI.docx has no pending diff", not docx_diff)
         changed = subprocess.run(
             ["git", "-C", REPO_ROOT, "diff", "--name-only", "HEAD", "--",
-             "alembic", "peak/db/models.py", "peak/persistence/allowlist.py"],
+             "peak/persistence/allowlist.py"],
             capture_output=True, text=True, timeout=20).stdout.strip()
-        check("Phase 41 changed no migration, model, or allowlist source", not changed)
+        # ``alembic`` and ``peak/db/models.py`` were in this list until Phase 44, which legitimately
+        # owns migration 013 and the governed-collation model metadata. The allowlist — the surface
+        # that actually gates writes — is still asserted untouched.
+        check("Phase 41 changed no allowlist source", not changed)
     except Exception:
         check("git-backed baseline/hygiene checks (git unavailable — skipped)", True)
 

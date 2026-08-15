@@ -298,3 +298,14 @@ Access rules for this path: no schema mutation, no data write, no migration exec
 delete, no DSN or credential in output, and **no production row value in output** — aggregates
 return counts only. The tool fails closed without an explicit read-only affirmation. See
 [`PRODUCTION_MYSQL_COLLATION_VERIFICATION.md`](PRODUCTION_MYSQL_COLLATION_VERIFICATION.md).
+
+---
+
+## Phase 44 — identity comparisons are now explicit in source
+
+The governed columns that audit trails depend on — `owner_id`, `client_id`, `engagement_id`,
+`idempotency_key`, and the fingerprints — now pin a deterministic collation in the models and in
+migration `013`, so their comparison semantics no longer depend on a server default.
+
+This holds in source control. It becomes true of the audit trail itself only once migration `013`
+has been executed against production and `make production-mysql-collation-verify` confirms it.

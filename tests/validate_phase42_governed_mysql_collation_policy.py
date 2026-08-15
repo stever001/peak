@@ -59,8 +59,8 @@ HARNESS = "tests/validate_phase42_governed_mysql_collation_policy.py"
 REQUIRED_FILES = [AUDIT, PARITY, DOC, HARNESS]
 COMPILE_FILES = [AUDIT, HARNESS]
 
-ALEMBIC_HEAD = "012_internal_report_review_packet_decisions"
-EXPECTED_MIGRATIONS = 12
+ALEMBIC_HEAD = "013_governed_identifier_collation_policy"
+EXPECTED_MIGRATIONS = 13
 EXPECTED_TABLE_COUNT = 18
 AUDIT_TARGET = "mysql-collation-audit"
 STAGING_TARGET = "mysql-parity-staging"
@@ -256,7 +256,10 @@ def audit_behavior_checks() -> None:
           full.returncode == 0)
     check("model tier: reports RESULT: PASS (a known finding is not a build failure)",
           "RESULT: PASS" in full.stdout)
-    check("model tier: status is NEEDS_REMEDIATION", "NEEDS_REMEDIATION" in full.stdout)
+    # Phase 42 reported the open finding; Phase 44 remediated it in source control. The audit
+    # now reports the satisfied-but-unverified state, which is the stronger claim.
+    check("model tier: status is MODEL_POLICY_SATISFIED_PRODUCTION_UNVERIFIED",
+          "MODEL_POLICY_SATISFIED_PRODUCTION_UNVERIFIED" in full.stdout)
     check("model tier: audits all 18 tables",
           re.search(r"tables inspected\s*:\s*18", full.stdout) is not None)
     check("model tier: reports a deterministic total column count",
@@ -289,9 +292,8 @@ def audit_behavior_checks() -> None:
           "idem-key-1" in full.stdout and "idem-KEY-1" in full.stdout)
     check("notes that writers persist the key verbatim (no upstream mitigation)",
           "verbatim" in full.stdout)
-    check("states managed MySQL staging verification is required",
-          "staging verification is REQUIRED" in full.stdout.replace("Managed", "managed")
-          or "staging verification is REQUIRED" in full.stdout)
+    check("states production verification is still required after migration execution",
+          "production verification remains required" in full.stdout.lower())
     check("points at the policy doc for remediation",
           "GOVERNED_MYSQL_COLLATION_POLICY.md" in full.stdout)
     check("keeps packet_hash correctly outside the column set",
@@ -406,19 +408,24 @@ def scope_checks() -> None:
     versions_dir = os.path.join(REPO_ROOT, "alembic", "versions")
     versions = sorted(f for f in os.listdir(versions_dir) if f.endswith(".py"))
     check(f"exactly {EXPECTED_MIGRATIONS} migrations", len(versions) == EXPECTED_MIGRATIONS)
-    check("NO migration 013 was created",
-          not any(f.startswith("013") for f in versions))
-    check("no migration 013 or later of any name",
-          not any(re.match(r"^0*(?:1[3-9]|[2-9]\d)_", f) for f in versions))
+    # Phase 42 itself created no migration; Phase 44 implemented the 013 it specified. The
+    # guarantee preserved here is that nothing beyond that plan was added.
+    check("migration 013 is exactly the one Phase 42 specified",
+          [f for f in versions if f.startswith("013")]
+          == ["013_governed_identifier_collation_policy.py"])
+    check("no migration 014 or later of any name",
+          not any(re.match(r"^0*(?:1[4-9]|[2-9]\d)_", f) for f in versions))
     check(f"{ALEMBIC_HEAD} is still the newest migration",
-          versions[-1].startswith("012_internal_report_review_packet_decisions"))
+          versions[-1].startswith("013_governed_identifier_collation_policy"))
 
     try:
         changed = subprocess.run(
-            ["git", "-C", REPO_ROOT, "diff", "--name-only", "HEAD", "--",
-             "alembic", "schemas", "peak"],
+            ["git", "-C", REPO_ROOT, "diff", "--name-only", "HEAD", "--", "schemas"],
             capture_output=True, text=True, timeout=20).stdout.strip()
-        check("no change under alembic/, schemas/, or peak/", not changed)
+        # ``alembic`` and ``peak`` left this list in Phase 44, which legitimately owns migration
+        # 013 and the governed-collation model metadata. ``schemas/`` — the Phase 9 contract
+        # source of truth — is still asserted untouched.
+        check("no change under schemas/", not changed)
     except Exception:
         check("git-backed scope check (git unavailable — skipped)", True)
 
@@ -474,13 +481,14 @@ def makefile_checks() -> None:
     static = subprocess.run([PY, os.path.join(REPO_ROOT, PARITY), "--mode", "static"],
                             capture_output=True, text=True, cwd=REPO_ROOT, timeout=180)
     check("mysql-parity-static still exits 0", static.returncode == 0)
-    check("mysql-parity-static still reports its collation warning",
-          "WARN" in static.stdout and "collation" in static.stdout.lower())
-    check("the Phase 41 warning now references the Phase 42 audit",
-          "mysql-collation-audit" in static.stdout
-          and "GOVERNED_MYSQL_COLLATION_POLICY.md" in static.stdout)
-    check("the Phase 41 warning was made more precise, not weakened",
-          "211 governed columns" in static.stdout and "CRITICAL" in static.stdout)
+    # Phase 42 asserted the parity checker still warned about the gap. Phase 44 closed it, so the
+    # checker now reports the pinned collation. Asserting the remediated state is stronger; what
+    # must never happen is the section going silent.
+    check("mysql-parity-static reports the pinned deterministic collation",
+          "an explicit collation is pinned" in static.stdout
+          and "utf8mb4_bin" in static.stdout)
+    check("the parity checker still reports a collation section",
+          "Charset / collation policy" in static.stdout)
     check("Phase 41 no longer lists packet_hash as a comparison-sensitive column",
           "packet_hash" not in static.stdout)
     staging = subprocess.run([PY, os.path.join(REPO_ROOT, PARITY), "--mode", "staging"],

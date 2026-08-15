@@ -128,6 +128,10 @@ documented open item, not a build failure. It exits **1** only if the audit itse
 required governed column missing or misclassified, so a future refactor cannot silently drop a
 column out of governed scope.
 
+Since Phase 44 the governed columns **are** pinned, so the authoritative run reports
+`MODEL_POLICY_SATISFIED_PRODUCTION_UNVERIFIED` rather than `NEEDS_REMEDIATION` — source control is
+correct, and the deployed database has still not been migrated.
+
 It proposes no schema and writes no migration. See
 [`../docs/GOVERNED_MYSQL_COLLATION_POLICY.md`](../docs/GOVERNED_MYSQL_COLLATION_POLICY.md).
 
