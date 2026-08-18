@@ -1369,6 +1369,26 @@ production execution):**
   [`../tests/validate_phase44_governed_identifier_collation_migration.py`](../tests/validate_phase44_governed_identifier_collation_migration.py)
   (`make validate-phase44`; offline).
 
+**Production Collation Verification (Phase 45 — operational read-only verification attempt; no
+source, schema, or migration change):**
+
+- [x] **Ran, connected, and returned `verified_inconclusive`** (`reason_code:
+  no_governed_columns_readable`). Server and database-level metadata were readable and the database
+  default collation was confirmed **case-insensitive** empirically, but **zero of the 18 expected
+  tables were visible** and `alembic_version` was unreadable, so `governed_columns_checked` and
+  `idempotency_boundaries_checked` were both **0**. The collision probe was not run.
+- [x] **`0 at risk` here means `0 of 0`** — nothing was examined. It does not prove production safe,
+  and it does not prove the risk live at the column level.
+- [x] **NO-GO for migration `013` as a standalone remediation against existing tables**, since on a
+  new production instance zero visible tables most likely means the schema was never bootstrapped.
+  Nothing was executed, written, altered, cleaned up, or deleted in production; no source file
+  changed; no connection or credential detail was recorded.
+- [ ] **Next: production schema bootstrap** from an empty database to head `013`, then re-run the
+  read-only verifier — requiring 18 tables, a readable `alembic_version`, 211 governed columns
+  checked, and 0 at risk. Bootstrap is schema-changing: it needs separate approval and a dedicated
+  migration credential, and the read-only verifier credential must **not** be upgraded. Recorded in
+  [`PHASE45_PRODUCTION_COLLATION_VERIFICATION.md`](PHASE45_PRODUCTION_COLLATION_VERIFICATION.md).
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing
