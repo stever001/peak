@@ -1389,6 +1389,36 @@ source, schema, or migration change):**
   migration credential, and the read-only verifier credential must **not** be upgraded. Recorded in
   [`PHASE45_PRODUCTION_COLLATION_VERIFICATION.md`](PHASE45_PRODUCTION_COLLATION_VERIFICATION.md).
 
+**Production Schema Bootstrap Recovery (Phase 46 — operational bootstrap, partial failure, approved
+recovery, and re-verification; no source, model, or migration change):**
+
+- [x] **Bootstrap ran once from the empty/new production database and failed partway.** Migrations
+  `001`–`007` recorded; migration `008` completed its DDL but Alembic could not record it, because
+  `alembic_version.version_num` was the Alembic default `VARCHAR(32)` and five revision ids —
+  including `008_internal_reviewer_decision_records` and `013_governed_identifier_collation_policy` —
+  are longer than 32 characters. Production was left partially bootstrapped at recorded revision
+  `007` with 15 base tables, 141 governed columns all at risk, and 7 idempotency boundaries all at
+  risk (`verified_risk_live_remediation_required`). No second schema-changing command was run before
+  approval.
+- [x] **Recovery executed under explicit approval, limited to three actions:** one exact
+  `ALTER TABLE alembic_version MODIFY COLUMN version_num VARCHAR(255) NOT NULL`, one Alembic stamp to
+  `008_internal_reviewer_decision_records`, and one Alembic upgrade to head. Stamping `008` was safe
+  because Alembic writes the version table only after the migration body returns and MySQL DDL is
+  non-transactional, so `008`'s DDL was already committed. No downgrade, `DROP`, `DELETE`,
+  `TRUNCATE`, cleanup, arbitrary SQL, second `ALTER`, or second upgrade.
+- [x] **Production now verifies safe.** Head `013_governed_identifier_collation_policy`,
+  `alembic_version` readable and at head, 18 expected tables plus `alembic_version`,
+  `governed_columns_checked: 211`, `governed_columns_at_risk: 0`,
+  `idempotency_boundaries_checked: 11`, `idempotency_boundaries_at_risk: 0`, outcome
+  `verified_safe_no_remediation_required`. **No further migration `013` action is needed.** Separate
+  read-only and migration credentials were used and the verifier credential was not upgraded; no
+  connection or credential detail was recorded; no source file changed.
+- [ ] **Next (Phase 47): Alembic version-table hardening in source.** The production database was
+  repaired manually and that repair exists nowhere in source control, so any fresh MySQL bootstrap —
+  new environment, staging rebuild, restore drill, CI database, disaster-recovery exercise — will
+  hit the same `VARCHAR(32)` failure. Harden before standing up any new environment. Recorded in
+  [`PHASE46_PRODUCTION_SCHEMA_BOOTSTRAP_RECOVERY.md`](PHASE46_PRODUCTION_SCHEMA_BOOTSTRAP_RECOVERY.md).
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing
