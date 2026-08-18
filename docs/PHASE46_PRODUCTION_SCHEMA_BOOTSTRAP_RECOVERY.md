@@ -185,6 +185,9 @@ the verification path remained read-only, as it is by construction.
 - **Phase 47 should address Alembic version-table hardening before any new environment, staging
   rebuild, restore drill, or fresh bootstrap.** Treat this as a prerequisite, not a cleanup task:
   the next environment stood up without it repeats this phase's failure.
+  **Addressed in source by Phase 47** — see
+  [`PHASE47_ALEMBIC_VERSION_TABLE_HARDENING.md`](PHASE47_ALEMBIC_VERSION_TABLE_HARDENING.md). The
+  fix is a preflight in `alembic/env.py`; it changes nothing about this already-repaired database.
 - **The database default collation remains case-insensitive.** Governed columns are individually
   pinned deterministic, so the idempotency boundary is correct today, but any future governed column
   added without an explicit collation would silently inherit the case-insensitive default. Continued

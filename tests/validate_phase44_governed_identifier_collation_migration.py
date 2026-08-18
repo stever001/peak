@@ -202,8 +202,11 @@ def baseline_checks() -> None:
              "schemas", "prompts", "agents", "peak/persistence/allowlist.py"],
             capture_output=True, text=True, timeout=20).stdout.strip()
         check("schemas/, prompts/, agents/, and the allowlist are untouched", not untouched)
+        # Scoped to alembic/versions, not all of alembic/: the claim is about migration files.
+        # The Alembic environment itself (env.py and its helpers) is allowed to evolve — Phase 47
+        # hardens the version table there without touching any migration.
         older = subprocess.run(
-            ["git", "-C", REPO_ROOT, "diff", "--name-only", "HEAD", "--", "alembic"],
+            ["git", "-C", REPO_ROOT, "diff", "--name-only", "HEAD", "--", "alembic/versions"],
             capture_output=True, text=True, timeout=20).stdout.strip()
         check("no earlier migration was edited (013 is new, not a rewrite)", not older)
     except Exception:

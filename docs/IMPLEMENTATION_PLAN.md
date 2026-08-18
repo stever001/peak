@@ -1383,11 +1383,12 @@ source, schema, or migration change):**
   new production instance zero visible tables most likely means the schema was never bootstrapped.
   Nothing was executed, written, altered, cleaned up, or deleted in production; no source file
   changed; no connection or credential detail was recorded.
-- [ ] **Next: production schema bootstrap** from an empty database to head `013`, then re-run the
-  read-only verifier — requiring 18 tables, a readable `alembic_version`, 211 governed columns
-  checked, and 0 at risk. Bootstrap is schema-changing: it needs separate approval and a dedicated
-  migration credential, and the read-only verifier credential must **not** be upgraded. Recorded in
-  [`PHASE45_PRODUCTION_COLLATION_VERIFICATION.md`](PHASE45_PRODUCTION_COLLATION_VERIFICATION.md).
+- [x] **Production schema bootstrap — completed by Phase 46.** Bootstrapped from an empty database
+  to head `013` and re-verified: 18 tables, a readable `alembic_version`, 211 governed columns
+  checked, and 0 at risk. Bootstrap was schema-changing and ran under separate approval with a
+  dedicated migration credential; the read-only verifier credential was **not** upgraded. Recorded in
+  [`PHASE45_PRODUCTION_COLLATION_VERIFICATION.md`](PHASE45_PRODUCTION_COLLATION_VERIFICATION.md) and
+  [`PHASE46_PRODUCTION_SCHEMA_BOOTSTRAP_RECOVERY.md`](PHASE46_PRODUCTION_SCHEMA_BOOTSTRAP_RECOVERY.md).
 
 **Production Schema Bootstrap Recovery (Phase 46 — operational bootstrap, partial failure, approved
 recovery, and re-verification; no source, model, or migration change):**
@@ -1418,6 +1419,29 @@ recovery, and re-verification; no source, model, or migration change):**
   new environment, staging rebuild, restore drill, CI database, disaster-recovery exercise — will
   hit the same `VARCHAR(32)` failure. Harden before standing up any new environment. Recorded in
   [`PHASE46_PRODUCTION_SCHEMA_BOOTSTRAP_RECOVERY.md`](PHASE46_PRODUCTION_SCHEMA_BOOTSTRAP_RECOVERY.md).
+
+**Alembic Version-Table Hardening (Phase 47 — source hardening only; no production command, no
+migration, no model/table/writer change):**
+
+- [x] **Root cause fixed in source.** Alembic's bookkeeping column defaults to `VARCHAR(32)` while
+  five revision ids here are longer (34–43 chars), which is what halted the Phase 46 bootstrap at
+  `008`. `alembic/env.py` now runs a preflight that creates `alembic_version` at
+  `version_num VARCHAR(255) NOT NULL` when absent, widens it when narrower, and does nothing when it
+  is already wide enough or the dialect is not MySQL/MariaDB. SQLite smoke behaviour is unchanged and
+  offline mode opens no connection.
+- [x] **Alembic exposes no width parameter** on `context.configure()`; its one official hook,
+  `DefaultImpl.version_table_impl`, governs only the `CREATE` shape and cannot widen an existing
+  narrow column — so a preflight covers all three states with one deterministic mechanism.
+- [x] **Bookkeeping only, and narrowly bounded.** The entire SQL surface is two fixed literals naming
+  only `alembic_version` and `version_num`; no application-table DDL, no `DROP`/`DELETE`/`TRUNCATE`,
+  no arbitrary SQL executor, no credential or `.env` access. A source-side guard fails loudly if any
+  future revision id exceeds the configured width. Head stays `013`, migrations stay 13, tables stay
+  18, and no revision id was rewritten. Recorded in
+  [`PHASE47_ALEMBIC_VERSION_TABLE_HARDENING.md`](PHASE47_ALEMBIC_VERSION_TABLE_HARDENING.md).
+- [ ] **Untested against a live MySQL server**, by design — no MySQL is reachable from the validation
+  suite. The create/widen/no-op branches are proven against a stubbed dialect and the statements are
+  asserted character-for-character; a real fresh MySQL/MariaDB bootstrap is the outstanding
+  confirmation, and is the natural first check when the next environment is stood up.
 
 **Still to do:**
 

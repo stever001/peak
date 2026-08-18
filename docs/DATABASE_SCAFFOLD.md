@@ -28,6 +28,7 @@ peak/
 alembic.ini       # Alembic config; URL comes from the environment, not this file
 alembic/
   env.py          # reads PEAK_DATABASE_URL; target_metadata = Base.metadata
+  version_table_hardening.py   # Phase 47: alembic_version.version_num preflight (bookkeeping only)
   versions/
     001_initial_controlled_database_schema.py   # tables only, no inserts
     002_agent_run_idempotency.py                # Phase 20: agent_run_records columns + unique index (no data)
@@ -185,3 +186,20 @@ The scaffold now states comparison semantics explicitly. `peak.db.base.GovernedS
 pins `utf8mb4_bin` on MySQL via `with_variant` and leaves SQLite untouched, so the local
 structural-smoke path keeps working. Use it for any column whose comparison decides identity,
 authorization, uniqueness, or integrity; use plain `String`/`Text` for prose and JSON detail.
+
+## Phase 47 — long revision ids are safe on a fresh MySQL bootstrap
+
+Alembic creates its bookkeeping table as `version_num VARCHAR(32)`, but five revision ids here are
+longer than that (up to 43 characters). On a fresh MySQL/MariaDB database that combination fails
+partway through `alembic upgrade head`: the migration's DDL commits, then Alembic cannot record it.
+
+`alembic/env.py` now runs a preflight before migrations that creates `alembic_version` at
+`version_num VARCHAR(255) NOT NULL` when absent, widens it when narrower, and does nothing otherwise.
+SQLite is skipped entirely, so the local structural-smoke path is unchanged, and offline mode opens
+no connection. A source-side guard fails loudly if a new revision id would ever exceed the configured
+width — so prefer short revision identifiers, but a long one can no longer break a bootstrap
+silently.
+
+The preflight is Alembic bookkeeping only: two fixed statements naming just `alembic_version` and
+`version_num`, no application-table DDL. See
+[`PHASE47_ALEMBIC_VERSION_TABLE_HARDENING.md`](PHASE47_ALEMBIC_VERSION_TABLE_HARDENING.md).
