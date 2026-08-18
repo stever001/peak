@@ -203,3 +203,17 @@ silently.
 The preflight is Alembic bookkeeping only: two fixed statements naming just `alembic_version` and
 `version_num`, no application-table DDL. See
 [`PHASE47_ALEMBIC_VERSION_TABLE_HARDENING.md`](PHASE47_ALEMBIC_VERSION_TABLE_HARDENING.md).
+
+## Phase 49 — runtime and migration read different variables
+
+`peak/db/session.py` reads **`PEAK_RUNTIME_DATABASE_URL`**; `alembic/env.py` reads
+**`PEAK_DATABASE_URL`**; the read-only production verifier reads **`PEAK_PRODUCTION_DB_URL`**. The
+three are deliberately not interchangeable — see `.env.example` for the placeholder form and
+[`PHASE49_RUNTIME_DATABASE_URL_SEPARATION.md`](PHASE49_RUNTIME_DATABASE_URL_SEPARATION.md) for why.
+
+Do **not** set `PEAK_DATABASE_URL` in a runtime environment file. Runtime does not fall back to it;
+it fails closed with a message naming the missing variable, because silently borrowing the migration
+credential would give application code schema-change privileges.
+
+For local work, pass an explicit URL instead of setting any of them:
+`create_session_factory(url="sqlite:///tmp/x.db")`, or inject `session_factory=` into a writer.

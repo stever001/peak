@@ -152,3 +152,11 @@ update-shaped allowlist actions gains an implementation, or the runtime grant se
 - **No source code changed.** This phase's only repository change is documentation.
 - No operator environment file was displayed, copied, or searched; `.env` was not read and no secret
   store was searched.
+
+---
+
+**Follow-up:** the wiring precondition named in §7 was resolved in source by **Phase 49** — see
+[`PHASE49_RUNTIME_DATABASE_URL_SEPARATION.md`](PHASE49_RUNTIME_DATABASE_URL_SEPARATION.md).
+`peak/db/session.py` now reads `PEAK_RUNTIME_DATABASE_URL` and fails closed rather than falling back
+to `PEAK_DATABASE_URL`. Runtime enablement remains a separately approved phase; Phase 49 enabled
+nothing and did not touch production.

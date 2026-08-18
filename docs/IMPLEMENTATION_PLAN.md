@@ -1471,6 +1471,29 @@ read, no writer enabled, no source change):**
   resolved by exporting `PEAK_DATABASE_URL` from the runtime file — that would collapse the runtime
   and migration variables into one name and undo the separation this gate established.
 
+**Runtime Database URL Separation (Phase 49 — source wiring only; no production command, no
+connection, no writer enabled, no migration/model/table/writer/allowlist change):**
+
+- [x] **Runtime has its own variable.** `peak/db/session.py` now reads
+  `PEAK_RUNTIME_DATABASE_URL` and performs exactly one environment read; `alembic/env.py` still
+  reads `PEAK_DATABASE_URL` and names neither other variable; the read-only verifier keeps
+  `PEAK_PRODUCTION_DB_URL` and never names the runtime one. The three code paths are disjoint, and
+  `.env.example` documents all three as separate placeholders.
+- [x] **Fails closed, never falls back.** A missing `PEAK_RUNTIME_DATABASE_URL` raises rather than
+  borrowing the migration credential — including when `PEAK_DATABASE_URL` *is* set — because a
+  silent fallback would give application code schema-change privileges exactly when configuration
+  went wrong. The error names variable names only: no value, no `://` scheme.
+- [x] **Local paths unchanged and explicit.** Writers still accept `session_factory=`, and
+  `create_session_factory(url=...)` accepts an explicit URL, so harnesses need none of the three
+  variables. `get_database_url()` / `create_db_engine()` / `ENV_VAR` remain as deprecated aliases
+  resolving to the runtime path. All eleven writers stay create-only and still resolve sessions
+  through `create_session_factory()`. Recorded in
+  [`PHASE49_RUNTIME_DATABASE_URL_SEPARATION.md`](PHASE49_RUNTIME_DATABASE_URL_SEPARATION.md).
+- [ ] **Next: runtime enablement, separately approved.** Phase 49 makes correct wiring *possible*;
+  it enables nothing. No writer was run, no deployment or environment config was added, and nothing
+  was pointed at production. The enablement phase should also confirm the runtime credential still
+  matches the Phase 48 grant set before any writer connects.
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

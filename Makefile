@@ -4,12 +4,12 @@
 
 PYTHON ?= python3
 
-.PHONY: help validate validate-phase1 validate-phase2 validate-phase3 validate-phase4 validate-phase5 validate-phase6 validate-phase7 validate-phase8 validate-phase9 validate-phase10 validate-phase11 validate-phase12 validate-phase13 validate-phase14 validate-phase15 validate-phase16 validate-phase17 validate-phase18 validate-phase19 validate-phase20 validate-phase21 validate-phase22 validate-phase23 validate-phase24 validate-phase25 validate-phase26 validate-phase27 validate-phase28 validate-phase29 validate-phase30 validate-phase31 validate-phase32 validate-phase33 validate-phase34 validate-phase35 validate-phase36 validate-phase37 validate-phase38 validate-phase39 validate-phase40 validate-phase41 validate-phase42 validate-phase43 validate-phase44 validate-phase47 db-check mysql-parity-static mysql-parity-staging mysql-collation-audit production-mysql-collation-verify db-check-managed-test managed-mysql-smoke managed-mysql-migration-check packet-summary install-dev
+.PHONY: help validate validate-phase1 validate-phase2 validate-phase3 validate-phase4 validate-phase5 validate-phase6 validate-phase7 validate-phase8 validate-phase9 validate-phase10 validate-phase11 validate-phase12 validate-phase13 validate-phase14 validate-phase15 validate-phase16 validate-phase17 validate-phase18 validate-phase19 validate-phase20 validate-phase21 validate-phase22 validate-phase23 validate-phase24 validate-phase25 validate-phase26 validate-phase27 validate-phase28 validate-phase29 validate-phase30 validate-phase31 validate-phase32 validate-phase33 validate-phase34 validate-phase35 validate-phase36 validate-phase37 validate-phase38 validate-phase39 validate-phase40 validate-phase41 validate-phase42 validate-phase43 validate-phase44 validate-phase47 validate-phase49 db-check mysql-parity-static mysql-parity-staging mysql-collation-audit production-mysql-collation-verify db-check-managed-test managed-mysql-smoke managed-mysql-migration-check packet-summary install-dev
 
 help: ## Show available targets
 	@echo "Targets:"
 	@echo "  make install-dev        Install dev dependencies ($(PYTHON) -m pip install -r requirements-dev.txt)"
-	@echo "  make validate           Run all validation harnesses (Phase 1 through Phase 47)"
+	@echo "  make validate           Run all validation harnesses (Phase 1 through Phase 49)"
 	@echo "  make validate-phase1    Run only the Phase 1 object harness"
 	@echo "  make validate-phase2    Run only the Phase 2 EngagementPacket harness"
 	@echo "  make validate-phase3    Run only the Phase 3 prompt-contract inventory check"
@@ -55,6 +55,7 @@ help: ## Show available targets
 	@echo "  make validate-phase43   Run only the Phase 43 production MySQL collation verification check"
 	@echo "  make validate-phase44   Run only the Phase 44 governed identifier collation migration check"
 	@echo "  make validate-phase47   Run only the Phase 47 Alembic version-table hardening check"
+	@echo "  make validate-phase49   Run only the Phase 49 runtime database URL separation check"
 	@echo "  make db-check           Alias for the Phase 11 database-scaffold check"
 	@echo "  make db-check-managed-test        Managed MySQL test-env rubric check (skips safely with no DSN)"
 	@echo "  make managed-mysql-smoke          Managed MySQL test-env smoke runbook (skips safely with no DSN)"
@@ -64,7 +65,7 @@ help: ## Show available targets
 install-dev: ## Install development dependencies
 	$(PYTHON) -m pip install -r requirements-dev.txt
 
-validate: validate-phase1 validate-phase2 validate-phase3 validate-phase4 validate-phase5 validate-phase6 validate-phase7 validate-phase8 validate-phase9 validate-phase10 validate-phase11 validate-phase12 validate-phase13 validate-phase14 validate-phase15 validate-phase16 validate-phase17 validate-phase18 validate-phase19 validate-phase20 validate-phase21 validate-phase22 validate-phase23 validate-phase24 validate-phase25 validate-phase26 validate-phase27 validate-phase28 validate-phase29 validate-phase30 validate-phase31 validate-phase32 validate-phase33 validate-phase34 validate-phase35 validate-phase36 validate-phase37 validate-phase38 validate-phase39 validate-phase40 validate-phase41 validate-phase42 validate-phase43 validate-phase44 validate-phase47 ## Run all validation harnesses
+validate: validate-phase1 validate-phase2 validate-phase3 validate-phase4 validate-phase5 validate-phase6 validate-phase7 validate-phase8 validate-phase9 validate-phase10 validate-phase11 validate-phase12 validate-phase13 validate-phase14 validate-phase15 validate-phase16 validate-phase17 validate-phase18 validate-phase19 validate-phase20 validate-phase21 validate-phase22 validate-phase23 validate-phase24 validate-phase25 validate-phase26 validate-phase27 validate-phase28 validate-phase29 validate-phase30 validate-phase31 validate-phase32 validate-phase33 validate-phase34 validate-phase35 validate-phase36 validate-phase37 validate-phase38 validate-phase39 validate-phase40 validate-phase41 validate-phase42 validate-phase43 validate-phase44 validate-phase47 validate-phase49 ## Run all validation harnesses
 
 validate-phase1: ## Run the Phase 1 schema/example validation harness
 	$(PYTHON) tests/validate_phase1.py
@@ -203,6 +204,11 @@ validate-phase44: ## Run the Phase 44 governed identifier collation migration ch
 # record this repo's long revision ids. Fully offline: no credentials, network, .env, or DSN.
 validate-phase47: ## Run the Phase 47 Alembic version-table hardening check (offline; no credentials/network)
 	$(PYTHON) tests/validate_phase47_alembic_version_table_hardening.py
+
+# Phase 49 separates the runtime DB URL variable from the migration one. Fully offline: it
+# reads no credentials, opens no connection, and scrubs the three role variables from the env.
+validate-phase49: ## Run the Phase 49 runtime database URL separation check (offline; no credentials/network)
+	$(PYTHON) tests/validate_phase49_runtime_database_url_separation.py
 
 db-check: ## Validate the DB scaffold (alias for validate-phase11)
 	$(PYTHON) tests/validate_phase11_db_scaffold.py

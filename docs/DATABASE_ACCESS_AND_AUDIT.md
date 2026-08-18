@@ -309,3 +309,30 @@ migration `013`, so their comparison semantics no longer depend on a server defa
 
 This holds in source control. It becomes true of the audit trail itself only once migration `013`
 has been executed against production and `make production-mysql-collation-verify` confirms it.
+
+## Phase 49 — database credentials are separated by role, in source
+
+Access control at the application layer means little if every process connects as the same database
+user. Three roles now read three distinct environment variables, and the code paths that read them
+do not overlap:
+
+| Variable | Read by | Credential should hold |
+| --- | --- | --- |
+| `PEAK_RUNTIME_DATABASE_URL` | `peak/db/session.py` — application/runtime sessions | `SELECT` + `INSERT` only |
+| `PEAK_DATABASE_URL` | `alembic/env.py` — Alembic / migration / bootstrap only | schema-change privileges |
+| `PEAK_PRODUCTION_DB_URL` | `tools/production_mysql_collation_verify.py` — read-only verifier only | read-only, plus an explicit affirmation |
+
+**Runtime never falls back to `PEAK_DATABASE_URL`.** If the runtime variable is unset, session
+creation raises rather than borrowing the migration credential — a fallback would hand
+schema-changing privileges to application code precisely when configuration went wrong. The error
+names the missing variable and nothing else; no value is ever printed.
+
+Phase 48 verified the runtime credential holds exactly `SELECT` + `INSERT` on the application
+schema, with no `UPDATE`, `DELETE`, DDL, global grant, or `GRANT OPTION` — which is all the
+create-only controlled writers require. The audit consequence is that a runtime process **cannot**
+rewrite or remove an audit record even if application logic were compromised: append is the only
+write it is permitted.
+
+Local harnesses need none of these variables. Every controlled writer accepts an explicit
+`session_factory=`, and `create_session_factory(url=...)` accepts an explicit URL — that is the
+supported way to point a test at a temporary SQLite database.

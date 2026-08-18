@@ -221,16 +221,30 @@ def baseline_checks() -> None:
         history = git("log", "--oneline", "-40")
         check(f"baseline commit {BASELINE_COMMIT} present in history",
               BASELINE_COMMIT in history)
-        changed = set(git("diff", "--name-only", "HEAD").splitlines())
-        unexpected = sorted(changed - ALLOWED_CHANGED)
-        check("only the intended narrow set of files changed", not unexpected)
-        if unexpected:
-            print(f"        unexpected: {unexpected}")
-        untouched = git("diff", "--name-only", "HEAD", "--",
-                        "schemas", "prompts", "agents", "peak", "requirements.txt",
-                        "requirements-dev.txt", ".env.example", "examples")
-        check("schemas/, prompts/, agents/, peak/, requirements, .env.example untouched",
-              not untouched)
+        # The whole-tree scope guard is an *authoring-time* check: it means "the work in progress
+        # for this phase touched nothing extra". Once Phase 47 is committed it must go quiet, or it
+        # would freeze the repository against every later phase's legitimate changes.
+        # Gated on the phase's *implementation* artifact, not its harness: a later phase editing
+        # this harness must not be mistaken for Phase 47 being re-authored.
+        authoring = bool(git("status", "--porcelain", "--", HARDENING_REL).strip())
+        if authoring:
+            changed = set(git("diff", "--name-only", "HEAD").splitlines())
+            unexpected = sorted(changed - ALLOWED_CHANGED)
+            check("only the intended narrow set of files changed", not unexpected)
+            if unexpected:
+                print(f"        unexpected: {unexpected}")
+            untouched = git("diff", "--name-only", "HEAD", "--",
+                            "schemas", "prompts", "agents", "requirements.txt",
+                            "requirements-dev.txt", "examples")
+            check("schemas/, prompts/, agents/, requirements untouched", not untouched)
+        else:
+            print("  [skip] Phase 47 is committed — working-tree scope guard not applicable")
+
+        # These remain unconditional: they are invariants, not authoring-time scope.
+        governed = [c for c in git("diff", "--name-only", "HEAD", "--", "peak").splitlines()
+                    if c.endswith("_writer.py") or c.endswith("peak/persistence/allowlist.py")
+                    or c.endswith("peak/db/models.py")]
+        check("no controlled writer, model, or allowlist source changed", not governed)
         migrations_changed = git("diff", "--name-only", "HEAD", "--", VERSIONS_REL)
         check("no existing migration file was edited or rewritten", not migrations_changed)
         docx = git("diff", "--name-only", "HEAD", "--", "docs/Peak_Investor_Overview_AI.docx")

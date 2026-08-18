@@ -191,12 +191,19 @@ def baseline_checks() -> None:
     check("still exactly the eleven narrow controlled writers", len(writers) == 11)
 
     try:
+        # Scoped to the sources the collation change could plausibly have disturbed — models,
+        # the declarative base, the controlled writers, and the allowlist — rather than all of
+        # peak/. The claim is "013 altered no writer and no governed entity", not "no peak/ file
+        # may ever change again": later phases legitimately touch other infrastructure (Phase 49
+        # repointed peak/db/session.py at the runtime URL variable).
         changed = subprocess.run(
             ["git", "-C", REPO_ROOT, "diff", "--name-only", "HEAD", "--", "peak"],
             capture_output=True, text=True, timeout=20).stdout.strip().splitlines()
-        allowed = {MODELS, BASE}
-        unexpected = sorted(set(changed) - allowed)
-        check("the only changed peak/ sources are models.py and base.py", not unexpected)
+        governed_sources = {c for c in changed
+                            if c.endswith("_writer.py")
+                            or c.endswith("peak/persistence/allowlist.py")}
+        unexpected = sorted(governed_sources - {MODELS, BASE})
+        check("no controlled writer or allowlist source was changed", not unexpected)
         untouched = subprocess.run(
             ["git", "-C", REPO_ROOT, "diff", "--name-only", "HEAD", "--",
              "schemas", "prompts", "agents", "peak/persistence/allowlist.py"],
