@@ -125,3 +125,11 @@ That phase should re-run this gate first: the grant posture can drift, and the g
   grepped, or searched. `.env` was not read; no secret store was searched.
 - The offline harness contacts no database and scrubs all role variables from every child process it
   starts, so `make validate` remains credential-free.
+
+---
+
+**Follow-up:** the enablement decision this phase deferred is now recorded by **Phase 51** — see
+[`PHASE51_WRITER_ENABLEMENT_DECISION_GATE.md`](PHASE51_WRITER_ENABLEMENT_DECISION_GATE.md). The
+recorded decision is **no production smoke-write and no writer enablement**, and the gate refuses
+any request to authorize one. The warning stated in §7 above is preserved there as an enforced
+field: a passing runtime connectivity gate is prerequisite evidence, not write permission.

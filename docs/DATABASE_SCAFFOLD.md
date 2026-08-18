@@ -231,3 +231,22 @@ reads no application table, and prints booleans rather than any connection detai
 `--self-test` exercises its logic with no database at all, and refuses to run if a runtime URL is
 set so it can never stand in for a live check. See
 [`PHASE50_CONTROLLED_RUNTIME_CONNECTIVITY_GATE.md`](PHASE50_CONTROLLED_RUNTIME_CONNECTIVITY_GATE.md).
+
+## Phase 51 — the writer enablement decision gate
+
+`make writer-enablement-decision-gate` prints the current, machine-checkable decision about
+production writes. Today that decision is **no production smoke-write and no writer enablement**.
+
+The tool is offline by construction: no database connection, no engine or session import, no writer
+import, no environment read, no statement, no file access. It exits 0 for the no-write path and
+refuses with exit 3 if asked to record a write-authorizing path. `--json` emits a single parseable
+document on stdout.
+
+It is opt-in and not part of `make validate`; the static harness `make validate-phase51` is.
+
+Before any future write, re-run the read-only verifier, the runtime connectivity gate, and this
+decision gate — and note that runtime holds no `DELETE`, so any synthetic record it writes is
+durable. Pass `PYTHON=.venv/bin/python` to the two live gates: `PYTHON` defaults to `python3`, which
+may have no database driver, and the connectivity gate then fails closed in a way that reads like a
+connectivity problem but is a missing local dependency. See
+[`PHASE51_WRITER_ENABLEMENT_DECISION_GATE.md`](PHASE51_WRITER_ENABLEMENT_DECISION_GATE.md).

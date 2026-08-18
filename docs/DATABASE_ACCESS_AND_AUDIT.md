@@ -356,3 +356,29 @@ The gate re-asserts the Phase 48 posture: `SELECT` + `INSERT` and nothing more. 
 guarantee behind append-only history — a runtime process cannot rewrite or delete an audit record,
 because it holds neither `UPDATE` nor `DELETE`. Re-run the gate before any change to runtime
 connectivity; grant posture can drift, and the check is cheap and non-mutating.
+
+## Phase 51 — writing is a governance decision, gated separately from connectivity
+
+Access control decides what a credential *could* do. It does not decide what *should* be written, or
+by whose authority. Phase 51 separates those questions: connectivity and grants are settled by the
+Phase 48–50 gates, while the decision to write anything at all is recorded by
+`tools/production_writer_enablement_decision_gate.py` (`make writer-enablement-decision-gate`).
+
+The current recorded decision is **no production write and no writer enablement**. The gate refuses
+(exit 3) any request to record a write-authorizing path, and it contacts no database — it has no
+engine, session, writer, or driver import, reads no environment variable, and issues no statement.
+
+Two audit consequences are worth stating plainly:
+
+**A passing runtime connectivity gate is not write permission.** It is evidence that the plumbing
+and privileges are correct. Treating it as authorization would collapse a governance decision into a
+technical one.
+
+**Runtime holds no `DELETE`, so a synthetic record is durable.** Anything runtime writes — including
+an administrative or smoke record — cannot be removed by runtime. Removal requires the migration
+credential under separate approval. Any such record must therefore be assumed to remain permanently
+in the governed audit history, which is exactly why the cleanup posture has to be decided *before*
+the write rather than discovered after it.
+
+Before any future write, re-run all three gates: the read-only verifier, the runtime connectivity
+gate, and the decision gate. Each is cheap and non-mutating, and posture drifts.

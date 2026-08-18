@@ -1521,6 +1521,33 @@ write, no app-row read, no migration, no writer enabled or invoked, no deploymen
   runtime holds no `DELETE`, so such a row cannot be removed by runtime), or a real engagement-only
   write after client authorization exists. Re-run this gate first; grant posture can drift.
 
+**Writer Enablement Decision Gate (Phase 51 — governance decision gate; no writer enabled or
+invoked, no production write, no app-row read, no schema/migration change):**
+
+- [x] **Decision recorded: no write, no enablement.** `selected_path = no_production_smoke_write_yet`,
+  with `production_write_authorized`, `writer_enablement_authorized`, `synthetic_write_authorized`,
+  `real_engagement_write_authorized`, `safe_to_run_writers_now`, and `safe_to_write_production_now`
+  all **false**. `tools/production_writer_enablement_decision_gate.py` exits 0 for the no-write path
+  and **refuses (exit 3)** any request to record a write-authorizing path — and no field flips when
+  one is asked for.
+- [x] **Connectivity is prerequisite evidence, not permission.** Phases 48–50 answered technical
+  questions (grants, wiring, connection). None answered whether anything *should* be written. The
+  gate records `phase50_pass_is_prerequisite_evidence_not_write_permission = true` so that a green
+  connectivity check can never be mistaken for authorization.
+- [x] **Runtime has no `DELETE`, so cleanup is part of the authorization.** A synthetic or
+  administrative record written by runtime **cannot be removed by runtime**; removal needs the
+  migration credential under separate approval. Any synthetic record must therefore be treated as
+  **durable**. Recorded as `requires_explicit_cleanup_plan_before_synthetic_write = true`.
+- [x] **Offline by construction.** The gate has no database code path at all — no engine, session,
+  writer, or driver import; no environment read; no statement; no file access. Opt-in as
+  `make writer-enablement-decision-gate`; its static harness runs inside `make validate`. Recorded in
+  [`PHASE51_WRITER_ENABLEMENT_DECISION_GATE.md`](PHASE51_WRITER_ENABLEMENT_DECISION_GATE.md).
+- [ ] **Next: wait for authorized engagement/intake data, or separately approve a no-cleanup
+  administrative smoke record.** Whichever future phase authorizes a write must re-run all three
+  gates (read-only verifier, runtime connectivity, this decision gate) and name in advance: the
+  writer, target table, exact allowed action, authorization scope, idempotency-key design,
+  rollback/cleanup posture, and whether a durable synthetic/admin record will remain.
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing
