@@ -217,3 +217,17 @@ credential would give application code schema-change privileges.
 
 For local work, pass an explicit URL instead of setting any of them:
 `create_session_factory(url="sqlite:///tmp/x.db")`, or inject `session_factory=` into a writer.
+
+## Phase 50 — checking runtime connectivity without touching data
+
+`make runtime-connectivity-gate` runs a read-only check that the runtime credential can connect
+through `peak/db/session.py` and still holds exactly `SELECT` + `INSERT`. It is **opt-in** and not
+part of `make validate`, because it can reach the real deployed database.
+
+It refuses (exit 2) when `PEAK_RUNTIME_DATABASE_URL` is unset, never reads `PEAK_DATABASE_URL` or
+`PEAK_PRODUCTION_DB_URL`, issues only `SELECT 1` and `SHOW GRANTS FOR CURRENT_USER`, writes nothing,
+reads no application table, and prints booleans rather than any connection detail.
+
+`--self-test` exercises its logic with no database at all, and refuses to run if a runtime URL is
+set so it can never stand in for a live check. See
+[`PHASE50_CONTROLLED_RUNTIME_CONNECTIVITY_GATE.md`](PHASE50_CONTROLLED_RUNTIME_CONNECTIVITY_GATE.md).

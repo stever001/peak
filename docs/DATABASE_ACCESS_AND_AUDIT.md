@@ -336,3 +336,23 @@ write it is permitted.
 Local harnesses need none of these variables. Every controlled writer accepts an explicit
 `session_factory=`, and `create_session_factory(url=...)` accepts an explicit URL — that is the
 supported way to point a test at a temporary SQLite database.
+
+## Phase 50 — runtime connectivity is provable, and provably harmless
+
+The role separation in Phase 49 is only worth as much as the evidence that it holds in a live
+environment. `tools/production_runtime_connectivity_gate.py` supplies that evidence on demand: it
+connects through the application's own session path using `PEAK_RUNTIME_DATABASE_URL`, having first
+removed `PEAK_DATABASE_URL` and `PEAK_PRODUCTION_DB_URL` from its own process — so a successful
+connection *proves* the runtime credential stood alone.
+
+For audit purposes the important property is what the gate **cannot** do. It issues exactly two
+hard-coded statements, `SELECT 1` and `SHOW GRANTS FOR CURRENT_USER`, both identity-checked before
+execution. Neither reads an application table: there is no `FROM` clause, no `COUNT(`, and no
+application table name anywhere in the tool. Grants are parsed in memory and only booleans are
+emitted — the user, host, and database names in each grant line are discarded. Failures report the
+exception type only, because driver messages embed the connection string.
+
+The gate re-asserts the Phase 48 posture: `SELECT` + `INSERT` and nothing more. That is the audit
+guarantee behind append-only history — a runtime process cannot rewrite or delete an audit record,
+because it holds neither `UPDATE` nor `DELETE`. Re-run the gate before any change to runtime
+connectivity; grant posture can drift, and the check is cheap and non-mutating.

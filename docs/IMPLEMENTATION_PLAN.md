@@ -1494,6 +1494,33 @@ connection, no writer enabled, no migration/model/table/writer/allowlist change)
   was pointed at production. The enablement phase should also confirm the runtime credential still
   matches the Phase 48 grant set before any writer connects.
 
+**Controlled Runtime Connectivity Gate (Phase 50 — read-only gate + reusable tool; no production
+write, no app-row read, no migration, no writer enabled or invoked, no deployment change):**
+
+- [x] **Reusable gate added.** `tools/production_runtime_connectivity_gate.py` connects through
+  `peak.db.session.create_runtime_engine` — the application's own path, so a regression there fails
+  the gate — using `PEAK_RUNTIME_DATABASE_URL` only. It **scrubs** `PEAK_DATABASE_URL` and
+  `PEAK_PRODUCTION_DB_URL` from its own process first, so a successful connection is *evidence* the
+  runtime variable sufficed rather than an assertion. Exposed as the opt-in
+  `make runtime-connectivity-gate`, deliberately **not** part of `make validate`.
+- [x] **Two statements, hard-coded.** `SELECT 1` and `SHOW GRANTS FOR CURRENT_USER`, checked for
+  identity (not resemblance) before execution. Neither has a `FROM` clause or a `COUNT(`; no
+  application table name appears in the tool; grants are parsed in memory and only booleans leave
+  the process; failures report the exception *type* only.
+- [x] **Grant policy is exact.** Requires `SELECT` + `INSERT`; fails on any of `UPDATE`, `DELETE`,
+  DDL, `INDEX`/`REFERENCES`, routine/view/event/trigger privileges, admin privileges,
+  `ALL PRIVILEGES`, `WITH GRANT OPTION`, or any global `*.*` privilege beyond `USAGE`. Too broad
+  *or* too narrow fails.
+- [x] **Self-test mode is safe by construction.** `--self-test` contacts no database, refuses when a
+  runtime URL is set, can never report readiness, and is a CLI flag rather than an environment
+  switch. Recorded in
+  [`PHASE50_CONTROLLED_RUNTIME_CONNECTIVITY_GATE.md`](PHASE50_CONTROLLED_RUNTIME_CONNECTIVITY_GATE.md).
+- [ ] **Next: writer enablement, separately approved.** A passing gate means the connection and
+  privilege posture are right — not that writers should start. The enablement phase must explicitly
+  choose between no production smoke-write, one approved synthetic/administrative smoke-write (note
+  runtime holds no `DELETE`, so such a row cannot be removed by runtime), or a real engagement-only
+  write after client authorization exists. Re-run this gate first; grant posture can drift.
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

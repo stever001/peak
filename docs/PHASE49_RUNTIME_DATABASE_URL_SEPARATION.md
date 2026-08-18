@@ -104,3 +104,12 @@ behaviour is otherwise untouched and they remain create-only.
 - The harness runs fully offline: it opens no database connection, scrubs all three role variables
   from child environments before probing behaviour, and only ever points a child at an explicit
   SQLite URL.
+
+---
+
+**Follow-up:** the runtime path introduced here was exercised against the real runtime credential in
+**Phase 50** — see
+[`PHASE50_CONTROLLED_RUNTIME_CONNECTIVITY_GATE.md`](PHASE50_CONTROLLED_RUNTIME_CONNECTIVITY_GATE.md).
+That phase adds a reusable read-only gate (`make runtime-connectivity-gate`) that connects through
+`create_runtime_engine`, confirms the `SELECT` + `INSERT` posture, and still writes nothing and reads
+no application table. Writer enablement remains a separately approved phase.
