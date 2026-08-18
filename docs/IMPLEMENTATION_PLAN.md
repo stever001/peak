@@ -1443,6 +1443,34 @@ migration, no model/table/writer change):**
   asserted character-for-character; a real fresh MySQL/MariaDB bootstrap is the outstanding
   confirmation, and is the natural first check when the next environment is stood up.
 
+**Production Runtime Readiness Gate (Phase 48 — read-only gate; no production write, no app-row
+read, no writer enabled, no source change):**
+
+- [x] **Production re-verified safe before the gate.** Head `013`, `alembic_version` readable and at
+  head, 18 expected tables plus `alembic_version`, `governed_columns_checked: 211`,
+  `governed_columns_at_risk: 0`, `idempotency_boundaries_checked: 11`,
+  `idempotency_boundaries_at_risk: 0`, outcome `verified_safe_no_remediation_required`.
+- [x] **Source says runtime needs `SELECT` + `INSERT` only.** All eleven controlled writers are
+  create-only (`session.add` is the sole persistence call); the replay path returns an existing row
+  without mutating it, so no ORM flush can emit an `UPDATE`; no writer needs schema privileges. The
+  three update-shaped allowlist names (`update_review_status`, `update_lifecycle_status`,
+  `mark_superseded`) are **declared vocabulary with no implementation** — re-run this gate if any
+  gains one.
+- [x] **Three credentials, separated by role** (verifier / migration / runtime), each in its own
+  operator-local untracked `0600` file defining only its own variable, with three distinct
+  usernames. The read-only credential was not upgraded and the migration credential was not reused
+  for runtime. **Runtime grants are exactly `SELECT` + `INSERT`** on the application schema — no
+  `UPDATE`/`DELETE`/DDL, no global scope, no `GRANT OPTION`, no `ALL PRIVILEGES`; 0 missing, 0
+  excess. Established via `SHOW GRANTS FOR CURRENT_USER` only, with no app-table read.
+- [x] **Decision: READY** for controlled runtime writer connectivity. **Phase 48 enabled nothing** —
+  no writer ran, no deployment or environment config changed. Recorded in
+  [`PHASE48_PRODUCTION_RUNTIME_READINESS_GATE.md`](PHASE48_PRODUCTION_RUNTIME_READINESS_GATE.md).
+- [ ] **Next (enablement, separately approved): give runtime its own URL variable in source.**
+  `peak/db/session.py` reads `PEAK_DATABASE_URL`, so nothing consumes `PEAK_RUNTIME_DATABASE_URL`
+  today and the runtime credential cannot yet be used by the application. This must **not** be
+  resolved by exporting `PEAK_DATABASE_URL` from the runtime file — that would collapse the runtime
+  and migration variables into one name and undo the separation this gate established.
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing
