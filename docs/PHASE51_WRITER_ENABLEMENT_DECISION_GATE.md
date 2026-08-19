@@ -105,9 +105,11 @@ no-cleanup administrative smoke record with eyes open about its permanence.
 
 > **Pass `PYTHON=.venv/bin/python` to the two live gates.** `PYTHON` defaults to `python3`, which on
 > this machine has no database driver installed. Run without the override, the connectivity gate
-> fails closed with `connect_failed:ModuleNotFoundError` — safe, since it reports the exception type
-> only and issues no statement, but easy to misread as a production connectivity problem when it is
-> really a missing local dependency. The same override applies to the read-only verifier.
+> fails closed and — since Phase 52A — says so plainly: `failure_category=local_driver_unavailable`,
+> `production_connectivity_result=not_tested_due_to_local_driver_unavailable`, plus a `FIX:` line
+> naming the venv invocation. **That is a local interpreter problem, not a production connectivity
+> failure**, and it authorizes nothing either way. The same override applies to the read-only
+> verifier.
 
 **And it must name, explicitly and in advance:**
 

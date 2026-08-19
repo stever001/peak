@@ -89,6 +89,33 @@ It is a CLI flag, not an environment switch, so no environment variable can turn
 The five mutation/read/writer/secret fields are **structural**: the tool contains no code path that
 could set any of them `True`.
 
+## 5b. Failure taxonomy (added in Phase 52A)
+
+A failure before any statement is issued is classified, so a local problem is never mistaken for a
+production one:
+
+| `failure_category` | Meaning | `production_connectivity_result` |
+| --- | --- | --- |
+| `local_driver_unavailable` | the selected local interpreter lacks a required dependency; **no connection was attempted** | `not_tested_due_to_local_driver_unavailable` |
+| `connection_failed` | a connection was genuinely attempted and did not succeed | `failed` |
+| `runtime_url_not_set` | nothing was attempted | `not_tested` |
+| `none` | no failure | `succeeded` on a passing live run |
+
+`failure_exception_type` records the exception **type** only — never its message, which can embed
+the connection string — and no stack trace is printed.
+
+**If you see `local_driver_unavailable`, this is not evidence of a production database problem.**
+`PYTHON` defaults to `python3`, which may have no database driver installed. The gate emits the
+remediation verbatim as a static string, and repeats it as a human-readable `FIX:` line:
+
+```
+make runtime-connectivity-gate PYTHON=.venv/bin/python
+```
+
+The gate still fails closed: nonzero exit, `connectivity_succeeded=false`, and
+`ready_for_later_writer_enablement=false`. It never installs a dependency, never activates a virtual
+environment, and never silently retries under a different interpreter.
+
 ## 6. What this phase does not do
 
 - **It does not enable writers.** No controlled writer was run or wired, and no deployment or

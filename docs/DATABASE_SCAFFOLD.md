@@ -247,6 +247,7 @@ It is opt-in and not part of `make validate`; the static harness `make validate-
 Before any future write, re-run the read-only verifier, the runtime connectivity gate, and this
 decision gate — and note that runtime holds no `DELETE`, so any synthetic record it writes is
 durable. Pass `PYTHON=.venv/bin/python` to the two live gates: `PYTHON` defaults to `python3`, which
-may have no database driver, and the connectivity gate then fails closed in a way that reads like a
-connectivity problem but is a missing local dependency. See
+may have no database driver. The connectivity gate then fails closed and reports
+`failure_category=local_driver_unavailable` with a `FIX:` line — a local interpreter problem, **not**
+a production connectivity failure, and it authorizes nothing either way. See
 [`PHASE51_WRITER_ENABLEMENT_DECISION_GATE.md`](PHASE51_WRITER_ENABLEMENT_DECISION_GATE.md).

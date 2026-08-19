@@ -217,6 +217,11 @@ def baseline_checks() -> None:
             check("only the intended narrow set of files changed", not unexpected)
             if unexpected:
                 print(f"        unexpected: {unexpected}")
+            # Authoring-time claim about *this* phase's work, not a permanent freeze: later
+            # phases may legitimately revise the Phase 50 gate (52A patched its driver
+            # diagnostic). Its substantive invariants are asserted unconditionally below.
+            check("Phase 51 itself did not modify the Phase 50 connectivity gate",
+                  not git("diff", "--name-only", "HEAD", "--", CONNECTIVITY_GATE_REL))
         else:
             print("  [skip] Phase 51 is committed — working-tree scope guard not applicable")
 
@@ -229,8 +234,6 @@ def baseline_checks() -> None:
               not git("diff", "--name-only", "HEAD", "--", "alembic"))
         check("the production verifier was not modified",
               not git("diff", "--name-only", "HEAD", "--", VERIFIER_REL))
-        check("the Phase 50 connectivity gate was not modified",
-              not git("diff", "--name-only", "HEAD", "--", CONNECTIVITY_GATE_REL))
         check("schemas/, prompts/, agents/ untouched",
               not git("diff", "--name-only", "HEAD", "--", "schemas", "prompts", "agents"))
         check("docs/Peak_Investor_Overview_AI.docx has no pending diff",

@@ -1548,6 +1548,29 @@ invoked, no production write, no app-row read, no schema/migration change):**
   writer, target table, exact allowed action, authorization scope, idempotency-key design,
   rollback/cleanup posture, and whether a durable synthetic/admin record will remain.
 
+**Runtime Gate Driver-Unavailable Diagnostic (Phase 52A — diagnostic polish only; no production
+command, no connection, no writer, no schema/migration change):**
+
+- [x] **A missing local driver is now classified as local, not as a production failure.** The
+  Phase 50 gate previously reported only `connect_failed:ModuleNotFoundError`, which reads like a
+  production outage when it is a workstation dependency problem. It now emits
+  `failure_category=local_driver_unavailable`,
+  `production_connectivity_result=not_tested_due_to_local_driver_unavailable`,
+  `failure_exception_type` (type only, never a message), and the static remediation
+  `recommended_command=make runtime-connectivity-gate PYTHON=.venv/bin/python`, plus human-readable
+  `CAUSE:`/`FIX:` lines. Genuine connection failures stay `connection_failed` / `failed`, and a
+  missing runtime URL stays `runtime_url_not_set` / `not_tested`.
+- [x] **Fail-closed behaviour is unchanged.** Nonzero exit, `connectivity_succeeded=false`,
+  `ready_for_later_writer_enablement=false`, zero statements issued, no stack trace, no connection
+  detail. The gate installs no dependency, activates no virtual environment, and never silently
+  retries under another interpreter. The two-statement allowlist and the hostile-statement guard are
+  untouched.
+- [x] **Exercised without uninstalling anything.** The harness blocks the driver import in one child
+  process — a test-only seam that lives in the harness, never in the gate, so it cannot be switched
+  on during a live run.
+- [x] **The Phase 51 no-write / no-enablement decision is unchanged**, and this phase authorizes
+  nothing.
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

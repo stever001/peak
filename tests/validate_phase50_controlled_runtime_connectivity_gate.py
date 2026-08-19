@@ -82,6 +82,10 @@ ALLOWED_CHANGED = {
     "docs/DATABASE_SCAFFOLD.md",
     "docs/PHASE49_RUNTIME_DATABASE_URL_SEPARATION.md",
     "docs/PHASE50_CONTROLLED_RUNTIME_CONNECTIVITY_GATE.md",
+    # Phase 52A patched this gate's driver-unavailable diagnostic and touched these alongside it.
+    "docs/PHASE51_WRITER_ENABLEMENT_DECISION_GATE.md",
+    "docs/DATABASE_SCAFFOLD.md",
+    "tests/validate_phase51_writer_enablement_decision_gate.py",
 }
 
 CREDENTIAL_FILE_MARKERS = ("peak-prod-ro.env", "peak-prod-migrate.env",
@@ -410,6 +414,99 @@ def behaviour_checks() -> None:
     check("output contains no raw GRANT line", "GRANT " not in out)
 
 
+# --------------------------------------------------------------------------- 5b. driver taxonomy
+
+#: Makes the database driver look absent to one child process, so the missing-dependency path can
+#: be exercised without uninstalling anything. Test-only: it lives here, never in the gate, so it
+#: cannot be switched on during a live run.
+_BLOCK_DRIVER_PRELUDE = (
+    "import runpy, sys\n"
+    "class _Block:\n"
+    "    def find_spec(self, name, path=None, target=None):\n"
+    "        if name == 'sqlalchemy' or name.startswith('sqlalchemy.'):\n"
+    "            raise ModuleNotFoundError(\"No module named 'sqlalchemy'\")\n"
+    "        return None\n"
+    "for _m in [m for m in sys.modules if m == 'sqlalchemy' or m.startswith('sqlalchemy.')]:\n"
+    "    del sys.modules[_m]\n"
+    "sys.meta_path.insert(0, _Block())\n"
+    "sys.argv = [%r]\n"
+    "runpy.run_path(%r, run_name='__main__')\n"
+)
+
+
+def run_gate_without_driver():
+    """Run the gate in a child process where the driver cannot be imported."""
+    gate_path = os.path.join(REPO_ROOT, GATE_REL)
+    prelude = _BLOCK_DRIVER_PRELUDE % (gate_path, gate_path)
+    # A local sqlite path, never a credentialed DSN — and unused, since the driver never loads.
+    return subprocess.run(
+        [PY, "-c", prelude], capture_output=True, text=True, timeout=120,
+        env=scrubbed_env(**{RUNTIME_VAR: "sqlite:///phase52a-unused.db"}))
+
+
+def _kv(stdout):
+    return dict(
+        line.split("=", 1) for line in stdout.splitlines()
+        if "=" in line and re.fullmatch(r"[a-z0-9_]+", line.split("=", 1)[0]))
+
+
+def driver_taxonomy_checks() -> None:
+    print("\n5b. A missing local driver is classified as such, not as a production failure")
+    r = run_gate_without_driver()
+    out = r.stdout
+    fields = _kv(out)
+
+    check("missing driver exits nonzero (fail-closed)", r.returncode != 0)
+    check("missing driver is classified local_driver_unavailable",
+          fields.get("failure_category") == "local_driver_unavailable")
+    check("missing driver records the exception type only",
+          fields.get("failure_exception_type") == "ModuleNotFoundError")
+    check("production connectivity is reported as not tested, not as failed",
+          fields.get("production_connectivity_result")
+          == "not_tested_due_to_local_driver_unavailable")
+    check("the venv remediation command is emitted verbatim",
+          fields.get("recommended_command")
+          == "make runtime-connectivity-gate PYTHON=.venv/bin/python")
+    check("a human-readable CAUSE line explains it is local", "CAUSE:" in out)
+    check("a human-readable FIX line names the venv invocation",
+          "FIX:" in out and "PYTHON=.venv/bin/python" in out)
+    check("the output states it is not evidence about production",
+          "not_evidence_of_a_production_connectivity_problem" in out)
+
+    for field in ("connectivity_succeeded", "ready_for_later_writer_enablement",
+                  "schema_mutation_made", "data_write_made", "app_table_read_made",
+                  "writer_invoked", "secrets_printed"):
+        check(f"missing driver keeps {field} false", fields.get(field) == "False")
+    check("missing driver issues no statement", fields.get("statements_issued") == "0")
+
+    check("missing-driver output contains no connection scheme", "://" not in out)
+    check("missing-driver output contains no stack trace",
+          "Traceback" not in out and "  File " not in out)
+    check("missing-driver output contains no raw GRANT line", "GRANT " not in out)
+    for token in ("password", "passwd", "@", "sqlalchemy.exc", "pymysql"):
+        check(f"missing-driver output contains no '{token}'", token not in out)
+    check("missing-driver stderr carries no traceback", "Traceback" not in r.stderr)
+
+    # A refusal for a different reason must NOT be mislabelled as a driver problem.
+    fields2 = _kv(run_gate().stdout)
+    check("a missing runtime URL is classified separately, not as a driver problem",
+          fields2.get("failure_category") == "runtime_url_not_set")
+    check("a missing runtime URL recommends no command",
+          fields2.get("recommended_command") == "none")
+    check("a missing runtime URL reports production connectivity as not tested",
+          fields2.get("production_connectivity_result") == "not_tested")
+
+    code = code_no_docstrings(read(GATE_REL))
+    check("the remediation string is a static literal",
+          'RECOMMENDED_VENV_COMMAND = "make runtime-connectivity-gate PYTHON=.venv/bin/python"'
+          in code)
+    check("the gate never installs a dependency",
+          not re.search(r"\bpip\b|install|os\.system", code))
+    check("the gate never retries under another interpreter", "sys.executable" not in code)
+    check("driver-unavailable can never report readiness",
+          "ready_for_later_writer_enablement = ready and not self_test" in code)
+
+
 # --------------------------------------------------------------------------- 6. regression
 
 
@@ -492,6 +589,7 @@ def main() -> int:
     statement_surface_checks()
     policy_checks()
     behaviour_checks()
+    driver_taxonomy_checks()
     regression_checks()
 
     print("\n" + "=" * 70)

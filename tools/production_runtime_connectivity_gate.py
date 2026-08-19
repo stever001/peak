@@ -97,6 +97,45 @@ def safe_error(exc: BaseException) -> str:
     return f"{type(exc).__name__} (detail withheld)"
 
 
+# --------------------------------------------------------------------------- failure taxonomy
+
+#: No failure yet, or none of the categories below.
+CATEGORY_NONE = "none"
+#: The runtime URL was not supplied, so nothing was attempted.
+CATEGORY_URL_NOT_SET = "runtime_url_not_set"
+#: The *local* interpreter lacks a required dependency (typically the database driver). This is a
+#: workstation/interpreter problem, NOT evidence about production: nothing was ever attempted
+#: against the database.
+CATEGORY_LOCAL_DRIVER_UNAVAILABLE = "local_driver_unavailable"
+#: A connection was genuinely attempted and did not succeed. This *is* evidence about production.
+CATEGORY_CONNECTION_FAILED = "connection_failed"
+#: A statement was refused by the read-only guard, or failed once issued.
+CATEGORY_QUERY_FAILED = "query_failed"
+CATEGORY_STATEMENT_REFUSED = "statement_refused"
+#: The gate refused to run at all (unsafe invocation).
+CATEGORY_REFUSED = "refused"
+
+#: Production connectivity outcomes, kept distinct from `connectivity_succeeded` so a reader can
+#: tell "we tried and failed" apart from "we never got far enough to try".
+PROD_NOT_TESTED = "not_tested"
+PROD_NOT_TESTED_DRIVER = "not_tested_due_to_local_driver_unavailable"
+PROD_SUCCEEDED = "succeeded"
+PROD_FAILED = "failed"
+
+#: Static, literal remediation string. Never built from input, never an executed command.
+RECOMMENDED_VENV_COMMAND = "make runtime-connectivity-gate PYTHON=.venv/bin/python"
+RECOMMENDED_NONE = "none"
+
+
+def is_local_dependency_failure(exc: BaseException) -> bool:
+    """True when the failure is a missing *local* import, not a database problem.
+
+    ``ModuleNotFoundError`` subclasses ``ImportError``; both mean this interpreter could not load a
+    dependency, so no connection attempt ever reached the network.
+    """
+    return isinstance(exc, ImportError)
+
+
 # --------------------------------------------------------------------------- grant policy
 
 REQUIRED_GRANTS = ("SELECT", "INSERT")
@@ -169,6 +208,8 @@ class GateResult:
         "excess_grants_present", "global_privileges_present", "grant_option_present",
         "schema_mutation_made", "data_write_made", "app_table_read_made", "writer_invoked",
         "secrets_printed", "ready_for_later_writer_enablement",
+        "failure_category", "failure_exception_type", "production_connectivity_result",
+        "recommended_command",
     )
 
     def __init__(self) -> None:
@@ -188,6 +229,12 @@ class GateResult:
         self.writer_invoked = False
         self.secrets_printed = False
         self.ready_for_later_writer_enablement = False
+        # Failure taxonomy. Every value is drawn from the constants above — never from an
+        # exception message, and never from anything a driver produced.
+        self.failure_category = CATEGORY_NONE
+        self.failure_exception_type = CATEGORY_NONE
+        self.production_connectivity_result = PROD_NOT_TESTED
+        self.recommended_command = RECOMMENDED_NONE
         self.statements_issued = 0
         self.notes: list = []
 
@@ -239,6 +286,26 @@ def _fake_connection():
     return _Fake()
 
 
+def _record_setup_failure(result: "GateResult", exc: BaseException, note_prefix: str) -> None:
+    """Classify a failure that occurred *before* any statement was issued.
+
+    The distinction that matters: a missing local dependency means no connection attempt ever left
+    this machine, so it is not evidence about production and must not be read as one. Only the
+    exception *type* is recorded — never its message, which can embed the connection string.
+    """
+    result.failure_exception_type = type(exc).__name__
+    if is_local_dependency_failure(exc):
+        result.failure_category = CATEGORY_LOCAL_DRIVER_UNAVAILABLE
+        result.production_connectivity_result = PROD_NOT_TESTED_DRIVER
+        result.recommended_command = RECOMMENDED_VENV_COMMAND
+        result.notes.append("local_interpreter_lacks_a_required_dependency_no_connection_attempted")
+        result.notes.append("this_is_not_evidence_of_a_production_connectivity_problem")
+    else:
+        result.failure_category = CATEGORY_CONNECTION_FAILED
+        result.production_connectivity_result = PROD_FAILED
+    result.notes.append(f"{note_prefix}:{safe_error(exc)}")
+
+
 def run_gate(self_test: bool = False) -> "tuple[GateResult, int]":
     result = GateResult()
     _scrub_environment()
@@ -247,6 +314,8 @@ def run_gate(self_test: bool = False) -> "tuple[GateResult, int]":
         # Refuse if a real runtime URL is present, so the mocked path can never stand in for a
         # live run — the flag is CLI-only and cannot be switched on by the environment.
         if os.environ.get(RUNTIME_URL_ENV):
+            result.failure_category = CATEGORY_REFUSED
+            result.production_connectivity_result = PROD_NOT_TESTED
             result.notes.append("self_test_refused_runtime_url_present")
             return result, 2
         connection = _fake_connection()
@@ -255,20 +324,22 @@ def run_gate(self_test: bool = False) -> "tuple[GateResult, int]":
         result.notes.append("self_test_mode_no_database_contacted")
     else:
         if not os.environ.get(RUNTIME_URL_ENV):
+            result.failure_category = CATEGORY_URL_NOT_SET
+            result.production_connectivity_result = PROD_NOT_TESTED
             result.notes.append(f"{RUNTIME_URL_ENV}_not_set")
             return result, 2
         result.runtime_url_present = True
         try:
             from peak.db.session import create_runtime_engine
         except Exception as exc:                                    # noqa: BLE001
-            result.notes.append(f"runtime_session_import_failed:{safe_error(exc)}")
+            _record_setup_failure(result, exc, "runtime_session_import_failed")
             return result, 1
         result.used_runtime_session_path = True
         try:
             engine = create_runtime_engine()
             connection_ctx = engine.connect()
         except Exception as exc:                                    # noqa: BLE001
-            result.notes.append(f"connect_failed:{safe_error(exc)}")
+            _record_setup_failure(result, exc, "connect_failed")
             return result, 1
 
     try:
@@ -294,9 +365,15 @@ def run_gate(self_test: bool = False) -> "tuple[GateResult, int]":
                 result.connectivity_succeeded = probe == 1
                 rows = [r[0] for r in _execute(conn, "grants").fetchall()]
     except UnsafeQueryRefused as exc:
+        result.failure_category = CATEGORY_STATEMENT_REFUSED
+        result.failure_exception_type = type(exc).__name__
+        result.production_connectivity_result = PROD_FAILED
         result.notes.append(f"statement_refused:{exc}")
         return result, 1
     except Exception as exc:                                        # noqa: BLE001
+        result.failure_category = CATEGORY_QUERY_FAILED
+        result.failure_exception_type = type(exc).__name__
+        result.production_connectivity_result = PROD_FAILED
         result.notes.append(f"query_failed:{safe_error(exc)}")
         return result, 1
 
@@ -318,6 +395,8 @@ def run_gate(self_test: bool = False) -> "tuple[GateResult, int]":
              and not result.global_privileges_present and not result.grant_option_present
              and not result.fallback_to_migration_url)
     result.ready_for_later_writer_enablement = ready and not self_test
+    if result.connectivity_succeeded and not self_test:
+        result.production_connectivity_result = PROD_SUCCEEDED
     return result, (0 if ready else 1)
 
 
@@ -336,6 +415,12 @@ def main(argv=None) -> int:
     result.emit()
     print("=" * 62)
     print("RESULT: " + ("PASS" if code == 0 else ("REFUSED" if code == 2 else "FAIL")))
+    if result.failure_category == CATEGORY_LOCAL_DRIVER_UNAVAILABLE:
+        # The failure this line exists for was previously reported only as
+        # "connect_failed:ModuleNotFoundError", which reads like a production outage.
+        print("CAUSE: the selected local Python interpreter lacks a required database "
+              "dependency. No connection was attempted, so this says nothing about production.")
+        print(f"FIX:   {RECOMMENDED_VENV_COMMAND}")
     print("This tool performs no schema mutation, no data write, no application-table read, and "
           "no writer execution. Enabling application writers remains a separate approved phase.")
     return code
