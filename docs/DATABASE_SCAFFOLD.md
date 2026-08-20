@@ -341,3 +341,16 @@ Defaults are the safe direction — an unclassified row is a real client engagem
 is never granted by default. Additive and reversible, with no INSERT or seed data. **Phase 56
 creates no records**, and production is still at 013: migration 014 has not been applied there. See
 [`PHASE56_INTERNAL_TEST_ENGAGEMENT_SUPPORT.md`](PHASE56_INTERNAL_TEST_ENGAGEMENT_SUPPORT.md).
+
+## Phase 57 — the read-side isolation primitive
+
+[`peak/db/engagement_read_isolation.py`](../peak/db/engagement_read_isolation.py) turns the Phase 56
+classification columns into enforcement. It adds no table, model, writer, migration, or allowlist
+pair — head stays at `014_engagement_classification` with 18 tables and 12 writers.
+
+It exposes row predicates (`is_client_visible`, `is_visible_in_mode`, `is_publication_eligible`) and
+SQLAlchemy filter clauses (`client_visible_filter`, `internal_admin_filter`,
+`publication_eligible_filter`, `apply_read_isolation`). The default mode is client-facing and
+**excludes internal test engagements**; internal/admin views must explicitly opt in. The helper opens
+no connection and executes nothing — the caller owns the session. See
+[`PHASE57_INTERNAL_TEST_READ_ISOLATION.md`](PHASE57_INTERNAL_TEST_READ_ISOLATION.md).

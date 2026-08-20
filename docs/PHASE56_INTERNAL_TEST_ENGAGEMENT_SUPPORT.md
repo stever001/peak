@@ -89,3 +89,15 @@ this column explicitly — the flag is the contract, not the enforcement.
 **Production is still at migration 013.** Migration 014 exists in the repository and has **not**
 been applied to production; the production verifier still expects 013 deliberately. Applying it is a
 separately approved operation.
+
+---
+
+## 6. Phase 57 update — the contract now has enforcement
+
+§5 noted that `client_accessible=false` was recorded but unenforced, because no read path existed.
+Phase 57 added the primitive: [`peak/db/engagement_read_isolation.py`](../peak/db/engagement_read_isolation.py)
+supplies row predicates and SQLAlchemy filter clauses whose **default mode excludes internal test
+engagements**, with internal/admin visibility available only on explicit opt-in, and a separate
+compound predicate for publication eligibility. **Phase 57 creates no records** and applies no
+migration to production. See
+[`PHASE57_INTERNAL_TEST_READ_ISOLATION.md`](PHASE57_INTERNAL_TEST_READ_ISOLATION.md).

@@ -1700,6 +1700,27 @@ no writer enabled, no production migration, no capsule published):**
   enforcement — and the first internal test engagement creation remains a **separately approved
   future phase**. Production is still at migration 013; 014 has not been applied there.
 
+**Read-Side Isolation for Internal Test Engagements (Phase 57 — enforcement primitive only; no
+records created, no client-facing route or UI, no writer enabled, no production migration):**
+
+- [x] **The Phase 56 contract now has enforcement.** `peak/db/engagement_read_isolation.py` supplies
+  row predicates and SQLAlchemy filter clauses over the classification columns. No table, model,
+  writer, migration, or allowlist pair added; head stays `014`.
+- [x] **Exclusion is the default.** The client-facing mode admits only `real_client` +
+  `client_accessible` + `real_client_data`, and **ignores** `include_internal_test` — it cannot be
+  widened by a flag. Internal/admin reads see internal test engagements **only** on explicit opt-in,
+  and an unrecognised mode fails closed.
+- [x] **`client_id` is not the access control.** A reserved id (`99999` / reserved prefix) is
+  excluded from client-facing reads as defence in depth, but an internal test record with an
+  ordinary id is excluded too, and a `client_id` narrowing cannot resurrect an excluded row.
+- [x] **Publication eligibility is separate from visibility** — the compound rule describes a record
+  that is publishable *and* invisible to every client.
+- [x] **No coupling:** the helper opens no connection, creates/modifies no record, imports no
+  writer, executes no raw SQL, and reads no environment variable.
+- [ ] **Next: the first client-facing read path must actually call it** — a read that bypasses
+  `apply_read_isolation` is not protected by it. Migration 014 is still not applied to production,
+  and the first internal test engagement creation remains separately approved.
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

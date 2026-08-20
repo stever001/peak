@@ -4,7 +4,7 @@
 
 PYTHON ?= python3
 
-.PHONY: help validate validate-phase1 validate-phase2 validate-phase3 validate-phase4 validate-phase5 validate-phase6 validate-phase7 validate-phase8 validate-phase9 validate-phase10 validate-phase11 validate-phase12 validate-phase13 validate-phase14 validate-phase15 validate-phase16 validate-phase17 validate-phase18 validate-phase19 validate-phase20 validate-phase21 validate-phase22 validate-phase23 validate-phase24 validate-phase25 validate-phase26 validate-phase27 validate-phase28 validate-phase29 validate-phase30 validate-phase31 validate-phase32 validate-phase33 validate-phase34 validate-phase35 validate-phase36 validate-phase37 validate-phase38 validate-phase39 validate-phase40 validate-phase41 validate-phase42 validate-phase43 validate-phase44 validate-phase47 validate-phase49 validate-phase50 validate-phase51 validate-phase53 validate-phase54 validate-phase55 validate-phase56 runtime-connectivity-gate writer-enablement-decision-gate db-check mysql-parity-static mysql-parity-staging mysql-collation-audit production-mysql-collation-verify db-check-managed-test managed-mysql-smoke managed-mysql-migration-check packet-summary install-dev
+.PHONY: help validate validate-phase1 validate-phase2 validate-phase3 validate-phase4 validate-phase5 validate-phase6 validate-phase7 validate-phase8 validate-phase9 validate-phase10 validate-phase11 validate-phase12 validate-phase13 validate-phase14 validate-phase15 validate-phase16 validate-phase17 validate-phase18 validate-phase19 validate-phase20 validate-phase21 validate-phase22 validate-phase23 validate-phase24 validate-phase25 validate-phase26 validate-phase27 validate-phase28 validate-phase29 validate-phase30 validate-phase31 validate-phase32 validate-phase33 validate-phase34 validate-phase35 validate-phase36 validate-phase37 validate-phase38 validate-phase39 validate-phase40 validate-phase41 validate-phase42 validate-phase43 validate-phase44 validate-phase47 validate-phase49 validate-phase50 validate-phase51 validate-phase53 validate-phase54 validate-phase55 validate-phase56 validate-phase57 runtime-connectivity-gate writer-enablement-decision-gate db-check mysql-parity-static mysql-parity-staging mysql-collation-audit production-mysql-collation-verify db-check-managed-test managed-mysql-smoke managed-mysql-migration-check packet-summary install-dev
 
 help: ## Show available targets
 	@echo "Targets:"
@@ -62,6 +62,7 @@ help: ## Show available targets
 	@echo "  make validate-phase54   Run only the Phase 54 engagement authorization anchor writer check"
 	@echo "  make validate-phase55   Run only the Phase 55 internal test engagement classification check"
 	@echo "  make validate-phase56   Run only the Phase 56 internal test engagement support check"
+	@echo "  make validate-phase57   Run only the Phase 57 internal test read-isolation check"
 	@echo "  make db-check           Alias for the Phase 11 database-scaffold check"
 	@echo "  make db-check-managed-test        Managed MySQL test-env rubric check (skips safely with no DSN)"
 	@echo "  make managed-mysql-smoke          Managed MySQL test-env smoke runbook (skips safely with no DSN)"
@@ -71,7 +72,7 @@ help: ## Show available targets
 install-dev: ## Install development dependencies
 	$(PYTHON) -m pip install -r requirements-dev.txt
 
-validate: validate-phase1 validate-phase2 validate-phase3 validate-phase4 validate-phase5 validate-phase6 validate-phase7 validate-phase8 validate-phase9 validate-phase10 validate-phase11 validate-phase12 validate-phase13 validate-phase14 validate-phase15 validate-phase16 validate-phase17 validate-phase18 validate-phase19 validate-phase20 validate-phase21 validate-phase22 validate-phase23 validate-phase24 validate-phase25 validate-phase26 validate-phase27 validate-phase28 validate-phase29 validate-phase30 validate-phase31 validate-phase32 validate-phase33 validate-phase34 validate-phase35 validate-phase36 validate-phase37 validate-phase38 validate-phase39 validate-phase40 validate-phase41 validate-phase42 validate-phase43 validate-phase44 validate-phase47 validate-phase49 validate-phase50 validate-phase51 validate-phase53 validate-phase54 validate-phase55 validate-phase56 ## Run all validation harnesses
+validate: validate-phase1 validate-phase2 validate-phase3 validate-phase4 validate-phase5 validate-phase6 validate-phase7 validate-phase8 validate-phase9 validate-phase10 validate-phase11 validate-phase12 validate-phase13 validate-phase14 validate-phase15 validate-phase16 validate-phase17 validate-phase18 validate-phase19 validate-phase20 validate-phase21 validate-phase22 validate-phase23 validate-phase24 validate-phase25 validate-phase26 validate-phase27 validate-phase28 validate-phase29 validate-phase30 validate-phase31 validate-phase32 validate-phase33 validate-phase34 validate-phase35 validate-phase36 validate-phase37 validate-phase38 validate-phase39 validate-phase40 validate-phase41 validate-phase42 validate-phase43 validate-phase44 validate-phase47 validate-phase49 validate-phase50 validate-phase51 validate-phase53 validate-phase54 validate-phase55 validate-phase56 validate-phase57 ## Run all validation harnesses
 
 validate-phase1: ## Run the Phase 1 schema/example validation harness
 	$(PYTHON) tests/validate_phase1.py
@@ -245,6 +246,11 @@ validate-phase55: ## Run the Phase 55 internal test engagement classification ch
 # against throwaway temporary SQLite databases and contacts no production database.
 validate-phase56: ## Run the Phase 56 internal test engagement support check (offline; no credentials/network)
 	$(PYTHON) tests/validate_phase56_internal_test_engagement_support.py
+
+# Phase 57 checks the read-side isolation primitive. Offline: the helper opens no connection
+# and the query layer runs only against throwaway temporary SQLite.
+validate-phase57: ## Run the Phase 57 internal test read-isolation check (offline; no credentials/network)
+	$(PYTHON) tests/validate_phase57_internal_test_read_isolation.py
 
 db-check: ## Validate the DB scaffold (alias for validate-phase11)
 	$(PYTHON) tests/validate_phase11_db_scaffold.py

@@ -492,3 +492,26 @@ one is built must filter on `client_accessible` / `engagement_category` explicit
 holds no `DELETE`, so these records are durable and cleanup is not assumed. **Phase 56 created no
 records**, and the Phase 51 no-write / no-enablement decision remains in force. See
 [`PHASE56_INTERNAL_TEST_ENGAGEMENT_SUPPORT.md`](PHASE56_INTERNAL_TEST_ENGAGEMENT_SUPPORT.md).
+
+## Phase 57 — read-side isolation is now enforceable, not just recorded
+
+The Phase 56 classification columns are now backed by a **read-side isolation primitive**. Future
+real-client read paths must use it rather than filtering by hand.
+
+**Exclusion is the default.** The client-facing mode admits only `real_client` +
+`client_accessible` + `real_client_data`, and cannot be widened into internal test visibility by any
+argument. Internal/admin reads must **explicitly opt in** to see internal test engagements, and an
+unrecognised mode fails closed rather than falling open.
+
+**`client_id=99999` is not sufficient by itself.** A reserved id is excluded from client-facing
+reads as defence in depth, but the control is the classification columns: an internal test record
+with an ordinary `client_id` is excluded too, and narrowing a query by `client_id` cannot resurrect
+an excluded row.
+
+**Publication eligibility is separate from client visibility** — the compound rule (`internal_test`
++ no real client data + not client-accessible + explicitly authorized) describes a record that is
+publishable *and* invisible to every client.
+
+The primitive opens no connection, writes nothing, and invokes no writer. **Phase 57 created no
+records**, and migration 014 has still not been applied to production. See
+[`PHASE57_INTERNAL_TEST_READ_ISOLATION.md`](PHASE57_INTERNAL_TEST_READ_ISOLATION.md).
