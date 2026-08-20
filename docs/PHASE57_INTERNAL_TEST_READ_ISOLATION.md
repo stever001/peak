@@ -70,6 +70,9 @@ Disposable synthetic smoke records remain disallowed. Runtime still holds no `DE
 
 - **No client-facing read path exists yet.** This phase supplies the primitive; the first read path
   must actually call it. A read that bypasses `apply_read_isolation` is not protected by it.
-- **Migration 014 has not been applied to production.** The production verifier still expects 013
-  deliberately. Applying it remains a separately approved operation.
-- The first internal test engagement creation remains a separately approved future phase.
+- **Migration 014 was applied to production in Phase 58** (superseding this section's original
+  statement that it had not been). The production verifier's expected production head moved from
+  `013` to `014` at the same time. See
+  [PHASE58_PRODUCTION_MIGRATION_014_VERIFICATION.md](PHASE58_PRODUCTION_MIGRATION_014_VERIFICATION.md).
+- The first internal test engagement creation remains a separately approved future phase. Phase 58
+  applied schema only and **created no production application record**.

@@ -513,5 +513,41 @@ an excluded row.
 publishable *and* invisible to every client.
 
 The primitive opens no connection, writes nothing, and invokes no writer. **Phase 57 created no
-records**, and migration 014 has still not been applied to production. See
+records**; migration 014 was applied to production later, in **Phase 58** (see below). See
 [`PHASE57_INTERNAL_TEST_READ_ISOLATION.md`](PHASE57_INTERNAL_TEST_READ_ISOLATION.md).
+
+## Phase 58 — migration 014 applied to production, under three authorized actions
+
+**Migration `014_engagement_classification` was applied to production in Phase 58.** Production
+schema now supports the Engagement classification fields (`engagement_category`, `real_client_data`,
+`client_accessible`, `capsule_publication_authorized`).
+
+Exactly three production actions were authorized, each with a single-purpose credential:
+
+| # | Action | Credential | Mutates production |
+| --- | --- | --- | --- |
+| 1 | pre-migration read-only verification | read-only verifier | no |
+| 2 | `alembic upgrade 014_engagement_classification` | production migration | schema + `alembic_version` only |
+| 3 | post-migration read-only verification | read-only verifier | no |
+
+**The production verifier's expected head is now `014`, not `013`.** The pin in
+[`tools/production_mysql_collation_verify.py`](../tools/production_mysql_collation_verify.py) tracks
+the live production head, so it moves only when a migration has genuinely been applied to
+production. `engagement_category` is classified `governed_scope`, so it is covered by the same
+deterministic-collation requirement as every other governed identifier; the production governed
+column count moves from 211 to 212 and all 11 idempotency boundaries stay case-sensitive.
+
+**No production application records were created, read, updated, or deleted.** Verification read
+`INFORMATION_SCHEMA` metadata and `alembic_version` only — no app table rows, counts, or probes; the
+collision probe stayed opt-in and unrun. **No writer was invoked**, **no runtime credential was
+used**, no downgrade or manual `ALTER` was performed, and **no credential, DSN, or environment value
+was printed or committed** — env files were sourced inside subshells only.
+
+**No internal test engagement was created.** The first internal test engagement anchor remains
+**separately approved** future work; 014 makes the classification representable, not authorized. The
+read-side isolation primitive exists, but **future client-facing paths must actually use it**.
+Properly gated production test records are allowed later — only with
+`engagement_category=internal_test`, `real_client_data=false`, `client_accessible=false`, and a
+reserved test namespace/value, and only as durable internal/admin records whose cleanup posture is
+decided before the write. See
+[`PHASE58_PRODUCTION_MIGRATION_014_VERIFICATION.md`](PHASE58_PRODUCTION_MIGRATION_014_VERIFICATION.md).

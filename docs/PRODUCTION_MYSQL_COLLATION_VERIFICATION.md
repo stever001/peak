@@ -251,3 +251,25 @@ be flagged — which is exactly the signal that the migration has not been run t
 
 **Phase 44 did not execute migration 013 against production.** See the production execution
 checklist in [`GOVERNED_MYSQL_COLLATION_POLICY.md`](GOVERNED_MYSQL_COLLATION_POLICY.md).
+
+---
+
+## Phase 58 update — the expected production head is now `014`
+
+Migration `014_engagement_classification` was **applied to production in Phase 58**, so
+`EXPECTED_ALEMBIC_HEAD` moved `013` → `014_engagement_classification`. The pin tracks the **live
+production head**, never the repository head: through Phases 56–57 it stayed at `013` precisely
+because 014 had been written but not applied. Move it only when a migration has genuinely been
+applied to production.
+
+A production database still reporting `013` will now be flagged — exactly the signal that 014 has
+not been run there. Nothing about the read-only boundary changed: hard-coded query allowlist, guard
+before every execution, fail-closed gating, no DSN or row value in output, and **no migration
+execution by this tool**.
+
+`engagement_category` classifies as `governed_scope`, so it is subject to the same deterministic
+collation requirement as every other governed identifier and the production governed-column count
+moves from **211 to 212**. Verification read `INFORMATION_SCHEMA` metadata and `alembic_version`
+only: **no production application records were read**, counted, or probed, and none were created,
+updated, or deleted. See
+[`PHASE58_PRODUCTION_MIGRATION_014_VERIFICATION.md`](PHASE58_PRODUCTION_MIGRATION_014_VERIFICATION.md).

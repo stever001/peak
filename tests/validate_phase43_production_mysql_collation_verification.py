@@ -65,10 +65,10 @@ HARNESS = "tests/validate_phase43_production_mysql_collation_verification.py"
 REQUIRED_FILES = [TOOL, AUDIT, DOC, POLICY_DOC, HARNESS]
 
 ALEMBIC_HEAD = "014_engagement_classification"
-#: The head the *production* verifier expects, which is deliberately still 013: Phase 56
-#: added migration 014 to the repository but it has not been applied to production. The
-#: fake cursor below simulates production, so it must report this, not the repo head.
-PRODUCTION_ALEMBIC_HEAD = "013_governed_identifier_collation_policy"
+#: The head the *production* verifier expects. Phase 58 applied migration 014 to
+#: production, so production and the repo head now agree. The fake cursor below simulates
+#: production, so it must report the live production head, not simply the repo head.
+PRODUCTION_ALEMBIC_HEAD = "014_engagement_classification"
 EXPECTED_MIGRATIONS = 14
 EXPECTED_TABLE_COUNT = 18
 EXPECTED_BOUNDARY_TABLES = 11

@@ -339,7 +339,8 @@ writers are unchanged**, no table was added, and `Client` was not altered.
 
 Defaults are the safe direction — an unclassified row is a real client engagement, and publication
 is never granted by default. Additive and reversible, with no INSERT or seed data. **Phase 56
-creates no records**, and production is still at 013: migration 014 has not been applied there. See
+creates no records**. Production was still at 013 at the time; migration 014 was applied to
+production later, in **Phase 58** (see below). See
 [`PHASE56_INTERNAL_TEST_ENGAGEMENT_SUPPORT.md`](PHASE56_INTERNAL_TEST_ENGAGEMENT_SUPPORT.md).
 
 ## Phase 57 — the read-side isolation primitive
@@ -354,3 +355,27 @@ SQLAlchemy filter clauses (`client_visible_filter`, `internal_admin_filter`,
 **excludes internal test engagements**; internal/admin views must explicitly opt in. The helper opens
 no connection and executes nothing — the caller owns the session. See
 [`PHASE57_INTERNAL_TEST_READ_ISOLATION.md`](PHASE57_INTERNAL_TEST_READ_ISOLATION.md).
+
+## Phase 58 — migration 014 applied to production
+
+Phase 58 applies migration `014_engagement_classification` **to production**, using the production
+migration credential and the explicit revision (never an open-ended `upgrade head`). It adds no
+table, model, writer, or allowlist pair — head stays at `014_engagement_classification` with **14
+migrations, 18 tables, and 12 writers** — but production now matches it. **Production schema now
+supports the Engagement classification fields** `engagement_category`, `real_client_data`,
+`client_accessible`, and `capsule_publication_authorized`, plus
+`ix_engagements_engagement_category`.
+
+**The production verifier's expected head is now `014`, not `013`.**
+[`tools/production_mysql_collation_verify.py`](../tools/production_mysql_collation_verify.py) tracks
+the live production head deliberately, and the pin moves only when a migration has actually been
+applied there. `engagement_category` is a `governed_scope` column, so it joins the deterministic
+collation posture and the production governed-column count moves from 211 to 212.
+
+**No production application records were created**, read, updated, or deleted; **no internal test
+engagement was created**; no writer was invoked; and no runtime credential was used. The first
+internal test engagement anchor remains **separately approved** future work. The read-side isolation
+primitive exists, but future client-facing paths must actually use it. Properly gated production
+test records are allowed later — only with `engagement_category=internal_test`,
+`real_client_data=false`, `client_accessible=false`, and a reserved test namespace/value. See
+[`PHASE58_PRODUCTION_MIGRATION_014_VERIFICATION.md`](PHASE58_PRODUCTION_MIGRATION_014_VERIFICATION.md).

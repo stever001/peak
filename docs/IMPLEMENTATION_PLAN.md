@@ -1698,7 +1698,8 @@ no writer enabled, no production migration, no capsule published):**
   so a changed classification under the same anchor id is a conflict, never an overwrite.
 - [ ] **Next: read-side isolation is still to build** — `client_accessible` is the contract, not the
   enforcement — and the first internal test engagement creation remains a **separately approved
-  future phase**. Production is still at migration 013; 014 has not been applied there.
+  future phase**. Production was still at migration 013 at that point; 014 was applied to production
+  later, in Phase 58.
 
 **Read-Side Isolation for Internal Test Engagements (Phase 57 — enforcement primitive only; no
 records created, no client-facing route or UI, no writer enabled, no production migration):**
@@ -1717,9 +1718,41 @@ records created, no client-facing route or UI, no writer enabled, no production 
   that is publishable *and* invisible to every client.
 - [x] **No coupling:** the helper opens no connection, creates/modifies no record, imports no
   writer, executes no raw SQL, and reads no environment variable.
-- [ ] **Next: the first client-facing read path must actually call it** — a read that bypasses
-  `apply_read_isolation` is not protected by it. Migration 014 is still not applied to production,
-  and the first internal test engagement creation remains separately approved.
+- [x] **Next: the first client-facing read path must actually call it** — a read that bypasses
+  `apply_read_isolation` is not protected by it. This remains outstanding; migration 014 *was*
+  applied to production in Phase 58, and the first internal test engagement creation remains
+  separately approved.
+
+**Migration 014 Applied to Production (Phase 58 — schema change only; no production application
+records created, no writer invoked, no runtime credential used):**
+
+- [x] **Migration `014_engagement_classification` was applied to production.** Applied with the
+  production migration credential using the explicit revision, never an open-ended `upgrade head`.
+  **Production schema now supports the Engagement classification fields** `engagement_category`,
+  `real_client_data`, `client_accessible`, and `capsule_publication_authorized`, plus
+  `ix_engagements_engagement_category`. Head is `014` in production as well as in the repository;
+  14 migrations, 18 tables, 12 writers.
+- [x] **Three authorized production actions, and only three:** read-only pre-migration verification,
+  the migration itself, and read-only post-migration verification. The only production mutation was
+  migration 014's schema change plus Alembic's own `alembic_version` update. No downgrade, no manual
+  `ALTER`, no migration 015, no cleanup or delete path.
+- [x] **The production verifier's expected head is now `014`, not `013`.** The pin in
+  `tools/production_mysql_collation_verify.py` tracks the *live* production head, so it moves only
+  when a migration has genuinely been applied there — never merely when it is written. Three
+  harnesses assert the pin. `engagement_category` classifies as `governed_scope`, so the production
+  governed-column count moves 211 → 212 and the deterministic collation posture still holds, with
+  all 11 idempotency boundaries case-sensitive.
+- [x] **No production application records were created**, read, updated, or deleted; verification
+  touched `INFORMATION_SCHEMA` and `alembic_version` only, with the collision probe left unrun. **No
+  writer was invoked**, **no runtime credential was used**, and no credential, DSN, or environment
+  value was printed or committed.
+- [x] **No internal test engagement was created.** 014 makes the classification representable, not
+  authorized.
+- [ ] **Next: the first internal test engagement anchor remains separately approved.** The read-side
+  isolation primitive exists, but future client-facing paths must actually use it. Properly gated
+  production test records are allowed later — only with `engagement_category=internal_test`,
+  `real_client_data=false`, `client_accessible=false`, and a reserved test namespace/value, as
+  durable internal/admin records whose cleanup posture is decided before the write.
 
 **Still to do:**
 

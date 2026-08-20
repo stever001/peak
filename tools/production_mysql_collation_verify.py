@@ -31,7 +31,8 @@ value — collision probes report **counts only**. Failures are reported by sani
 by raw driver exception text, which routinely embeds the connection string.
 
 **It changes nothing and decides nothing.** It reports, classifies the risk, and recommends a next
-step. Migration ``013`` is **not** implemented, proposed as code, or executed here.
+step. No migration is proposed as code or executed here. Production is expected at
+``014_engagement_classification`` (applied in Phase 58); this tool only observes that fact.
 
 See docs/PRODUCTION_MYSQL_COLLATION_VERIFICATION.md.
 
@@ -107,10 +108,11 @@ _SAFE_IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9_]{1,64}$")
 
 # --------------------------------------------------------------------------- expectations
 
-#: The head expected **in production**. Deliberately still 013: Phase 56 added migration 014
-#: to the repository but it has **not** been applied to production, so expecting 014 here
-#: would misreport the live posture. Move this only when 014 is actually applied.
-EXPECTED_ALEMBIC_HEAD = "013_governed_identifier_collation_policy"
+#: The head expected **in production**. Moved to 014 in Phase 58, when migration
+#: ``014_engagement_classification`` was actually applied to production by the migration
+#: credential. It tracks the live production head, not the repository head: move it only when a
+#: later migration has genuinely been applied to production, never merely written.
+EXPECTED_ALEMBIC_HEAD = "014_engagement_classification"
 EXPECTED_TABLE_COUNT = 18
 REQUIRED_CHARSET = "utf8mb4"
 
@@ -650,8 +652,8 @@ def render(result: VerificationResult, *, verbose: bool = False) -> None:
             emit(f"  - {name}")
     emit("")
     emit("This tool performs no schema mutation, no data write, no migration, and no cleanup or")
-    emit("delete path. Migration 013 is implemented in source control but is NOT executed by this")
-    emit("tool; production execution remains a separately approved operation.")
+    emit("delete path. Production is expected at 014_engagement_classification, applied in Phase 58")
+    emit("by the migration credential; any further migration remains a separately approved operation.")
 
 
 def main(argv=None) -> int:

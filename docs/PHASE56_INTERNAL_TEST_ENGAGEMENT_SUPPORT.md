@@ -101,3 +101,18 @@ engagements**, with internal/admin visibility available only on explicit opt-in,
 compound predicate for publication eligibility. **Phase 57 creates no records** and applies no
 migration to production. See
 [`PHASE57_INTERNAL_TEST_READ_ISOLATION.md`](PHASE57_INTERNAL_TEST_READ_ISOLATION.md).
+
+---
+
+## 7. Phase 58 update — migration 014 is now applied to production
+
+§5's statement that "production is still at migration 013" is **superseded**. In Phase 58, migration
+`014_engagement_classification` was applied to production using the production migration credential.
+Production now carries `engagement_category`, `real_client_data`, `client_accessible`, and
+`capsule_publication_authorized` on `engagements`, and the production verifier's expected production
+head moved from `013` to `014`.
+
+Phase 58 applied **schema only**: no production application record was created, read, updated, or
+deleted; no writer was invoked; no runtime credential was used; and **no internal test engagement
+was created**. The first internal test engagement anchor remains a separately approved future phase.
+See [`PHASE58_PRODUCTION_MIGRATION_014_VERIFICATION.md`](PHASE58_PRODUCTION_MIGRATION_014_VERIFICATION.md).

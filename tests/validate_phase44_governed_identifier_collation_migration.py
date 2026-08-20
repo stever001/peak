@@ -57,6 +57,9 @@ BASELINE_COMMIT = "c624854"   # Add Phase 43 production MySQL collation verifica
 MIGRATION_NAME = "013_governed_identifier_collation_policy"
 MIGRATION_REL = f"alembic/versions/{MIGRATION_NAME}.py"
 PRIOR_HEAD = "012_internal_report_review_packet_decisions"
+#: The head the production verifier expects, which tracks the *live* production head rather than
+#: this phase's migration. Phase 58 applied 014 to production, so the pin moved 013 -> 014.
+PRODUCTION_EXPECTED_HEAD = "014_engagement_classification"
 AUDIT = "tools/governed_mysql_collation_audit.py"
 PARITY = "tools/managed_mysql_parity_check.py"
 VERIFIER = "tools/production_mysql_collation_verify.py"
@@ -549,8 +552,8 @@ def tooling_checks() -> None:
           verifier.returncode == 0 and "skipped_not_configured" in verifier.stdout)
     check("production verifier attempted no connection",
           re.search(r"production_connection_attempted:\s*False", verifier.stdout) is not None)
-    check("production verifier expects the 013 head",
-          f'EXPECTED_ALEMBIC_HEAD = "{MIGRATION_NAME}"' in read(VERIFIER))
+    check("production verifier expects the live production head (014, applied in Phase 58)",
+          f'EXPECTED_ALEMBIC_HEAD = "{PRODUCTION_EXPECTED_HEAD}"' in read(VERIFIER))
     check("no tool output echoes a canary",
           _no_canary(parity.stdout + verifier.stdout))
     check("no tool output prints a DSN",

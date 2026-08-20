@@ -371,7 +371,7 @@ def doc_and_regression_checks() -> None:
         ("explicitly opt in", "internal/admin views must explicitly opt in"),
         ("separate from client visibility", "publication eligibility is separate"),
         ("creates no records", "Phase 57 creates no records"),
-        ("has not been applied to production", "migration 014 not applied to production"),
+        ("applied to production in phase 58", "migration 014 applied to production in Phase 58"),
     ):
         check(f"doc states: {label}", phrase in f)
     check("doc embeds no real-looking DSN", not REAL_DSN_RE.search(doc))
@@ -392,8 +392,8 @@ def doc_and_regression_checks() -> None:
           re.search(r"^validate:.*(?:runtime-connectivity|writer-enablement|"
                     r"production-mysql-collation-verify)", mk, re.MULTILINE) is None)
 
-    check("the production verifier still expects production at 013 (014 is NOT applied there)",
-          'EXPECTED_ALEMBIC_HEAD = "013_governed_identifier_collation_policy"'
+    check("the production verifier expects production at 014 (applied there in Phase 58)",
+          'EXPECTED_ALEMBIC_HEAD = "014_engagement_classification"'
           in read(VERIFIER_REL))
 
     env = scrubbed_env()
