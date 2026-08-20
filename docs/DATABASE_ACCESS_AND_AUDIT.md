@@ -382,3 +382,32 @@ the write rather than discovered after it.
 
 Before any future write, re-run all three gates: the read-only verifier, the runtime connectivity
 gate, and the decision gate. Each is cheap and non-mutating, and posture drifts.
+
+## Phase 53 — the authorization anchor the audit trail hangs from
+
+Phase 53 is **plan only**: no production write, no writer enablement, no synthetic smoke write, no
+engagement record, no intake note. It answers what "wait for authorized engagement data" concretely
+requires, by reading source.
+
+**The anchor is a stored `Engagement` row with a populated `authorization_scope`.** Every controlled
+writer loads that row at write time and requires the request's scope to equal the stored scope.
+Identity matching — owner, client, engagement — is necessary but not sufficient; a scope mismatch is
+denied even when every identity matches. This is what makes the audit trail meaningful: no governed
+row can exist without a stored, scoped authority it descends from.
+
+Two findings matter for access control:
+
+**No controlled Engagement writer exists.** No writer targets `engagements`; the table sits in
+`PROHIBITED_TABLES` alongside `clients` as an identity/root record, and no engagement-creating
+action is on the allowlist. The runtime credential's `INSERT` is schema-wide, so what actually
+prevents an unauthorized anchor from being created is the missing writer and the allowlist — a code
+and governance block, not a privilege block. Both must stay intact.
+
+**The planned first write needs no new privilege.** It requires `SELECT` (load the stored
+engagement, check idempotency, read back) and `INSERT` (one row), which is exactly the Phase 48/50
+runtime posture. It requires no `UPDATE` and no `DELETE`.
+
+The Phase 51 no-write / no-enablement decision remains in force and the first production write
+remains deferred. Synthetic smoke-writing stays disallowed unless separately approved, and — since
+runtime holds no `DELETE` — any such record would be durable. See
+[`PHASE53_AUTHORIZED_ENGAGEMENT_INTAKE_PATH.md`](PHASE53_AUTHORIZED_ENGAGEMENT_INTAKE_PATH.md).

@@ -251,3 +251,29 @@ may have no database driver. The connectivity gate then fails closed and reports
 `failure_category=local_driver_unavailable` with a `FIX:` line — a local interpreter problem, **not**
 a production connectivity failure, and it authorizes nothing either way. See
 [`PHASE51_WRITER_ENABLEMENT_DECISION_GATE.md`](PHASE51_WRITER_ENABLEMENT_DECISION_GATE.md).
+
+## Phase 53 — planning the first authorized engagement / intake write path
+
+Phase 53 is **plan only**: no production write, no writer enablement, no synthetic smoke write, no
+engagement record, no intake note, no schema or migration change. Head stays at
+`013_governed_identifier_collation_policy`; 13 migrations and 18 tables are unchanged.
+
+Reading source established the shape of the first real write:
+
+- **`Engagement` (`engagements`) exists** from migration `001_initial`, so the schema side of the
+  authorization anchor is already in place. Nothing needs to be added to the scaffold.
+- **No controlled Engagement writer exists.** No writer targets `engagements`; the table is in
+  `PROHIBITED_TABLES` and no engagement-creating action is on the allowlist.
+- **The intake note writer exists** (Phase 34) and **requires a stored `Engagement` whose
+  `authorization_scope` matches the request** — it denies on missing subject, blank stored scope,
+  scope mismatch, identity mismatch, or a blocked subject lifecycle. So the first intake note cannot
+  be written without the anchor.
+- **All eleven writers load that same anchor**; nine depend on it alone, and two additionally need a
+  stored parent draft or packet. That ordering makes the **intake note writer** the recommended
+  first real operational writer once an authorized engagement exists.
+
+**Recommended next phase: Phase 54 should add a create-only controlled Engagement authorization
+anchor writer** — and create no engagement record. The Phase 51 no-write / no-enablement decision is
+unchanged, Phase 50 connectivity remains prerequisite evidence rather than write permission, and no
+synthetic smoke-write is authorized. See
+[`PHASE53_AUTHORIZED_ENGAGEMENT_INTAKE_PATH.md`](PHASE53_AUTHORIZED_ENGAGEMENT_INTAKE_PATH.md).

@@ -1571,6 +1571,39 @@ command, no connection, no writer, no schema/migration change):**
 - [x] **The Phase 51 no-write / no-enablement decision is unchanged**, and this phase authorizes
   nothing.
 
+**Authorized Engagement / Intake Path Planning (Phase 53 — plan only; no production write, no
+writer enablement, no synthetic smoke write, no engagement record, no intake note, no schema or
+migration change):**
+
+- [x] **The required authorization anchor is a stored `Engagement` row with a populated
+  `authorization_scope`.** Every controlled writer loads that row at write time and requires the
+  request scope to equal the stored scope; identity matching alone is not sufficient. No controlled
+  write of any kind is possible before that row exists.
+- [x] **Source inspection findings.** The `Engagement` model/table **exists** (`engagements`, from
+  migration `001_initial`) — the schema side of the anchor is already in place. A controlled
+  **Engagement writer does not exist**: no writer targets `engagements`, and the table sits in
+  `PROHIBITED_TABLES` with no engagement-creating action on the allowlist. The **intake note writer
+  exists** (Phase 34, `intake_note_records` / `create_intake_note_record`) and **requires the stored
+  Engagement authorization** — it denies on missing subject, blank stored scope, scope mismatch,
+  identity mismatch, or a blocked subject lifecycle.
+- [x] **Recommended first real operational writer: the intake note writer**, once the anchor exists.
+  It depends on the engagement anchor alone, needs no agent/LLM/AgentNet/resolver/network and no
+  prior stored artifact, and its first row would be genuine work rather than a synthetic record.
+- [x] **`SELECT` + `INSERT` remain sufficient** for the planned path; it requires no `UPDATE` and no
+  `DELETE`, so no privilege change is needed.
+- [ ] **Next: Phase 54 should add a create-only controlled Engagement authorization anchor writer**
+  — and create no engagement record. Because no such writer exists, that is the conditional branch
+  the findings selected; had one existed, Phase 54 would instead create the first authorized
+  engagement record, only after explicit approval and once the exact authorized values are known.
+- [x] **No synthetic smoke-write is authorized.** It stays disallowed unless separately approved,
+  and because runtime holds no `DELETE` it would be durable — approvable only as a no-cleanup
+  administrative record with that permanence understood up front, or with an explicit cleanup plan
+  agreed before the write.
+- [x] **The Phase 51 no-write / no-enablement decision is unchanged**, Phase 50 connectivity remains
+  prerequisite evidence rather than write permission, the first production write remains deferred,
+  and this phase authorizes nothing. See
+  [`PHASE53_AUTHORIZED_ENGAGEMENT_INTAKE_PATH.md`](PHASE53_AUTHORIZED_ENGAGEMENT_INTAKE_PATH.md).
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

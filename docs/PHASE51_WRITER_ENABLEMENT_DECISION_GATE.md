@@ -143,3 +143,30 @@ no-cleanup administrative smoke record with eyes open about its permanence.
   and never displayed, copied, catted, grepped, or searched. `.env` was not read; no secret store was
   searched. The migration credential was not sourced or used.
 - `make validate` stays offline and credential-free; the live gates remain opt-in.
+
+---
+
+## 9. Phase 53 update — the recommended path, made concrete (still no write)
+
+Phase 53 took the recommended path of §5 — *wait for authorized engagement/intake data* — and worked
+out what it concretely requires, by reading source only. **The Phase 51 decision is unchanged: no
+production write, no writer enablement, no synthetic smoke write. No field in §2 flips.** The first
+production write remains deferred.
+
+What Phase 53 established:
+
+- **The authorization anchor is a stored `Engagement` row with a populated `authorization_scope`.**
+  Every controlled writer loads it at write time and requires the request scope to equal the stored
+  scope; identity matching alone is not sufficient.
+- **The `Engagement` model/table exists**, so no schema work is needed — but **no controlled
+  Engagement writer exists**, and `engagements` sits in `PROHIBITED_TABLES` with no
+  engagement-creating action on the allowlist.
+- **The intake note writer exists and requires that stored authorization**, so the first intake note
+  cannot be written without the anchor. It is the recommended first real operational writer once the
+  anchor exists.
+- **Recommended next phase: Phase 54 should add a create-only controlled Engagement authorization
+  anchor writer** — and create no engagement record.
+
+Path 2 of §5 (a synthetic/administrative smoke-write) remains unchosen and disallowed unless
+separately approved; §4 still applies to it in full — runtime holds no `DELETE`, so such a record is
+durable. See [`PHASE53_AUTHORIZED_ENGAGEMENT_INTAKE_PATH.md`](PHASE53_AUTHORIZED_ENGAGEMENT_INTAKE_PATH.md).
