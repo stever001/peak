@@ -983,3 +983,109 @@ class InternalReportReviewPacketDecisionWriteReceipt:
     database_write_at: Optional[str] = None
     reasons: List[str] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
+
+
+class EngagementAuthorizationAnchorWriteOutcome:
+    """Outcome codes for a controlled engagement authorization anchor write (str constants)."""
+
+    CREATED = "created"
+    IDEMPOTENT_REPLAY = "idempotent_replay"
+    DENIED = "denied"
+    FAILED_BEFORE_WRITE = "failed_before_write"
+    WRITE_OUTCOME_UNCERTAIN = "write_outcome_uncertain"
+
+
+# The single table/action the Phase 54 anchor writer may target. Note that this pair is NOT on
+# the generic Phase 17 allowlist — `engagements` remains a prohibited table there. It is granted
+# only by `peak.persistence.allowlist.ALLOWED_ANCHOR_CREATION_PAIRS`, a separate one-pair gate.
+ENGAGEMENT_ANCHOR_TARGET_TABLE = "engagements"
+ENGAGEMENT_ANCHOR_TARGET_ACTION = "create_engagement_authorization_anchor"
+
+ENGAGEMENT_ANCHOR_ALL_OUTCOMES = (
+    EngagementAuthorizationAnchorWriteOutcome.CREATED,
+    EngagementAuthorizationAnchorWriteOutcome.IDEMPOTENT_REPLAY,
+    EngagementAuthorizationAnchorWriteOutcome.DENIED,
+    EngagementAuthorizationAnchorWriteOutcome.FAILED_BEFORE_WRITE,
+    EngagementAuthorizationAnchorWriteOutcome.WRITE_OUTCOME_UNCERTAIN,
+)
+
+
+@dataclass
+class EngagementAuthorizationAnchorDraft:
+    """A DB-free input draft for one engagement authorization anchor (never persisted by itself).
+
+    The anchor is the ``engagements`` row every other controlled writer loads at write time and
+    compares its request scope against. Its ``authorization_scope`` is therefore the single value
+    that governs everything later written under this engagement — which is why the writer treats
+    it as a governed identifier rather than free text.
+
+    ``engagement_id`` is caller-supplied on purpose: it is the anchor's primary key and doubles as
+    the idempotency boundary, so a replay names the same anchor rather than minting a second one.
+    ``engagement_label`` is an optional short human label; it is stored but **never echoed in a
+    receipt**, because a label can carry a client organisation name.
+    """
+
+    owner_id: Optional[str] = None
+    client_id: Optional[str] = None
+    engagement_id: Optional[str] = None       # caller-supplied anchor id / idempotency boundary
+    authorization_scope: Optional[str] = None
+    engagement_label: Optional[str] = None    # optional short label; stored, never echoed
+    status: str = "prospective"               # allowed initial engagement status only
+    review_status: str = "needs_review"
+    lifecycle_status: str = "active"
+    warnings: List[str] = field(default_factory=list)
+
+
+@dataclass
+class EngagementAuthorizationAnchorWriteReceipt:
+    """A typed, auditable receipt for one controlled anchor-creation attempt.
+
+    Contains no credentials, no SQL, no connection URL, no stack trace, and no
+    ``engagement_label`` — labels can carry client organisation names, so only governed
+    identifiers and safe status labels are reported. The boolean flags describe what actually
+    happened. This writer creates an authorization anchor and nothing else: it approves nothing,
+    publishes nothing, executes nothing, and writes no other table.
+    """
+
+    outcome: str = EngagementAuthorizationAnchorWriteOutcome.DENIED
+    permitted: bool = False
+    reason_code: Optional[str] = None
+    target_table: str = ENGAGEMENT_ANCHOR_TARGET_TABLE
+    target_action: str = ENGAGEMENT_ANCHOR_TARGET_ACTION
+    # Stored identity — set only when safely known (created / idempotent_replay).
+    stored_record_id: Optional[str] = None
+    idempotency_key: Optional[str] = None  # the caller's key (not a secret); a safe reference
+    audit_trace_ref: Optional[str] = None
+    # Actual-behavior flags.
+    database_connection_made: bool = False
+    sql_execution_made: bool = False
+    database_write_made: bool = False
+    stored_record_created: bool = False
+    existing_record_returned: bool = False
+    transaction_committed: bool = False
+    outcome_uncertain: bool = False
+    # Safe governance labels of the anchor this write concerns (never the engagement_label).
+    authorization_scope: Optional[str] = None
+    engagement_status: Optional[str] = None
+    review_status: Optional[str] = None
+    lifecycle_status: Optional[str] = None
+    # Non-effect flags — always False (Phase 54 approves/publishes/executes nothing).
+    other_table_write_made: bool = False
+    client_record_write_made: bool = False
+    update_made: bool = False
+    delete_made: bool = False
+    review_approval_made: bool = False
+    client_facing_output_created: bool = False
+    financial_verification_made: bool = False
+    capsule_publication_made: bool = False
+    agentnet_publication_made: bool = False
+    agent_execution_made: bool = False
+    llm_call_made: bool = False
+    agentnet_call_made: bool = False
+    resolver_call_made: bool = False
+    network_call_made: bool = False
+    # Server-stamped timestamps read back from the DB (ISO strings), when known.
+    created_at: Optional[str] = None
+    database_write_at: Optional[str] = None
+    reasons: List[str] = field(default_factory=list)
+    warnings: List[str] = field(default_factory=list)

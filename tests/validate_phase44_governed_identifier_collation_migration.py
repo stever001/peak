@@ -188,7 +188,7 @@ def baseline_checks() -> None:
 
     writers = sorted(f for f in os.listdir(os.path.join(REPO_ROOT, "peak", "db"))
                      if f.endswith("_writer.py"))
-    check("still exactly the eleven narrow controlled writers", len(writers) == 11)
+    check("still exactly the twelve narrow controlled writers", len(writers) == 12)
 
     try:
         # Scoped to the sources the collation change could plausibly have disturbed — models,
@@ -199,16 +199,20 @@ def baseline_checks() -> None:
         changed = subprocess.run(
             ["git", "-C", REPO_ROOT, "diff", "--name-only", "HEAD", "--", "peak"],
             capture_output=True, text=True, timeout=20).stdout.strip().splitlines()
-        governed_sources = {c for c in changed
-                            if c.endswith("_writer.py")
-                            or c.endswith("peak/persistence/allowlist.py")}
-        unexpected = sorted(governed_sources - {MODELS, BASE})
-        check("no controlled writer or allowlist source was changed", not unexpected)
+        # Writers and the allowlist *file* were frozen here until Phase 54, which legitimately
+        # owns the engagement authorization anchor writer and the one-pair anchor-creation gate
+        # added beside the generic sets. The substantive invariant — the generic allowlist is
+        # unchanged and root tables stay prohibited — is asserted directly instead.
+        from peak.persistence.allowlist import ALLOWED_ACTIONS, ALLOWED_TABLES, PROHIBITED_TABLES
+        check("the generic allowlist is unchanged and root tables stay prohibited",
+              len(ALLOWED_TABLES) == 13 and len(ALLOWED_ACTIONS) == 15
+              and "engagements" in PROHIBITED_TABLES and "clients" in PROHIBITED_TABLES
+              and "engagements" not in ALLOWED_TABLES)
         untouched = subprocess.run(
             ["git", "-C", REPO_ROOT, "diff", "--name-only", "HEAD", "--",
-             "schemas", "prompts", "agents", "peak/persistence/allowlist.py"],
+             "schemas", "prompts", "agents"],
             capture_output=True, text=True, timeout=20).stdout.strip()
-        check("schemas/, prompts/, agents/, and the allowlist are untouched", not untouched)
+        check("schemas/, prompts/, agents/ are untouched", not untouched)
         # Scoped to alembic/versions, not all of alembic/: the claim is about migration files.
         # The Alembic environment itself (env.py and its helpers) is allowed to evolve — Phase 47
         # hardens the version table there without touching any migration.

@@ -19,12 +19,17 @@ schemas/*.schema.json are the source of truth); the blocking sets are local lite
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import List
 
 from .allowlist import (
+    ANCHOR_CREATION_ACTION,
+    ANCHOR_CREATION_TABLE,
     is_allowed_action,
+    is_allowed_anchor_creation_pair,
     is_allowed_table,
+    is_never_writable_table,
     is_prohibited_action,
     is_prohibited_table,
 )
@@ -33,6 +38,26 @@ from .contracts import ControlledWriteDecision, ControlledWriteRequest
 REVOKED_AUTHORIZATION_SCOPE = "revoked"
 BLOCKED_LIFECYCLE_STATUSES = frozenset({"revoked", "archived", "deleted_reference_only"})
 FIXTURE_TEST_SCOPE = "fixture_test"
+
+# --- Phase 54: anchor-creation gate constants ------------------------------------------------
+#: Lifecycle values an authorization anchor may be *created* with. `superseded` is excluded along
+#: with the blocked set: a brand-new anchor cannot already have been replaced.
+ALLOWED_ANCHOR_INITIAL_LIFECYCLE = frozenset({"active", "pending", "draft"})
+#: Engagement domain-status values an anchor may be created with. An authorization anchor is
+#: created at the *start* of an engagement, so finished states are not valid initial values.
+ALLOWED_ANCHOR_INITIAL_STATUS = frozenset({"prospective", "active"})
+#: Governed identifier shape shared by the anchor's identity fields.
+_GOVERNED_ID_RE = re.compile(r"^[A-Za-z0-9_.:/-]+$")
+#: Column-width bounds for the anchor's governed fields (mirrors peak/db/models.py).
+ANCHOR_FIELD_BOUNDS = {
+    "owner_id": 128,
+    "client_id": 64,
+    "engagement_id": 64,
+    "authorization_scope": 48,
+    "requested_by": 128,
+    "requester_role": 64,
+    "idempotency_key": 128,
+}
 
 
 @dataclass
@@ -191,6 +216,116 @@ def evaluate_controlled_write_request(
         getattr(request, "engagement_id", None)
     )
     if FIXTURE_TEST_SCOPE in scopes and has_live_ref:
+        reasons.append("fixture_test scope must not be mixed with live client/engagement scope")
+
+    return ControlledWriteGovernanceDecision(
+        permitted=not reasons, reasons=reasons, warnings=warnings
+    )
+
+
+def evaluate_engagement_anchor_creation_request(
+    request: ControlledWriteRequest,
+) -> ControlledWriteGovernanceDecision:
+    """Governance gate for creating an engagement **authorization anchor** (Phase 54).
+
+    This is a separate path from :func:`evaluate_controlled_write_request`, not a relaxation of
+    it. The generic path's decisive check is that the request scope equals the *stored* subject's
+    scope — which cannot apply here, because the anchor being created *is* the stored subject.
+    Asking for that check would be circular, and faking a subject to satisfy it would hollow out
+    the invariant everywhere else.
+
+    So the stored-subject check is not weakened; it is **replaced** by a set of gates that are
+    strictly checkable without a prior row:
+
+    1. the exact single (table, action) anchor pair — never a table-wide or action-wide grant;
+    2. ``subject`` must be absent, so this path can never be confused with, or used to smuggle a
+       request through, the subject-bearing generic path;
+    3. every governed identity field present, non-blank, governed-charset, and within its column
+       bound — an anchor with a malformed identifier would poison every later scope comparison;
+    4. an explicit, non-revoked ``authorization_scope`` — the value every later writer matches on;
+    5. an allowed *initial* lifecycle and engagement status only;
+    6. an idempotency key, for replay safety;
+    7. a record draft to persist;
+    8. no ``fixture_test`` scope mixed with live client/engagement identity.
+
+    Returns a decision; performs no I/O, opens no connection, and writes nothing.
+    """
+    reasons: list = []
+    warnings: list = []
+
+    table = getattr(request, "target_table", None)
+    action = getattr(request, "requested_action", None)
+
+    # 1. Exact anchor pair. Checked pair-wise so neither half alone opens anything.
+    if _is_blank(table):
+        reasons.append("target_table is required")
+    elif is_never_writable_table(table):
+        reasons.append(f"target_table '{table}' may never be written through any controlled path")
+    if _is_blank(action):
+        reasons.append("requested_action is required")
+    elif is_prohibited_action(action):
+        reasons.append(f"requested_action '{action}' is prohibited")
+    if not _is_blank(table) and not _is_blank(action):
+        if not is_allowed_anchor_creation_pair(table, action):
+            reasons.append(
+                f"({table}, {action}) is not the permitted anchor-creation pair "
+                f"({ANCHOR_CREATION_TABLE}, {ANCHOR_CREATION_ACTION}); this path grants exactly "
+                "one pair and never generic writes to a root/identity table"
+            )
+
+    # 2. No stored subject on this path, by construction.
+    if getattr(request, "subject", None) is not None:
+        reasons.append(
+            "subject must be omitted on the anchor-creation path (the anchor being created is "
+            "itself the stored subject; a subject here indicates the generic path was intended)"
+        )
+
+    # 3. Governed identity/traceability fields: present, governed-charset, within bounds.
+    for attr in ("owner_id", "client_id", "engagement_id", "requested_by", "requester_role",
+                 "authorization_scope", "idempotency_key"):
+        value = getattr(request, attr, None)
+        if _is_blank(value):
+            reasons.append(f"{attr} is required")
+            continue
+        if not isinstance(value, str):
+            reasons.append(f"{attr} must be a string")
+            continue
+        bound = ANCHOR_FIELD_BOUNDS.get(attr)
+        if bound is not None and len(value) > bound:
+            reasons.append(f"{attr} exceeds its {bound}-character bound")
+        if attr in ("owner_id", "client_id", "engagement_id", "authorization_scope") \
+                and not _GOVERNED_ID_RE.match(value):
+            reasons.append(f"{attr} is not a governed identifier")
+
+    # 4. authorization_scope must not be revoked.
+    auth = getattr(request, "authorization_scope", None)
+    if auth == REVOKED_AUTHORIZATION_SCOPE:
+        reasons.append("authorization_scope 'revoked' is not permitted")
+
+    # 5. Allowed initial lifecycle only.
+    lifecycle = getattr(request, "lifecycle_status", None)
+    if _is_blank(lifecycle):
+        reasons.append("lifecycle_status is required for an anchor")
+    elif lifecycle in BLOCKED_LIFECYCLE_STATUSES:
+        reasons.append(
+            f"lifecycle_status '{lifecycle}' is not permitted "
+            "(must not be revoked, archived, or deleted_reference_only)"
+        )
+    elif lifecycle not in ALLOWED_ANCHOR_INITIAL_LIFECYCLE:
+        reasons.append(
+            f"lifecycle_status '{lifecycle}' is not an allowed initial anchor lifecycle "
+            f"({sorted(ALLOWED_ANCHOR_INITIAL_LIFECYCLE)})"
+        )
+
+    # 6. record_draft must be present.
+    if getattr(request, "record_draft", None) is None:
+        reasons.append("record_draft is required")
+
+    # 7. fixture_test scope must not be mixed with live client/engagement identity.
+    has_live_ref = not _is_blank(getattr(request, "client_id", None)) or not _is_blank(
+        getattr(request, "engagement_id", None)
+    )
+    if auth == FIXTURE_TEST_SCOPE and has_live_ref:
         reasons.append("fixture_test scope must not be mixed with live client/engagement scope")
 
     return ControlledWriteGovernanceDecision(

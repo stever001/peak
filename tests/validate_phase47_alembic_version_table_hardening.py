@@ -69,7 +69,7 @@ VERIFIER = "tools/production_mysql_collation_verify.py"
 
 EXPECTED_MIGRATIONS = 13
 EXPECTED_TABLE_COUNT = 18
-EXPECTED_WRITERS = 11
+EXPECTED_WRITERS = 12
 EXPECTED_ALLOWLIST_TABLES = 13
 EXPECTED_ALLOWLIST_ACTIONS = 15
 MINIMUM_VERSION_NUM_LENGTH = 255
@@ -240,11 +240,17 @@ def baseline_checks() -> None:
         else:
             print("  [skip] Phase 47 is committed — working-tree scope guard not applicable")
 
-        # These remain unconditional: they are invariants, not authoring-time scope.
-        governed = [c for c in git("diff", "--name-only", "HEAD", "--", "peak").splitlines()
-                    if c.endswith("_writer.py") or c.endswith("peak/persistence/allowlist.py")
-                    or c.endswith("peak/db/models.py")]
-        check("no controlled writer, model, or allowlist source changed", not governed)
+        # The *content* invariants remain unconditional. The file-level freeze on writers and the
+        # allowlist did not: Phase 54 legitimately owns the engagement authorization anchor writer
+        # and the one-pair anchor-creation gate added beside the generic sets.
+        from peak.persistence.allowlist import ALLOWED_ACTIONS, ALLOWED_TABLES, PROHIBITED_TABLES
+        check("the generic allowlist is unchanged and root tables stay prohibited",
+              len(ALLOWED_TABLES) == 13 and len(ALLOWED_ACTIONS) == 15
+              and "engagements" in PROHIBITED_TABLES and "clients" in PROHIBITED_TABLES
+              and "engagements" not in ALLOWED_TABLES)
+        check("no DB model source changed",
+              not [c for c in git("diff", "--name-only", "HEAD", "--", "peak").splitlines()
+                   if c.endswith("peak/db/models.py")])
         migrations_changed = git("diff", "--name-only", "HEAD", "--", VERSIONS_REL)
         check("no existing migration file was edited or rewritten", not migrations_changed)
         docx = git("diff", "--name-only", "HEAD", "--", "docs/Peak_Investor_Overview_AI.docx")

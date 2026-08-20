@@ -450,7 +450,7 @@ def scope_checks() -> None:
 
     writers = sorted(f for f in os.listdir(os.path.join(REPO_ROOT, "peak", "db"))
                      if f.endswith("_writer.py"))
-    check("still exactly the eleven narrow controlled writers", len(writers) == 11)
+    check("still exactly the twelve narrow controlled writers", len(writers) == 12)
     check("no collation/audit writer module added",
           not any(re.search(r"collat|audit|parity", w) for w in writers))
 

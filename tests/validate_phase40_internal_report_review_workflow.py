@@ -66,11 +66,14 @@ SCANNED_FILES = [MODULE, PACKAGE_INIT]
 #: originally in this list; Phase 44 legitimately owns both (governed-collation metadata and
 #: migration 013), so they moved out. The real guarantee — that the three narrow writers and the
 #: controlled-write allowlist are untouched — is unchanged and still enforced here.
+# ``peak/persistence/allowlist.py`` was in this list until Phase 54, which legitimately owns the
+# one-pair engagement anchor-creation gate added beside the generic sets. The Phase 37/38/39
+# writers this phase actually depends on are still frozen, and the generic allowlist is asserted
+# unchanged separately below.
 UNCHANGED_SOURCES = [
     "peak/db/internal_assessment_report_draft_writer.py",
     "peak/db/internal_report_review_packet_writer.py",
     "peak/db/internal_report_review_packet_decision_writer.py",
-    "peak/persistence/allowlist.py",
 ]
 REPORTS_FILES = [
     "peak/reports/__init__.py", "peak/reports/contracts.py", "peak/reports/governance.py",
@@ -452,7 +455,7 @@ def _baseline_regressions() -> None:
 
     writers = sorted(f for f in os.listdir(os.path.join(REPO_ROOT, "peak", "db"))
                      if f.endswith("_writer.py"))
-    check("still exactly the eleven narrow controlled writers", len(writers) == 11)
+    check("still exactly the twelve narrow controlled writers", len(writers) == 12)
     check("no Phase 40 writer module added",
           not any("workflow" in w for w in writers))
 
@@ -472,7 +475,12 @@ def _baseline_regressions() -> None:
         changed = subprocess.run(
             ["git", "-C", REPO_ROOT, "diff", "--name-only", "HEAD", "--"] + UNCHANGED_SOURCES,
             capture_output=True, text=True, timeout=20).stdout.strip()
-        check("Phase 37/38/39 writers and the allowlist have no pending diff",
+        from peak.persistence.allowlist import ALLOWED_ACTIONS, ALLOWED_TABLES, PROHIBITED_TABLES
+        check("the generic allowlist is unchanged and engagements stays prohibited on it",
+              len(ALLOWED_TABLES) == 13 and len(ALLOWED_ACTIONS) == 15
+              and "engagements" in PROHIBITED_TABLES and "clients" in PROHIBITED_TABLES
+              and "engagements" not in ALLOWED_TABLES)
+        check("Phase 37/38/39 writers have no pending diff",
               not changed)
     except Exception:
         check("git-backed unchanged-source check (git unavailable — skipped)", True)

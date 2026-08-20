@@ -424,7 +424,7 @@ def regression_checks() -> None:
 
     writers = sorted(f for f in os.listdir(os.path.join(REPO_ROOT, "peak", "db"))
                      if f.endswith("_writer.py"))
-    check("still exactly the eleven narrow controlled writers", len(writers) == 11)
+    check("still exactly the twelve narrow controlled writers", len(writers) == 12)
 
     print("     no forbidden path was introduced by Phase 41")
     tool = read(TOOL)
@@ -519,14 +519,16 @@ def hygiene_checks() -> None:
              "docs/Peak_Investor_Overview_AI.docx"],
             capture_output=True, text=True, timeout=20).stdout.strip()
         check("docs/Peak_Investor_Overview_AI.docx has no pending diff", not docx_diff)
-        changed = subprocess.run(
-            ["git", "-C", REPO_ROOT, "diff", "--name-only", "HEAD", "--",
-             "peak/persistence/allowlist.py"],
-            capture_output=True, text=True, timeout=20).stdout.strip()
         # ``alembic`` and ``peak/db/models.py`` were in this list until Phase 44, which legitimately
-        # owns migration 013 and the governed-collation model metadata. The allowlist — the surface
-        # that actually gates writes — is still asserted untouched.
-        check("Phase 41 changed no allowlist source", not changed)
+        # owns migration 013 and the governed-collation model metadata; the allowlist *file* was in
+        # it until Phase 54, which legitimately owns the one-pair engagement anchor-creation gate
+        # added beside the generic sets. What actually gates generic writes is the content of those
+        # generic sets, so that is asserted directly rather than freezing the file.
+        from peak.persistence.allowlist import ALLOWED_ACTIONS, ALLOWED_TABLES, PROHIBITED_TABLES
+        check("the generic allowlist is unchanged and root tables stay prohibited",
+              len(ALLOWED_TABLES) == 13 and len(ALLOWED_ACTIONS) == 15
+              and "engagements" in PROHIBITED_TABLES and "clients" in PROHIBITED_TABLES
+              and "engagements" not in ALLOWED_TABLES)
     except Exception:
         check("git-backed baseline/hygiene checks (git unavailable — skipped)", True)
 

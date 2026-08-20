@@ -411,3 +411,35 @@ The Phase 51 no-write / no-enablement decision remains in force and the first pr
 remains deferred. Synthetic smoke-writing stays disallowed unless separately approved, and — since
 runtime holds no `DELETE` — any such record would be durable. See
 [`PHASE53_AUTHORIZED_ENGAGEMENT_INTAKE_PATH.md`](PHASE53_AUTHORIZED_ENGAGEMENT_INTAKE_PATH.md).
+
+## Phase 54 — creating the anchor the audit trail hangs from
+
+Phase 53 named the stored `Engagement` row as the anchor every governed write descends from, and
+noted that nothing could create one. Phase 54 adds that path — and **creates no engagement record,
+no intake note, and no synthetic smoke record**.
+
+For access control the important part is *how* the grant was made. `engagements` **stays** on
+`PROHIBITED_TABLES`, because it is a root/identity record and the generic write path must never
+reach it. The anchor writer instead travels a second, one-pair gate — exactly `engagements` /
+`create_engagement_authorization_anchor` — checked pair-wise, so neither half opens anything on its
+own. `clients` is listed as never writable and is refused by both gates.
+
+The generic path's decisive check — request scope must equal the *stored* subject's scope — cannot
+apply when the row being created *is* that subject. It is replaced, not weakened, by gates that are
+checkable without a prior row: the exact pair, an absent subject, governed and bounded identity, a
+canonical non-revoked scope, an allowed initial lifecycle and status, an idempotency key, and
+value-marker screening on free text. All of them fail closed before any connection is opened.
+
+Two audit properties worth stating:
+
+**No overwrite path exists.** Re-creating an anchor id with a different governed definition is
+denied, not applied. The stored anchor cannot be edited by this writer — it has no `UPDATE` — so an
+anchor's authorization scope is fixed at creation as far as runtime is concerned.
+
+**Runtime still holds no `DELETE`, so an anchor is durable.** Cleanup cannot be assumed: removing an
+anchor would require the migration credential under separate approval. That is why the retention
+posture belongs in the authorization decision for the first production anchor rather than after it.
+
+The Phase 51 no-write / no-enablement decision remains in force and the first production anchor
+creation remains separately approved future work. See
+[`PHASE54_CONTROLLED_ENGAGEMENT_AUTHORIZATION_ANCHOR_WRITER.md`](PHASE54_CONTROLLED_ENGAGEMENT_AUTHORIZATION_ANCHOR_WRITER.md).

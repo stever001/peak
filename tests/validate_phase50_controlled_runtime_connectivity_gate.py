@@ -68,7 +68,7 @@ ROLE_VARS = (RUNTIME_VAR, MIGRATION_VAR, VERIFY_VAR, "PEAK_PRODUCTION_DB_READONL
 
 EXPECTED_MIGRATIONS = 13
 EXPECTED_TABLE_COUNT = 18
-EXPECTED_WRITERS = 11
+EXPECTED_WRITERS = 12
 EXPECTED_ALLOWLIST_TABLES = 13
 EXPECTED_ALLOWLIST_ACTIONS = 15
 HEAD_REVISION = "013_governed_identifier_collation_policy"
@@ -138,6 +138,19 @@ def git(*args: str) -> str:
                           capture_output=True, text=True, timeout=20).stdout.strip()
 
 
+def phase_never_committed(rel: str) -> bool:
+    """True while ``rel`` has no commit yet — i.e. this phase's own work is still unstaged.
+
+    The working-tree scope guards below are authoring-time claims about *this* phase. Keying them
+    on "does this file have a pending diff" was wrong: a later phase editing this phase's document
+    also produces a pending diff, and the guard would then judge that later phase's changes against
+    this phase's allowlist. Absence of any commit for the file is the signal that actually means
+    "this phase has not landed yet".
+    """
+    return not git("log", "-1", "--format=%H", "--", rel).strip()
+
+
+
 def scrubbed_env(**extra):
     env = {k: v for k, v in os.environ.items() if k not in ROLE_VARS}
     env["PYTHONPATH"] = REPO_ROOT
@@ -200,7 +213,7 @@ def baseline_checks() -> None:
     try:
         check(f"baseline commit {BASELINE_COMMIT} present in history",
               BASELINE_COMMIT in git("log", "--oneline", "-40"))
-        if git("status", "--porcelain", "--", GATE_REL).strip():
+        if phase_never_committed(HARNESS_REL):
             changed = set(git("diff", "--name-only", "HEAD").splitlines())
             unexpected = sorted(changed - ALLOWED_CHANGED)
             check("only the intended narrow set of files changed", not unexpected)
@@ -209,11 +222,18 @@ def baseline_checks() -> None:
         else:
             print("  [skip] Phase 50 is committed — working-tree scope guard not applicable")
 
-        governed = [c for c in git("diff", "--name-only", "HEAD", "--", "peak").splitlines()
-                    if c.endswith("_writer.py")
-                    or c in ("peak/db/models.py", "peak/db/base.py",
-                             "peak/persistence/allowlist.py")]
-        check("no controlled writer, model, base, or allowlist source changed", not governed)
+        # Authoring-time claim about *this* phase's own working tree, not a permanent freeze
+        # on the repository: later phases may legitimately add a writer or extend the
+        # allowlist under their own governance gate (Phase 54 added the engagement
+        # authorization anchor writer and its one-pair anchor gate). The substantive
+        # invariants — writers stay create-only, the generic allowlist stays closed — are
+        # asserted unconditionally elsewhere in this harness.
+        if phase_never_committed(HARNESS_REL):
+            governed = [c for c in git("diff", "--name-only", "HEAD", "--", "peak").splitlines()
+                        if c.endswith("_writer.py")
+                        or c in ("peak/db/models.py", "peak/db/base.py",
+                                 "peak/persistence/allowlist.py")]
+            check("no controlled writer, model, base, or allowlist source changed", not governed)
         check("no alembic file was modified",
               not git("diff", "--name-only", "HEAD", "--", "alembic"))
         check("the production verifier was not modified",

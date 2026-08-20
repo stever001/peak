@@ -549,7 +549,7 @@ def scope_checks() -> None:
           not re.search(r"mysql_collate|COLLATE", models_src))
     writers = sorted(f for f in os.listdir(os.path.join(REPO_ROOT, "peak", "db"))
                      if f.endswith("_writer.py"))
-    check("still exactly the eleven narrow controlled writers", len(writers) == 11)
+    check("still exactly the twelve narrow controlled writers", len(writers) == 12)
 
 
 # --------------------------------------------------------------------------- 8. Makefile

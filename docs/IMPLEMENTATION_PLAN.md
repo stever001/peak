@@ -1604,6 +1604,48 @@ migration change):**
   and this phase authorizes nothing. See
   [`PHASE53_AUTHORIZED_ENGAGEMENT_INTAKE_PATH.md`](PHASE53_AUTHORIZED_ENGAGEMENT_INTAKE_PATH.md).
 
+**Controlled Engagement Authorization Anchor Writer (Phase 54 — code path only; no engagement
+record, no intake note, no synthetic smoke record, no writer enablement, no production write, no
+schema or migration change):**
+
+- [x] **The blocker Phase 53 named is resolved in code.** Every controlled writer loads a stored
+  `Engagement` anchor and requires its scope to match; nothing could create that anchor, because
+  `engagements` is a prohibited root table. Phase 54 adds
+  `peak/db/engagement_authorization_anchor_writer.py` — the twelfth narrow writer, and the only one
+  that may reach `engagements`.
+- [x] **The grant is one pair, not a hole.** `engagements` **stays** on `PROHIBITED_TABLES`; the
+  writer travels a separate one-pair gate, `ALLOWED_ANCHOR_CREATION_PAIRS` = exactly
+  `engagements` / `create_engagement_authorization_anchor`, checked pair-wise. The generic allowlist
+  is unchanged at 13 tables and 15 actions, the anchor action is not on it, and `clients` is listed
+  never-writable and refused by both gates. Generic Engagement CRUD remains impossible.
+- [x] **The stored-subject check is replaced, not weakened.** It would be circular here — the row
+  being created *is* the subject. In its place: the exact pair, an absent `subject`, governed and
+  bounded identity, a canonical non-revoked `authorization_scope`, an allowed initial lifecycle
+  (`active`/`pending`/`draft`) and status (`prospective`/`active`), a required idempotency key, a
+  typed draft whose identity matches, no `fixture_test` mixing, and value-marker screening on the
+  label. All fail closed before any connection is opened.
+- [x] **Create-only; `SELECT` + `INSERT` remains sufficient.** One `session.add`, one commit. No
+  `UPDATE`, `DELETE`, `merge`, bulk operation, raw SQL, or schema operation; no network/LLM/AgentNet/
+  MCP/resolver path; no table other than `engagements`; no `Client` row ever created. No privilege
+  change is required.
+- [x] **No migration was needed.** The anchor's primary key is its idempotency boundary and the
+  replay fingerprint is recomputed from the stored row's governed fields, so no `idempotency_key` /
+  `payload_fingerprint` column was added. Same id + same definition replays with no second write;
+  same id + different definition is denied and the stored row is **not** modified. There is no
+  overwrite path.
+- [x] **Leak-free receipts.** No credential, DSN, host, database name, SQL string, stack trace, or
+  raw payload — and never the `engagement_label`, which can carry a client organisation name. Only
+  governed identifiers, safe status labels, and marker *categories*.
+- [ ] **Next: the first production engagement anchor remains separately approved future work.** That
+  phase must re-run all three gates and name in advance the exact `owner_id` / `client_id` /
+  `engagement_id` / `authorization_scope` sources, approval authority, idempotency-key pattern,
+  retention/cleanup posture, and whether the record is real client, internal/admin, or a separately
+  approved durable admin smoke record.
+- [x] **Phase 51 no-write / no-enablement is unchanged**, Phase 50 connectivity remains prerequisite
+  evidence rather than write permission, synthetic smoke-writing remains disallowed unless
+  separately approved, and runtime still holds no `DELETE` so cleanup cannot be assumed. See
+  [`PHASE54_CONTROLLED_ENGAGEMENT_AUTHORIZATION_ANCHOR_WRITER.md`](PHASE54_CONTROLLED_ENGAGEMENT_AUTHORIZATION_ANCHOR_WRITER.md).
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

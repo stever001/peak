@@ -974,8 +974,10 @@ forbidden thing cannot pass or fail the check by accident); `import peak.workflo
 DB driver and a DB-free denial needs none; the public entry point and the typed
 request/result/trace contracts exist; the baseline is unchanged (Alembic head `012`, 18 tables, 13
 allowlist tables / 15 actions, no migration `013`, no new table/model/writer/allowlist pair, and no
-pending diff on the Phase 37/38/39 writers, `peak/db/models.py`, the allowlist, or
-`alembic/versions`); Phase 36 `peak/reports` stays DB-free; the closed computed vocabularies cover
+pending diff on the Phase 37/38/39 writers, `peak/db/models.py`, or `alembic/versions`, and the
+*generic* allowlist unchanged with `engagements`/`clients` still prohibited on it — the allowlist
+*file* stopped being frozen at Phase 54, which legitimately added the one-pair engagement
+anchor-creation gate beside those generic sets); Phase 36 `peak/reports` stays DB-free; the closed computed vocabularies cover
 the whole Phase 32 decision vocabulary and stay in lockstep with Phase 39's server-side
 `decision_status` derivation; the docs carry the required language; the repo stays source-only.
 

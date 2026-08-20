@@ -228,3 +228,31 @@ authorization decision, never a follow-up task.
   `.env` was not read; no secret store was searched.
 - The migration credential was not sourced or used, and no production migration was run.
 - `make validate` stays offline and credential-free; the live gates remain opt-in.
+
+---
+
+## 12. Phase 54 update — the recommended next phase was done (still no record created)
+
+Phase 54 implemented §6's recommendation: it added a **create-only controlled Engagement
+authorization anchor writer** and **created no engagement record**. The findings recorded above
+were accurate when written; two of them have deliberately changed as a result, and are restated
+here so this document does not misdescribe the code:
+
+- **§4.2 is now historical.** A controlled Engagement writer **does exist** —
+  `peak/db/engagement_authorization_anchor_writer.py`, targeting
+  `engagements` / `create_engagement_authorization_anchor`. It is the only writer that may reach
+  the table.
+- **`engagements` still sits on `PROHIBITED_TABLES`.** Phase 54 did *not* remove it. The anchor
+  writer travels a separate one-pair gate (`ALLOWED_ANCHOR_CREATION_PAIRS`), so the generic path
+  still refuses the table and generic Engagement CRUD remains impossible. `clients` remains
+  prohibited by every path.
+- **Everything else in this document stands.** The authorization anchor is still a stored
+  `Engagement` row with a populated `authorization_scope`; the intake note writer still requires
+  it; the intake note writer is still the recommended first real operational writer; and
+  `SELECT` + `INSERT` is still sufficient.
+
+**No production write has occurred.** The Phase 51 no-write / no-enablement decision remains in
+force, Phase 50 connectivity remains prerequisite evidence rather than write permission, synthetic
+smoke-writing remains disallowed unless separately approved, and the first production anchor
+creation — with the §7 fields named in advance — remains separately approved future work. See
+[`PHASE54_CONTROLLED_ENGAGEMENT_AUTHORIZATION_ANCHOR_WRITER.md`](PHASE54_CONTROLLED_ENGAGEMENT_AUTHORIZATION_ANCHOR_WRITER.md).

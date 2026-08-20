@@ -277,3 +277,27 @@ anchor writer** — and create no engagement record. The Phase 51 no-write / no-
 unchanged, Phase 50 connectivity remains prerequisite evidence rather than write permission, and no
 synthetic smoke-write is authorized. See
 [`PHASE53_AUTHORIZED_ENGAGEMENT_INTAKE_PATH.md`](PHASE53_AUTHORIZED_ENGAGEMENT_INTAKE_PATH.md).
+
+## Phase 54 — the engagement authorization anchor writer
+
+Phase 54 adds the twelfth narrow controlled writer,
+[`peak/db/engagement_authorization_anchor_writer.py`](../peak/db/engagement_authorization_anchor_writer.py),
+and **creates no engagement record**. Head stays at `013_governed_identifier_collation_policy`; 13
+migrations and 18 tables are unchanged, and there is **no migration 014 and no model change**.
+
+It is the governed code path Phase 53 identified as missing: every other writer loads a stored
+`Engagement` anchor and matches its scope against it, and nothing could create that anchor.
+
+- **Create-only.** One `session.add`, one commit. No `UPDATE`, `DELETE`, `merge`, bulk operation,
+  raw SQL, or schema operation. `SELECT` + `INSERT` remains sufficient.
+- **One pair, not a hole.** `engagements` stays on `PROHIBITED_TABLES`; the writer travels a
+  separate one-pair gate, `engagements` / `create_engagement_authorization_anchor`. The generic
+  allowlist is unchanged at 13 tables and 15 actions, and `clients` is unreachable by any path.
+- **No new columns.** The anchor's primary key is its idempotency boundary, and the replay
+  fingerprint is recomputed from the stored row's governed fields — so no `idempotency_key` /
+  `payload_fingerprint` column and no migration were needed. A conflicting definition under the
+  same id is denied, never overwritten.
+
+The Phase 51 no-write / no-enablement decision is unchanged, and the first production anchor
+creation remains separately approved future work. See
+[`PHASE54_CONTROLLED_ENGAGEMENT_AUTHORIZATION_ANCHOR_WRITER.md`](PHASE54_CONTROLLED_ENGAGEMENT_AUTHORIZATION_ANCHOR_WRITER.md).
