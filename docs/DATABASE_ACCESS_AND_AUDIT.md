@@ -475,3 +475,20 @@ Runtime still holds no `DELETE`, so these records are durable — which suits th
 exactly why disposable synthetic smoke records remain disallowed. The Phase 51 no-write /
 no-enablement decision remains in force. See
 [`PHASE55_INTERNAL_TEST_ENGAGEMENT_CLASSIFICATION.md`](PHASE55_INTERNAL_TEST_ENGAGEMENT_CLASSIFICATION.md).
+
+## Phase 56 — classification is recorded; read-side isolation is still to build
+
+Internal test engagements are now classifiable on the row: `engagement_category=internal_test`
+requires `real_client_data=false`, `client_accessible=false`, and a reserved `client_id` namespace
+(`99999` or a reserved prefix). The reserved value is a **visible marker, not the whole control**,
+and the rule is bidirectional — a real client engagement may not use that namespace, so the two
+cannot bleed together.
+
+Capsule publication requires **explicit authorization and no real client data**, checked together.
+A real client engagement may not authorize publication here at all.
+
+**The flag is the contract, not the enforcement.** No client-facing read path exists yet; whichever
+one is built must filter on `client_accessible` / `engagement_category` explicitly. Runtime still
+holds no `DELETE`, so these records are durable and cleanup is not assumed. **Phase 56 created no
+records**, and the Phase 51 no-write / no-enablement decision remains in force. See
+[`PHASE56_INTERNAL_TEST_ENGAGEMENT_SUPPORT.md`](PHASE56_INTERNAL_TEST_ENGAGEMENT_SUPPORT.md).

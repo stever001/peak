@@ -282,3 +282,19 @@ executing it remains separately approved work.
 - No `~/.peak` operator credential file was sourced or read; `.env` was not read; no secret store was
   searched; the migration credential was not used.
 - `make validate` stays offline and credential-free; the live gates remain opt-in.
+
+---
+
+## 14. Phase 56 update — the gap is closed (still no records)
+
+Phase 56 implemented §10's recommendation and **created no records**. §4.1–§4.4 are now historical:
+`Engagement` carries `engagement_category` / `real_client_data` / `client_accessible` /
+`capsule_publication_authorized` as **real columns** (migration `014_engagement_classification`),
+and the anchor writer validates them.
+
+The §5 isolation and §6 publication rules are now enforced at write time: `internal_test` requires
+no real client data, non-client-accessibility, and a reserved `client_id` namespace, and publication
+requires explicit authorization **and** no real client data. The §8 creation packet and §9
+preconditions still stand — the first internal test engagement remains separately approved future
+work, and read-side isolation is still to be built. See
+[`PHASE56_INTERNAL_TEST_ENGAGEMENT_SUPPORT.md`](PHASE56_INTERNAL_TEST_ENGAGEMENT_SUPPORT.md).

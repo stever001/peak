@@ -329,3 +329,15 @@ Inspection found the scaffold cannot express that yet:
 writer to validate them, and creates no records.** The Phase 51 no-write / no-enablement decision is
 unchanged. See
 [`PHASE55_INTERNAL_TEST_ENGAGEMENT_CLASSIFICATION.md`](PHASE55_INTERNAL_TEST_ENGAGEMENT_CLASSIFICATION.md).
+
+## Phase 56 — engagement classification columns
+
+Migration `014_engagement_classification` adds four real columns to `engagements`:
+`engagement_category` (governed string; `real_client` / `internal_test`), `real_client_data`,
+`client_accessible`, and `capsule_publication_authorized`. Head moves to `014`; **18 tables and 12
+writers are unchanged**, no table was added, and `Client` was not altered.
+
+Defaults are the safe direction — an unclassified row is a real client engagement, and publication
+is never granted by default. Additive and reversible, with no INSERT or seed data. **Phase 56
+creates no records**, and production is still at 013: migration 014 has not been applied there. See
+[`PHASE56_INTERNAL_TEST_ENGAGEMENT_SUPPORT.md`](PHASE56_INTERNAL_TEST_ENGAGEMENT_SUPPORT.md).

@@ -107,6 +107,9 @@ _SAFE_IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9_]{1,64}$")
 
 # --------------------------------------------------------------------------- expectations
 
+#: The head expected **in production**. Deliberately still 013: Phase 56 added migration 014
+#: to the repository but it has **not** been applied to production, so expecting 014 here
+#: would misreport the live posture. Move this only when 014 is actually applied.
 EXPECTED_ALEMBIC_HEAD = "013_governed_identifier_collation_policy"
 EXPECTED_TABLE_COUNT = 18
 REQUIRED_CHARSET = "utf8mb4"

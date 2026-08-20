@@ -46,6 +46,98 @@ ALLOWED_ANCHOR_INITIAL_LIFECYCLE = frozenset({"active", "pending", "draft"})
 #: Engagement domain-status values an anchor may be created with. An authorization anchor is
 #: created at the *start* of an engagement, so finished states are not valid initial values.
 ALLOWED_ANCHOR_INITIAL_STATUS = frozenset({"prospective", "active"})
+# --- Phase 56: engagement classification -----------------------------------------------------
+#: The closed engagement-category vocabulary (mirrors ``peak.db.enums.EngagementCategory``; kept
+#: as literals so this stdlib-only module never imports ``peak.db``).
+ENGAGEMENT_CATEGORY_REAL_CLIENT = "real_client"
+ENGAGEMENT_CATEGORY_INTERNAL_TEST = "internal_test"
+ALLOWED_ENGAGEMENT_CATEGORIES = frozenset(
+    {ENGAGEMENT_CATEGORY_REAL_CLIENT, ENGAGEMENT_CATEGORY_INTERNAL_TEST}
+)
+
+#: A reserved namespace makes an internal test record *visible* at a glance. It is deliberately
+#: **one marker among several**, never the control by itself: an internal test engagement must
+#: also be explicitly categorised, hold no real client data, and be non-client-accessible. The
+#: rule is bidirectional — a reserved value may only be used by an internal test engagement, and
+#: a real client engagement may never use one, so the two namespaces cannot bleed together.
+RESERVED_INTERNAL_TEST_CLIENT_IDS = frozenset({"99999"})
+RESERVED_INTERNAL_TEST_CLIENT_PREFIXES = ("99999_", "internal_test_")
+
+
+def is_reserved_internal_test_client_id(client_id) -> bool:
+    """True if ``client_id`` is in the reserved internal-test namespace."""
+    if not isinstance(client_id, str):
+        return False
+    value = client_id.strip()
+    return (value in RESERVED_INTERNAL_TEST_CLIENT_IDS
+            or value.startswith(RESERVED_INTERNAL_TEST_CLIENT_PREFIXES))
+
+
+def validate_engagement_classification(
+    category, real_client_data, client_accessible, capsule_publication_authorized, client_id,
+) -> List[str]:
+    """Return the reasons this classification is not permitted (empty list == permitted).
+
+    Encodes the Phase 55 policy as checkable rules:
+
+    * the category must be one of the two closed values;
+    * an **internal test** engagement must hold no real client data, must not be
+      client-accessible, and must use the reserved client namespace;
+    * a **real client** engagement must *not* use the reserved namespace, and must not claim
+      capsule publication authority — no real-client publication authority is designed yet;
+    * capsule publication may be authorised only when there is no real client data **and** the
+      engagement is not client-accessible — the compound rule, checked together.
+    """
+    reasons: List[str] = []
+
+    if category not in ALLOWED_ENGAGEMENT_CATEGORIES:
+        reasons.append(
+            f"engagement_category must be one of {sorted(ALLOWED_ENGAGEMENT_CATEGORIES)}"
+        )
+        return reasons
+
+    for name, value in (("real_client_data", real_client_data),
+                        ("client_accessible", client_accessible),
+                        ("capsule_publication_authorized", capsule_publication_authorized)):
+        if not isinstance(value, bool):
+            reasons.append(f"{name} must be a boolean")
+    if reasons:
+        return reasons
+
+    reserved = is_reserved_internal_test_client_id(client_id)
+
+    if category == ENGAGEMENT_CATEGORY_INTERNAL_TEST:
+        if real_client_data:
+            reasons.append("internal_test requires real_client_data=false")
+        if client_accessible:
+            reasons.append("internal_test requires client_accessible=false")
+        if not reserved:
+            reasons.append(
+                "internal_test requires a reserved internal-test client_id namespace "
+                "(the reserved value is a visible marker, not the only control)"
+            )
+    else:  # real_client
+        if reserved:
+            reasons.append(
+                "a real_client engagement must not use the reserved internal-test client_id "
+                "namespace"
+            )
+        if capsule_publication_authorized:
+            reasons.append(
+                "real_client engagements may not authorise capsule publication here; no "
+                "real-client publication authority is designed yet"
+            )
+
+    # Compound publication rule — both conditions, checked together, for every category.
+    if capsule_publication_authorized and (real_client_data or client_accessible):
+        reasons.append(
+            "capsule_publication_authorized requires real_client_data=false and "
+            "client_accessible=false"
+        )
+
+    return reasons
+
+
 #: Governed identifier shape shared by the anchor's identity fields.
 _GOVERNED_ID_RE = re.compile(r"^[A-Za-z0-9_.:/-]+$")
 #: Column-width bounds for the anchor's governed fields (mirrors peak/db/models.py).

@@ -72,7 +72,9 @@ from peak.persistence.contracts import ControlledWriteRequest
 from peak.persistence.governance import (
     ALLOWED_ANCHOR_INITIAL_LIFECYCLE,
     ALLOWED_ANCHOR_INITIAL_STATUS,
+    ENGAGEMENT_CATEGORY_INTERNAL_TEST,
     evaluate_engagement_anchor_creation_request,
+    validate_engagement_classification,
 )
 # Reuse the public, DB-free Phase 32 value classifier for the short label/scope fields.
 from peak.reviewer_decisions.governance import classify_prohibited_value_marker
@@ -120,7 +122,8 @@ def _deny(reason_code: str, message: str, **flags) -> EngagementAuthorizationAnc
 
 def _anchor_fingerprint(
     owner_id, client_id, engagement_id, authorization_scope, engagement_label, status,
-    review_status, lifecycle_status,
+    review_status, lifecycle_status, engagement_category, real_client_data, client_accessible,
+    capsule_publication_authorized,
 ) -> str:
     """Deterministic fingerprint of an anchor's governed definition.
 
@@ -136,6 +139,10 @@ def _anchor_fingerprint(
         "status": status,
         "review_status": review_status,
         "lifecycle_status": lifecycle_status,
+        "engagement_category": engagement_category,
+        "real_client_data": bool(real_client_data),
+        "client_accessible": bool(client_accessible),
+        "capsule_publication_authorized": bool(capsule_publication_authorized),
     }
     blob = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
     return hashlib.sha256(blob.encode("utf-8")).hexdigest()
@@ -148,6 +155,8 @@ def _fingerprint_from_request(
         request.owner_id, request.client_id, request.engagement_id,
         request.authorization_scope, draft.engagement_label, draft.status,
         REQUIRED_REVIEW_STATUS, request.lifecycle_status,
+        draft.engagement_category, draft.real_client_data, draft.client_accessible,
+        draft.capsule_publication_authorized,
     )
 
 
@@ -155,6 +164,8 @@ def _fingerprint_from_stored(row: Engagement) -> str:
     return _anchor_fingerprint(
         row.owner_id, row.client_id, row.id, row.authorization_scope,
         row.engagement_label, row.status, row.review_status, row.lifecycle_status,
+        row.engagement_category, row.real_client_data, row.client_accessible,
+        row.capsule_publication_authorized,
     )
 
 
@@ -253,6 +264,22 @@ def _pre_db_validate(
     if len(draft.status) > MAX_STATUS_LEN:
         return _deny("invalid_initial_status", "draft.status exceeds its bound"), None
 
+    # 11. Phase 56 classification. An internal test engagement must be explicitly categorised,
+    #     hold no real client data, be non-client-accessible, and use the reserved client
+    #     namespace; a real client engagement must not use that namespace. The reserved value is
+    #     a visible marker, never the only control.
+    class_reasons = validate_engagement_classification(
+        getattr(draft, "engagement_category", None),
+        getattr(draft, "real_client_data", None),
+        getattr(draft, "client_accessible", None),
+        getattr(draft, "capsule_publication_authorized", None),
+        request.client_id,
+    )
+    if class_reasons:
+        return _deny("invalid_classification",
+                     "engagement classification is not permitted",
+                     reasons=class_reasons), None
+
     return None, draft
 
 
@@ -268,6 +295,10 @@ def _build_record(request: ControlledWriteRequest,
         status=draft.status,
         review_status=REQUIRED_REVIEW_STATUS,   # server-stamped
         lifecycle_status=request.lifecycle_status,
+        engagement_category=draft.engagement_category,
+        real_client_data=bool(draft.real_client_data),
+        client_accessible=bool(draft.client_accessible),
+        capsule_publication_authorized=bool(draft.capsule_publication_authorized),
         created_by=request.requested_by,
         # created_at / updated_at are DB server_default (server-stamped).
         details_json={
@@ -297,6 +328,10 @@ def _receipt_from_existing(existing: Engagement, idem: str, outcome: str
         engagement_status=existing.status,
         review_status=existing.review_status,
         lifecycle_status=existing.lifecycle_status,
+        engagement_category=existing.engagement_category,
+        real_client_data=existing.real_client_data,
+        client_accessible=existing.client_accessible,
+        capsule_publication_authorized=existing.capsule_publication_authorized,
         reasons=["exact authorized replay; existing anchor returned, not modified"],
     )
 
@@ -424,6 +459,10 @@ def persist_engagement_authorization_anchor(
             engagement_status=record.status,
             review_status=record.review_status,
             lifecycle_status=record.lifecycle_status,
+            engagement_category=record.engagement_category,
+            real_client_data=record.real_client_data,
+            client_accessible=record.client_accessible,
+            capsule_publication_authorized=record.capsule_publication_authorized,
             created_at=created_iso,
             database_write_at=created_iso,
             reasons=["created one engagement authorization anchor row"],

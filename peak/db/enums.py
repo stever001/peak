@@ -25,6 +25,18 @@ class AuthorizationScope(str, Enum):
     revoked = "revoked"
 
 
+class EngagementCategory(str, Enum):
+    """What kind of engagement a stored anchor is (Phase 56).
+
+    Orthogonal to ``AuthorizationScope``: the scope answers *who may see this*, the category
+    answers *what kind of record this is*. ``real_client`` is the default so an unclassified row
+    can never be mistaken for an internal test record.
+    """
+
+    real_client = "real_client"
+    internal_test = "internal_test"
+
+
 class ReviewStatus(str, Enum):
     draft = "draft"
     needs_review = "needs_review"

@@ -58,8 +58,11 @@ if REPO_ROOT not in sys.path:
 MYSQL_IDENTIFIER_LIMIT = 64
 
 #: The pinned Alembic head for this baseline. A new migration must update this deliberately.
-EXPECTED_HEAD = "013_governed_identifier_collation_policy"
-EXPECTED_MIGRATION_COUNT = 13
+# Pins the **repository's** migration chain (not production's applied head — the
+# production verifier tracks that separately and still expects 013, because migration
+# 014 has not been applied to production).
+EXPECTED_HEAD = "014_engagement_classification"
+EXPECTED_MIGRATION_COUNT = 14
 
 #: Required MySQL table options on every created table.
 REQUIRED_TABLE_ARGS = {"mysql_engine": "InnoDB", "mysql_charset": "utf8mb4"}
@@ -252,8 +255,8 @@ def check_migration_chain(report: Report) -> None:
     report.check(f"exactly {EXPECTED_MIGRATION_COUNT} migrations present",
                  len(files) == EXPECTED_MIGRATION_COUNT,
                  f"found {len(files)}")
-    report.check("no migration 014 or later added",
-                 not any(re.match(r"^0*(?:1[4-9]|[2-9]\d)_", f) for f in files))
+    report.check("no migration 015 or later added",
+                 not any(re.match(r"^0*(?:1[5-9]|[2-9]\d)_", f) for f in files))
 
     revisions, downs = {}, {}
     for name in files:

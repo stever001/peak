@@ -15,6 +15,7 @@ from typing import Optional
 from sqlalchemy import (
     JSON, Boolean, DateTime, Index, Numeric, String, Text, UniqueConstraint,
 )
+from sqlalchemy import false as sa_false, true as sa_true
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .base import MYSQL_TABLE_ARGS, AuditMixin, Base, GovernanceMixin, GovernedString
@@ -36,6 +37,18 @@ class Engagement(Base, GovernanceMixin, AuditMixin):
     client_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
     engagement_label: Mapped[Optional[str]] = mapped_column(String(255))
     status: Mapped[Optional[str]] = mapped_column(String(32))  # prospective/active/on_hold/complete/closed
+    # Phase 56 classification — real columns, never JSON/label/scope/id-prefix. `engagement_category`
+    # is governed (byte-exact) so a case variant can never read as the same category. Defaults are
+    # the safe direction: an unclassified row is a real client engagement, not a hidden test record.
+    engagement_category: Mapped[str] = mapped_column(
+        GovernedString(24), index=True, nullable=False, default="real_client",
+        server_default="real_client")  # real_client / internal_test
+    real_client_data: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=sa_true())
+    client_accessible: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=sa_true())
+    capsule_publication_authorized: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=sa_false())
 
 
 class EngagementRecord(Base, GovernanceMixin, AuditMixin):

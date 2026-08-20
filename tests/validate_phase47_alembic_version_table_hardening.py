@@ -8,7 +8,7 @@ source so a *fresh* MySQL/MariaDB bootstrap no longer needs that manual step.
 
 Seven layers:
 
-* **Baseline** — head is still 013, there are still 13 migrations and 18 tables, no migration 014
+* **Baseline** — head is 014, there are 14 migrations and 18 tables, no migration 015
   appeared, no model/entity, writer, or allowlist pair was added, and no revision id was rewritten.
 
 * **Revision widths** — the five known long identifiers are detected at their exact lengths, every
@@ -67,14 +67,14 @@ MODELS = "peak/db/models.py"
 AUDIT = "tools/governed_mysql_collation_audit.py"
 VERIFIER = "tools/production_mysql_collation_verify.py"
 
-EXPECTED_MIGRATIONS = 13
+EXPECTED_MIGRATIONS = 14
 EXPECTED_TABLE_COUNT = 18
 EXPECTED_WRITERS = 12
 EXPECTED_ALLOWLIST_TABLES = 13
 EXPECTED_ALLOWLIST_ACTIONS = 15
 MINIMUM_VERSION_NUM_LENGTH = 255
 ALEMBIC_DEFAULT_WIDTH = 32
-HEAD_REVISION = "013_governed_identifier_collation_policy"
+HEAD_REVISION = "014_engagement_classification"
 
 # The identifiers that broke Phase 46, with the lengths that broke it.
 KNOWN_LONG_REVISIONS = {
@@ -181,12 +181,12 @@ def git(*args: str) -> str:
 
 
 def baseline_checks() -> None:
-    print("\n1. Baseline: head still 013, 13 migrations, 18 tables, nothing new added")
+    print("\n1. Baseline: head is 014, 14 migrations, 18 tables, nothing new added")
     versions_dir = os.path.join(REPO_ROOT, VERSIONS_REL)
     versions = sorted(f for f in os.listdir(versions_dir) if f.endswith(".py"))
     check(f"exactly {EXPECTED_MIGRATIONS} migrations", len(versions) == EXPECTED_MIGRATIONS)
-    check("no migration 014 or later",
-          not any(re.match(r"^0*(?:1[4-9]|[2-9]\d)_", f) for f in versions))
+    check("no migration 015 or later",
+          not any(re.match(r"^0*(?:1[5-9]|[2-9]\d)_", f) for f in versions))
     check(f"{HEAD_REVISION} is still the newest migration",
           versions[-1] == f"{HEAD_REVISION}.py")
 
@@ -248,9 +248,11 @@ def baseline_checks() -> None:
               len(ALLOWED_TABLES) == 13 and len(ALLOWED_ACTIONS) == 15
               and "engagements" in PROHIBITED_TABLES and "clients" in PROHIBITED_TABLES
               and "engagements" not in ALLOWED_TABLES)
-        check("no DB model source changed",
-              not [c for c in git("diff", "--name-only", "HEAD", "--", "peak").splitlines()
-                   if c.endswith("peak/db/models.py")])
+        # The model file was frozen here until Phase 56, which legitimately owns the engagement
+        # classification columns and migration 014. The substantive invariant — the table count is
+        # unchanged, so no table was added — is asserted directly instead.
+        check("no DB table was added (model table count unchanged)",
+              read("peak/db/models.py").count("__tablename__ = ") == EXPECTED_TABLE_COUNT)
         migrations_changed = git("diff", "--name-only", "HEAD", "--", VERSIONS_REL)
         check("no existing migration file was edited or rewritten", not migrations_changed)
         docx = git("diff", "--name-only", "HEAD", "--", "docs/Peak_Investor_Overview_AI.docx")

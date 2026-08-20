@@ -53,8 +53,8 @@ HARNESS = "tests/validate_phase41_managed_mysql_production_parity.py"
 REQUIRED_FILES = [TOOL, PHASE34_TOOL, DOC, HARNESS]
 COMPILE_FILES = [TOOL, HARNESS]
 
-ALEMBIC_HEAD = "013_governed_identifier_collation_policy"
-EXPECTED_MIGRATIONS = 13
+ALEMBIC_HEAD = "014_engagement_classification"
+EXPECTED_MIGRATIONS = 14
 EXPECTED_TABLE_COUNT = 18
 MYSQL_IDENTIFIER_LIMIT = 64
 
@@ -398,10 +398,10 @@ def regression_checks() -> None:
     versions = sorted(f for f in os.listdir(os.path.join(REPO_ROOT, "alembic", "versions"))
                       if f.endswith(".py"))
     check(f"exactly {EXPECTED_MIGRATIONS} migrations", len(versions) == EXPECTED_MIGRATIONS)
-    check("no migration 014 or later",
-          not any(re.match(r"^0*(?:1[4-9]|[2-9]\d)_", f) for f in versions))
+    check("no migration 015 or later",
+          not any(re.match(r"^0*(?:1[5-9]|[2-9]\d)_", f) for f in versions))
     check(f"{ALEMBIC_HEAD} is still the newest migration",
-          versions[-1].startswith("013_governed_identifier_collation_policy"))
+          versions[-1].startswith(ALEMBIC_HEAD))
 
     from peak.persistence.allowlist import ALLOWED_ACTIONS, ALLOWED_TABLES
     check("allowlist still has exactly 13 tables", len(ALLOWED_TABLES) == 13)

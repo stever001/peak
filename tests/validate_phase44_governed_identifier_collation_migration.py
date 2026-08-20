@@ -65,9 +65,15 @@ HARNESS = "tests/validate_phase44_governed_identifier_collation_migration.py"
 MODELS = "peak/db/models.py"
 BASE = "peak/db/base.py"
 
-EXPECTED_MIGRATIONS = 13
+EXPECTED_MIGRATIONS = 14
 EXPECTED_TABLE_COUNT = 18
+#: Columns migration 013 itself pins. Phase 56's migration 014 creates one further
+#: governed column (`engagements.engagement_category`) already pinned at creation, so
+#: the *model* now carries 212 — see EXPECTED_MODEL_GOVERNED_COLUMNS.
 EXPECTED_GOVERNED_COLUMNS = 211
+EXPECTED_MODEL_GOVERNED_COLUMNS = 212
+#: Governed columns created already-pinned by a migration later than 013.
+LATER_PINNED = {("engagements", "engagement_category")}
 EXPECTED_BOUNDARY_TABLES = 11
 GOVERNED_COLLATION = "utf8mb4_bin"
 MYSQL_IDENTIFIER_LIMIT = 64
@@ -162,10 +168,12 @@ def baseline_checks() -> None:
     versions = sorted(f for f in os.listdir(versions_dir) if f.endswith(".py"))
     check(f"exactly {EXPECTED_MIGRATIONS} migrations", len(versions) == EXPECTED_MIGRATIONS)
     check(f"{MIGRATION_REL} exists", os.path.isfile(os.path.join(REPO_ROOT, MIGRATION_REL)))
-    check(f"{MIGRATION_NAME} is the newest migration",
-          versions[-1] == f"{MIGRATION_NAME}.py")
-    check("no migration 014 or later",
-          not any(re.match(r"^0*(?:1[4-9]|[2-9]\d)_", f) for f in versions))
+    # Phase 44 owns 013; the invariant is that it still exists in the chain, not that it stays
+    # newest — Phase 56 legitimately appended 014 after it.
+    check(f"{MIGRATION_NAME} is still present in the chain",
+          f"{MIGRATION_NAME}.py" in versions)
+    check("no migration 015 or later",
+          not any(re.match(r"^0*(?:1[5-9]|[2-9]\d)_", f) for f in versions))
     try:
         py_compile.compile(os.path.join(REPO_ROOT, MIGRATION_REL), doraise=True)
         check(f"{MIGRATION_REL} compiles", True)
@@ -321,17 +329,23 @@ def coverage_checks() -> None:
             else:
                 excluded[(table.name, column.name)] = policy
 
-    missing = sorted(set(model_governed) - set(mapped))
+    missing = sorted(set(model_governed) - set(mapped) - LATER_PINNED)
     extra = sorted(set(mapped) - set(model_governed))
-    check(f"every governed model column is in the migration ({len(model_governed)} expected)",
+    check(f"every governed model column is pinned by 013 or a later migration "
+          f"({len(model_governed)} governed columns in the model)",
           not missing)
     if missing:
         print(f"        missing: {missing[:6]}")
+    check("every later-pinned column is created with the governed collation in its migration",
+          all(f'"{col}"' in read("alembic/versions/014_engagement_classification.py")
+              and "GOVERNED_COLLATION" in read(
+                  "alembic/versions/014_engagement_classification.py")
+              for _tbl, col in LATER_PINNED))
     check("every migration-mapped column exists in the model as governed", not extra)
     if extra:
         print(f"        extra: {extra[:6]}")
-    check(f"governed count is exactly {EXPECTED_GOVERNED_COLUMNS}",
-          len(model_governed) == EXPECTED_GOVERNED_COLUMNS)
+    check(f"model governed count is exactly {EXPECTED_MODEL_GOVERNED_COLUMNS}",
+          len(model_governed) == EXPECTED_MODEL_GOVERNED_COLUMNS)
 
     mismatched = [k for k in mapped if k in model_governed and mapped[k] != model_governed[k]]
     check("length and nullability match the model for every mapped column", not mismatched)
@@ -409,8 +423,8 @@ def model_policy_checks() -> None:
             elif collation:
                 wrongly += 1
 
-    check(f"exactly {EXPECTED_GOVERNED_COLUMNS} governed columns pin {GOVERNED_COLLATION}",
-          pinned == EXPECTED_GOVERNED_COLUMNS)
+    check(f"exactly {EXPECTED_MODEL_GOVERNED_COLUMNS} governed columns pin {GOVERNED_COLLATION}",
+          pinned == EXPECTED_MODEL_GOVERNED_COLUMNS)
     check("no governed column is left unpinned", unpinned == 0)
     check("no non-governed column was forced into a binary collation", wrongly == 0)
     check(f"all {EXPECTED_BOUNDARY_TABLES} idempotency-boundary tables are covered",
@@ -511,9 +525,9 @@ def tooling_checks() -> None:
               "must still be executed against production" in audit.stdout)
         check("audit points at the read-only production verifier",
               "production-mysql-collation-verify" in audit.stdout)
-        check(f"audit reports 0 unpinned of {EXPECTED_GOVERNED_COLUMNS} governed",
+        check(f"audit reports 0 unpinned of {EXPECTED_MODEL_GOVERNED_COLUMNS} governed",
               re.search(r"unpinned\s*:\s*0", audit.stdout) is not None
-              and re.search(rf"governed\s*:\s*{EXPECTED_GOVERNED_COLUMNS}", audit.stdout)
+              and re.search(rf"governed\s*:\s*{EXPECTED_MODEL_GOVERNED_COLUMNS}", audit.stdout)
               is not None)
         again = subprocess.run([venv, os.path.join(REPO_ROOT, AUDIT)],
                                capture_output=True, text=True, cwd=REPO_ROOT, env=env, timeout=180)

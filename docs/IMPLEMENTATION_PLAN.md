@@ -1678,6 +1678,28 @@ enablement, no schema/model/writer/allowlist change):**
   their permanence understood, and runtime still holds no `DELETE` so cleanup cannot be assumed. See
   [`PHASE55_INTERNAL_TEST_ENGAGEMENT_CLASSIFICATION.md`](PHASE55_INTERNAL_TEST_ENGAGEMENT_CLASSIFICATION.md).
 
+**Internal Test Engagement Support (Phase 56 — schema + writer classification; no records created,
+no writer enabled, no production migration, no capsule published):**
+
+- [x] **Migration `014_engagement_classification`** adds `engagement_category` (governed string;
+  `real_client` / `internal_test`), `real_client_data`, `client_accessible`, and
+  `capsule_publication_authorized` as **real columns** on `engagements`. Additive, reversible, no
+  INSERT/seed data. **18 tables and 12 writers unchanged**; `Client` untouched.
+- [x] **Defaults point the safe way** — an unclassified row is a real client engagement, and
+  publication is never granted by default.
+- [x] **The anchor writer validates the classification** before opening any connection.
+  `internal_test` requires no real client data, non-client-accessibility, and a **reserved
+  `client_id` namespace** (`99999` / reserved prefix) — a visible marker that is deliberately not
+  the whole control. The rule is **bidirectional**: a real client engagement may not use it.
+- [x] **Publication requires explicit authorization AND no real client data**, checked together;
+  real client engagements may not authorize publication here at all.
+- [x] **Writer stays create-only** — `engagements` only, no `UPDATE`/`DELETE`/merge/bulk/raw SQL,
+  `SELECT` + `INSERT` sufficient, leak-free receipts. Classification joins the replay fingerprint,
+  so a changed classification under the same anchor id is a conflict, never an overwrite.
+- [ ] **Next: read-side isolation is still to build** — `client_accessible` is the contract, not the
+  enforcement — and the first internal test engagement creation remains a **separately approved
+  future phase**. Production is still at migration 013; 014 has not been applied there.
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

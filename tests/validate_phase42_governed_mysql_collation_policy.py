@@ -59,8 +59,8 @@ HARNESS = "tests/validate_phase42_governed_mysql_collation_policy.py"
 REQUIRED_FILES = [AUDIT, PARITY, DOC, HARNESS]
 COMPILE_FILES = [AUDIT, HARNESS]
 
-ALEMBIC_HEAD = "013_governed_identifier_collation_policy"
-EXPECTED_MIGRATIONS = 13
+ALEMBIC_HEAD = "014_engagement_classification"
+EXPECTED_MIGRATIONS = 14
 EXPECTED_TABLE_COUNT = 18
 AUDIT_TARGET = "mysql-collation-audit"
 STAGING_TARGET = "mysql-parity-staging"
@@ -413,10 +413,10 @@ def scope_checks() -> None:
     check("migration 013 is exactly the one Phase 42 specified",
           [f for f in versions if f.startswith("013")]
           == ["013_governed_identifier_collation_policy.py"])
-    check("no migration 014 or later of any name",
-          not any(re.match(r"^0*(?:1[4-9]|[2-9]\d)_", f) for f in versions))
+    check("no migration 015 or later of any name",
+          not any(re.match(r"^0*(?:1[5-9]|[2-9]\d)_", f) for f in versions))
     check(f"{ALEMBIC_HEAD} is still the newest migration",
-          versions[-1].startswith("013_governed_identifier_collation_policy"))
+          versions[-1].startswith(ALEMBIC_HEAD))
 
     try:
         changed = subprocess.run(

@@ -225,3 +225,17 @@ writer validation — and creates no records.** Until then this writer stands as
 no-write / no-enablement decision remains in force, and the first production anchor — internal test
 or real client — remains separately approved future work. See
 [`PHASE55_INTERNAL_TEST_ENGAGEMENT_CLASSIFICATION.md`](PHASE55_INTERNAL_TEST_ENGAGEMENT_CLASSIFICATION.md).
+
+---
+
+## 13. Phase 56 update — the writer now classifies (still no records)
+
+Phase 56 extended this writer with the classification §12 said was missing, and **created no
+records**. The draft now accepts `engagement_category`, `real_client_data`, `client_accessible`, and
+`capsule_publication_authorized`; the writer validates them before opening any connection, persists
+them to the migration-014 columns, and reports them on the receipt.
+
+Everything in §1–§11 still holds: create-only, `engagements` only, no `UPDATE`/`DELETE`, `SELECT` +
+`INSERT` sufficient, leak-free receipts, and the single anchor pair. The fingerprint now covers the
+classification, so a changed classification under the same anchor id is a conflict rather than an
+overwrite. See [`PHASE56_INTERNAL_TEST_ENGAGEMENT_SUPPORT.md`](PHASE56_INTERNAL_TEST_ENGAGEMENT_SUPPORT.md).

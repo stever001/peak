@@ -8,7 +8,7 @@ variable so the two credentials cannot collapse into one name.
 
 Six layers:
 
-* **Baseline** — head is still 013, 13 migrations, 18 tables, no migration 014, no
+* **Baseline** — head is 014, 14 migrations, 18 tables, no migration 014, no
   ``alembic/versions`` file touched, and no model/entity, writer, or allowlist pair added.
 
 * **Role split** — runtime session code reads ``PEAK_RUNTIME_DATABASE_URL`` and nothing else;
@@ -64,12 +64,12 @@ RUNTIME_VAR = "PEAK_RUNTIME_DATABASE_URL"
 MIGRATION_VAR = "PEAK_DATABASE_URL"
 VERIFY_VAR = "PEAK_PRODUCTION_DB_URL"
 
-EXPECTED_MIGRATIONS = 13
+EXPECTED_MIGRATIONS = 14
 EXPECTED_TABLE_COUNT = 18
 EXPECTED_WRITERS = 12
 EXPECTED_ALLOWLIST_TABLES = 13
 EXPECTED_ALLOWLIST_ACTIONS = 15
-HEAD_REVISION = "013_governed_identifier_collation_policy"
+HEAD_REVISION = "014_engagement_classification"
 
 ALLOWED_CHANGED = {
     SESSION_REL,
@@ -173,12 +173,12 @@ def run_isolated(snippet: str):
 
 
 def baseline_checks() -> None:
-    print("\n1. Baseline: head still 013, 13 migrations, 18 tables, nothing new added")
+    print("\n1. Baseline: head is 014, 14 migrations, 18 tables, nothing new added")
     versions_dir = os.path.join(REPO_ROOT, "alembic", "versions")
     versions = sorted(f for f in os.listdir(versions_dir) if f.endswith(".py"))
     check(f"exactly {EXPECTED_MIGRATIONS} migrations", len(versions) == EXPECTED_MIGRATIONS)
-    check("no migration 014 or later",
-          not any(re.match(r"^0*(?:1[4-9]|[2-9]\d)_", f) for f in versions))
+    check("no migration 015 or later",
+          not any(re.match(r"^0*(?:1[5-9]|[2-9]\d)_", f) for f in versions))
     check(f"{HEAD_REVISION} is still the newest migration",
           versions[-1] == f"{HEAD_REVISION}.py")
 
@@ -225,8 +225,6 @@ def baseline_checks() -> None:
               not git("diff", "--name-only", "HEAD", "--", "alembic/versions"))
         check("alembic/env.py was not modified by this phase",
               not git("diff", "--name-only", "HEAD", "--", ENV_REL))
-        check("the production verifier was not modified",
-              not git("diff", "--name-only", "HEAD", "--", VERIFIER_REL))
         # Unconditional invariants — these are not authoring-time scope, they are the properties
         # Phase 49 promises regardless of when this harness runs.
         # Authoring-time claim about *this* phase's own working tree, not a permanent freeze
@@ -241,6 +239,10 @@ def baseline_checks() -> None:
                         or c in ("peak/db/models.py", "peak/db/base.py",
                                  "peak/persistence/allowlist.py")]
             check("no controlled writer, model, base, or allowlist source changed", not governed)
+        # Working-tree freezes on shared files were authoring-time claims about this phase.
+        # Phase 56 legitimately owns migration 014, the engagement classification model
+        # columns, and the repo-side head pin in the parity tool. The substantive
+        # invariants each harness cares about are asserted directly elsewhere.
         check("schemas/, prompts/, agents/ untouched",
               not git("diff", "--name-only", "HEAD", "--", "schemas", "prompts", "agents"))
         check("docs/Peak_Investor_Overview_AI.docx has no pending diff",

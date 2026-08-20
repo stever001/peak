@@ -64,8 +64,12 @@ POLICY_DOC = "docs/GOVERNED_MYSQL_COLLATION_POLICY.md"
 HARNESS = "tests/validate_phase43_production_mysql_collation_verification.py"
 REQUIRED_FILES = [TOOL, AUDIT, DOC, POLICY_DOC, HARNESS]
 
-ALEMBIC_HEAD = "013_governed_identifier_collation_policy"
-EXPECTED_MIGRATIONS = 13
+ALEMBIC_HEAD = "014_engagement_classification"
+#: The head the *production* verifier expects, which is deliberately still 013: Phase 56
+#: added migration 014 to the repository but it has not been applied to production. The
+#: fake cursor below simulates production, so it must report this, not the repo head.
+PRODUCTION_ALEMBIC_HEAD = "013_governed_identifier_collation_policy"
+EXPECTED_MIGRATIONS = 14
 EXPECTED_TABLE_COUNT = 18
 EXPECTED_BOUNDARY_TABLES = 11
 
@@ -380,7 +384,7 @@ class _FakeCursor:
         elif "SCHEMATA" in sql:
             self._rows = [("utf8mb4", self.collation)]
         elif "alembic_version" in sql:
-            self._rows = [(ALEMBIC_HEAD,)]
+            self._rows = [(PRODUCTION_ALEMBIC_HEAD,)]
         elif "INFORMATION_SCHEMA.TABLES" in sql:
             self._rows = [(m.__tablename__, self.collation) for m in self.models]
         elif "INFORMATION_SCHEMA.COLUMNS" in sql:
@@ -519,7 +523,7 @@ def scope_checks() -> None:
           [f for f in versions if f.startswith("013")]
           == ["013_governed_identifier_collation_policy.py"])
     check(f"{ALEMBIC_HEAD} is still the newest migration",
-          versions[-1].startswith("013_governed_identifier_collation_policy"))
+          versions[-1].startswith(ALEMBIC_HEAD))
 
     try:
         changed = subprocess.run(

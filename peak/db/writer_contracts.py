@@ -1033,6 +1033,12 @@ class EngagementAuthorizationAnchorDraft:
     status: str = "prospective"               # allowed initial engagement status only
     review_status: str = "needs_review"
     lifecycle_status: str = "active"
+    # Phase 56 classification. Defaults describe a real client engagement, so a caller that says
+    # nothing cannot accidentally create a hidden internal test record.
+    engagement_category: str = "real_client"          # real_client / internal_test
+    real_client_data: bool = True
+    client_accessible: bool = True
+    capsule_publication_authorized: bool = False
     warnings: List[str] = field(default_factory=list)
 
 
@@ -1069,6 +1075,11 @@ class EngagementAuthorizationAnchorWriteReceipt:
     engagement_status: Optional[str] = None
     review_status: Optional[str] = None
     lifecycle_status: Optional[str] = None
+    # Phase 56 classification — safe closed-vocabulary labels and booleans, never free text.
+    engagement_category: Optional[str] = None
+    real_client_data: Optional[bool] = None
+    client_accessible: Optional[bool] = None
+    capsule_publication_authorized: Optional[bool] = None
     # Non-effect flags — always False (Phase 54 approves/publishes/executes nothing).
     other_table_write_made: bool = False
     client_record_write_made: bool = False

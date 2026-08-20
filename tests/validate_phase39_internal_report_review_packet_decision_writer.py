@@ -258,11 +258,12 @@ def structural_checks() -> None:
           mig.split("def downgrade")[1].count("op.drop_table(") == 1)
     versions = sorted(f for f in os.listdir(os.path.join(REPO_ROOT, "alembic", "versions"))
                       if f.endswith(".py"))
-    # Phase 44 added migration 013 (governed collation). The guarantee preserved here is that
-    # 012 remains this writer's own migration and nothing unplanned was inserted after it.
-    check("012 remains this phase's migration and 013 is the current newest",
+    # Phase 44 added migration 013 (governed collation) and Phase 56 added 014 (engagement
+    # classification). The guarantee preserved here is that 012 remains this writer's own
+    # migration and that later migrations only ever append after it.
+    check("012 remains this phase's migration and later migrations append after it",
           any(v.startswith("012_internal_report_review_packet_decisions") for v in versions)
-          and versions[-1].startswith("013_governed_identifier_collation_policy"))
+          and versions[-1] > "012_internal_report_review_packet_decisions")
     downs = [re.search(r'down_revision\s*=\s*"?([^"\s]+)"?',
                        read(os.path.join("alembic", "versions", f))).group(1) for f in versions]
     check("migration chain stays linear (no duplicate down_revision)",

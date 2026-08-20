@@ -83,7 +83,7 @@ REPORTS_FILES = [
 #: The head Phase 40 was built on and records in its own doc. Historical and correct as written.
 ALEMBIC_HEAD = "012_internal_report_review_packet_decisions"
 #: The current newest migration. Phase 44 added 013 (governed collation).
-CURRENT_HEAD = "013_governed_identifier_collation_policy"
+CURRENT_HEAD = "014_engagement_classification"
 DECISION_TABLE = "internal_report_review_packet_decisions"
 PACKET_TABLE = "internal_report_review_packets"
 DRAFT_TABLE = "internal_assessment_report_drafts"
@@ -417,11 +417,11 @@ def _baseline_regressions() -> None:
     print("\n7. Baseline regressions: no new table / model / migration / allowlist pair / writer")
     versions_dir = os.path.join(REPO_ROOT, "alembic", "versions")
     versions = sorted(f for f in os.listdir(versions_dir) if f.endswith(".py"))
-    check("no migration 014 (or later) added",
-          not any(re.match(r"^0*1[4-9]_|^0*[2-9]\d_", f) for f in versions))
+    check("no migration 015 (or later) added",
+          not any(re.match(r"^0*1[5-9]_|^0*[2-9]\d_", f) for f in versions))
     check(f"{CURRENT_HEAD} is the newest migration",
-          versions[-1].startswith("013_governed_identifier_collation_policy"))
-    check("exactly 13 migrations", len(versions) == 13)
+          versions[-1].startswith("014_engagement_classification"))
+    check("exactly 14 migrations", len(versions) == 14)
 
     from peak.persistence.allowlist import ALLOWED_ACTIONS, ALLOWED_TABLES
     check("allowlist still has exactly 13 tables", len(ALLOWED_TABLES) == 13)

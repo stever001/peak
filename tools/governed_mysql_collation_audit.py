@@ -121,6 +121,11 @@ EXACT_CLASS = {
     # Short closed-vocabulary labels, not free text and not refs.
     "approval_decision": GOVERNED_ENUM,
     "note_source": GOVERNED_ENUM,
+    # Phase 56: the engagement classification axis (real_client / internal_test). Classed as a
+    # governed *scope* rather than a plain enum: its comparison decides client isolation and
+    # publication eligibility, so a case-insensitive match would change authorization
+    # behavior, not just presentation. Deterministic collation is required, not preferred.
+    "engagement_category": GOVERNED_SCOPE,
 }
 
 #: Suffix/substring patterns, applied in order when no exact name matches.
