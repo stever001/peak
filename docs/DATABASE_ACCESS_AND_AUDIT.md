@@ -443,3 +443,35 @@ posture belongs in the authorization decision for the first production anchor ra
 The Phase 51 no-write / no-enablement decision remains in force and the first production anchor
 creation remains separately approved future work. See
 [`PHASE54_CONTROLLED_ENGAGEMENT_AUTHORIZATION_ANCHOR_WRITER.md`](PHASE54_CONTROLLED_ENGAGEMENT_AUTHORIZATION_ANCHOR_WRITER.md).
+
+## Phase 55 — internal test engagements must be isolated by classification, not convention
+
+Phase 55 defines a future category of governed record: **durable internal test / training
+engagements**. It creates none, enables no writer, and contacts no database.
+
+For access control the requirement is specific: **real clients must not be able to query, view,
+list, infer, or join into internal test engagements** — and aggregates, counts, search results,
+exports, and error messages all count as exposure. That isolation must be enforced by an explicit
+classification predicate in whatever read path is eventually built, **not** by a `client_id` prefix,
+a label, or any naming convention.
+
+Two properties of the current design matter here:
+
+**Isolation today is write-side only.** Option A scopes every controlled write to
+`(owner_id, client_id, engagement_id)` and its stored anchor. **No client-facing read or query path
+exists in the repository at all**, so nothing can leak today — but there is also no read-side
+isolation to inherit, which is why it has to be designed alongside the classification columns.
+
+**There is no governed client registry to reserve from.** `clients` is never writable by any
+controlled path, so an internal-test `client_id` cannot be reserved in the database. Collision
+avoidance with real client records must therefore be guaranteed by the creation packet and stated
+explicitly before the first such record exists.
+
+Capsule publication for these records is permitted only under a compound rule: the engagement must
+be **explicitly classified as authorized for publication** *and* **contain no real client data** —
+both, checked at publication time. Nothing is published today; publication remains deferred.
+
+Runtime still holds no `DELETE`, so these records are durable — which suits their intent, and is
+exactly why disposable synthetic smoke records remain disallowed. The Phase 51 no-write /
+no-enablement decision remains in force. See
+[`PHASE55_INTERNAL_TEST_ENGAGEMENT_CLASSIFICATION.md`](PHASE55_INTERNAL_TEST_ENGAGEMENT_CLASSIFICATION.md).

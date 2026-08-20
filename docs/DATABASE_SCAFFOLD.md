@@ -301,3 +301,31 @@ It is the governed code path Phase 53 identified as missing: every other writer 
 The Phase 51 no-write / no-enablement decision is unchanged, and the first production anchor
 creation remains separately approved future work. See
 [`PHASE54_CONTROLLED_ENGAGEMENT_AUTHORIZATION_ANCHOR_WRITER.md`](PHASE54_CONTROLLED_ENGAGEMENT_AUTHORIZATION_ANCHOR_WRITER.md).
+
+## Phase 55 — classifying durable internal test engagements (planning only)
+
+Phase 55 is **plan and classification only**: no production write, no writer enablement, no
+engagement record of any kind, no intake note, no synthetic smoke record, no capsule published. Head
+stays at `013_governed_identifier_collation_policy`; 13 migrations, 18 tables, and 12 writers are
+unchanged, and there is **no migration 014 and no model change**.
+
+Peak will eventually keep a small number of **durable internal test / training engagements** — used
+for training, live testing, and demonstration, retained deliberately, never client-accessible, and
+carrying no real client data unless separately and explicitly authorized. They are a distinct
+category from disposable synthetic smoke records (still disallowed) and from the in-memory synthetic
+fixtures the harnesses build.
+
+Inspection found the scaffold cannot express that yet:
+
+- **`Engagement` has no classification columns.** It carries `id`, `client_id`, `engagement_label`,
+  `status` plus the governance/audit mixins — and none of the `client_facing_approved` /
+  `capsule_candidate_ready` / `publication_allowed` real booleans that eight other record tables use.
+- **No workaround is sound.** `authorization_scope` would be overloaded onto an orthogonal axis;
+  `fixture_test` is refused for anchors because they need live client/engagement identity;
+  `engagement_label` and `id`-prefix conventions are too fragile to carry governance; and
+  `details_json` is documented as non-governance detail only.
+
+**Recommended next phase: Phase 56 adds the governed classification columns, extends the anchor
+writer to validate them, and creates no records.** The Phase 51 no-write / no-enablement decision is
+unchanged. See
+[`PHASE55_INTERNAL_TEST_ENGAGEMENT_CLASSIFICATION.md`](PHASE55_INTERNAL_TEST_ENGAGEMENT_CLASSIFICATION.md).

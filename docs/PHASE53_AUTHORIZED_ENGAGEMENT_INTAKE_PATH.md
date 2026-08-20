@@ -256,3 +256,23 @@ force, Phase 50 connectivity remains prerequisite evidence rather than write per
 smoke-writing remains disallowed unless separately approved, and the first production anchor
 creation — with the §7 fields named in advance — remains separately approved future work. See
 [`PHASE54_CONTROLLED_ENGAGEMENT_AUTHORIZATION_ANCHOR_WRITER.md`](PHASE54_CONTROLLED_ENGAGEMENT_AUTHORIZATION_ANCHOR_WRITER.md).
+
+---
+
+## 13. Phase 55 update — a second engagement category is planned (still no record created)
+
+Phase 55 defined a future category this document did not anticipate: **durable internal test /
+training engagements**, kept deliberately for training, live testing, and demonstration. They are
+governed records in the managed database — **not** disposable synthetic smoke records, which remain
+disallowed — and they must never be accessible to real clients or contain real client data unless
+separately and explicitly authorized.
+
+This does not change anything above. The authorization anchor is still a stored `Engagement` row
+with a populated `authorization_scope`; the intake note writer still requires it; and the intake
+note writer remains the recommended first real operational writer once an anchor exists — for an
+internal test engagement just as for a real client one.
+
+Phase 55 found that neither the `Engagement` model nor the Phase 54 writer can classify such a
+record today, so **Phase 56 should add classification support and create no records**. **No
+production write has occurred**, and the Phase 51 no-write / no-enablement decision stands. See
+[`PHASE55_INTERNAL_TEST_ENGAGEMENT_CLASSIFICATION.md`](PHASE55_INTERNAL_TEST_ENGAGEMENT_CLASSIFICATION.md).

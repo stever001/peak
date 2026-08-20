@@ -199,3 +199,29 @@ cheap and non-mutating.
 - No `~/.peak` operator credential file was sourced or read; `.env` was not read; no secret store
   was searched; the migration credential was not used.
 - `make validate` stays offline and credential-free; the live gates remain opt-in.
+
+---
+
+## 12. Phase 55 update — classification is the next gap (still no record created)
+
+Phase 55 examined whether this writer can classify an engagement as a **durable internal test /
+training engagement**. It cannot, and that is the next gap to close. **No record was created.**
+
+The anchor draft accepts `owner_id`, `client_id`, `engagement_id`, `authorization_scope`,
+`engagement_label`, `status`, `review_status`, `lifecycle_status` — and no classification field. The
+`Engagement` model likewise carries no category, client-visibility, real-client-data, or
+capsule-publication column, unlike the eight record tables that carry those as real booleans.
+
+Phase 55 rejected every no-schema-change workaround: `authorization_scope` would be overloaded (it
+answers *who may see this*, not *what kind of record this is*); `fixture_test` is refused outright
+for anchors because they require live client/engagement identity; `engagement_label` and `id`-prefix
+conventions are too fragile to carry governance; and `details_json` is documented as
+non-governance-only.
+
+**Recommended next phase: Phase 56 adds internal-test classification support — schema, model, and
+writer validation — and creates no records.** Until then this writer stands as built.
+
+**Existing is not permission to write.** This writer's existence authorizes nothing; the Phase 51
+no-write / no-enablement decision remains in force, and the first production anchor — internal test
+or real client — remains separately approved future work. See
+[`PHASE55_INTERNAL_TEST_ENGAGEMENT_CLASSIFICATION.md`](PHASE55_INTERNAL_TEST_ENGAGEMENT_CLASSIFICATION.md).

@@ -1646,6 +1646,38 @@ schema or migration change):**
   separately approved, and runtime still holds no `DELETE` so cleanup cannot be assumed. See
   [`PHASE54_CONTROLLED_ENGAGEMENT_AUTHORIZATION_ANCHOR_WRITER.md`](PHASE54_CONTROLLED_ENGAGEMENT_AUTHORIZATION_ANCHOR_WRITER.md).
 
+**Internal Test Engagement Classification (Phase 55 — plan and classification only; no engagement
+record of any kind, no intake note, no synthetic smoke record, no capsule published, no writer
+enablement, no schema/model/writer/allowlist change):**
+
+- [x] **A fourth record category is named.** Peak will eventually keep a small number of **durable
+  internal test / training engagements** — for training, live testing, and demonstration; retained
+  deliberately; **never client-accessible**; carrying **no real client data** unless separately and
+  explicitly authorized; optionally authorized for capsule publication when explicitly classified.
+  They are distinct from real client engagements, from disposable synthetic smoke records (still
+  disallowed), and from the in-memory synthetic fixtures the harnesses build.
+- [x] **The current model cannot classify them.** `Engagement` carries `id`, `client_id`,
+  `engagement_label`, `status` plus the governance/audit mixins — and none of the
+  `client_facing_approved` / `capsule_candidate_ready` / `publication_allowed` real booleans that
+  eight other record tables carry.
+- [x] **The Phase 54 writer cannot either.** Its draft accepts no classification field, so there is
+  nothing for it to validate or refuse.
+- [x] **Every no-schema workaround was rejected, with reasons.** `authorization_scope` would be
+  overloaded onto an orthogonal axis (it answers *who may see this*, not *what kind of record this
+  is*); `fixture_test` is refused for anchors because they require live client/engagement identity
+  (verified, not assumed); `engagement_label` and `id`-prefix conventions are too fragile to carry
+  governance; `details_json` is documented as non-governance detail only.
+- [x] **Isolation must be by classification, not convention**, and no client-facing read path exists
+  yet to leak through — but `clients` is never writable, so there is no governed registry from which
+  to reserve a non-colliding internal-test `client_id`. The creation packet must guarantee that.
+- [ ] **Next: Phase 56 should add internal-test classification support — schema, model, and writer
+  validation — and create no records.** Preparing the first creation packet is the phase after that,
+  and executing it remains separately approved work.
+- [x] **Phase 51 no-write / no-enablement is unchanged**, the Phase 54 writer's existence is **not**
+  permission to write, synthetic smoke records remain disallowed unless separately approved with
+  their permanence understood, and runtime still holds no `DELETE` so cleanup cannot be assumed. See
+  [`PHASE55_INTERNAL_TEST_ENGAGEMENT_CLASSIFICATION.md`](PHASE55_INTERNAL_TEST_ENGAGEMENT_CLASSIFICATION.md).
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

@@ -170,3 +170,28 @@ What Phase 53 established:
 Path 2 of §5 (a synthetic/administrative smoke-write) remains unchosen and disallowed unless
 separately approved; §4 still applies to it in full — runtime holds no `DELETE`, so such a record is
 durable. See [`PHASE53_AUTHORIZED_ENGAGEMENT_INTAKE_PATH.md`](PHASE53_AUTHORIZED_ENGAGEMENT_INTAKE_PATH.md).
+
+---
+
+## 10. Phase 55 update — a third future path, and the decision still stands
+
+§5 named three future paths. Phase 55 adds a fourth, and **changes no field in §2**: **no production
+write, no writer enablement, no synthetic smoke write.**
+
+4. **Durable internal test / training engagement.** A deliberately retained internal record used for
+   training, live testing, and demonstration — never client-accessible, carrying no real client data
+   unless separately and explicitly authorized, and optionally authorized for capsule publication
+   when explicitly classified.
+
+This is **not** path 2 renamed. Path 2 is a smoke record written to prove plumbing, ideally removed
+afterwards, and disallowed precisely because §4 means it cannot be. A durable internal test
+engagement is written *because Peak intends to keep it*, so the absence of a runtime `DELETE` fits
+its intent rather than defeating it. Classifying a record as internal test is **not** a route to
+retroactively justify a smoke write; path 2 remains disallowed unless separately approved with its
+permanence understood.
+
+Phase 55 also records that the Phase 54 anchor writer now exists — and that **existing is not
+permission to write**, exactly as a passing connectivity gate is not. Neither the model nor that
+writer can yet classify an internal test engagement, so **Phase 56 should add classification support
+and create no records**. See
+[`PHASE55_INTERNAL_TEST_ENGAGEMENT_CLASSIFICATION.md`](PHASE55_INTERNAL_TEST_ENGAGEMENT_CLASSIFICATION.md).
