@@ -402,3 +402,28 @@ publication. A new operator utility,
 [`tools/create_internal_test_engagement_anchor.py`](../tools/create_internal_test_engagement_anchor.py),
 holds the one hard-coded packet and is dry-run by default. See
 [`PHASE59_FIRST_INTERNAL_TEST_ENGAGEMENT_ANCHOR.md`](PHASE59_FIRST_INTERNAL_TEST_ENGAGEMENT_ANCHOR.md).
+
+## Phase 60 — intake taxonomy V0 and the first internal test intake note
+
+Phase 60 creates **one** durable `internal_test` intake note in production through the unchanged
+Phase 34 controlled writer, attached to the Phase 59 anchor. It adds no migration, table, model,
+writer, or allowlist pair: head stays at `014_engagement_classification` with **14 migrations, 18
+tables, and 12 writers**.
+
+The note is tied to `internal_test_001` / `99999` / `internal_peak_only`, is review-gated and
+non-final (`review_status=needs_review`, `lifecycle_status=draft`), and is **not client-facing** —
+`client_facing_approved`, `publication_allowed`, `capsule_candidate_ready`, `execution_allowed`, and
+`financial_verified` are all false. It contains **no real client data** and is a durable
+internal/admin record, **not disposable smoke**.
+
+**No Client record, no additional Engagement record, no downstream record, and no capsule** were
+created. Authorization came from the stored engagement: the writer loads the `Engagement` row and
+requires the request scope to match the stored scope — identity matching alone is not sufficient.
+
+**The note body is not in this repository.** Intake prose belongs only in the managed DB, so the
+operator utility
+[`tools/create_internal_test_intake_note.py`](../tools/create_internal_test_intake_note.py) loads it
+at runtime from a file outside the repo and prints only its length and SHA-256. Intake questions are
+now grounded in
+[`PEAK_INTAKE_QUESTION_TAXONOMY_V0.md`](PEAK_INTAKE_QUESTION_TAXONOMY_V0.md). See
+[`PHASE60_FIRST_INTERNAL_TEST_INTAKE_NOTE.md`](PHASE60_FIRST_INTERNAL_TEST_INTAKE_NOTE.md).

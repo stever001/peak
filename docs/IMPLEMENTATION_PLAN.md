@@ -1780,6 +1780,39 @@ no Client record, no intake note, no downstream record, no capsule, no writer en
   internal test row now genuinely exists in production, so an unfiltered client-facing query would
   surface it. Any further production record remains separately approved.
 
+**Intake Taxonomy V0 and the First Internal Test Intake Note (Phase 60 — one production application
+record; no Client record, no additional Engagement, no downstream record, no capsule, no writer
+enabled):**
+
+- [x] **Intake questions are now grounded in a taxonomy, not invented as form fields.**
+  `docs/PEAK_INTAKE_QUESTION_TAXONOMY_V0.md` defines fourteen categories, each mapped to what it
+  feeds: the operations assessment, prioritized improvement plan, evidence map, data/source quality
+  review, AI/AgentNet readiness view, and future capsule/publication readiness. The rule is that a
+  question is justified only when it supports a downstream decision, evidence need, report section,
+  or readiness judgment.
+- [x] **V0 is explicitly not the final client-facing questionnaire.** Future forms should be
+  **generated from the taxonomy, not guessed**; a question mapping to no category means either the
+  taxonomy is missing a downstream need or the question should be cut.
+- [x] **The GeoSites lesson is preserved at strategy level.** A future GeoSites intake should derive
+  its questions from website / GEO-AEO / structured-data / generative-discovery deliverables. The
+  category list will differ entirely; the derivation rule will not. **No GeoSites code is built.**
+- [x] **One durable `internal_test` intake note was created in production**, tied to
+  `internal_test_001` / `99999` / `internal_peak_only` through the unchanged Phase 34 controlled
+  writer. Review-gated and non-final (`needs_review` / `draft`), **not client-facing**, containing
+  **no real client data**, and durable internal/admin data rather than disposable smoke. Head stays
+  `014` with 18 tables and 12 writers.
+- [x] **Authorization came from the stored engagement.** The writer loaded the Phase 59 anchor and
+  required the request scope to match the stored scope; identity matching alone is not sufficient.
+  The anchor was read, not modified.
+- [x] **No Client record, no additional Engagement, no downstream record, no capsule.** No
+  `UPDATE`/`DELETE`/manual SQL/cleanup/stamp, and no app table scan or count beyond the writer's own
+  stored-engagement load and idempotency lookup.
+- [x] **No intake prose entered source control.** Note bodies belong only in the managed DB, so the
+  operator utility reads the body from outside the repository and reports only its length and
+  SHA-256; receipts never echo note content.
+- [ ] **Next: render the taxonomy into a real intake form**, and build the first client-facing read
+  path on top of `apply_read_isolation`. Any further production record remains separately approved.
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

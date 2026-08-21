@@ -137,3 +137,19 @@ This is the first phase where that stops being hypothetical.
 - Any further production record — including a second internal test anchor — remains separately
   approved, and must name its writer, table, action, scope, idempotency key, and cleanup posture
   before the write.
+
+---
+
+## 9. Phase 60 update — the anchor now authorizes a real write
+
+§8 listed the first client-facing read path as outstanding and noted that further production records
+remained separately approved. In **Phase 60** one such record was approved and created: a durable
+`internal_test` intake note tied to `internal_test_001` / `99999`, holding **no real client data**
+and **not client-facing**.
+
+This is what the anchor was for. Every controlled writer loads the stored `Engagement` and matches
+its request scope against the stored `authorization_scope`; the Phase 60 note is the first write to
+travel that gate for real. The anchor itself was **not modified** — it was read as the authorization
+subject — and **no additional Engagement or Client record was created**. Intake questions are now
+grounded in [`PEAK_INTAKE_QUESTION_TAXONOMY_V0.md`](PEAK_INTAKE_QUESTION_TAXONOMY_V0.md). See
+[`PHASE60_FIRST_INTERNAL_TEST_INTAKE_NOTE.md`](PHASE60_FIRST_INTERNAL_TEST_INTAKE_NOTE.md).

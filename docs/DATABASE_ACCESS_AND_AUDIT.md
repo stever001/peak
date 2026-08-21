@@ -586,3 +586,37 @@ production. Distinguish the three postures: the approved **durable internal_test
 created; a **disposable production smoke record** is still disallowed; unauthorized **writer
 enablement** is still disallowed. See
 [`PHASE59_FIRST_INTERNAL_TEST_ENGAGEMENT_ANCHOR.md`](PHASE59_FIRST_INTERNAL_TEST_ENGAGEMENT_ANCHOR.md).
+
+## Phase 60 — the first intake note, authorized by the stored engagement
+
+**One durable `internal_test` intake note was created in production**, tied to `internal_test_001` /
+`99999` / `internal_peak_only`, through the unchanged Phase 34 controlled writer. It is the second
+production application record, and the first one whose authorization came from a *stored* row.
+
+**Authorization is the stored engagement, not the caller's claim.** At write time the writer loaded
+the `Engagement` anchor created in Phase 59 and required
+`request.authorization_scope == engagement.authorization_scope`. Identity matching (owner, client,
+engagement) is necessary but explicitly not sufficient. Without that stored anchor the write would
+have been denied as `missing_subject` — which is exactly why Phase 59 had to come first.
+
+| Credential | Used for | Mutates production |
+| --- | --- | --- |
+| read-only verifier | schema posture, before and after | no |
+| runtime | connectivity gate (metadata + grants only) | no |
+| runtime | **exactly one** controlled intake-note writer invocation | one `intake_note_records` row |
+| migration | **not used** | — |
+
+The record is review-gated and non-final and is **not client-facing**. It contains **no real client
+data** and is durable internal/admin data, **not disposable smoke**. **No Client record, no
+additional Engagement record, no downstream record, and no capsule** were created. No `UPDATE`,
+`DELETE`, manual SQL, cleanup, or stamp was issued, and no app table was scanned, counted, or probed
+beyond the writer's own stored-engagement load and idempotency lookup.
+
+**Intake prose never enters source control.** The writer's standing rule is that note bodies are
+acceptable only in the managed DB; the operator utility therefore reads the body from outside the
+repository and reports only its length and SHA-256, and receipts never echo note content. Intake
+questions are grounded in
+[`PEAK_INTAKE_QUESTION_TAXONOMY_V0.md`](PEAK_INTAKE_QUESTION_TAXONOMY_V0.md); future client-facing
+forms should be generated from the taxonomy, not guessed, and future GeoSites intake should
+replicate the same derive-from-deliverables approach. See
+[`PHASE60_FIRST_INTERNAL_TEST_INTAKE_NOTE.md`](PHASE60_FIRST_INTERNAL_TEST_INTAKE_NOTE.md).
