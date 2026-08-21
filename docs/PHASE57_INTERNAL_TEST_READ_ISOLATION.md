@@ -76,3 +76,17 @@ Disposable synthetic smoke records remain disallowed. Runtime still holds no `DE
   [PHASE58_PRODUCTION_MIGRATION_014_VERIFICATION.md](PHASE58_PRODUCTION_MIGRATION_014_VERIFICATION.md).
 - The first internal test engagement creation remains a separately approved future phase. Phase 58
   applied schema only and **created no production application record**.
+
+---
+
+## 7. Phase 59 update — the primitive now guards a real row
+
+Phase 57 built the read-side isolation primitive before any internal test record existed. **Phase
+59 created one**: a durable `internal_test` engagement anchor in production. The exclusion this
+module provides is therefore no longer hypothetical.
+
+**Future real-client read paths must use it.** A client-facing query that bypasses
+`apply_read_isolation` would now surface a genuine internal test row. Default-mode reads exclude
+it; internal/admin views must explicitly opt in; publication eligibility remains separate from
+client visibility. See
+[`PHASE59_FIRST_INTERNAL_TEST_ENGAGEMENT_ANCHOR.md`](PHASE59_FIRST_INTERNAL_TEST_ENGAGEMENT_ANCHOR.md).

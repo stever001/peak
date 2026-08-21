@@ -379,3 +379,26 @@ primitive exists, but future client-facing paths must actually use it. Properly 
 test records are allowed later — only with `engagement_category=internal_test`,
 `real_client_data=false`, `client_accessible=false`, and a reserved test namespace/value. See
 [`PHASE58_PRODUCTION_MIGRATION_014_VERIFICATION.md`](PHASE58_PRODUCTION_MIGRATION_014_VERIFICATION.md).
+
+## Phase 59 — the first durable internal test engagement anchor
+
+Phase 59 creates **one** durable `internal_test` engagement anchor in production through the
+unchanged Phase 54/56 controlled writer — Peak's first production application record. It adds no
+migration, table, model, writer, or allowlist pair: head stays at `014_engagement_classification`
+with **14 migrations, 18 tables, and 12 writers**, `engagements` stays prohibited generically, and
+`clients` stays never-writable.
+
+The anchor is `engagement_category=internal_test`, `real_client_data=false`,
+`client_accessible=false`, `capsule_publication_authorized=true`, in the reserved `99999` client
+namespace, scope `internal_peak_only`, `status`/`lifecycle_status` `active`, `review_status`
+server-stamped `needs_review`. Classification lives in **real columns** — not in `details_json`,
+the label, the scope, or the id prefix.
+
+It is a **durable internal/admin record, not disposable smoke**: runtime holds `SELECT` + `INSERT`
+and no `DELETE`, so it cannot be cleaned up and is not meant to be. **No Client record, no intake
+note, no downstream record, and no capsule** were created; publication *eligibility* follows from
+the compound internal_test / no-real-client-data / not-client-accessible rule and is not
+publication. A new operator utility,
+[`tools/create_internal_test_engagement_anchor.py`](../tools/create_internal_test_engagement_anchor.py),
+holds the one hard-coded packet and is dry-run by default. See
+[`PHASE59_FIRST_INTERNAL_TEST_ENGAGEMENT_ANCHOR.md`](PHASE59_FIRST_INTERNAL_TEST_ENGAGEMENT_ANCHOR.md).

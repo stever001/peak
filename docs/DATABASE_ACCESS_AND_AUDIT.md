@@ -551,3 +551,38 @@ Properly gated production test records are allowed later — only with
 reserved test namespace/value, and only as durable internal/admin records whose cleanup posture is
 decided before the write. See
 [`PHASE58_PRODUCTION_MIGRATION_014_VERIFICATION.md`](PHASE58_PRODUCTION_MIGRATION_014_VERIFICATION.md).
+
+## Phase 59 — the first production application record, under one authorized write
+
+**One durable `internal_test` engagement anchor was created in production**, through the existing
+Phase 54/56 controlled writer. It is the first application record Peak has written to production.
+
+| Credential | Used for | Mutates production |
+| --- | --- | --- |
+| read-only verifier | schema posture, before and after | no |
+| runtime | connectivity gate (metadata + grants only) | no |
+| runtime | **exactly one** controlled writer invocation | one `engagements` row |
+| migration | **not used** | — |
+
+The **runtime credential was used only through the controlled writer path** — resolved by
+`create_session_factory`, which reads `PEAK_RUNTIME_DATABASE_URL` and no other variable. The
+connectivity gate confirmed `SELECT` + `INSERT` with no excess grants, no global privileges, and no
+`GRANT OPTION`. **Runtime DELETE is unavailable**, so this record cannot be removed by the
+application and deletion is not expected — cleanup posture was decided before the write.
+
+**No real client record was created** (`clients` remains never-writable), **no intake note**, no
+downstream record, and no capsule. No `UPDATE`, `DELETE`, manual SQL, cleanup, or stamp was issued,
+and no app table was scanned, counted, or probed — the only reads were the writer's own
+single-primary-key existence check and the read-back of the row it created. No credential, DSN,
+environment value, or raw grant was printed or committed.
+
+The record holds **no real client data** and is **not client-accessible**; it uses the reserved
+internal/test namespace as a visible marker on top of those controls, never instead of them. It is
+publication-*eligible* only because the compound rule is satisfied; nothing was published.
+
+**Future real-client read paths must use Phase 57 read isolation.** A query that bypasses
+`apply_read_isolation` is not protected by it, and an internal test row now genuinely exists in
+production. Distinguish the three postures: the approved **durable internal_test anchor** is now
+created; a **disposable production smoke record** is still disallowed; unauthorized **writer
+enablement** is still disallowed. See
+[`PHASE59_FIRST_INTERNAL_TEST_ENGAGEMENT_ANCHOR.md`](PHASE59_FIRST_INTERNAL_TEST_ENGAGEMENT_ANCHOR.md).

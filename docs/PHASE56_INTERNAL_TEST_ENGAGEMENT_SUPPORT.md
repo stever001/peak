@@ -116,3 +116,16 @@ Phase 58 applied **schema only**: no production application record was created, 
 deleted; no writer was invoked; no runtime credential was used; and **no internal test engagement
 was created**. The first internal test engagement anchor remains a separately approved future phase.
 See [`PHASE58_PRODUCTION_MIGRATION_014_VERIFICATION.md`](PHASE58_PRODUCTION_MIGRATION_014_VERIFICATION.md).
+
+---
+
+## 8. Phase 59 update — the first internal test anchor now exists
+
+§1's "no records created" describes Phase 56. In **Phase 59** the classification this phase
+designed was used for real: **one durable `internal_test` engagement anchor was created in
+production** — `engagement_category=internal_test`, `real_client_data=false`,
+`client_accessible=false`, `capsule_publication_authorized=true`, reserved `99999` client
+namespace. It is a durable internal/admin record, **not disposable smoke**, and runtime DELETE is
+unavailable so it is not expected to be removed. No Client record, intake note, downstream record,
+or capsule was created. See
+[`PHASE59_FIRST_INTERNAL_TEST_ENGAGEMENT_ANCHOR.md`](PHASE59_FIRST_INTERNAL_TEST_ENGAGEMENT_ANCHOR.md).

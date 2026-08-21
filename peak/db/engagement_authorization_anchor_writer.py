@@ -54,9 +54,14 @@ not the production-readiness proof path**; managed MySQL test/staging validation
 before treating this writer as production-ready (see docs/PRODUCTION_PARITY_DB_VALIDATION.md and
 docs/MANAGED_MYSQL_PERSISTENCE_RUBRIC.md).
 
-**No production anchor has been created.** Phase 54 adds the code path only; the Phase 51 no-write
-/ no-enablement decision stands, and the first production anchor remains separately approved
-future work. See docs/PHASE54_CONTROLLED_ENGAGEMENT_AUTHORIZATION_ANCHOR_WRITER.md.
+**One production anchor exists, created in Phase 59.** Phase 54 added the code path and created
+nothing; Phase 59 used it once, under separate explicit authorization, to create Peak's first
+production application record — a durable ``internal_test`` engagement anchor holding no real
+client data and not client-accessible. That was a single authorized invocation, **not** writer
+enablement: the Phase 51 no-write / no-enablement decision still stands as the standing default,
+disposable production smoke records remain disallowed, and any further production anchor remains
+separately approved. See docs/PHASE54_CONTROLLED_ENGAGEMENT_AUTHORIZATION_ANCHOR_WRITER.md and
+docs/PHASE59_FIRST_INTERNAL_TEST_ENGAGEMENT_ANCHOR.md.
 """
 
 from __future__ import annotations

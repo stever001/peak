@@ -1748,11 +1748,37 @@ records created, no writer invoked, no runtime credential used):**
   value was printed or committed.
 - [x] **No internal test engagement was created.** 014 makes the classification representable, not
   authorized.
-- [ ] **Next: the first internal test engagement anchor remains separately approved.** The read-side
-  isolation primitive exists, but future client-facing paths must actually use it. Properly gated
-  production test records are allowed later — only with `engagement_category=internal_test`,
-  `real_client_data=false`, `client_accessible=false`, and a reserved test namespace/value, as
-  durable internal/admin records whose cleanup posture is decided before the write.
+- [x] **Next: the first internal test engagement anchor remains separately approved.** It was
+  separately approved and created in Phase 59, on exactly those terms.
+
+**The First Durable Internal Test Engagement Anchor (Phase 59 — one production application record;
+no Client record, no intake note, no downstream record, no capsule, no writer enabled):**
+
+- [x] **One durable `internal_test` engagement anchor was created in production**, through the
+  unchanged Phase 54/56 controlled writer — Peak's first production application record.
+  `engagement_category=internal_test`, `real_client_data=false`, `client_accessible=false`,
+  `capsule_publication_authorized=true`, reserved `99999` client namespace, scope
+  `internal_peak_only`, `active`/`active`, server-stamped `needs_review`. No migration, table,
+  model, writer, or allowlist pair added; head stays `014` with 18 tables and 12 writers.
+- [x] **Classification lives in real columns** — never in `details_json`, the label, the scope, or
+  the id prefix. The reserved `client_id` is a visible marker on top of the controls, not instead
+  of them.
+- [x] **Durable, not disposable.** Runtime holds `SELECT` + `INSERT` and no `DELETE`, so the record
+  cannot be cleaned up and is not meant to be; cleanup posture was decided before the write.
+  Disposable production smoke records remain disallowed, and no writer was enabled.
+- [x] **Publication eligibility is not publication.** `capsule_publication_authorized=true` is
+  permitted only because the compound internal_test / no-real-client-data / not-client-accessible
+  rule is satisfied. No capsule was created or published.
+- [x] **Credential boundary held.** The runtime credential was used only through the controlled
+  writer path; the connectivity gate confirmed `SELECT` + `INSERT` with no excess grants, no global
+  privileges, and no `GRANT OPTION`. The migration credential was not used and no migration ran. No
+  `UPDATE`/`DELETE`/manual SQL/cleanup/stamp, no app table scan or count, no secrets printed.
+- [x] **A narrow operator utility, not a record creator.**
+  `tools/create_internal_test_engagement_anchor.py` holds one hard-coded packet, accepts no record
+  field, and is dry-run by default.
+- [ ] **Next: the first client-facing read path must actually call `apply_read_isolation`.** An
+  internal test row now genuinely exists in production, so an unfiltered client-facing query would
+  surface it. Any further production record remains separately approved.
 
 **Still to do:**
 

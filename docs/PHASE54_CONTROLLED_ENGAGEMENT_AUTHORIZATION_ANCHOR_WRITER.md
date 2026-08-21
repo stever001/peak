@@ -239,3 +239,19 @@ Everything in §1–§11 still holds: create-only, `engagements` only, no `UPDAT
 `INSERT` sufficient, leak-free receipts, and the single anchor pair. The fingerprint now covers the
 classification, so a changed classification under the same anchor id is a conflict rather than an
 overwrite. See [`PHASE56_INTERNAL_TEST_ENGAGEMENT_SUPPORT.md`](PHASE56_INTERNAL_TEST_ENGAGEMENT_SUPPORT.md).
+
+---
+
+## Phase 59 update — this writer has now been used once, in production
+
+The statement above that the first production anchor "remains separately approved future work"
+described Phase 54. It **was** separately approved, and in **Phase 59** this writer created Peak's
+first production application record: one durable `internal_test` engagement anchor,
+`real_client_data=false`, `client_accessible=false`, in the reserved `99999` client namespace.
+
+The writer itself is unchanged — still create-only, still one `session.add`, still the single
+`engagements` / `create_engagement_authorization_anchor` pair. That was **one authorized
+invocation, not writer enablement**: the Phase 51 no-write / no-enablement decision stands as the
+standing default, disposable production smoke records remain disallowed, runtime still holds no
+`DELETE`, and any further production anchor remains separately approved. See
+[`PHASE59_FIRST_INTERNAL_TEST_ENGAGEMENT_ANCHOR.md`](PHASE59_FIRST_INTERNAL_TEST_ENGAGEMENT_ANCHOR.md).

@@ -105,3 +105,17 @@ They are **durable internal/admin records**, not disposable smoke records: runti
 `DELETE`, so cleanup posture must be decided **before** any such write, not after. Creating one
 still requires separate approval, a named writer, table, action scope, idempotency key, and cleanup
 posture. Nothing in Phase 58 grants that approval.
+
+---
+
+## 7. Phase 59 update — the classification columns now hold a record
+
+§4's "no internal test engagement was created" and §6's "allowed later, under these terms" describe
+Phase 58, which applied schema only. **Phase 59 met those terms**: one durable anchor was created
+in production with `engagement_category=internal_test`, `real_client_data=false`,
+`client_accessible=false`, and the reserved `99999` client namespace — the separately approved
+first internal test engagement anchor this section anticipated.
+
+It is a **durable internal/admin record, not disposable smoke**; disposable production smoke
+records remain disallowed, and no writer was enabled. See
+[`PHASE59_FIRST_INTERNAL_TEST_ENGAGEMENT_ANCHOR.md`](PHASE59_FIRST_INTERNAL_TEST_ENGAGEMENT_ANCHOR.md).
