@@ -1813,6 +1813,38 @@ enabled):**
 - [ ] **Next: render the taxonomy into a real intake form**, and build the first client-facing read
   path on top of `apply_read_isolation`. Any further production record remains separately approved.
 
+**The Internal Test Intake Review Decision (Phase 61 — one production application record; no Client
+record, no additional Engagement, no second intake note, no source/evidence/report/capsule record,
+no writer enabled):**
+
+- [x] **One internal review decision record was created** in production for the Phase 60 intake
+  note `intn_b8b86b8c196c4595`, through the unchanged Phase 22 `review_records` writer. Head stays
+  `014` with 18 tables and 12 writers; no writer or allowlist pair was added.
+- [x] **`review_records` was the honest fit, and the alternative was rejected.** The writer keeps
+  the **authorization anchor** (`request.subject`, which must be an `engagement`) separate from the
+  **reviewed target** (`draft.subject_record_id`, stored as `target_id`), so the intake note is
+  reviewed under the Phase 59 anchor's authority without overloading either field. The bundle-shaped
+  `internal_reviewer_decision_records` draft has no reviewed-target field, so using it would have
+  meant misusing a bundle reference.
+- [x] **The decision authorizes source/evidence collection, not report or capsule publication.**
+  `approve_internal` is the writer's vocabulary for internal reliance only; `client_facing_approve`,
+  `verify_financial_impact`, and `publish_capsule` are refused outright. `authoritative=false`,
+  `client_facing_approved=false`, `capsule_candidate_ready=false`, output stays `draft`.
+- [x] **Covered and missing categories were derived from the V0 taxonomy.** All 14 categories are
+  covered *qualitatively*; the note carries **no counts, rates, cadences, or dates**, so eight
+  categories are recorded as quantitatively incomplete — which is exactly why the next step is
+  collection rather than analysis.
+- [x] **Eight next evidence requests are recorded** — inventory export by SKU/location, item/SKU
+  master export, adjustment history with reason codes, receiving/putaway records, cycle or physical
+  count results, stockout/backorder data, SOP and process documentation, and a system-of-record and
+  data-export map.
+- [x] **The note remains internal-only and non-client-facing**, and no note prose entered source
+  control: the findings are category labels and gap descriptors, and this phase's tools never read
+  the note body.
+- [ ] **Next: source/evidence request and source ingestion planning** — the source ingestion or
+  evidence writer is the sensible next downstream path to exercise. Report drafting, capsule
+  candidacy, and publication remain unauthorized.
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

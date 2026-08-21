@@ -427,3 +427,24 @@ at runtime from a file outside the repo and prints only its length and SHA-256. 
 now grounded in
 [`PEAK_INTAKE_QUESTION_TAXONOMY_V0.md`](PEAK_INTAKE_QUESTION_TAXONOMY_V0.md). See
 [`PHASE60_FIRST_INTERNAL_TEST_INTAKE_NOTE.md`](PHASE60_FIRST_INTERNAL_TEST_INTAKE_NOTE.md).
+
+## Phase 61 — the internal test intake review decision
+
+Phase 61 creates **one** `review_records` row in production through the unchanged Phase 22
+controlled writer, recording an internal review decision on the Phase 60 intake note. It adds no
+migration, table, model, writer, or allowlist pair: head stays at `014_engagement_classification`
+with **14 migrations, 18 tables, and 12 writers**.
+
+The writer keeps the **authorization anchor** (`request.subject`, which must be the `engagement`)
+separate from the **reviewed target** (`draft.subject_record_id`, stored as `target_id`), so the
+intake note `intn_b8b86b8c196c4595` is reviewed under the `internal_test_001` anchor's authority
+without overloading either field. The bundle-shaped `internal_reviewer_decision_records` draft has
+no reviewed-target field and was rejected for that reason.
+
+Decision `approve_internal`, `authoritative=false`, `approved_internal` / `draft`,
+`client_facing_approved=false`, `capsule_candidate_ready=false`. **The decision authorizes moving
+toward source/evidence collection, not report or capsule publication.** Covered and incomplete
+taxonomy categories and eight next evidence requests are recorded as concise findings — category
+labels and gap descriptors, never note prose. **No Client record, no additional Engagement, no
+second intake note, and no source/evidence/report/capsule record** were created. See
+[`PHASE61_INTERNAL_TEST_INTAKE_REVIEW_DECISION.md`](PHASE61_INTERNAL_TEST_INTAKE_REVIEW_DECISION.md).

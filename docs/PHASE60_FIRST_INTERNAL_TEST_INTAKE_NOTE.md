@@ -117,3 +117,23 @@ SQLite.
 - The first **client-facing read path** must call `apply_read_isolation`; internal test rows now
   exist in production at two levels (engagement and intake note).
 - Any further production record remains separately approved.
+
+---
+
+## 8. Phase 61 update — the note has been reviewed
+
+§7 listed rendering the taxonomy and the first client-facing read path as outstanding. In **Phase
+61** the note itself was reviewed: **one internal review decision record was created** for
+`intn_b8b86b8c196c4595` through the Phase 22 `review_records` writer, with the note as the reviewed
+target and the Phase 59 anchor as the authorization subject.
+
+The finding: all 14 V0 taxonomy categories are covered **qualitatively**, but the note carries no
+counts, rates, cadences, or dates, so eight categories are recorded as quantitatively incomplete and
+eight next evidence requests are named. The decision is `approve_internal` — it **authorizes moving
+toward source/evidence collection, not report or capsule publication**.
+
+The note **remains internal-only and non-client-facing**, and its body remains outside the
+repository — the review recorded category labels and gap descriptors, never note prose. **No Client
+record, no additional Engagement, no second intake note, and no source/evidence/report/capsule
+record** were created. See
+[`PHASE61_INTERNAL_TEST_INTAKE_REVIEW_DECISION.md`](PHASE61_INTERNAL_TEST_INTAKE_REVIEW_DECISION.md).

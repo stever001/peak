@@ -124,3 +124,19 @@ template.
 The category names will differ entirely. The rule will not: **questions are derived from
 deliverables.** No GeoSites code, schema, or intake form is built here; this note exists so the
 lesson survives to that phase instead of being rediscovered.
+
+---
+
+## Phase 61 — the taxonomy's first real use
+
+In **Phase 61** this taxonomy was used to review an actual intake note, and the derivation rule
+earned its place. Comparing the note against the fourteen categories produced a finding a
+reviewer's memory would likely have missed: the note covers **all 14 categories qualitatively**
+while carrying **no counts, rates, cadences, or dates** — so eight categories are quantitatively
+incomplete, and the gaps map directly onto the evidence that must be requested next.
+
+That is the taxonomy working as intended. Coverage is not a checkbox: a category can be discussed
+at length and still fail to support the deliverable it feeds. **Future real-client forms should be
+taxonomy-derived, not guessed** — and a form should ask for the *measurable* input a category
+feeds, not merely invite narrative about it. See
+[`PHASE61_INTERNAL_TEST_INTAKE_REVIEW_DECISION.md`](PHASE61_INTERNAL_TEST_INTAKE_REVIEW_DECISION.md).

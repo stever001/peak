@@ -620,3 +620,35 @@ questions are grounded in
 forms should be generated from the taxonomy, not guessed, and future GeoSites intake should
 replicate the same derive-from-deliverables approach. See
 [`PHASE60_FIRST_INTERNAL_TEST_INTAKE_NOTE.md`](PHASE60_FIRST_INTERNAL_TEST_INTAKE_NOTE.md).
+
+## Phase 61 — reviewing a stored record, under a stored anchor
+
+**One internal review decision record was created** in production for the Phase 60 intake note
+`intn_b8b86b8c196c4595`, through the unchanged Phase 22 `review_records` writer. It is the third
+production application record, and the first whose *target* is another stored record.
+
+Two separate identities are involved and the writer keeps them apart: the **authorization anchor**
+is the `internal_test_001` engagement (`request.subject`, which must be an `engagement`), and the
+**reviewed target** is the intake note (`draft.subject_record_id`, stored as `target_id`). As with
+Phase 60, authorization came from the stored engagement — the writer loaded it and required the
+request scope to match the stored `internal_peak_only` scope.
+
+| Credential | Used for | Mutates production |
+| --- | --- | --- |
+| read-only verifier | schema posture, before and after | no |
+| runtime | connectivity gate (metadata + grants only) | no |
+| runtime | **exactly one** controlled review writer invocation | one `review_records` row |
+| migration | **not used** | — |
+
+The decision is `approve_internal` — the writer's vocabulary for internal reliance only; it refuses
+`client_facing_approve`, `verify_financial_impact`, and `publish_capsule` outright. It is
+non-authoritative, non-client-facing, and authorizes **source/evidence collection, not report or
+capsule publication**. The intake note **remains internal-only and non-client-facing**.
+
+**No Client record, no additional Engagement, no second intake note, and no
+source/evidence/report/capsule record** were created. No `UPDATE`, `DELETE`, manual SQL, cleanup, or
+stamp was issued, and no app table was scanned, counted, or probed beyond the writer's own
+stored-engagement load and idempotency lookup. **The findings carry no note prose** — they are
+category labels and gap descriptors derived from the V0 taxonomy, and the note body was never read
+by this phase's tools. See
+[`PHASE61_INTERNAL_TEST_INTAKE_REVIEW_DECISION.md`](PHASE61_INTERNAL_TEST_INTAKE_REVIEW_DECISION.md).
