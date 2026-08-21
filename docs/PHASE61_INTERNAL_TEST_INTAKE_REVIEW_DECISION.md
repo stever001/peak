@@ -132,3 +132,24 @@ taxonomy rather than against a reviewer's memory.
 - The first **client-facing read path** must call `apply_read_isolation`.
 - No writer is enabled; this was one explicitly authorized invocation. Any further production record
   remains separately approved.
+
+---
+
+## 9. Phase 62 — the review decision becomes a request plan
+
+**Phase 61's review now feeds a concrete source/evidence request plan.** Phase 62 turned §4's eight
+next evidence requests into ten prioritized requests, each mapped to Intake Taxonomy V0 categories
+and to the downstream deliverable it supports, and each marked required / important / optional.
+**Phase 62 creates no production record** — it opens no connection, invokes no writer, and reads no
+environment file.
+
+Inspecting the source/evidence writers settled the sequencing question §4 left open: the recommended
+next path is the **source ingestion writer, not the evidence writer**. `evidence_references` asserts
+`evidence_status`, `reliability`, and characterization that presuppose a registered source, so
+**evidence and source collection precede analysis**, and evidence writing follows source ingestion
+rather than preceding it.
+
+**Phase 63 should create the first internal_test source ingestion record** through the unchanged
+Phase 24 writer — if the inspected writer contract supports it, meaning a real internal_test artifact
+exists at write time. Report drafting and capsule publication remain unauthorized. See
+[`PHASE62_INTERNAL_TEST_SOURCE_EVIDENCE_REQUEST_PLAN.md`](PHASE62_INTERNAL_TEST_SOURCE_EVIDENCE_REQUEST_PLAN.md).

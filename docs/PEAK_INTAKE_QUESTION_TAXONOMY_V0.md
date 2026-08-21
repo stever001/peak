@@ -140,3 +140,20 @@ at length and still fail to support the deliverable it feeds. **Future real-clie
 taxonomy-derived, not guessed** — and a form should ask for the *measurable* input a category
 feeds, not merely invite narrative about it. See
 [`PHASE61_INTERNAL_TEST_INTAKE_REVIEW_DECISION.md`](PHASE61_INTERNAL_TEST_INTAKE_REVIEW_DECISION.md).
+
+## Phase 62 — from categories to a request plan
+
+**Phase 62 turned the Phase 61 review into a concrete source/evidence request plan**, and it is the
+taxonomy's second real use. Each of the ten requests carries the categories it serves and the
+deliverable that justifies it, so a request with no category and no consumer would be cut the same
+way a category with no consumer is.
+
+The route runs one way: a category names the deliverable it feeds, the deliverable names the
+measurable input it needs, and that input is the request. **Future real-client intake forms should
+lead to this same evidence request structure** — a form derived from the categories yields the
+request set without a reviewer reconstructing it from memory.
+
+**Phase 62 creates no production record.** **Evidence and source collection precede analysis, report
+drafting, and capsule publication**, and Phase 63 should create the first internal_test source
+ingestion record if the inspected writer contract supports it. See
+[`PHASE62_INTERNAL_TEST_SOURCE_EVIDENCE_REQUEST_PLAN.md`](PHASE62_INTERNAL_TEST_SOURCE_EVIDENCE_REQUEST_PLAN.md).

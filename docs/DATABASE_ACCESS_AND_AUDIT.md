@@ -652,3 +652,27 @@ stored-engagement load and idempotency lookup. **The findings carry no note pros
 category labels and gap descriptors derived from the V0 taxonomy, and the note body was never read
 by this phase's tools. See
 [`PHASE61_INTERNAL_TEST_INTAKE_REVIEW_DECISION.md`](PHASE61_INTERNAL_TEST_INTAKE_REVIEW_DECISION.md).
+
+## Phase 62 — planning a collection step without touching production
+
+Phase 62 is **planning-only**. No credential of any role was used, no connection was opened, no SQL
+was issued, no writer was invoked, and **no production record was created**.
+
+| Credential | Used for | Mutates production |
+| --- | --- | --- |
+| read-only verifier | **not used** | — |
+| runtime | **not used** | — |
+| migration | **not used** | — |
+
+The Phase 61 review decision now feeds a **concrete source/evidence request plan**: ten prioritized
+source/evidence requests, each mapped to Intake Taxonomy V0 categories and to the downstream
+deliverable it supports. The plan is internal/admin only, covers no real client data, and produces
+no client-facing output.
+
+**Phase 63 should create the first internal_test source ingestion record** — through the unchanged
+Phase 24 writer, `source_ingestion_records` / `create_source_ingestion_record`, anchored on the
+stored `internal_test_001` engagement — **if the inspected writer contract supports it**, meaning a
+real internal_test artifact exists at write time. If none does, Phase 63 must defer rather than
+fabricate a packet reference. **Evidence and source collection precede analysis, report drafting,
+and capsule publication**, both of which remain unauthorized. See
+[`PHASE62_INTERNAL_TEST_SOURCE_EVIDENCE_REQUEST_PLAN.md`](PHASE62_INTERNAL_TEST_SOURCE_EVIDENCE_REQUEST_PLAN.md).

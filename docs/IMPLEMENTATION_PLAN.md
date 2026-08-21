@@ -1845,6 +1845,39 @@ no writer enabled):**
   evidence writer is the sensible next downstream path to exercise. Report drafting, capsule
   candidacy, and publication remain unauthorized.
 
+**The Internal Test Source/Evidence Request Plan (Phase 62 — planning-only; no production write, no
+production record, no writer invoked, no migration, no allowlist pair):**
+
+- [x] **Phase 62 creates no production record.** It opens no database connection, issues no SQL,
+  invokes no writer, and reads no environment file. Head stays `014` with 14 migrations, 18 tables,
+  and 12 writers.
+- [x] **The Phase 61 review now feeds a concrete source/evidence request plan** — ten prioritized
+  requests (inventory export by SKU/location, item/SKU master, adjustment history with reason codes,
+  cycle/physical count results, receiving and putaway records, stockout/fulfilment exception data,
+  SOP and process documentation, a system-of-record and data-export map, the location/bin naming
+  model, and the target metric/baseline/deadline statement). Each carries purpose, Intake Taxonomy V0
+  categories, the downstream deliverable it supports, priority, expected evidence type, AI/AgentNet
+  and capsule readiness, and its internal_test-only safety posture.
+- [x] **Source ingestion is the recommended Phase 63 path, and evidence writing follows it.**
+  `evidence_references` asserts `evidence_status`, `reliability`, and characterization that
+  presuppose a registered source, and the Phase 23 boundary derives evidence requests *from* an
+  ingested packet. **Evidence and source collection precede analysis, report drafting, and capsule
+  publication.**
+- [x] **One honest gap was recorded rather than papered over.** A request that has been *made but not
+  yet fulfilled* has no writable representation: `source_system_references` models exactly that
+  (`source_system_access_status`: `not_requested`/`requested`/…) but has no writer and no allowlist
+  pair. No writer was added; the narrowest future change is documented and deliberately not
+  implemented.
+- [x] **The first source-ingestion packet shape is prepared, not executed** — metadata only, with the
+  packet hash and location reference sourced from outside the repository, exactly as the Phase 60
+  note body was. No fixture, example, or sample packet entered source control.
+- [ ] **Next (Phase 63): create the first internal_test source ingestion record** through the
+  unchanged Phase 24 writer — `source_ingestion_records` / `create_source_ingestion_record`, anchored
+  on the stored `internal_test_001` engagement — **if the inspected writer contract supports it**,
+  meaning a real internal_test artifact exists at write time. If none does, defer rather than
+  fabricate a packet reference. Report drafting and capsule publication remain unauthorized, and
+  **future real-client intake forms should lead to this same evidence request structure.**
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

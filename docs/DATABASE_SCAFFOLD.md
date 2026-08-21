@@ -448,3 +448,30 @@ taxonomy categories and eight next evidence requests are recorded as concise fin
 labels and gap descriptors, never note prose. **No Client record, no additional Engagement, no
 second intake note, and no source/evidence/report/capsule record** were created. See
 [`PHASE61_INTERNAL_TEST_INTAKE_REVIEW_DECISION.md`](PHASE61_INTERNAL_TEST_INTAKE_REVIEW_DECISION.md).
+
+## Phase 62 — the internal test source/evidence request plan
+
+Phase 62 is **planning-only and creates no production record.** It contacts no database, invokes no
+writer, and reads no environment file. Head stays at `014_engagement_classification` with **14
+migrations, 18 tables, and 12 writers**; no migration, model, writer, or allowlist pair is added.
+
+The Phase 61 review decision now feeds a **concrete source/evidence request plan** — ten prioritized
+requests, each mapped to Intake Taxonomy V0 categories and to the downstream deliverable it feeds.
+**Evidence and source collection precede analysis, report drafting, and capsule publication**, and
+report drafting and capsule publication remain unauthorized.
+
+**Phase 63 should create the first internal_test source ingestion record** if the inspected
+writer contract supports it — meaning a real internal_test artifact exists at write time; if none
+does, Phase 63 defers rather than fabricates a packet reference. Inspecting the existing writers
+gives that path: the unchanged Phase 24
+[`source_ingestion_writer.py`](../peak/db/source_ingestion_writer.py) →
+`source_ingestion_records` / `create_source_ingestion_record`, anchored on the stored
+`internal_test_001` engagement. It is metadata-only by contract and never persists a packet payload.
+`evidence_references` comes **after** source ingestion, not before: its columns assert
+`evidence_status`, `reliability`, and characterization that presuppose a registered source.
+
+One honest gap is recorded: a **request that has been made but not yet fulfilled** has no writable
+representation. `source_system_references` models exactly that (`source_system_access_status`:
+`not_requested`/`requested`/…) but has no writer and no allowlist pair. No writer was added; the
+request state lives in the plan document instead. See
+[`PHASE62_INTERNAL_TEST_SOURCE_EVIDENCE_REQUEST_PLAN.md`](PHASE62_INTERNAL_TEST_SOURCE_EVIDENCE_REQUEST_PLAN.md).
