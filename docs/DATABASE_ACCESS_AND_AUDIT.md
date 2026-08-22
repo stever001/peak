@@ -729,3 +729,35 @@ may not be asserted until it is settled. **Capsule publication remains unauthori
 AgentNet resolver**, which is a real production target and therefore a reason to keep the gate shut
 rather than to relax it. See
 [`PHASE64_INTERNAL_TEST_R1_R7_SOURCE_ARTIFACT_COLLECTION_PLAN.md`](PHASE64_INTERNAL_TEST_R1_R7_SOURCE_ARTIFACT_COLLECTION_PLAN.md).
+
+## Phase 65 — two artifact registrations, under the same stored anchor
+
+Phase 65 writes **exactly two** `source_ingestion_records` rows through the unchanged Phase 24
+writer: **R2 (the SKU/item master export) first, then R1 (the current inventory export by SKU and
+location)**. Both are anchored to the stored `internal_test_001` engagement, and at write time the
+writer loads that stored `Engagement` row and requires `request.authorization_scope ==
+engagement.authorization_scope` — identity matching is necessary but not sufficient.
+
+| Credential | Used for | Mutates production |
+| --- | --- | --- |
+| read-only verifier | pre-write and post-write schema/collation verification (no app rows read) | no |
+| runtime | the two `INSERT`s, via the writer only (`SELECT` + `INSERT` grants only) | yes — two rows |
+| migration | **not used** | — |
+
+**Only metadata was persisted** — packet reference, schema name and version, source type, a logical
+`internal-test-artifact://phase65/…` location reference, and a SHA-256 hash computed over the exact
+artifact bytes. **The artifact bodies live outside the repository**, were never decoded, printed,
+logged, or committed, and never entered the database. No filesystem path reached a row.
+
+**R1's location dimension is provisional** and is recorded as such on the row: the R8 location/bin
+model is unconfirmed, so any future evidence from R1 must carry degraded reliability for
+location-attributed claims. **No evidence reference was created** — R8 review remains a precondition
+for attribution, not for collection.
+
+Each record carries its own idempotency key. An exact replay returns the existing row unmodified; a
+changed hash under the same key is refused as an `idempotency_conflict`, never an overwrite. No
+`UPDATE`, `DELETE`, manual SQL, cleanup, or `alembic stamp` was issued, and no app table was
+scanned, counted, or probed beyond the writer's own stored-engagement load and idempotency lookup.
+**R3–R7 remain deferred**, and **AgentNet resolver publication remains unauthorized** despite the
+live public resolver. See
+[`PHASE65_R1_R2_INTERNAL_TEST_SOURCE_INGESTION.md`](PHASE65_R1_R2_INTERNAL_TEST_SOURCE_INGESTION.md).

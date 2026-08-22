@@ -1930,11 +1930,38 @@ production record, no artifact body, no migration, no writer, no allowlist pair)
 - [x] **Artifact bodies stay outside the repository** and out of the database; source ingestion
   persists metadata only. **No example rows were committed** — field and document-section names
   appear, but no SKU values, quantities, location identifiers, or sample export rows.
-- [ ] **Next (Phase 65): create the external artifact(s) and register `source_ingestion_records`,
+- [x] **Next (Phase 65): create the external artifact(s) and register `source_ingestion_records`,
   not `evidence_references` yet** — recommended batch R2 then R1, since R2 is unblocked and R1 is
   uninterpretable without the item master, with R1's location dimension registered as explicitly
   provisional. **Capsule publication remains unauthorized despite the live AgentNet resolver**, and
   any further production record remains separately approved.
+
+**The R2 and R1 Internal Test Source Ingestion Records (Phase 65 — two production application
+records; no evidence reference, no report, no capsule, no migration, no writer, no allowlist pair):**
+
+- [x] **Two `source_ingestion_records` rows were created: R2 first, then R1**, both through the
+  unchanged Phase 24 writer under the stored `internal_test_001` engagement anchor
+  (client `99999`, owner `peak_internal_admin`, scope `internal_peak_only`). Head stays `014` with
+  14 migrations, 18 tables, and 12 writers.
+- [x] **R2 was registered first** because the Phase 63 R8 map records it as the only unblocked
+  request and because it is the interpretive key for R1 — R1's item identifiers cannot be assessed
+  for duplication or unit-of-measure consistency without the item master.
+- [x] **R1's location dimension is registered as explicitly provisional.** Its provenance notes
+  record that the R8 location/bin model is unconfirmed, that future evidence must carry degraded
+  reliability for location-attributed claims while SKU-level claims are not similarly limited, and
+  that R9 (the location/bin naming model) is the unblocker.
+- [x] **Artifact bodies live outside the repository** and never entered the database. Only
+  metadata was persisted — packet reference, schema name and version, source type, a logical
+  `internal-test-artifact://phase65/…` location reference, and a SHA-256 hash. No artifact body was
+  printed, committed, or stored; no fixture, example, or sample packet was committed.
+- [x] **No `evidence_reference` was created**, and no report, review packet, capsule candidate, or
+  client-facing output. No Client record, no additional Engagement, no intake note, no review
+  record. No `UPDATE`, `DELETE`, manual SQL, cleanup path, app scan, or app row count.
+- [ ] **Next: R9 (the location/bin naming model), then the remaining R3–R7**, which stay deferred
+  behind their unresolved R8 blockers. `evidence_references` still come after source ingestion and
+  after R8 review, as a separately approved phase. **AgentNet resolver publication remains
+  unauthorized** despite the live public resolver, and any further production record remains
+  separately approved.
 
 **Still to do:**
 

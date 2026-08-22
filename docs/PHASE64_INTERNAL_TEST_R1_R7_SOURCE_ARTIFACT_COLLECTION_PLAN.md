@@ -316,3 +316,30 @@ dimension and for R5**, and remains the natural follow-on.
 - **No migration, no migration 015, no model, no writer, no allowlist pair, no operator utility.**
 - **No example rows.** Field names and document section names appear throughout; **no SKU values, no
   quantities, no location identifiers, and no sample export rows** do.
+
+---
+
+## 8. What Phase 65 did with this plan
+
+**Phase 65 executed Section 6 unchanged in substance: two source ingestion records were created,
+R2 first, then R1**, through the unchanged Phase 24 writer, anchored to `internal_test_001` with
+scope `internal_peak_only`. R3–R7 remain deferred, and **R9** (the location/bin naming model)
+remains the natural follow-on.
+
+- **R1's location dimension was registered as explicitly provisional**, exactly as Section 5
+  required — recorded in the row's provenance notes at registration time.
+- **Artifact bodies live outside the repository** and never entered the database; only metadata,
+  logical `internal-test-artifact://phase65/…` references, and SHA-256 hashes were persisted.
+- **No `evidence_reference` was created**, no report, no capsule, no client-facing output.
+- **AgentNet resolver publication remains unauthorized**, as this plan required.
+
+**Naming deviation.** The Phase 65 sprint brief named the artifact filenames, `packet_reference_id`
+values, and logical location references directly, and they differ from the placeholders sketched
+here for **R2** (`r2_sku_item_master_export_v1.json`,
+`pkt_internal_test_r2_sku_item_master_001`,
+`internal-test-artifact://phase65/r2-sku-item-master-export-v1`) and for **R1's**
+`packet_reference_id` (`pkt_internal_test_r1_inventory_sku_location_001`). **The Phase 65 brief's
+values are the ones persisted**; the values in Sections 5 above are the superseded plan
+placeholders for those two entries. R3–R7's names in Section 5 are unaffected and still stand.
+
+See [`PHASE65_R1_R2_INTERNAL_TEST_SOURCE_INGESTION.md`](PHASE65_R1_R2_INTERNAL_TEST_SOURCE_INGESTION.md).

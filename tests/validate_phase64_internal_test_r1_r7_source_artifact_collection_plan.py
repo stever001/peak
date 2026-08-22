@@ -189,10 +189,15 @@ def baseline_checks() -> None:
                if c.endswith("_writer.py")])
     check("the allowlist module was not modified by this phase — no allowlist pair added",
           not git("diff", "--name-only", "HEAD", "--", ALLOWLIST_REL))
-    check("no operator utility was added or modified by this phase",
-          not git("diff", "--name-only", "HEAD", "--", "tools")
-          and not [c for c in git("ls-files", "--others", "--exclude-standard").splitlines()
-                   if c.startswith("tools/")])
+    # Scoped to Phase 64's own claim — that *this* phase shipped no operator utility. It must not
+    # forbid a source-ingestion operator outright: Phase 65 is the phase authorized to add one, and
+    # Section 6 above recommends exactly that. An unscoped working-tree diff would instead fail the
+    # moment the recommended phase is executed.
+    check("no Phase 64 operator/record-creation utility was added",
+          not [t for t in os.listdir(os.path.join(REPO_ROOT, "tools"))
+               if "phase64" in t.lower()]
+          and not [c for c in git("diff", "--name-only", "HEAD", "--", "tools").splitlines()
+                   if c in PHASE_FILES])
 
     from peak.persistence.allowlist import (
         ALLOWED_ACTIONS, ALLOWED_ANCHOR_CREATION_PAIRS, ALLOWED_TABLES, is_allowed_table,

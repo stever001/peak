@@ -143,3 +143,22 @@ block *attribution*: no reliability may be asserted until it is confirmed. **Art
 outside the repository, and capsule publication remains unauthorized despite the live AgentNet
 resolver.** See
 [`PHASE64_INTERNAL_TEST_R1_R7_SOURCE_ARTIFACT_COLLECTION_PLAN.md`](PHASE64_INTERNAL_TEST_R1_R7_SOURCE_ARTIFACT_COLLECTION_PLAN.md).
+
+---
+
+## What followed in Phase 65
+
+**Phase 65 registered the next two artifacts: R2 (SKU/item master export) first, then R1 (current
+inventory by SKU and location)** — two more `source_ingestion_records` rows through this same
+unchanged Phase 24 writer, under this same `internal_test_001` anchor. R2 went first because this
+R8 map records it as the only unblocked request and because it is the interpretive key for R1.
+
+**R8 remains `needs_review` / `draft` / `authoritative=false`.** Nothing in Phase 65 treated the map
+as settled: its location/bin model and its authority precedence rule are still unconfirmed, which is
+why **R1's location dimension was registered as explicitly provisional** and why **no evidence
+reference was created yet**. R8 review remains a precondition for attribution, not for collection.
+
+Artifact bodies still live outside the repository; only metadata, logical
+`internal-test-artifact://phase65/…` references, and SHA-256 hashes were persisted. **R3–R7 remain
+deferred**, and **AgentNet resolver publication remains unauthorized** despite the live public
+resolver. See [`PHASE65_R1_R2_INTERNAL_TEST_SOURCE_INGESTION.md`](PHASE65_R1_R2_INTERNAL_TEST_SOURCE_INGESTION.md).

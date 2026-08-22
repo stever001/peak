@@ -516,3 +516,27 @@ metadata only — packet reference, schema, source type, logical location, hash.
 unblocked request, and R1 is uninterpretable without the item master. **Capsule publication remains
 unauthorized despite the live AgentNet resolver.** See
 [`PHASE64_INTERNAL_TEST_R1_R7_SOURCE_ARTIFACT_COLLECTION_PLAN.md`](PHASE64_INTERNAL_TEST_R1_R7_SOURCE_ARTIFACT_COLLECTION_PLAN.md).
+
+## Phase 65 — the R2 and R1 internal test source ingestion records
+
+Phase 65 creates **two** `source_ingestion_records` rows in production (`ing_884c94df03c34908` and
+`ing_a2abb497f471458e`) through the unchanged Phase 24
+writer — **R2 (SKU/item master export) first, then R1 (current inventory by SKU and location)**.
+Head stays at `014_engagement_classification` with **14 migrations, 18 tables, and 12 writers**; no
+migration, model, writer, or allowlist pair is added.
+
+**R2 first** because the Phase 63 R8 map records it as the only unblocked request and because it is
+the interpretive key for R1. **R1's location dimension is registered as explicitly provisional** —
+the R8 location/bin naming model is unconfirmed, so location-attributed claims derived from R1 must
+carry degraded reliability until R9 lands.
+
+**Artifact bodies remain outside the repository** and out of the database. Only metadata was
+persisted — packet reference, schema name and version, source type, a logical
+`internal-test-artifact://phase65/…` location reference, and a SHA-256 hash. No artifact body was
+printed, committed, or stored, and no fixture or sample packet was committed.
+
+**No evidence reference, report, capsule, or client-facing output was created**, and no Client,
+Engagement, intake, or review record. **R3–R7 remain deferred** behind their unresolved R8 blockers,
+with R9 (the location/bin naming model) the natural next request. **AgentNet resolver publication
+remains unauthorized** despite the live public resolver. See
+[`PHASE65_R1_R2_INTERNAL_TEST_SOURCE_INGESTION.md`](PHASE65_R1_R2_INTERNAL_TEST_SOURCE_INGESTION.md).
