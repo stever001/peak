@@ -705,3 +705,27 @@ report/capsule/client-facing output were created. No `UPDATE`, `DELETE`, manual 
 stamp was issued, and no app table was scanned, counted, or probed beyond the writer's own
 stored-engagement load and idempotency lookup. See
 [`PHASE63_FIRST_INTERNAL_TEST_SOURCE_INGESTION.md`](PHASE63_FIRST_INTERNAL_TEST_SOURCE_INGESTION.md).
+
+## Phase 64 — planning the next collection batch without touching production
+
+Phase 64 is **planning-only**. No credential of any role was used, no connection was opened, no SQL
+was issued, no writer was invoked, and **no production record was created**.
+
+| Credential | Used for | Mutates production |
+| --- | --- | --- |
+| read-only verifier | **not used** | — |
+| runtime | **not used** | — |
+| migration | **not used** | — |
+
+**Phase 63 registered R8**; **Phase 64 defines the R1–R7 artifact collection** that follows it.
+**Artifact bodies remain outside the repository** and never enter the database — source ingestion
+persists metadata only: packet reference, schema, source type, a logical
+`internal-test-artifact://` location reference, and a SHA-256 hash.
+
+**Phase 65 should create the external artifact(s) and register `source_ingestion_records`, not
+`evidence_references` yet.** Collection does not require the R8 map to be reviewed; *attribution*
+does, because R8's authority precedence rule is still provisional and unconfirmed — so reliability
+may not be asserted until it is settled. **Capsule publication remains unauthorized despite the live
+AgentNet resolver**, which is a real production target and therefore a reason to keep the gate shut
+rather than to relax it. See
+[`PHASE64_INTERNAL_TEST_R1_R7_SOURCE_ARTIFACT_COLLECTION_PLAN.md`](PHASE64_INTERNAL_TEST_R1_R7_SOURCE_ARTIFACT_COLLECTION_PLAN.md).

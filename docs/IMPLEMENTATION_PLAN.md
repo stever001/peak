@@ -1908,6 +1908,34 @@ report/capsule record, no writer enabled):**
   evidence normalization and `evidence_references` as a separately approved phase. Any further
   production record remains separately approved.
 
+**The R1–R7 Source Artifact Collection Plan (Phase 64 — planning-only; no production write, no
+production record, no artifact body, no migration, no writer, no allowlist pair):**
+
+- [x] **Phase 64 creates no production record** and no artifact body. It opens no connection, issues
+  no SQL, invokes no writer, and reads no environment file. Head stays `014` with 14 migrations, 18
+  tables, and 12 writers.
+- [x] **Phase 63 registered R8; Phase 64 defines the R1–R7 artifact collection.** Each of the seven
+  requests now carries an artifact type, minimum expected fields or document sections, an external
+  filename under the approved out-of-repo directory, a logical `internal-test-artifact://phase65/…`
+  location reference, a `packet_reference_id`, schema name and version, source type, a SHA-256 hash
+  requirement, taxonomy categories, the downstream deliverable, and its future `evidence_reference`
+  implications.
+- [x] **The registered R8 map vindicated the Phase 62 ordering argument.** Read as a work-list it
+  records **R2 as the only unblocked request**, R1 as blocked on the unconfirmed location model, and
+  R3–R7 as uncertain or partial — so the map really did determine what is fulfillable.
+- [x] **Collection and attribution were separated.** Registering an artifact asserts only that it
+  exists, so R1–R7 may be collected while R8 stays `needs_review`. R8's provisional authority rule
+  blocks *attribution* — no reliability may be asserted — which is why the next phase is source
+  ingestion and not evidence.
+- [x] **Artifact bodies stay outside the repository** and out of the database; source ingestion
+  persists metadata only. **No example rows were committed** — field and document-section names
+  appear, but no SKU values, quantities, location identifiers, or sample export rows.
+- [ ] **Next (Phase 65): create the external artifact(s) and register `source_ingestion_records`,
+  not `evidence_references` yet** — recommended batch R2 then R1, since R2 is unblocked and R1 is
+  uninterpretable without the item master, with R1's location dimension registered as explicitly
+  provisional. **Capsule publication remains unauthorized despite the live AgentNet resolver**, and
+  any further production record remains separately approved.
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

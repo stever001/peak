@@ -375,3 +375,23 @@ named systems and enumerated exports.
 `evidence_references` come **after** source ingestion. Report drafting and capsule publication
 remain unauthorized. See
 [`PHASE63_FIRST_INTERNAL_TEST_SOURCE_INGESTION.md`](PHASE63_FIRST_INTERNAL_TEST_SOURCE_INGESTION.md).
+
+---
+
+## 10. Phase 64 — R1–R7 specified against the registered map
+
+**Phase 63 registered R8**, and **Phase 64 defines the R1–R7 artifact collection** this plan's §4
+called for — turning each request into a concrete artifact specification: type, minimum expected
+fields or document sections, external filename, logical `internal-test-artifact://phase65/…`
+reference, `packet_reference_id`, schema and source type, SHA-256 hash requirement, taxonomy
+categories, and downstream deliverable. **Phase 64 creates no production record.**
+
+§4 ranked R8 ahead of R1–R7 on the argument that it determines whether they are fulfillable. The
+registered map bears that out: it records **R2 as the only unblocked request**, R1 as blocked on the
+location model, and R3–R7 as uncertain or partial. The ordering argument was not decorative.
+
+**Phase 65 should create the external artifact(s) and register `source_ingestion_records`, not
+`evidence_references` yet** — recommended batch R2 then R1. **Artifact bodies remain outside the
+repository**, and **capsule publication remains unauthorized despite the live AgentNet resolver**.
+See
+[`PHASE64_INTERNAL_TEST_R1_R7_SOURCE_ARTIFACT_COLLECTION_PLAN.md`](PHASE64_INTERNAL_TEST_R1_R7_SOURCE_ARTIFACT_COLLECTION_PLAN.md).

@@ -494,3 +494,25 @@ assert `evidence_status` and `reliability`, so they still come **after** source 
 before. No Client record, no additional Engagement, no intake note, no review record, and no
 report or capsule record were created. See
 [`PHASE63_FIRST_INTERNAL_TEST_SOURCE_INGESTION.md`](PHASE63_FIRST_INTERNAL_TEST_SOURCE_INGESTION.md).
+
+## Phase 64 — the R1–R7 source artifact collection plan
+
+Phase 64 is **planning-only and creates no production record.** Head stays at
+`014_engagement_classification` with **14 migrations, 18 tables, and 12 writers**; no migration,
+model, writer, allowlist pair, or operator utility is added.
+
+**Phase 63 registered R8** (`ing_4fb70519cbf84401`), and **Phase 64 defines the R1–R7 artifact
+collection** that follows it: for each request, an artifact type, minimum expected fields or document
+sections, an external filename under the approved out-of-repo directory, a logical
+`internal-test-artifact://phase65/…` location reference, a `packet_reference_id`, schema name and
+version, source type, a SHA-256 hash requirement, taxonomy categories, and the downstream
+deliverable.
+
+**Artifact bodies remain outside the repository** and out of the database. Source ingestion persists
+metadata only — packet reference, schema, source type, logical location, hash.
+
+**Phase 65 should create the external artifact(s) and register `source_ingestion_records`, not
+`evidence_references` yet.** The recommended batch is R2 then R1: the R8 map records R2 as the only
+unblocked request, and R1 is uninterpretable without the item master. **Capsule publication remains
+unauthorized despite the live AgentNet resolver.** See
+[`PHASE64_INTERNAL_TEST_R1_R7_SOURCE_ARTIFACT_COLLECTION_PLAN.md`](PHASE64_INTERNAL_TEST_R1_R7_SOURCE_ARTIFACT_COLLECTION_PLAN.md).

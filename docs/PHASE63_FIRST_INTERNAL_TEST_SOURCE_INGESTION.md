@@ -121,3 +121,25 @@ reported `required_grants_present=True`, `excess_grants_present=False`,
 Replay behaviour is covered offline against temporary SQLite: an identical payload under the same
 idempotency key returns `idempotent_replay` without a second write, and a **changed artifact hash**
 under the same key is denied as `idempotency_conflict` with the existing record left untouched.
+
+---
+
+## 8. Phase 64 — the map becomes a collection plan
+
+**Phase 63 registered R8; Phase 64 defines the R1–R7 artifact collection** it scopes. Each request
+now has an artifact type, minimum expected fields or document sections, an external filename, a
+logical `internal-test-artifact://phase65/…` reference, a `packet_reference_id`, schema and source
+type, and a SHA-256 hash requirement. **Phase 64 creates no production record.**
+
+Read as a work-list, this record's map is not uniform: **R2 is the only request it shows as
+unblocked**, while R1 is blocked on the unconfirmed location model and R3–R7 each carry an open
+question. That is the map doing its job — it was registered first precisely so the other requests
+could be scoped against something real.
+
+**Phase 65 should create the external artifact(s) and register `source_ingestion_records`, not
+`evidence_references` yet** — recommended batch R2 then R1. This record staying `needs_review` /
+`draft` / `authoritative=false` does not block collection, but its provisional authority rule does
+block *attribution*: no reliability may be asserted until it is confirmed. **Artifact bodies remain
+outside the repository, and capsule publication remains unauthorized despite the live AgentNet
+resolver.** See
+[`PHASE64_INTERNAL_TEST_R1_R7_SOURCE_ARTIFACT_COLLECTION_PLAN.md`](PHASE64_INTERNAL_TEST_R1_R7_SOURCE_ARTIFACT_COLLECTION_PLAN.md).
