@@ -1957,11 +1957,40 @@ records; no evidence reference, no report, no capsule, no migration, no writer, 
 - [x] **No `evidence_reference` was created**, and no report, review packet, capsule candidate, or
   client-facing output. No Client record, no additional Engagement, no intake note, no review
   record. No `UPDATE`, `DELETE`, manual SQL, cleanup path, app scan, or app row count.
-- [ ] **Next: R9 (the location/bin naming model), then the remaining R3–R7**, which stay deferred
+- [x] **Next: R9 (the location/bin naming model), then the remaining R3–R7**, which stay deferred
   behind their unresolved R8 blockers. `evidence_references` still come after source ingestion and
   after R8 review, as a separately approved phase. **AgentNet resolver publication remains
   unauthorized** despite the live public resolver, and any further production record remains
   separately approved.
+
+**The Internal Test Source Ingestion Review Decision (Phase 66 — one production application record;
+no evidence reference, no source record, no report, no capsule, no migration, no writer, no
+allowlist pair):**
+
+- [x] **One `review_records` row was created** (`rev_bf7f18a13d8f461c`), recording the internal
+  review decision on the
+  Phase 65 **R2** source ingestion record (`ing_884c94df03c34908`), through the unchanged Phase 22
+  review writer under the stored `internal_test_001` anchor. Head stays `014` with 14 migrations,
+  18 tables, and 12 writers.
+- [x] **No field was overloaded and no writer was added.** The review writer already separates the
+  **authorization anchor** (`request.subject`, required to be the engagement) from the **reviewed
+  target** (`subject_record_id` / `subject_record_type`, stored as `target_id`), so
+  `source_ingestion_record` is an honest `subject_record_type` — the same shape Phase 61 used for
+  the intake note.
+- [x] **The decision is `approve_internal`, non-authoritative**, landing on `approved_internal`
+  with output still `draft`. It authorizes exactly one narrow next step: a **future
+  `evidence_reference` about item-master source availability and data readiness**.
+- [x] **It authorizes nothing wider, and says so on the row.** No inventory accuracy conclusion
+  (R2 describes an item master, not measured quantity); **R1 stays provisional** on its unconfirmed
+  location model; **R8 stays provisional** (`needs_review` / `draft` / `authoritative=false`) with
+  its authority precedence rule unconfirmed; **R3–R7 stay deferred**; and report drafting, capsule
+  candidacy, client-facing output, and **AgentNet resolver publication remain unauthorized**.
+- [x] **The artifact body was never read.** The Phase 66 operator opens no file and computes no
+  hash; findings are sanitized structural counts, posture flags, and named gaps — no artifact text,
+  field values, item/SKU values, quantities, or location identifiers.
+- [ ] **Next: the first `evidence_reference`**, scoped to item-master source availability and data
+  readiness only, as a separately approved phase. R9 and R3–R7 remain the outstanding collection
+  work. Any further production record remains separately approved.
 
 **Still to do:**
 

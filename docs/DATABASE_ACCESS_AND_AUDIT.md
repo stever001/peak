@@ -761,3 +761,32 @@ scanned, counted, or probed beyond the writer's own stored-engagement load and i
 **R3–R7 remain deferred**, and **AgentNet resolver publication remains unauthorized** despite the
 live public resolver. See
 [`PHASE65_R1_R2_INTERNAL_TEST_SOURCE_INGESTION.md`](PHASE65_R1_R2_INTERNAL_TEST_SOURCE_INGESTION.md).
+
+## Phase 66 — reviewing a registered source, under the same stored anchor
+
+Phase 66 writes **exactly one** `review_records` row through the unchanged Phase 22 review writer,
+recording the internal review decision on the **R2** source ingestion record
+(`ing_884c94df03c34908`). The reviewed target is stored in `target_id` with
+`subject_record_type='source_ingestion_record'`; the **authorization anchor stays the
+`internal_test_001` engagement**, and at write time the writer loads that stored `Engagement` row
+and requires `request.authorization_scope == engagement.authorization_scope`.
+
+| Credential | Used for | Mutates production |
+| --- | --- | --- |
+| read-only verifier | pre-write and post-write schema/collation verification (no app rows read) | no |
+| runtime | the one `INSERT`, via the writer only (`SELECT` + `INSERT` grants only) | yes — one row |
+| migration | **not used** | — |
+
+**The decision is `approve_internal`, non-authoritative.** It authorizes one narrow next step — a
+future `evidence_reference` about **item-master source availability and data readiness** — and
+nothing wider. **No evidence reference was created.** R1 stays provisional, **R8 stays provisional**
+(`needs_review` / `draft` / `authoritative=false`), R3–R7 stay deferred, and report drafting,
+capsule candidacy, client-facing output, and **AgentNet resolver publication remain unauthorized**
+despite the live public resolver.
+
+**No artifact body was read.** The Phase 66 operator opens no file and computes no hash; the stored
+findings are sanitized structural counts and named gaps, never artifact text or row values. No
+`UPDATE`, `DELETE`, manual SQL, cleanup, or `alembic stamp` was issued, and no app table was
+scanned, counted, or probed beyond the writer's own stored-engagement load and idempotency lookup.
+See
+[`PHASE66_INTERNAL_TEST_SOURCE_INGESTION_REVIEW_DECISION.md`](PHASE66_INTERNAL_TEST_SOURCE_INGESTION_REVIEW_DECISION.md).

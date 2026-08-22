@@ -540,3 +540,25 @@ Engagement, intake, or review record. **R3–R7 remain deferred** behind their u
 with R9 (the location/bin naming model) the natural next request. **AgentNet resolver publication
 remains unauthorized** despite the live public resolver. See
 [`PHASE65_R1_R2_INTERNAL_TEST_SOURCE_INGESTION.md`](PHASE65_R1_R2_INTERNAL_TEST_SOURCE_INGESTION.md).
+
+## Phase 66 — the internal test source ingestion review decision
+
+Phase 66 creates **one** `review_records` row in production (`rev_bf7f18a13d8f461c`) through the
+unchanged Phase 22 review writer, recording the internal review decision on the **R2** source ingestion record
+(`ing_884c94df03c34908`). Head stays at `014_engagement_classification` with **14 migrations, 18
+tables, and 12 writers**; no migration, model, writer, or allowlist pair is added.
+
+**No field is overloaded.** The review writer already separates the authorization anchor
+(`request.subject`, required to be the engagement) from the reviewed target (`subject_record_id` /
+`subject_record_type`, stored as `target_id`), so `source_ingestion_record` is an honest
+`subject_record_type` — the shape Phase 61 used for the intake note.
+
+**The decision is `approve_internal` and non-authoritative**, authorizing only a future
+`evidence_reference` about **item-master source availability and data readiness**. **No evidence
+reference was created yet.** R1's location dimension stays provisional, **R8 stays provisional**
+(`needs_review` / `draft` / `authoritative=false`), **R3–R7 stay deferred**, and report drafting,
+capsule candidacy, client-facing output, and **AgentNet resolver publication remain unauthorized**
+despite the live public resolver.
+
+**No artifact body was read, printed, committed, or stored.** See
+[`PHASE66_INTERNAL_TEST_SOURCE_INGESTION_REVIEW_DECISION.md`](PHASE66_INTERNAL_TEST_SOURCE_INGESTION_REVIEW_DECISION.md).
