@@ -351,3 +351,27 @@ time.
 **Evidence and source collection precede analysis, report drafting, and capsule publication.** That
 ordering is not a formality: a report drafted before R1–R10 land would describe what the intake note
 already says, and Phase 61 established that the note supports narrative, not measurement.
+
+---
+
+## 9. Phase 63 — the plan's first execution
+
+**Phase 63 registered R8 as the first internal test source ingestion record**
+(`ing_4fb70519cbf84401`), through exactly the writer and path §5 recommended:
+`source_ingestion_records` / `create_source_ingestion_record`, anchored on the stored
+`internal_test_001` engagement, metadata only.
+
+**The §3.4 precondition held.** No internal_test artifact existed when Phase 63 began, so rather
+than write a row pointing at a nonexistent packet, a durable R8 artifact was created **outside the
+repository** first and only its metadata — packet reference, schema, source type, a logical
+`internal-test-artifact://` location reference, and a SHA-256 hash — was registered. The artifact
+body was not committed and never entered the database.
+
+**This closes the first precondition for R1–R7.** R8 was ranked ahead of them in §4 because it
+determines whether they are fulfillable; with the map registered, they can be requested against
+named systems and enumerated exports.
+
+**No evidence reference was created**, and none is yet authorized — §3.2's ordering stands:
+`evidence_references` come **after** source ingestion. Report drafting and capsule publication
+remain unauthorized. See
+[`PHASE63_FIRST_INTERNAL_TEST_SOURCE_INGESTION.md`](PHASE63_FIRST_INTERNAL_TEST_SOURCE_INGESTION.md).

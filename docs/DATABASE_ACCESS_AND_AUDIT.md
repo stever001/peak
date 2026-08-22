@@ -676,3 +676,32 @@ real internal_test artifact exists at write time. If none does, Phase 63 must de
 fabricate a packet reference. **Evidence and source collection precede analysis, report drafting,
 and capsule publication**, both of which remain unauthorized. See
 [`PHASE62_INTERNAL_TEST_SOURCE_EVIDENCE_REQUEST_PLAN.md`](PHASE62_INTERNAL_TEST_SOURCE_EVIDENCE_REQUEST_PLAN.md).
+
+## Phase 63 — registering an artifact, under a stored anchor
+
+Phase 63 writes **exactly one** `source_ingestion_records` row through the unchanged Phase 24
+controlled writer, under the stored `internal_test_001` engagement anchor.
+
+| Credential | Used for | Mutates production |
+| --- | --- | --- |
+| read-only verifier | schema posture, before and after | no |
+| runtime | connectivity gate (metadata + grants only) | no |
+| runtime | **exactly one** controlled source-ingestion writer invocation | one `source_ingestion_records` row |
+| migration | **not used** | — |
+
+The read-only verifier reported `verified_safe_no_remediation_required` both before and after the
+write (head `014`, 212 governed columns deterministic, `data_write_made=False`). The runtime gate
+reported required grants present, no excess grants, no global privileges, no `GRANT OPTION`, and
+`app_table_read_made=False`.
+
+**Only metadata reached the database** — packet reference, schema, source type, a logical
+`internal-test-artifact://` location reference, and a SHA-256 hash. The artifact body lives outside
+the repository, is never committed, and is opened only in binary to compute its length and hash;
+no filesystem path is stored on the row.
+
+**No evidence reference was created** — evidence characterization still follows source ingestion.
+No Client record, no additional Engagement, no intake note, no review record, and no
+report/capsule/client-facing output were created. No `UPDATE`, `DELETE`, manual SQL, cleanup, or
+stamp was issued, and no app table was scanned, counted, or probed beyond the writer's own
+stored-engagement load and idempotency lookup. See
+[`PHASE63_FIRST_INTERNAL_TEST_SOURCE_INGESTION.md`](PHASE63_FIRST_INTERNAL_TEST_SOURCE_INGESTION.md).

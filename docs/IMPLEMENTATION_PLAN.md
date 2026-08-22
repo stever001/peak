@@ -1878,6 +1878,36 @@ production record, no writer invoked, no migration, no allowlist pair):**
   fabricate a packet reference. Report drafting and capsule publication remain unauthorized, and
   **future real-client intake forms should lead to this same evidence request structure.**
 
+**The First Internal Test Source Ingestion Record (Phase 63 — one production application record; no
+Client record, no additional Engagement, no intake/review record, no evidence reference, no
+report/capsule record, no writer enabled):**
+
+- [x] **One source ingestion record was created** in production — `ing_4fb70519cbf84401`,
+  registering the R8 system-of-record and data-export map through the unchanged Phase 24
+  `source_ingestion_records` writer. Head stays `014` with 18 tables and 12 writers; no writer,
+  model, or allowlist pair was added.
+- [x] **R8 went first, as Phase 62 ranked it.** The system-of-record and data-export map determines
+  whether R1–R7 are fulfillable at all, so registering it first lets the remaining requests be
+  scoped against named systems and enumerated exports rather than assumptions.
+- [x] **Phase 62's precondition was honoured rather than worked around.** No internal_test artifact
+  existed when the phase began, so a durable R8 artifact was created **outside the repository**
+  first; only then was its metadata registered. The operator utility refuses a missing artifact, any
+  path inside the repository working tree, and any path other than the approved artifact.
+- [x] **Only metadata was persisted.** Packet reference, schema name/version, source type, a
+  **logical** `internal-test-artifact://` location reference, and a SHA-256 hash. The artifact body
+  was never decoded, printed, committed, or stored in the database, and no filesystem path reached
+  the row. The writer independently refuses payload- and secret-named draft attributes.
+- [x] **No evidence reference was created.** `evidence_references` assert `evidence_status` and
+  `reliability`, which presuppose a registered source, so they still come **after** source
+  ingestion. Report drafting, capsule candidacy, and publication remain unauthorized.
+- [x] **Verified before and after.** The read-only verifier reported
+  `verified_safe_no_remediation_required` both times (head `014`, 212 governed columns
+  deterministic, `data_write_made=False`); the runtime gate reported required grants only, no excess
+  grants, and `app_table_read_made=False`.
+- [ ] **Next: R1–R7 evidence collection** against the systems and exports the R8 map names, then
+  evidence normalization and `evidence_references` as a separately approved phase. Any further
+  production record remains separately approved.
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

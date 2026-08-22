@@ -153,3 +153,20 @@ rather than preceding it.
 Phase 24 writer — if the inspected writer contract supports it, meaning a real internal_test artifact
 exists at write time. Report drafting and capsule publication remain unauthorized. See
 [`PHASE62_INTERNAL_TEST_SOURCE_EVIDENCE_REQUEST_PLAN.md`](PHASE62_INTERNAL_TEST_SOURCE_EVIDENCE_REQUEST_PLAN.md).
+
+---
+
+## 10. Phase 63 — collection actually begins
+
+The §4 recommendation — *source/evidence request and source ingestion planning* — has now been
+carried out end to end. **Phase 63 created the first internal test source ingestion record**
+(`ing_4fb70519cbf84401`), registering the R8 system-of-record and data-export map that Phase 62
+ranked ahead of the other requests.
+
+The §8 "still outstanding" item that source/evidence collection had not started is **closed**: it
+has started, with the artifact body held outside the repository and only metadata persisted.
+
+**No evidence reference was created yet.** The Phase 61 decision authorized moving toward
+source/evidence collection, and that is exactly as far as this goes — `evidence_references` follow
+source ingestion, and report drafting and capsule publication remain unauthorized. See
+[`PHASE63_FIRST_INTERNAL_TEST_SOURCE_INGESTION.md`](PHASE63_FIRST_INTERNAL_TEST_SOURCE_INGESTION.md).

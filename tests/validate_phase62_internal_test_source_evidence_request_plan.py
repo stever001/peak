@@ -452,12 +452,18 @@ def isolation_checks() -> None:
     check("this phase declares no writer, model, allowlist, migration, or tool file",
           not [c for c in PHASE_FILES
                if c.startswith(("peak/", "tools/", "alembic/")) or c.endswith("_writer.py")])
+    # Scoped to Phase 62's own claim — that *this* phase shipped no operator utility. It must not
+    # forbid a source-ingestion operator outright: Phase 63 is the phase authorized to add one,
+    # and the plan above recommends exactly that.
     check("no Phase 62 operator/record-creation utility was added",
           not [t for t in os.listdir(os.path.join(REPO_ROOT, "tools"))
-               if "phase62" in t.lower()
-               or ("source_ingestion" in t.lower() and t.startswith("create_"))])
-    check("no stored source or evidence record id was committed anywhere in this phase's docs",
-          not any(re.search(rf"\b{p}[0-9a-f]{{8,}}\b", read(DOC_REL)) for p in NO_RECORD_IDS))
+               if "phase62" in t.lower()])
+    # Scoped to Phase 62's own body. A later phase may append an addendum that cites the record
+    # *it* created — that is the plan being executed, not Phase 62 having written something. The
+    # claim under test is that Phase 62 itself created no source or evidence record.
+    own_body = re.split(r"(?m)^##\s+\d+\.\s+Phase 6[3-9]\b", read(DOC_REL))[0]
+    check("Phase 62's own sections cite no stored source or evidence record id",
+          not any(re.search(rf"\b{p}[0-9a-f]{{8,}}\b", own_body) for p in NO_RECORD_IDS))
 
     # No fixtures / examples / sample packets, and no Phase 60 note body.
     tracked = git("ls-files").splitlines()

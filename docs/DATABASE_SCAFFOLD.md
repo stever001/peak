@@ -475,3 +475,22 @@ representation. `source_system_references` models exactly that (`source_system_a
 `not_requested`/`requested`/…) but has no writer and no allowlist pair. No writer was added; the
 request state lives in the plan document instead. See
 [`PHASE62_INTERNAL_TEST_SOURCE_EVIDENCE_REQUEST_PLAN.md`](PHASE62_INTERNAL_TEST_SOURCE_EVIDENCE_REQUEST_PLAN.md).
+
+## Phase 63 — the first internal test source ingestion record
+
+Phase 63 creates **one** `source_ingestion_records` row in production through the unchanged Phase 24
+controlled writer, registering the R8 system-of-record and data-export map artifact
+(`ing_4fb70519cbf84401`). It adds no migration, table, model, writer, or allowlist pair: head stays
+at `014_engagement_classification` with **14 migrations, 18 tables, and 12 writers**.
+
+**Only metadata was persisted** — packet reference id, schema name/version, source type, a logical
+`internal-test-artifact://` location reference, and the `packet_hash`. The artifact body lives
+**outside the repository** and never enters the database; the writer refuses any draft carrying
+`packet_payload`, `raw_packet_content`, `raw_content`, `payload`, or a secret-named attribute.
+
+Posture is `needs_review` / `draft`, `authoritative=false`, `client_facing_approved=false`,
+`capsule_candidate_ready=false`. **No evidence reference was created** — `evidence_references`
+assert `evidence_status` and `reliability`, so they still come **after** source ingestion, never
+before. No Client record, no additional Engagement, no intake note, no review record, and no
+report or capsule record were created. See
+[`PHASE63_FIRST_INTERNAL_TEST_SOURCE_INGESTION.md`](PHASE63_FIRST_INTERNAL_TEST_SOURCE_INGESTION.md).
