@@ -124,3 +124,21 @@ The record carries its own Phase 66 idempotency key. An exact replay returns the
 unmodified; a **changed payload fingerprint under the same key is refused as an
 `idempotency_conflict`** — never an overwrite. The operator has no `UPDATE`, `DELETE`, or cleanup
 path.
+
+## 8. What followed in Phase 67
+
+**Phase 67 took the one step this decision authorized.** It created **one `evidence_references`
+row** (`evid_56437d9b9c764560`) for R2 (`ing_884c94df03c34908`), citing this review record (`rev_bf7f18a13d8f461c`) as its
+support, through the unchanged Phase 21 evidence writer under the same `internal_test_001` anchor.
+No new writer, model, migration, or allowlist pair was added.
+
+**The evidence scope is item-master source availability and data readiness only** — exactly the
+scope approved here, and nothing wider. **No inventory accuracy conclusion was made.** The evidence
+does not rely on **R1** location claims (**provisional** pending R9), does not treat **R8** as
+authoritative (**`needs_review`** / `draft` / `authoritative=false`), and leaves **R3–R7 deferred**.
+It created **no report**, **no capsule**, **no client-facing output**, and **no AgentNet**
+publication; the public resolver is live but **publication remains unauthorized**.
+
+No field was overloaded: `evidence_type` / `source_type` are `document` because the artifact is a
+field-level export *description* and not an export of rows. Phase 67 read no artifact body. See
+[`PHASE67_FIRST_INTERNAL_TEST_EVIDENCE_REFERENCE.md`](PHASE67_FIRST_INTERNAL_TEST_EVIDENCE_REFERENCE.md).

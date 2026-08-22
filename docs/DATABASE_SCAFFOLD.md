@@ -562,3 +562,31 @@ despite the live public resolver.
 
 **No artifact body was read, printed, committed, or stored.** See
 [`PHASE66_INTERNAL_TEST_SOURCE_INGESTION_REVIEW_DECISION.md`](PHASE66_INTERNAL_TEST_SOURCE_INGESTION_REVIEW_DECISION.md).
+
+## Phase 67 — the first internal test evidence reference
+
+Phase 67 creates **one** `evidence_references` row in production (`evid_56437d9b9c764560`)
+through the unchanged Phase 21 evidence writer, for the Phase 66-approved **R2** source ingestion record (`ing_884c94df03c34908`),
+supported by review record `rev_bf7f18a13d8f461c`. Head stays at `014_engagement_classification`
+with **14 migrations, 18 tables, and 12 writers**; no migration, model, writer, or allowlist pair is
+added.
+
+**No field is overloaded.** `source_reference_id` carries the registered packet reference,
+`source_location` carries a *logical* in-Peak locator for the R2 record, `evidence_type` /
+`source_type` are `document` (the artifact is a field-level export description, not an export of
+rows), and the claim and its limits live in the free descriptive text. Three contract limits are
+stated rather than worked around: the table has **no typed related-object column** (so the
+supporting review is named in text), the writer does **not expose `evidence_status`** (the row takes
+the `collected` default), and the writer does **not persist `draft.reasons`** (so the limits live in
+`normalized_summary` / `observed_condition`).
+
+**The evidence scope is item-master source availability and data readiness only.** **No inventory
+accuracy conclusion was made.** The table has **no `authoritative` column**, so that claim is
+structurally impossible, and the writer server-stamps `needs_review` / `draft`. R1's location
+dimension stays provisional pending R9, **R8 stays provisional** (`needs_review` / `draft` /
+`authoritative=false`), **R3–R7 stay deferred**, and report drafting, capsule candidacy,
+client-facing output, and **AgentNet resolver publication remain unauthorized** despite the live
+public resolver.
+
+**No artifact body was read, printed, committed, or stored.** See
+[`PHASE67_FIRST_INTERNAL_TEST_EVIDENCE_REFERENCE.md`](PHASE67_FIRST_INTERNAL_TEST_EVIDENCE_REFERENCE.md).

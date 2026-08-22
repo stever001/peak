@@ -143,3 +143,22 @@ unauthorized** despite the live public resolver.
 
 Phase 66 read no artifact body: its operator opens no file and computes no hash. See
 [`PHASE66_INTERNAL_TEST_SOURCE_INGESTION_REVIEW_DECISION.md`](PHASE66_INTERNAL_TEST_SOURCE_INGESTION_REVIEW_DECISION.md).
+
+## 9. What followed in Phase 67
+
+**Phase 67 created one `evidence_references` row for R2** (`evid_56437d9b9c764560`, evidencing
+`ing_884c94df03c34908`), supported by the
+Phase 66 review `rev_bf7f18a13d8f461c`, through the unchanged Phase 21 evidence writer under this
+same `internal_test_001` anchor. The row carries this record's own
+`pkt_internal_test_r2_sku_item_master_001` packet reference plus a *logical* in-Peak locator for the
+R2 registration — never a filesystem path, and never any artifact content.
+
+**The evidence scope is item-master source availability and data readiness only**, and **no
+inventory accuracy conclusion was made**. The evidence does **not rely on R1 location claims**:
+**R1's location dimension remains provisional** pending **R9**, exactly as recorded in §3 above.
+**R8 remains provisional** (`needs_review` / `draft` / `authoritative=false`), **R3–R7 remain
+deferred**, and report drafting, capsule publication, client-facing output, and **AgentNet resolver
+publication remain unauthorized** despite the live public resolver.
+
+Phase 67 read no artifact body: its operator opens no file and computes no hash. See
+[`PHASE67_FIRST_INTERNAL_TEST_EVIDENCE_REFERENCE.md`](PHASE67_FIRST_INTERNAL_TEST_EVIDENCE_REFERENCE.md).

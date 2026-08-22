@@ -1988,9 +1988,46 @@ allowlist pair):**
 - [x] **The artifact body was never read.** The Phase 66 operator opens no file and computes no
   hash; findings are sanitized structural counts, posture flags, and named gaps — no artifact text,
   field values, item/SKU values, quantities, or location identifiers.
-- [ ] **Next: the first `evidence_reference`**, scoped to item-master source availability and data
+- [x] **Next: the first `evidence_reference`**, scoped to item-master source availability and data
   readiness only, as a separately approved phase. R9 and R3–R7 remain the outstanding collection
   work. Any further production record remains separately approved.
+
+**The First Internal Test Evidence Reference (Phase 67 — one production application record; no
+source record, no review record, no report, no capsule, no migration, no writer, no allowlist
+pair):**
+
+- [x] **One `evidence_references` row was created** (`evid_56437d9b9c764560`) for the Phase
+  66-approved **R2** source
+  ingestion record (`ing_884c94df03c34908`), supported by review record `rev_bf7f18a13d8f461c`,
+  through the unchanged Phase 21 evidence writer under the stored `internal_test_001` anchor. Head
+  stays `014` with 14 migrations, 18 tables, and 12 writers.
+- [x] **No field was overloaded and no writer was added.** `source_reference_id` carries the
+  registered packet reference, `source_location` a *logical* in-Peak locator for the R2 record, and
+  `evidence_type` / `source_type` are `document` — the artifact is a field-level export
+  *description*, not an export of rows, so `system_export` would have been the overload. Three
+  contract limits are stated rather than worked around: no typed related-object column (the
+  supporting review is named in text), `evidence_status` is not caller-settable (the row takes the
+  `collected` default), and `draft.reasons` is not persisted (the limits live in
+  `normalized_summary` / `observed_condition`).
+- [x] **The evidence scope is item-master source availability and data readiness only.** The R2
+  artifact is available and registered, and its field-level structure is sufficient to proceed to a
+  future item-master **data-readiness review**. Unit-of-measure posture, item-status posture, and
+  the duplicate/normalization risks remain recorded open questions.
+- [x] **No inventory accuracy conclusion was made, and the row says so.** R2 describes an item
+  master, not measured quantity. The evidence does not rely on **R1** location claims (provisional
+  pending **R9**) and does not treat **R8** as authoritative (`needs_review` / `draft` /
+  `authoritative=false`); **R3–R7 stay deferred**; and report drafting, capsule candidacy,
+  client-facing output, and **AgentNet resolver publication remain unauthorized**.
+- [x] **The posture is structural, not asserted.** `evidence_references` has **no `authoritative`
+  column**, the writer refuses any draft claiming `authoritative`, `client_facing_approved`, or
+  `capsule_candidate_ready`, and it server-stamps `review_status='needs_review'` and
+  `output_status='draft'` itself.
+- [x] **The artifact body was never read.** The Phase 67 operator opens no file and computes no
+  hash; the stored text is sanitized structural counts, posture flags, named gaps, and record ids —
+  no artifact text, field values, item/SKU values, quantities, or location identifiers.
+- [ ] **Next: an item-master data-readiness review of R2**, as a separately approved phase. R9
+  (which unblocks R1's location dimension), R8 review, and R3–R7 remain the outstanding collection
+  and review work. Any further production record remains separately approved.
 
 **Still to do:**
 

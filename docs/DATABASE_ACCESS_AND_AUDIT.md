@@ -790,3 +790,37 @@ findings are sanitized structural counts and named gaps, never artifact text or 
 scanned, counted, or probed beyond the writer's own stored-engagement load and idempotency lookup.
 See
 [`PHASE66_INTERNAL_TEST_SOURCE_INGESTION_REVIEW_DECISION.md`](PHASE66_INTERNAL_TEST_SOURCE_INGESTION_REVIEW_DECISION.md).
+
+## Phase 67 — the first evidence reference, under the same stored anchor
+
+Phase 67 writes **exactly one** `evidence_references` row (`evid_56437d9b9c764560`) through the
+unchanged Phase 21 evidence writer, for the Phase 66-approved **R2** source ingestion record
+(`ing_884c94df03c34908`). The
+**authorization anchor stays the `internal_test_001` engagement** — the writer requires the subject
+to be an `engagement`, loads that stored `Engagement` row at write time, and requires
+`request.authorization_scope == engagement.authorization_scope`. The evidenced source is carried on
+`source_reference_id` (the registered packet) and `source_location` (a *logical* in-Peak locator,
+never a filesystem path); the supporting review `rev_bf7f18a13d8f461c` is named in the row's
+descriptive text, because the table has no typed related-object column.
+
+| Credential | Used for | Mutates production |
+| --- | --- | --- |
+| read-only verifier | pre-write and post-write schema/collation verification (no app rows read) | no |
+| runtime | the one `INSERT`, via the writer only (`SELECT` + `INSERT` grants only) | yes — one row |
+| migration | **not used** | — |
+
+**The evidence scope is item-master source availability and data readiness only**, and **no
+inventory accuracy conclusion was made**. The row is `needs_review` / `draft` / `active`, with
+`reliability='low'` and `evidence_status='collected'`; `evidence_references` has **no
+`authoritative` column**, and the writer refuses any draft claiming `authoritative`,
+`client_facing_approved`, or `capsule_candidate_ready`. R1 stays provisional pending R9, **R8 stays
+provisional** (`needs_review` / `draft` / `authoritative=false`), R3–R7 stay deferred, and report
+drafting, capsule candidacy, client-facing output, and **AgentNet resolver publication remain
+unauthorized** despite the live public resolver.
+
+**No artifact body was read.** The Phase 67 operator opens no file and computes no hash; the stored
+text is sanitized structural counts, posture flags, named gaps, and record ids — never artifact
+text or row values. No `UPDATE`, `DELETE`, manual SQL, cleanup, or `alembic stamp` was issued, and
+no app table was scanned, counted, or probed beyond the writer's own stored-engagement load and
+idempotency lookup. See
+[`PHASE67_FIRST_INTERNAL_TEST_EVIDENCE_REFERENCE.md`](PHASE67_FIRST_INTERNAL_TEST_EVIDENCE_REFERENCE.md).
