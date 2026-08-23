@@ -142,3 +142,23 @@ publication; the public resolver is live but **publication remains unauthorized*
 No field was overloaded: `evidence_type` / `source_type` are `document` because the artifact is a
 field-level export *description* and not an export of rows. Phase 67 read no artifact body. See
 [`PHASE67_FIRST_INTERNAL_TEST_EVIDENCE_REFERENCE.md`](PHASE67_FIRST_INTERNAL_TEST_EVIDENCE_REFERENCE.md).
+
+## 9. What followed in Phase 68
+
+**Phase 68 reviewed the evidence reference this decision made possible.** It created **one
+`review_records` row** (`rev_de2b6e73f6c94c67`) on `evid_56437d9b9c764560`, with
+`subject_record_type='evidence_reference'`, through the same unchanged Phase 22 review writer and
+the same `internal_test_001` anchor. Its scope check confirmed the Phase 67 evidence reference **did
+not exceed the narrow scope approved here**.
+
+The decision is **`approve_internal`, non-authoritative**, and authorizes only a **future internal
+assessment finding** about item-master source availability and data readiness. **The evidence
+remains low confidence and non-authoritative**, and **no inventory accuracy conclusion was made**.
+**R1 location claims were not validated** (provisional pending **R9**, the likely Phase 69
+collection), **R8 remains provisional** (`needs_review` / `draft` / `authoritative=false`), and
+**R3–R7 remain deferred**. It created **no report**, **no capsule**, **no client-facing output**,
+and **no AgentNet** publication; the public resolver is live but **publication remains
+unauthorized**.
+
+Phase 68 read no artifact body. See
+[`PHASE68_R2_EVIDENCE_REFERENCE_REVIEW_DECISION.md`](PHASE68_R2_EVIDENCE_REFERENCE_REVIEW_DECISION.md).

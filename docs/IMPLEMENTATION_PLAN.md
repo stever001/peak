@@ -2025,9 +2025,44 @@ pair):**
 - [x] **The artifact body was never read.** The Phase 67 operator opens no file and computes no
   hash; the stored text is sanitized structural counts, posture flags, named gaps, and record ids —
   no artifact text, field values, item/SKU values, quantities, or location identifiers.
-- [ ] **Next: an item-master data-readiness review of R2**, as a separately approved phase. R9
+- [x] **Next: an item-master data-readiness review of R2**, as a separately approved phase. R9
   (which unblocks R1's location dimension), R8 review, and R3–R7 remain the outstanding collection
   and review work. Any further production record remains separately approved.
+
+**The R2 Evidence Reference Review Decision (Phase 68 — one production application record; no
+evidence reference, no source record, no report, no capsule, no migration, no writer, no allowlist
+pair):**
+
+- [x] **One `review_records` row was created** (`rev_de2b6e73f6c94c67`), recording the internal
+  review decision on the
+  Phase 67 **R2 evidence reference** (`evid_56437d9b9c764560`), through the unchanged Phase 22
+  review writer under the stored `internal_test_001` anchor. Head stays `014` with 14 migrations,
+  18 tables, and 12 writers.
+- [x] **No field was overloaded and no writer was added.** The review writer separates the
+  **authorization anchor** (`request.subject`, required to be the engagement) from the **reviewed
+  target** (`subject_record_id` / `subject_record_type`, stored as `target_id`), and persists
+  `draft.reasons`, so the limits are stored as findings.
+  `subject_record_type='evidence_reference'` follows the Phase 61 / Phase 66 convention of naming
+  the reviewed **table**; the older fixtures' `normalized_evidence_record` names the Phase 14
+  *in-memory* output, which is never stored.
+- [x] **The decision is `approve_internal`, non-authoritative**, landing on `approved_internal`
+  with output still `draft`. It authorizes exactly one narrow next step: a **future internal
+  assessment finding about item-master source availability and data readiness**.
+- [x] **The evidence stays low confidence and non-authoritative**, and **the reviewed evidence row
+  is not modified** — a review records a decision about a target, and the writer has no `UPDATE`
+  path.
+- [x] **It authorizes nothing wider, and says so on the row.** **No inventory accuracy
+  conclusion**; no SKU or location quantity reliability claim; **R1 location claims are not
+  validated** (provisional pending **R9**); **R8 authority precedence is not confirmed**
+  (`needs_review` / `draft` / `authoritative=false`); **R3–R7 stay deferred**; and report drafting,
+  capsule publication, client-facing output, and **AgentNet resolver publication remain
+  unauthorized**.
+- [x] **The artifact body was never read.** The Phase 68 operator opens no file and computes no
+  hash; findings are sanitized structural counts, posture flags, and named gaps — no artifact text,
+  field values, item/SKU values, quantities, or location identifiers.
+- [ ] **Next: Phase 69 should likely collect R9**, the location/bin naming model, which unblocks
+  R1's location dimension. A future internal assessment finding, R8 review, and R3–R7 remain the
+  other outstanding work. Any further production record remains separately approved.
 
 **Still to do:**
 

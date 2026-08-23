@@ -590,3 +590,29 @@ public resolver.
 
 **No artifact body was read, printed, committed, or stored.** See
 [`PHASE67_FIRST_INTERNAL_TEST_EVIDENCE_REFERENCE.md`](PHASE67_FIRST_INTERNAL_TEST_EVIDENCE_REFERENCE.md).
+
+## Phase 68 — the R2 evidence reference review decision
+
+Phase 68 creates **one** `review_records` row in production (`rev_de2b6e73f6c94c67`) through the
+unchanged Phase 22 review writer, recording the internal review decision on the Phase 67 **R2 evidence reference**
+(`evid_56437d9b9c764560`). Head stays at `014_engagement_classification` with **14 migrations, 18
+tables, and 12 writers**; no migration, model, writer, or allowlist pair is added.
+
+**No field is overloaded.** The review writer separates the authorization anchor
+(`request.subject`, required to be the engagement) from the reviewed target (`subject_record_id` /
+`subject_record_type`, stored as `target_id`), and persists `draft.reasons` into `details_json`, so
+the limits are stored as findings. `subject_record_type='evidence_reference'` is derived from the
+reviewed table's name — the convention Phase 61 and Phase 66 used; the older fixtures' label
+`normalized_evidence_record` names the Phase 14 *in-memory* output, which is never stored.
+
+**The decision is `approve_internal` and non-authoritative**, authorizing only a future **internal
+assessment finding** about item-master source availability and data readiness. **The evidence
+remains low confidence and non-authoritative**, and **no inventory accuracy conclusion was made**.
+The reviewed evidence row is **not modified** — the review writer has no `UPDATE` path. R1's
+location dimension stays provisional pending **R9** (the likely Phase 69 collection), **R8 stays
+provisional** (`needs_review` / `draft` / `authoritative=false`), **R3–R7 stay deferred**, and
+report drafting, capsule publication, client-facing output, and **AgentNet resolver publication
+remain unauthorized** despite the live public resolver.
+
+**No artifact body was read, printed, committed, or stored.** See
+[`PHASE68_R2_EVIDENCE_REFERENCE_REVIEW_DECISION.md`](PHASE68_R2_EVIDENCE_REFERENCE_REVIEW_DECISION.md).
