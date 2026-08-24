@@ -855,3 +855,40 @@ findings are sanitized structural counts and named gaps, never artifact text or 
 scanned, counted, or probed beyond the writer's own stored-engagement load and idempotency lookup.
 See
 [`PHASE68_R2_EVIDENCE_REFERENCE_REVIEW_DECISION.md`](PHASE68_R2_EVIDENCE_REFERENCE_REVIEW_DECISION.md).
+
+## Phase 69 — collecting the R9 location model, under the same stored anchor
+
+Phase 69 writes **exactly one** `source_ingestion_records` row (`ing_64b2e2648ac1402b`) through the
+unchanged **Phase 24** source ingestion writer, registering the internal test **R9 location/bin
+naming model** artifact. Same stored anchor as every phase since 59: `internal_test_001` / `99999` /
+`peak_internal_admin` / `internal_peak_only`, loaded from the database at write time and compared
+against the request scope. Head stays `014` — no migration, no model, no writer, no allowlist pair.
+
+| credential | what it did in Phase 69 | wrote? |
+| --- | --- | --- |
+| read-only | pre-write and post-write schema/collation verify only; no app rows read | no |
+| runtime | the one `INSERT`, via the writer only (`SELECT` + `INSERT` grants only) | yes — one row |
+| migration | **not used** | — |
+
+**R9 is a location/bin naming model artifact**, and its **body lives outside the repository**. Only
+**metadata, the `packet_hash`, and the logical location reference**
+`internal-test-artifact://phase69/r9-location-bin-naming-model-v1` were persisted — never a
+filesystem path, an export row, an item or SKU value, a quantity, or a location identifier, bin
+code, aisle, rack, warehouse, or site name. The artifact is a field-level and concept-level
+description containing no instance data at all.
+
+**R9 was collected to unblock a future R1 location-dimension review.** It **does not validate
+inventory quantities**, is not an inventory accuracy finding, and **does not make R1 evidence-ready
+by itself** — R1's location dimension remains provisional, and **R9 must be reviewed before use in
+evidence references**. It landed `needs_review` / `draft` / `active` with `authoritative=false`.
+
+**No evidence reference, no review record, no report, no capsule, no client-facing output, and no
+AgentNet publication record was created.** **R8 remains provisional** (`needs_review` / `draft` /
+`authoritative=false`, precedence unconfirmed), **R3–R7 remain deferred**, and the AgentNet public
+resolver is live but **publication remains gated and unauthorized**.
+
+**No artifact body was printed, committed, or stored.** The operator opens the file in binary solely
+to compute its length and SHA-256; the bytes are never decoded or logged. No `UPDATE`, `DELETE`,
+manual SQL, cleanup, or `alembic stamp` was issued, and no app table was scanned, counted, or probed
+beyond the writer's own stored-engagement load and idempotency lookup. See
+[`PHASE69_R9_LOCATION_BIN_MODEL_SOURCE_INGESTION.md`](PHASE69_R9_LOCATION_BIN_MODEL_SOURCE_INGESTION.md).

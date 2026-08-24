@@ -162,3 +162,24 @@ publication remain unauthorized** despite the live public resolver.
 
 Phase 67 read no artifact body: its operator opens no file and computes no hash. See
 [`PHASE67_FIRST_INTERNAL_TEST_EVIDENCE_REFERENCE.md`](PHASE67_FIRST_INTERNAL_TEST_EVIDENCE_REFERENCE.md).
+
+## 10. What followed in Phase 69 — the R9 location model
+
+**Phase 69 collected R9, the location/bin naming model**, as one `source_ingestion_records` row
+(`ing_64b2e2648ac1402b`) through the same unchanged Phase 24 writer and the same `internal_test_001` /
+`internal_peak_only` anchor. Only **metadata, a SHA-256 `packet_hash`, and the logical reference**
+`internal-test-artifact://phase69/r9-location-bin-naming-model-v1` were persisted; the artifact body
+lives **outside the repository**.
+
+**R9 is the artifact this record's §3 named as the unblocker** for the R1 location dimension
+registered here as provisional. It was **collected to unblock a future R1 location-dimension
+review** — but **R1's location dimension remains provisional**. Collecting the model is not the
+review that lifts the marking, and **R9 does not make R1 evidence-ready by itself**. R9 **does not
+validate inventory quantities** and is not an inventory accuracy finding, and it **must be reviewed
+before use in evidence references**.
+
+**No evidence reference, no review record, no report, no capsule, no client-facing output, and no
+AgentNet publication record was created.** **R8 remains provisional** (`needs_review` / `draft` /
+`authoritative=false`, precedence unconfirmed) — R9 does not confirm it. **R3–R7 remain deferred**,
+and the AgentNet resolver is live but **publication remains gated and unauthorized**. See
+[`PHASE69_R9_LOCATION_BIN_MODEL_SOURCE_INGESTION.md`](PHASE69_R9_LOCATION_BIN_MODEL_SOURCE_INGESTION.md).

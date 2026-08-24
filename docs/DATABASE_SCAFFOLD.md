@@ -616,3 +616,35 @@ remain unauthorized** despite the live public resolver.
 
 **No artifact body was read, printed, committed, or stored.** See
 [`PHASE68_R2_EVIDENCE_REFERENCE_REVIEW_DECISION.md`](PHASE68_R2_EVIDENCE_REFERENCE_REVIEW_DECISION.md).
+
+## Phase 69 — the R9 location/bin naming model source ingestion
+
+Phase 69 creates **one** `source_ingestion_records` row in production (`ing_64b2e2648ac1402b`) through
+the unchanged **Phase 24** writer, registering the internal test **R9 location/bin naming model**
+artifact under the stored `internal_test_001` / `99999` / `internal_peak_only` anchor. **No
+migration, no migration 015, no model, no writer, and no allowlist pair** — head stays
+`014_engagement_classification` with 14 migrations, 18 tables, and 12 writers.
+
+**Metadata only, as the writer requires.** The row stores the packet reference
+(`pkt_internal_test_r9_location_bin_model_001`, persisted as `source_reference_id`), schema name and
+version, source type, the **logical** location reference
+`internal-test-artifact://phase69/r9-location-bin-naming-model-v1`, and the `packet_hash` — a
+SHA-256 over the exact artifact bytes. **The artifact body lives outside the repository** and never
+enters the database, the repository, or the operator's output. The artifact itself is a field-level
+and concept-level description of location hierarchy, naming, type/status, availability treatment,
+and virtual/staging/hold/damaged/unavailable concepts, with **no location identifiers, item values,
+quantities, or row-like export data** of any kind.
+
+**Collection, not review or validation.** R9 was collected to unblock a future **R1
+location-dimension review**. It **does not validate inventory quantities**, is not an inventory
+accuracy finding, **does not make R1 evidence-ready by itself**, and **must be reviewed before use
+in evidence references**. It landed `needs_review` / `draft` / `active`, `authoritative=false`.
+
+**No evidence reference, no review record, no report, no capsule, no client-facing output, and no
+AgentNet publication record was created.** R1's location dimension stays provisional, **R8 stays
+provisional** (`needs_review` / `draft` / `authoritative=false`, precedence unconfirmed), **R3–R7
+stay deferred**, and report drafting, capsule publication, client-facing output, and **AgentNet
+resolver publication remain unauthorized** despite the live public resolver.
+
+**No artifact body was read into memory as text, printed, committed, or stored.** See
+[`PHASE69_R9_LOCATION_BIN_MODEL_SOURCE_INGESTION.md`](PHASE69_R9_LOCATION_BIN_MODEL_SOURCE_INGESTION.md).

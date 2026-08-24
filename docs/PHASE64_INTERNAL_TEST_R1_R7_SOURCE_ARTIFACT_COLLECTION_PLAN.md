@@ -363,3 +363,25 @@ unconfirmed, so attribution stays blocked; and **R3–R7 remain deferred** behin
 blockers. Report drafting, capsule publication, and **AgentNet resolver publication remain
 unauthorized**. See
 [`PHASE66_INTERNAL_TEST_SOURCE_INGESTION_REVIEW_DECISION.md`](PHASE66_INTERNAL_TEST_SOURCE_INGESTION_REVIEW_DECISION.md).
+
+## 10. What Phase 69 collected from this plan's unblocker list
+
+**Phase 69 collected R9** — the location/bin naming model this plan named in Section 8 as "the
+unblocker for R1's location dimension and for R5". One `source_ingestion_records` row
+(`ing_64b2e2648ac1402b`) was created through the unchanged Phase 24 writer, **metadata only**, under
+the same `internal_test_001` / `internal_peak_only` anchor, with the logical reference
+`internal-test-artifact://phase69/r9-location-bin-naming-model-v1` and a SHA-256 `packet_hash`. The
+artifact body lives **outside the repository**.
+
+**R9 was collected to unblock a future R1 location-dimension review**, which is exactly the
+dependency Section 5 recorded. It **does not validate inventory quantities**, **does not make R1
+evidence-ready by itself**, and **must be reviewed before use in evidence references**. **No
+evidence reference was created**, and no review record, report, capsule, client-facing output, or
+AgentNet publication record was created.
+
+**This plan's deferrals still stand.** **R1's location dimension remains provisional** — collecting
+the model is a necessary input, not the review that lifts the marking. **R8 remains `needs_review` /
+`draft` / `authoritative=false`** with its precedence rule unconfirmed. **R3–R7 remain deferred**;
+**R5's WMS scope uncertainty is unchanged**, and R9 does not settle it. Report drafting, capsule
+publication, and **AgentNet resolver publication remain unauthorized**. See
+[`PHASE69_R9_LOCATION_BIN_MODEL_SOURCE_INGESTION.md`](PHASE69_R9_LOCATION_BIN_MODEL_SOURCE_INGESTION.md).

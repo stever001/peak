@@ -153,3 +153,25 @@ the same key is refused as an `idempotency_conflict`** — never an overwrite. T
 location dimension. A future internal assessment finding about item-master source availability and
 data readiness is the other step this decision supports. Both remain **separately approved phases**,
 as do R8 review, R3–R7, report drafting, capsule publication, and AgentNet resolver publication.
+
+## 10. What Phase 69 did with this decision's next step
+
+**Phase 69 collected R9** — the location/bin naming model §9 named as the likely next step — as one
+`source_ingestion_records` row (`ing_64b2e2648ac1402b`) through the unchanged Phase 24 writer, under
+this same `internal_test_001` / `internal_peak_only` anchor. **Metadata, a SHA-256 `packet_hash`,
+and the logical reference** `internal-test-artifact://phase69/r9-location-bin-naming-model-v1` were
+persisted; the **artifact body lives outside the repository**.
+
+**R9 was collected to unblock a future R1 location-dimension review.** It **does not validate
+inventory quantities**, **does not make R1 evidence-ready by itself**, and **must be reviewed before
+use in evidence references** — it landed `needs_review` / `draft` / `authoritative=false`.
+
+Phase 69 changed nothing this decision established. The R2 evidence reference and this review record
+are untouched — the source ingestion writer has no `UPDATE` path. **No evidence reference, no review
+record**, no report, no capsule, no client-facing output, and no AgentNet publication record was
+created. **R8 remains provisional** (`needs_review` / `draft` / `authoritative=false`, precedence
+unconfirmed), **R3–R7 remain deferred**, and the AgentNet resolver is live but **publication remains
+gated and unauthorized**. The other step this decision supports — a future internal assessment
+finding about item-master source availability and data readiness — **remains a separately approved
+phase**. See
+[`PHASE69_R9_LOCATION_BIN_MODEL_SOURCE_INGESTION.md`](PHASE69_R9_LOCATION_BIN_MODEL_SOURCE_INGESTION.md).

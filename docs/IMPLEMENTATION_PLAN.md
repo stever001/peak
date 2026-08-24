@@ -2060,9 +2060,44 @@ pair):**
 - [x] **The artifact body was never read.** The Phase 68 operator opens no file and computes no
   hash; findings are sanitized structural counts, posture flags, and named gaps — no artifact text,
   field values, item/SKU values, quantities, or location identifiers.
-- [ ] **Next: Phase 69 should likely collect R9**, the location/bin naming model, which unblocks
-  R1's location dimension. A future internal assessment finding, R8 review, and R3–R7 remain the
-  other outstanding work. Any further production record remains separately approved.
+- [x] **Next: Phase 69 collected R9**, the location/bin naming model. A future internal assessment
+  finding, R8 review, and R3–R7 remain the other outstanding work. Any further production record
+  remains separately approved.
+
+**The R9 Location/Bin Naming Model Source Ingestion (Phase 69 — one production application record;
+no evidence reference, no review record, no report, no capsule, no migration, no writer, no
+allowlist pair):**
+
+- [x] **One R9 source ingestion record was created** (`ing_64b2e2648ac1402b`), registering the
+  internal test **R9 location/bin naming model** artifact through the unchanged Phase 24 source
+  ingestion writer under the stored `internal_test_001` / `99999` / `internal_peak_only` anchor.
+  Head stays `014` with 14 migrations, 18 tables, and 12 writers.
+- [x] **R9 is a location/bin naming model artifact** — a structural description of location
+  hierarchy fields (site / warehouse / zone / aisle / rack / bin), bin and location naming fields,
+  location type and status fields, inventory availability treatment, and the virtual / staging /
+  hold / damaged / quarantine / unavailable-inventory concepts. Ownership is stated cautiously as
+  ERP / WMS / manual / **unknown**, as open questions rather than claims.
+- [x] **The artifact body lives outside the repository** and **only metadata, the hash, and a
+  logical location reference were persisted** —
+  `internal-test-artifact://phase69/r9-location-bin-naming-model-v1` plus the `packet_hash`. No
+  artifact body, filesystem path, export row, item/SKU value, quantity, or location identifier
+  reached the database or this repository.
+- [x] **R9 was collected to unblock a future R1 location-dimension review.** Phase 65 registered R1
+  with its location dimension explicitly provisional; R9 is the model that makes that dimension
+  reviewable.
+- [x] **R9 does not validate inventory quantities**, is **not** an inventory accuracy finding, and
+  **does not make R1 evidence-ready by itself** — R1's location dimension **remains provisional**.
+- [x] **R9 must be reviewed before use in evidence references.** It landed `needs_review` /
+  `draft` / `active`, `authoritative=false`, `client_facing_approved=false`,
+  `capsule_candidate_ready=false`.
+- [x] **Nothing wider was created or authorized.** **No evidence reference**, **no review record**,
+  no report, no capsule, no client-facing output, and **no AgentNet publication**. **R8 remains
+  provisional** (`needs_review` / `draft` / `authoritative=false`, precedence unconfirmed),
+  **R3–R7 remain deferred**, and the AgentNet resolver is live but **publication remains gated and
+  unauthorized**.
+- [ ] **Next: an R9 review**, then a possible R1 location-dimension review. A future internal
+  assessment finding, R8 review, and R3–R7 remain outstanding. Any further production record
+  remains separately approved.
 
 **Still to do:**
 
