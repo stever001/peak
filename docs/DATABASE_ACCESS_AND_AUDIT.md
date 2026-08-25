@@ -929,3 +929,31 @@ or SKU values, quantities, or location identifiers. No `UPDATE`, `DELETE`, manua
 `alembic stamp` was issued, and no app table was scanned, counted, or probed beyond the writer's own
 stored-engagement load and idempotency lookup. See
 [`PHASE70_R9_SOURCE_INGESTION_REVIEW_DECISION.md`](PHASE70_R9_SOURCE_INGESTION_REVIEW_DECISION.md).
+
+## Phase 71 — planning-only; no credential was used at all
+
+Phase 71 is a **planning phase**. It contacted **no production database**, sourced **no environment
+file**, used **no credential** — read-only, runtime, or migration — invoked **no writer**, and
+created **no production record of any kind**. Head stays `014`; no migration, model, writer,
+allowlist pair, or operator utility was added.
+
+| credential | what it did in Phase 71 | wrote? |
+| --- | --- | --- |
+| read-only | **not used** | — |
+| runtime | **not used** | — |
+| migration | **not used** | — |
+
+**No `evidence_reference`, `review_record`, or `source_ingestion_record` was created**, and no
+report, capsule, client-facing output, or AgentNet/resolver publication was produced or authorized.
+
+**The finding is a sequencing one.** R1 cannot yet support a location-dimension evidence reference
+because R9 **defines the questions that must be answered but does not answer them**. **R1 remains
+provisional**; **R9 is reviewed but non-authoritative and remains a question set, not an answered
+model**; R8 authority precedence and R5 WMS scope remain unresolved; R3–R7 remain deferred. The next
+useful production step is likely an **R10 measured location model answer set source ingestion**
+(Phase 72), followed by its review — each separately approved.
+
+**No artifact body was read into the repository.** Both registered artifacts were re-read for
+**structure only** — field names, roles, and counts — with no body printed, copied, or committed and
+no location, bin, aisle, rack, warehouse, or site values read or recorded. See
+[`PHASE71_R1_R9_EVIDENCE_READINESS_PLAN.md`](PHASE71_R1_R9_EVIDENCE_READINESS_PLAN.md).

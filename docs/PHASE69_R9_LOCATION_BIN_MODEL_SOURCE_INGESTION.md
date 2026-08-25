@@ -164,3 +164,24 @@ not validate inventory quantities**; **R8 authority precedence and R5 WMS scope 
 **R3–R7 remain deferred**; and report, capsule, client-facing output, and **AgentNet resolver
 publication remain unauthorized** despite the live public resolver. See
 [`PHASE70_R9_SOURCE_INGESTION_REVIEW_DECISION.md`](PHASE70_R9_SOURCE_INGESTION_REVIEW_DECISION.md).
+
+## 11. What Phase 71 planned around this record
+
+**Phase 71 is planning-only** — no production access, no production write, and **no
+`evidence_reference`, `review_record`, or `source_ingestion_record` created**. **No production record of any kind was
+created.** It planned what must
+happen before this record can support evidence about R1's location dimension.
+
+Its premise is §10's confirmed finding: **R9 is reviewed but is a question set, not an answered
+model**. Phase 71 made the gap concrete against R1 — R1 carries one required location identifier
+plus one *optional* level marker, both marked provisional in the R1 artifact, against the six-level
+hierarchy this record describes — and listed **15 required measured answers** as the gate before any
+R1/R9 evidence reference.
+
+**This record was not modified and its posture is unchanged**: `needs_review` / `draft` /
+`authoritative=false`. **R1's location dimension remains provisional.** The recommended next
+production step is **R10 — a measured location model answer set** that answers this record's
+question set, registered as its own source ingestion (Phase 72) and non-authoritative until
+reviewed. That is a **recommendation only**; report drafting, capsule publication, client-facing
+output, and **AgentNet resolver publication remain unauthorized**. See
+[`PHASE71_R1_R9_EVIDENCE_READINESS_PLAN.md`](PHASE71_R1_R9_EVIDENCE_READINESS_PLAN.md).

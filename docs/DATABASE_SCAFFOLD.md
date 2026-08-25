@@ -677,3 +677,28 @@ The reviewed R9 row is **not modified** — the review writer has no `UPDATE` pa
 
 **No artifact body was read, printed, committed, or stored.** See
 [`PHASE70_R9_SOURCE_INGESTION_REVIEW_DECISION.md`](PHASE70_R9_SOURCE_INGESTION_REVIEW_DECISION.md).
+
+## Phase 71 — the R1/R9 evidence-readiness plan (planning-only)
+
+Phase 71 creates **no database record at all**. It is a planning phase: no production access, no
+production write, **no `evidence_reference`, no `review_record`, no `source_ingestion_record`**, no
+report, no capsule, no client-facing output, and no AgentNet or resolver publication. **No
+migration, no migration 015, no model, no writer, no allowlist pair, and no operator utility** —
+head stays `014_engagement_classification` with 14 migrations, 18 tables, and 12 writers.
+
+**The finding:** R1 cannot yet support a location-dimension evidence reference because the collected
+R9 artifact **defines the questions that must be answered but does not answer them**. The gap is
+concrete — R1 carries one required location identifier plus one *optional* level marker, both marked
+provisional, against R9's six-level hierarchy, and location is a **grain key** in R1's declared
+grain. The plan lists **15 required measured answers** as the gate, including both the "readable"
+and the "not reliable enough" thresholds, fixed in advance.
+
+**R1 remains provisional**; **R9 is reviewed but non-authoritative and remains a question set, not
+an answered model**; R8 and R5 remain unresolved; **R3–R7 remain deferred**. The next useful
+production step is likely **R10 — a measured location model answer set source ingestion** (Phase
+72), through the unchanged Phase 24 writer, landing `draft` / `needs_review` / `authoritative=false`
+and non-authoritative until reviewed. That is a **recommendation only**; report drafting, capsule
+publication, client-facing output, and **AgentNet resolver publication remain unauthorized**.
+
+**No artifact body was read into the repository, printed, or committed.** See
+[`PHASE71_R1_R9_EVIDENCE_READINESS_PLAN.md`](PHASE71_R1_R9_EVIDENCE_READINESS_PLAN.md).

@@ -2128,9 +2128,41 @@ pair):**
   output, and **AgentNet resolver publication remain unauthorized**.
 - [x] **The reviewed R9 record was not modified** — a review records a decision about a target, and
   the writer has no `UPDATE` path. **No artifact body was read**: the operator opens no file at all.
-- [ ] **Next: Phase 71** likely creates a narrow R9 evidence reference scoped to location-model
-  availability and readiness, or alternatively begins a combined R1/R9 evidence-readiness planning
-  step. Any further production record remains separately approved.
+- [x] **Next: Phase 71 chose the planning step** over a narrow R9 evidence reference.
+
+**The R1/R9 Evidence-Readiness Plan (Phase 71 — planning-only; no production access and no
+production record of any kind):**
+
+- [x] **Planning-only.** No production database was contacted, no environment file sourced, no
+  writer invoked, and **no production record created** — no `evidence_reference`, no
+  `review_record`, no `source_ingestion_record`, no report, no capsule, no client-facing output, and
+  no AgentNet or resolver publication. No migration, model, writer, allowlist pair, or operator
+  utility was added.
+- [x] **Core finding:** R1 cannot yet support a location-dimension `evidence_reference` because the
+  collected R9 artifact **defines the questions that must be answered but does not answer them**.
+  The next operational need is a **measured location-model answer set**, not another evidence
+  reference.
+- [x] **The gap was made concrete.** R1 declares 10 fields of which exactly **two** carry the
+  location dimension — one required identifier and one *optional* level marker, both marked
+  provisional in the artifact — while R9 describes a **six-level** hierarchy. The optional level
+  marker is a first-order readability problem, and because location is a **grain key**, ambiguity
+  there is ambiguity in the grain itself.
+- [x] **15 required measured answers** were listed as the gate before any R1/R9 evidence reference,
+  including which hierarchy levels exist, what the location identifier actually represents, which
+  system owns the model, and — stated in advance — **both** the threshold for "readable" and the
+  threshold for "not reliable enough".
+- [x] **R1 remains provisional**; **R9 is reviewed but non-authoritative and remains a question set,
+  not an answered model**; **R8 and R5 remain unresolved**; **R3–R7 remain deferred**. **No
+  inventory accuracy conclusion**, no quantity reliability conclusion, no report drafting, no
+  capsule publication, no client-facing output, and no AgentNet resolver publication is made or
+  authorized.
+- [x] **The narrow R9 evidence reference is deferred, not foreclosed.** It would mostly establish
+  that Peak holds a reviewed question set, which does not materially advance R1 location readiness;
+  it stays available if later wanted for audit completeness.
+- [ ] **Recommended next: Phase 72 — R10 Location Model Answer Set Source Ingestion**, then Phase 73
+  review, Phase 74 R1/R9/R10 evidence reference, Phase 75 review. **A recommendation only** — each
+  phase remains separately approved, and the sequence may legitimately end in a data-readiness
+  finding rather than an inventory accuracy one.
 
 **Still to do:**
 

@@ -135,3 +135,29 @@ and readiness — or, alternatively, begins a **combined R1/R9 evidence-readines
 which may be the better fit given that R9's value is the question set it defines rather than any
 answer it supplies. Either path is a **separately approved phase**, as are R8 review, R3–R7
 collection, report drafting, capsule publication, and AgentNet resolver publication.
+
+## 9. What Phase 71 planned from this decision
+
+**Phase 71 took the alternative §8 named** — a **combined R1/R9 evidence-readiness planning step**
+rather than a narrow R9 evidence reference — and is **planning-only**: no production access, no
+production write, and **no `evidence_reference`, `review_record`, or `source_ingestion_record`
+created**. **No production record of any kind was
+created.**
+
+It carried this decision's central finding forward as its own premise: **R9 is a question set, not
+an answered model**, so R1 cannot yet support a location-dimension evidence reference. Phase 71 made
+that gap concrete — R1 carries one required location identifier plus one *optional* level marker,
+both marked provisional, against R9's six-level hierarchy — and listed **15 required measured
+answers** as the gate before any R1/R9 evidence reference, including both success and failure
+thresholds fixed in advance.
+
+**The narrow R9 evidence reference is deferred, not foreclosed.** It would mostly establish that
+Peak holds a reviewed question set, which does not materially advance R1 location readiness; it
+remains available if later wanted for audit completeness.
+
+**Nothing this decision established was changed.** **R1 remains provisional**, **R9 remains
+non-authoritative**, R8 authority precedence and R5 WMS scope remain unresolved, R3–R7 remain
+deferred, and no inventory accuracy conclusion, report, capsule, client-facing output, or AgentNet
+resolver publication was created or authorized. The recommended next production step is **R10 — a
+measured location model answer set source ingestion** (Phase 72), a **separately approved phase**.
+See [`PHASE71_R1_R9_EVIDENCE_READINESS_PLAN.md`](PHASE71_R1_R9_EVIDENCE_READINESS_PLAN.md).
