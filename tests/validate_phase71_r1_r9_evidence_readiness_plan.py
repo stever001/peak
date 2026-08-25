@@ -153,10 +153,15 @@ def flat(text: str) -> str:
 
 
 def changed_files() -> list:
-    """Every path this phase touched — modified and untracked alike."""
-    modified = [c for c in git("diff", "--name-only", "HEAD").splitlines() if c]
+    """Every path this phase touched, measured against the **baseline commit**.
+
+    Deliberately not ``git diff HEAD``: once the phase is committed, a diff against HEAD is
+    empty, and every "this phase added only X" check would then pass vacuously rather than
+    testing anything. Diffing the baseline gives the same answer before and after the commit.
+    """
+    changed = [c for c in git("diff", "--name-only", BASELINE_COMMIT).splitlines() if c]
     untracked = [c for c in git("ls-files", "--others", "--exclude-standard").splitlines() if c]
-    return modified + untracked
+    return sorted(set(changed + untracked))
 
 
 # --------------------------------------------------------------------------- 1. baseline
@@ -175,9 +180,9 @@ def baseline_checks() -> None:
     check("no migration 015 or later - Phase 71 adds no migration",
           not any(re.match(r"^0*(?:1[5-9]|[2-9]\d)_", f) for f in versions))
     check("no file under alembic/ was changed by this phase",
-          not git("diff", "--name-only", "HEAD", "--", "alembic"))
+          not git("diff", "--name-only", BASELINE_COMMIT, "--", "alembic"))
     check("no file under peak/ was changed by this phase",
-          not git("diff", "--name-only", "HEAD", "--", "peak"))
+          not git("diff", "--name-only", BASELINE_COMMIT, "--", "peak"))
 
     try:
         py_compile.compile(os.path.join(REPO_ROOT, HARNESS_REL), doraise=True)
@@ -192,7 +197,7 @@ def baseline_checks() -> None:
     check(f"still exactly {EXPECTED_WRITERS} writers - no writer added",
           len(writers) == EXPECTED_WRITERS)
     check("the allowlist module was not modified - no allowlist pair added",
-          not git("diff", "--name-only", "HEAD", "--", ALLOWLIST_REL))
+          not git("diff", "--name-only", BASELINE_COMMIT, "--", ALLOWLIST_REL))
 
     from peak.persistence.allowlist import (
         ALLOWED_ACTIONS, ALLOWED_ANCHOR_CREATION_PAIRS, ALLOWED_TABLES, is_allowed_table,
@@ -207,7 +212,7 @@ def baseline_checks() -> None:
     check("clients remains never writable by any controlled path",
           is_never_writable_table("clients"))
     check("docs/Peak_Investor_Overview_AI.docx has no pending diff",
-          not git("diff", "--name-only", "HEAD", "--", "docs/Peak_Investor_Overview_AI.docx"))
+          not git("diff", "--name-only", BASELINE_COMMIT, "--", "docs/Peak_Investor_Overview_AI.docx"))
 
 
 # --------------------------------------------------------------------------- 2. no write surface
@@ -244,7 +249,7 @@ def no_write_surface_checks() -> None:
               not any(n in code for n in ARTIFACT_BASENAMES)
               and "peak-internal-test-artifacts" not in code)
 
-    mk_diff = git("diff", "-U0", "HEAD", "--", "Makefile")
+    mk_diff = git("diff", "-U0", BASELINE_COMMIT, "--", "Makefile")
     added_mk = [ln[1:].strip() for ln in mk_diff.splitlines()
                 if ln.startswith("+") and not ln.startswith("+++") and ln[1:].strip()]
     removed_mk = [ln[1:].strip() for ln in mk_diff.splitlines()
