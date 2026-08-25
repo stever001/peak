@@ -2159,10 +2159,43 @@ production record of any kind):**
 - [x] **The narrow R9 evidence reference is deferred, not foreclosed.** It would mostly establish
   that Peak holds a reviewed question set, which does not materially advance R1 location readiness;
   it stays available if later wanted for audit completeness.
-- [ ] **Recommended next: Phase 72 — R10 Location Model Answer Set Source Ingestion**, then Phase 73
-  review, Phase 74 R1/R9/R10 evidence reference, Phase 75 review. **A recommendation only** — each
-  phase remains separately approved, and the sequence may legitimately end in a data-readiness
-  finding rather than an inventory accuracy one.
+- [x] **Recommended next: Phase 72 — R10 Location Model Answer Set Source Ingestion**, then Phase
+  73 review, Phase 74 R1/R9/R10 evidence reference, Phase 75 review. Phase 72 has now run.
+
+**The R10 Location Model Answer Set Source Ingestion (Phase 72 — one production application record;
+no evidence reference, no review record, no report, no capsule, no migration, no writer, no
+allowlist pair):**
+
+- [x] **One R10 source ingestion record was created** (`ing_b26d137a0a334ee9`), registering the
+  internal test **R10 measured location model answer set** through the unchanged Phase 24 source
+  ingestion writer under the stored `internal_test_001` / `99999` / `internal_peak_only` anchor.
+  Head stays `014` with 14 migrations, 18 tables, and 12 writers.
+- [x] **R10 answers R9's question set.** All **15** Phase 71 checklist items carry an explicit
+  answer state from a fixed vocabulary (`answered_yes`, `answered_no`, `partial`, `unknown`,
+  `not_present`, `not_measured`, `blocked_by_r8`, `blocked_by_r5`, `requires_follow_up`).
+- [x] **The unfavourable answers were kept.** None of the 15 items was dropped, merged, or softened,
+  and **11 of 15 resolve to a negative, unknown, or blocked state**. The only two `answered_yes`
+  items are the two threshold *definitions*, not favourable findings about the data.
+- [x] **The measurement basis is stated honestly:** measured against the registered R1, R2, and R9
+  artifact descriptions only — **no live ERP, WMS, production, or client system exists** to measure
+  against in this internal_test engagement, so artifact-level assertions were not upgraded into
+  measured facts.
+- [x] **Headline finding: R1's location dimension is not currently readable**, and on the
+  thresholds fixed in advance it is **not reliable enough** for location-attributed evidence. Two
+  items are outright `answered_no` — no field-to-level mapping exists, and R1 quantities are not
+  time-aligned with a location model that has no effective-dating.
+- [x] **The artifact body lives outside the repository** and **only metadata, the hash, and a
+  logical location reference were persisted** — no location identifiers, bin codes, aisle, rack,
+  warehouse or site names, item values, quantities, or row-like data reached the database or repo.
+- [x] **Nothing wider was created or authorized.** **No evidence reference**, **no review record**,
+  no report, no capsule, no client-facing output, and **no AgentNet publication**. **R10 remains
+  `needs_review` / `draft` / `authoritative=false` and must be reviewed before evidence use**; **R1
+  remains provisional**; **R8 precedence and R5 WMS scope remain unresolved** (recorded as
+  `blocked_by_r8` / `blocked_by_r5`); **R3–R7 remain deferred**; the resolver is live but
+  **publication remains gated**.
+- [ ] **Next: Phase 73 — the R10 source-ingestion review decision**, which must confront the
+  headline finding directly: an answer set concluding *not readable* supports a **data-readiness or
+  reliability finding**, not an inventory accuracy one. Separately approved, as is every phase.
 
 **Still to do:**
 

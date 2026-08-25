@@ -1,16 +1,22 @@
 #!/usr/bin/env python3
-"""Phase 69 R9 location/bin naming model source ingestion check.
+"""Phase 72 R10 measured location model answer set source ingestion check.
 
-R1 was registered in Phase 65 with its **location dimension explicitly provisional**: R8 flags the
-location/bin naming model as unconfirmed, and per-location quantity is exactly what R1 supplies.
-Phase 69 collects that location model as **exactly one** metadata-only source ingestion record
-through the unchanged Phase 24 writer, so a future R1 location-dimension review has something to
-review against.
+R9 defines the location question set; Phase 71 fixed a fifteen-item checklist of measured answers
+required before R1 can support a location-dimension `evidence_reference`. Phase 72 collects **R10**,
+the measured answer set, as **exactly one** metadata-only source ingestion record through the
+unchanged Phase 24 writer.
 
-Collection is not review and not validation. This harness therefore checks not only that one row
-is written correctly, but that the phase withholds everything it must withhold: no evidence
-reference, no review record, no report, no capsule, no publication, no lifting of R1's provisional
-marking, and no inventory-quantity claim.
+Collection is not review and not validation. This harness therefore checks not only that one row is
+written correctly, but that the phase withholds everything it must withhold: no evidence reference,
+no review record, no report, no capsule, no publication, no lifting of R1's provisional marking, and
+no inventory-quantity claim.
+
+**It also checks the property that makes an answer set trustworthy: that the unfavourable answers
+are still in it.** An answer set which quietly dropped the questions that came back negative would
+look like readiness while establishing none, so the checks below assert that all fifteen checklist
+items are present and that negative, unknown, and blocked states are actually recorded. Those
+assertions are made against the *operator's own provenance notes* — never by opening the artifact,
+which stays outside the repository.
 
 Offline and credential-free: the SQLAlchemy layer runs only against throwaway temporary SQLite, and
 the operator utility is exercised with every role variable scrubbed from the child environment so
@@ -47,20 +53,28 @@ for _p in (REPO_ROOT, os.path.join(REPO_ROOT, "tools")):
 
 PY = sys.executable or "python3"
 
-BASELINE_COMMIT = "8be7893"   # Add Phase 68 R2 evidence reference review decision
-#: The last commit belonging to this phase. The "changed nothing outside" check below
-#: is pinned to this range: scoped to the working tree it would go empty once the phase
-#: is committed, and would flag a *later* phase's in-progress edits as this phase's.
-PHASE_COMMIT = "608bf4e"   # Add Phase 69 R9 location bin model source ingestion
+BASELINE_COMMIT = "fb1ffdb"   # Fix Phase 71 harness to diff the baseline commit, not HEAD
 
-TOOL_REL = "tools/create_internal_test_r9_source_ingestion_record.py"
+TOOL_REL = "tools/create_internal_test_r10_source_ingestion_record.py"
 PHASE63_TOOL_REL = "tools/create_internal_test_source_ingestion_record.py"
 PHASE65_TOOL_REL = "tools/create_internal_test_r1_r2_source_ingestion_records.py"
-HARNESS_REL = "tests/validate_phase69_r9_location_bin_model_source_ingestion.py"
-DOC_REL = "docs/PHASE69_R9_LOCATION_BIN_MODEL_SOURCE_INGESTION.md"
-PLAN_REL = "docs/PHASE64_INTERNAL_TEST_R1_R7_SOURCE_ARTIFACT_COLLECTION_PLAN.md"
-PHASE65_DOC_REL = "docs/PHASE65_R1_R2_INTERNAL_TEST_SOURCE_INGESTION.md"
-PHASE68_DOC_REL = "docs/PHASE68_R2_EVIDENCE_REFERENCE_REVIEW_DECISION.md"
+PHASE69_TOOL_REL = "tools/create_internal_test_r9_source_ingestion_record.py"
+
+#: Prior-phase *harnesses* Phase 72 also had to touch, and why. Each scoped its "this phase changed
+#: nothing outside" check to the working tree, which is only correct at a commit boundary: once
+#: Phase 72 had uncommitted files, all three flagged Phase 72's work as their own. They are pinned
+#: to their own commit ranges instead. These are validation files only - no production operator,
+#: writer, model, migration, or allowlist was touched, and that is asserted separately below.
+PRIOR_HARNESS_FIXES = (
+    "tests/validate_phase69_r9_location_bin_model_source_ingestion.py",
+    "tests/validate_phase70_r9_source_ingestion_review_decision.py",
+    "tests/validate_phase71_r1_r9_evidence_readiness_plan.py",
+)
+HARNESS_REL = "tests/validate_phase72_r10_location_model_answer_set_source_ingestion.py"
+DOC_REL = "docs/PHASE72_R10_LOCATION_MODEL_ANSWER_SET_SOURCE_INGESTION.md"
+PLAN_REL = "docs/PHASE71_R1_R9_EVIDENCE_READINESS_PLAN.md"
+PHASE70_DOC_REL = "docs/PHASE70_R9_SOURCE_INGESTION_REVIEW_DECISION.md"
+PHASE69_DOC_REL = "docs/PHASE69_R9_LOCATION_BIN_MODEL_SOURCE_INGESTION.md"
 WRITER_REL = "peak/db/source_ingestion_writer.py"
 MODELS_REL = "peak/db/models.py"
 ALLOWLIST_REL = "peak/persistence/allowlist.py"
@@ -83,14 +97,30 @@ SCOPE = "internal_peak_only"
 FORBIDDEN_DRAFT_ATTRS = ("packet_payload", "raw_packet_content", "raw_content", "payload")
 
 #: The artifact body must never be committed. Its filename must appear nowhere in the repo.
-ARTIFACT_BASENAMES = ("r9_location_bin_naming_model_v1.json",)
+ARTIFACT_BASENAMES = ("r10_location_model_answer_set_v1.json",)
 
-#: Identity of the records Phase 69 must NOT be able to re-express. A flag that could reach any of
+#: Identity of the records Phase 72 must NOT be able to re-express. A flag that could reach any of
 #: these would mean the tool is not the fixed single-packet utility it claims to be.
 OTHER_PACKET_MARKERS = ("pkt_internal_test_r1_inventory_sku_location_001",
                         "pkt_internal_test_r2_sku_item_master_001",
+                        "pkt_internal_test_r9_location_bin_model_001",
                         "phase65_internal_test_source_ingestion_r1_001",
-                        "phase65_internal_test_source_ingestion_r2_001")
+                        "phase65_internal_test_source_ingestion_r2_001",
+                        "phase69_internal_test_source_ingestion_r9_001")
+
+#: The nine answer states the R10 answer set may use.
+ANSWER_STATES = ("answered_yes", "answered_no", "partial", "unknown", "not_present",
+                 "not_measured", "blocked_by_r8", "blocked_by_r5", "requires_follow_up")
+
+#: States that represent an unfavourable or unresolved answer. At least one must be recorded, or
+#: the answer set is not credible as a measurement.
+UNFAVOURABLE_STATES = ("answered_no", "unknown", "not_measured", "blocked_by_r8", "blocked_by_r5")
+
+#: Row-like values that must never appear: item/SKU values, quantities, and location/bin/aisle/
+#: rack/warehouse/site *values*. Schema field names such as ``location_identifier`` are not values.
+ROW_LIKE_RE = re.compile(r"(?i)\b(sku|item)[-_ ]?(?:id|code|no|number)?\s*[:=]\s*[\"\']?[A-Z0-9]{3,}"
+                         r"|\bqty\s*[:=]\s*\d|\bquantity_on_hand\s*[:=]\s*\d"
+                         r"|\b(?:bin|aisle|rack|bay|warehouse|site)\s*[:=]\s*[\"\']?[A-Z0-9]{2,}")
 
 REAL_DSN_RE = re.compile(r"\b[a-z][a-z0-9+.\-]*://(?!USER:PASSWORD)(?!user:password)"
                          r"(?!internal-test-artifact)[\w.\-]+:[^\s@'\"]+@")
@@ -160,7 +190,12 @@ def git(*args: str) -> str:
 
 
 def flat(text: str) -> str:
-    return re.sub(r"\s+", " ", re.sub(r"^\s*>\s?", "", text, flags=re.MULTILINE)).lower()
+    """Prose flattened for phrase checks: blockquotes, code spans, and bold/italic asterisks
+    removed, so a check tests the claim rather than the markdown formatting. Only ``*`` is
+    stripped - ``_`` is part of identifiers such as ``evidence_reference``."""
+    stripped = re.sub(r"^\s*>\s?", "", text, flags=re.MULTILINE)
+    stripped = stripped.replace("`", "").replace("*", "")
+    return re.sub(r"\s+", " ", stripped).lower()
 
 
 def scrubbed_env():
@@ -170,18 +205,18 @@ def scrubbed_env():
 
 
 def tmpdir() -> str:
-    tmp = tempfile.mkdtemp(prefix="peak_phase69_")
+    tmp = tempfile.mkdtemp(prefix="peak_phase72_")
     _tmpdirs.append(tmp)
     return tmp
 
 
 def temp_sqlite_url() -> str:
-    return "sqlite:///" + os.path.join(tmpdir(), "phase69.db")
+    return "sqlite:///" + os.path.join(tmpdir(), "phase72.db")
 
 
 def synthetic_packet_hash(salt: str) -> str:
     """A throwaway hash built at runtime. The real artifact is never opened by this harness."""
-    return hashlib.sha256(("phase69-synthetic-fixture-" + salt).encode("utf-8")).hexdigest()
+    return hashlib.sha256(("phase72-synthetic-fixture-" + salt).encode("utf-8")).hexdigest()
 
 
 # --------------------------------------------------------------------------- 1. baseline
@@ -197,7 +232,7 @@ def baseline_checks() -> None:
     check(f"exactly {EXPECTED_MIGRATIONS} migrations", len(versions) == EXPECTED_MIGRATIONS)
     check(f"{HEAD_REVISION} is still the newest migration",
           versions[-1] == f"{HEAD_REVISION}.py")
-    check("no migration 015 or later - Phase 69 adds no migration",
+    check("no migration 015 or later - Phase 72 adds no migration",
           not any(re.match(r"^0*(?:1[5-9]|[2-9]\d)_", f) for f in versions))
     check("no migration file was added or modified by this phase",
           not git("diff", "--name-only", "HEAD", "--", "alembic"))
@@ -227,7 +262,7 @@ def baseline_checks() -> None:
           not git("diff", "--name-only", "HEAD", "--", "peak"))
     check("the allowlist module was not modified by this phase - no allowlist pair added",
           not git("diff", "--name-only", "HEAD", "--", ALLOWLIST_REL))
-    for rel in (PHASE63_TOOL_REL, PHASE65_TOOL_REL):
+    for rel in (PHASE63_TOOL_REL, PHASE65_TOOL_REL, PHASE69_TOOL_REL):
         check(f"{os.path.basename(rel)} was not modified by this phase",
               not git("diff", "--name-only", "HEAD", "--", rel))
 
@@ -291,8 +326,8 @@ def writer_contract_checks() -> None:
 
 
 def packet_checks() -> None:
-    print("\n3. Exactly one R9 packet, metadata-only, internal-only, non-final, non-validating")
-    import create_internal_test_r9_source_ingestion_record as tool
+    print("\n3. One R10 packet: an answer set that keeps its unfavourable answers")
+    import create_internal_test_r10_source_ingestion_record as tool
 
     check(f"the packet is anchored to engagement {ANCHOR_ID} / client {RESERVED_CLIENT_ID}",
           tool.ENGAGEMENT_ID == ANCHOR_ID and tool.CLIENT_ID == RESERVED_CLIENT_ID)
@@ -301,15 +336,15 @@ def packet_checks() -> None:
     check("the approved artifact directory lives outside the repository",
           not os.path.realpath(tool.APPROVED_ARTIFACT_DIR).startswith(
               os.path.realpath(REPO_ROOT) + os.sep))
-    check("the idempotency key is Phase 69 scoped and names R9",
-          tool.IDEMPOTENCY_KEY == "phase69_internal_test_source_ingestion_r9_001")
-    check("the packet reference id names R9 and the location/bin model",
-          tool.PACKET_REFERENCE_ID == "pkt_internal_test_r9_location_bin_model_001")
-    check("the approved artifact filename is the R9 location/bin naming model",
+    check("the idempotency key is Phase 72 scoped and names R10",
+          tool.IDEMPOTENCY_KEY == "phase72_internal_test_source_ingestion_r10_001")
+    check("the packet reference id names R10 and the location model answer set",
+          tool.PACKET_REFERENCE_ID == "pkt_internal_test_r10_location_model_answer_set_001")
+    check("the approved artifact filename is the R10 answer set",
           tool.ARTIFACT_NAME == ARTIFACT_BASENAMES[0])
     check("the stored location reference is logical, not a filesystem path",
           tool.PACKET_LOCATION_REFERENCE
-          == "internal-test-artifact://phase69/r9-location-bin-naming-model-v1"
+          == "internal-test-artifact://phase72/r10-location-model-answer-set-v1"
           and not tool.PACKET_LOCATION_REFERENCE.startswith("/")
           and "\\" not in tool.PACKET_LOCATION_REFERENCE
           and os.path.expanduser("~") not in tool.PACKET_LOCATION_REFERENCE)
@@ -319,31 +354,76 @@ def packet_checks() -> None:
           and tool.PACKET_SOURCE_TYPE == "internal_test_export")
 
     reasons = list(tool.REASONS)
-    check("provenance notes name R9 as the location/bin naming model",
-          any(r.startswith("source_ingestion:") and "location/bin naming model" in r
+    joined = "\n".join(reasons)
+
+    check("provenance notes name R10 as the measured location model answer set",
+          any(r.startswith("source_ingestion:") and "measured location model answer set" in r
               for r in reasons))
-    check("provenance notes state R9 is collected to resolve R1 location-dimension ambiguity",
-          any("R1 location-dimension ambiguity" in r for r in reasons))
-    check("provenance notes state R9 does not validate any inventory quantity",
+    check("provenance notes record that R10 responds to the R9 question set",
+          any(r.startswith("responds_to:") and "question set" in r for r in reasons))
+    check("provenance notes cite the Phase 71 readiness plan",
+          any("PHASE71_R1_R9_EVIDENCE_READINESS_PLAN" in r for r in reasons))
+    check("provenance notes state R9 defines the questions and R10 supplies the answers",
+          any("R9 defines the questions and R10 supplies the measured answers" in r
+              for r in reasons))
+
+    # --- the answer set must be complete and must keep its unfavourable answers
+    check("provenance notes state all 15 Phase 71 checklist items are answered",
+          any(r.startswith("structure:") and "15" in r and "checklist" in r for r in reasons))
+    check("provenance notes state no checklist item was dropped, merged, or softened",
+          any("none was dropped, merged or softened" in r for r in reasons))
+    check("provenance notes enumerate the answer-state vocabulary used",
+          any(r.startswith("structure:") and "answer states used are" in r for r in reasons))
+    # Every state the notes enumerate must come from the approved vocabulary — an invented
+    # state would let an unfavourable answer be relabelled into something that reads as settled.
+    enumerated = [r for r in reasons if "answer states used are" in r]
+    check("the answer-state vocabulary is enumerated exactly once", len(enumerated) == 1)
+    declared_states = set(re.findall(r"\b(?:answered_\w+|partial|unknown|not_present|"
+                                     r"not_measured|blocked_by_\w+|requires_follow_up)\b",
+                                     enumerated[0] if enumerated else ""))
+    check("every enumerated answer state is in the approved vocabulary",
+          bool(declared_states) and declared_states <= set(ANSWER_STATES))
+    check("the enumerated states include at least one unfavourable state",
+          bool(declared_states & set(UNFAVOURABLE_STATES)))
+    check("provenance notes record that negative/unknown/blocked answers were retained",
+          any(r.startswith("negative_answers_retained:") and "rather than omitted" in r
+              for r in reasons))
+    check("provenance notes record at least one unfavourable answer state",
+          any(st in joined for st in UNFAVOURABLE_STATES))
+    check("provenance notes state the measurement basis honestly - no live system was measured",
+          any(r.startswith("measurement_basis:") and "no live ERP, WMS, production or client "
+              "system exists" in r for r in reasons))
+    check("provenance notes carry the headline finding that R1 is not currently readable",
+          any(r.startswith("headline_finding:") and "not currently readable" in r
+              for r in reasons))
+    check("provenance notes state R10 does not make R1 readable",
+          any(r.startswith("headline_finding:") and "does not make R1 readable" in r
+              for r in reasons))
+
+    # --- the withholdings
+    check("provenance notes state R10 does not validate inventory quantities",
           any(r.startswith("does_not_validate:")
               and "does not validate any inventory quantity" in r for r in reasons))
-    check("provenance notes state R9 is not an inventory accuracy finding",
-          any("not an inventory accuracy finding" in r for r in reasons))
-    check("provenance notes state R9 does not confirm R8 authority precedence",
+    check("provenance notes state R10 creates no inventory accuracy conclusion",
+          any(r.startswith("does_not_validate:")
+              and "does not create an inventory accuracy conclusion" in r for r in reasons))
+    check("provenance notes state R10 does not lift R1's provisional location marking",
+          any(r.startswith("provisional:") and "does not lift R1's provisional location marking" in r
+              for r in reasons))
+    check("provenance notes state R10 does not make R1 evidence-ready by itself",
+          any(r.startswith("provisional:") and "evidence-ready by itself" in r for r in reasons))
+    check("provenance notes state R10 does not confirm R8 authority precedence",
           any(r.startswith("unconfirmed:") and "does not confirm R8 authority precedence" in r
               for r in reasons))
-    check("provenance notes state R9 does not by itself lift R1's provisional marking",
-          any(r.startswith("provisional:") and "does not by itself lift" in r
-              and "evidence-ready" in r for r in reasons))
-    check("provenance notes record the R5 WMS scope uncertainty as a shared dependency",
-          any(r.startswith("dependency:") and "R5 WMS scope" in r for r in reasons))
-    check("provenance notes record ERP/WMS/manual/unknown ownership as open questions",
-          any(r.startswith("ownership_posture:") and "open questions" in r for r in reasons))
-    check("provenance notes record the data-readiness downstream implication",
-          any(r.startswith("downstream:") and "data-readiness or reliability" in r
+    check("provenance notes state R10 does not resolve R5 WMS scope",
+          any(r.startswith("unconfirmed:") and "does not resolve R5 WMS scope" in r
               for r in reasons))
-    check("provenance notes state R9 must be reviewed before evidence use",
+    check("provenance notes state R10 must be reviewed before evidence use",
           any(r.startswith("review_required:") and "evidence_reference" in r for r in reasons))
+    check("provenance notes withhold evidence/report/capsule/publication authority",
+          any(r.startswith("not_authorized:") and "publication" in r for r in reasons))
+    check("provenance notes name the R10 review as the next separately approved step",
+          any(r.startswith("next_step:") and "separately approved phase" in r for r in reasons))
     check("provenance notes state the artifact carries no location identifiers or quantities",
           any(r.startswith("scope_note:") and "no location identifiers" in r
               and "quantities" in r for r in reasons))
@@ -351,10 +431,13 @@ def packet_checks() -> None:
           any("no real client data" in r and "not client-facing" in r for r in reasons))
     check("provenance notes state the metadata-only content rule",
           any(r.startswith("content_rule:") and "metadata only" in r for r in reasons))
-    check("provenance notes withhold evidence/report/capsule/publication authority",
-          any(r.startswith("not_authorized:") and "publication" in r for r in reasons))
     check("provenance notes disclose the artifact is Peak-authored, not client-supplied",
           any("not a client-supplied export" in r for r in reasons))
+    check("provenance notes carry no row-like item/quantity/location value",
+          not ROW_LIKE_RE.search(joined))
+    check("provenance notes name no other request's packet identity",
+          not any(m in joined for m in OTHER_PACKET_MARKERS
+                  if not m.startswith("pkt_internal_test_r9")))
 
     from peak.db.source_ingestion_writer import _pre_db_validate
     request = tool.build_request(synthetic_packet_hash("packet"))
@@ -376,7 +459,7 @@ def packet_checks() -> None:
           request.target_table == "source_ingestion_records"
           and request.requested_action == "create_source_ingestion_record")
     denial, validated = _pre_db_validate(request, None)
-    check("the R9 packet passes the writer's pre-DB governance gate (no connection opened)",
+    check("the R10 packet passes the writer's pre-DB governance gate (no connection opened)",
           denial is None and validated is not None)
 
 
@@ -416,8 +499,15 @@ def tool_checks() -> None:
     check("utility never places artifact content on a draft",
           not any(f"{a}=" in code for a in FORBIDDEN_DRAFT_ATTRS))
     check("utility embeds no real-looking DSN", not REAL_DSN_RE.search(src))
-    check("utility cannot retarget R1, R2 or R8 - no other packet identity appears anywhere",
-          not any(marker in src for marker in OTHER_PACKET_MARKERS))
+    # R9's packet reference legitimately appears once, as the question set R10 answers. Every
+    # other prior packet identity - and R9's own idempotency key, which would be a retarget -
+    # must be absent.
+    check("utility cannot retarget R1, R2, R8 or R9 - no other packet identity appears",
+          not any(m in src for m in OTHER_PACKET_MARKERS
+                  if m != "pkt_internal_test_r9_location_bin_model_001"))
+    check("utility references R9 only as the answered question set, never as its own target",
+          src.count("pkt_internal_test_r9_location_bin_model_001") <= 1
+          and "phase69_internal_test_source_ingestion_r9_001" not in src)
     check("the record identity fields are module constants, not derived from arguments",
           all(re.search(rf"(?m)^{name} = ", code) is not None
               for name in ("ENGAGEMENT_ID", "CLIENT_ID", "OWNER_ID", "AUTHORIZATION_SCOPE",
@@ -453,13 +543,15 @@ def tool_checks() -> None:
     check("dry-run discloses that stored-engagement authorization is not exercised",
           "NOT exercised by this dry-run" in run.stdout)
     check("dry-run prints the logical location reference, not a filesystem path",
-          "internal-test-artifact://phase69/r9-location-bin-naming-model-v1" in run.stdout)
+          "internal-test-artifact://phase72/r10-location-model-answer-set-v1"
+          in run.stdout)
     check("dry-run states R9 does not validate any inventory quantity",
           "does not validate any inventory quantity" in run.stdout)
     check("dry-run states R9 does not confirm R8 authority precedence",
           "does not confirm R8 authority precedence" in run.stdout)
     check("dry-run names no other request's packet reference or idempotency key",
-          not any(marker in run.stdout for marker in OTHER_PACKET_MARKERS))
+          not any(m in run.stdout for m in OTHER_PACKET_MARKERS
+                  if m != "pkt_internal_test_r9_location_bin_model_001"))
     # Artifact-agnostic: the artifact is JSON, so any leak would carry object syntax. Matching on
     # its own key names would instead copy its internals into this repository.
     check("dry-run prints no JSON object syntax - the artifact body cannot have leaked",
@@ -487,7 +579,7 @@ def tool_checks() -> None:
 
     # Missing and empty approved artifacts, exercised in-process against a temp directory so the
     # real external artifact is never touched.
-    import create_internal_test_r9_source_ingestion_record as tool
+    import create_internal_test_r10_source_ingestion_record as tool
 
     fake_dir = tmpdir()
     real_dir = tool.APPROVED_ARTIFACT_DIR
@@ -515,12 +607,12 @@ def tool_checks() -> None:
 
 
 def writer_checks() -> None:
-    print("\n5. The writer creates exactly one record and nothing else")
+    print("\n5. The writer creates exactly one R10 record and nothing else")
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
 
     import create_internal_test_engagement_anchor as anchor_tool
-    import create_internal_test_r9_source_ingestion_record as tool
+    import create_internal_test_r10_source_ingestion_record as tool
     from peak.db.base import Base
     from peak.db.engagement_authorization_anchor_writer import (
         persist_engagement_authorization_anchor,
@@ -543,7 +635,7 @@ def writer_checks() -> None:
     packet_hash = synthetic_packet_hash("R9")
     receipt = persist_source_ingestion_record(tool.build_request(packet_hash),
                                               session_factory=factory)
-    check("the R9 invocation creates a source ingestion record", receipt.outcome == "created")
+    check("the R10 invocation creates a source ingestion record", receipt.outcome == "created")
     check("the receipt reports one stored record created", receipt.stored_record_created is True)
     check("the receipt reports the record is review-gated",
           receipt.review_status == "needs_review" and receipt.output_status == "draft")
@@ -552,7 +644,7 @@ def writer_checks() -> None:
     check("exactly one source ingestion record exists",
           session.query(SourceIngestionRecord).count() == 1)
     row = session.get(SourceIngestionRecord, receipt.stored_record_id)
-    check("the row carries the R9 packet reference id",
+    check("the row carries the R10 packet reference id",
           row.source_reference_id == tool.PACKET_REFERENCE_ID)
     check("the record is tied to the internal_test engagement",
           row.engagement_id == ANCHOR_ID and row.client_id == RESERVED_CLIENT_ID
@@ -578,14 +670,26 @@ def writer_checks() -> None:
           and row.details_json["capsule_candidate_ready"] is False)
 
     stored_reasons = row.details_json.get("reasons", [])
-    check("the row records that R9 does not validate any inventory quantity",
+    check("the row records that R10 does not validate any inventory quantity",
           any("does not validate any inventory quantity" in r for r in stored_reasons))
-    check("the row records that R9 must be reviewed before evidence use",
+    check("the row records that R10 must be reviewed before evidence use",
           any("must be reviewed before" in r for r in stored_reasons))
     check("the row records the unconfirmed R8 precedence posture",
           any("does not confirm R8 authority precedence" in r for r in stored_reasons))
+    check("the row records the unresolved R5 WMS scope posture",
+          any("does not resolve R5 WMS scope" in r for r in stored_reasons))
+    check("the row records that R1's provisional location marking is not lifted",
+          any("does not lift R1's provisional location marking" in r for r in stored_reasons))
+    check("the row retains the negative/unknown/blocked answer states",
+          any("negative_answers_retained" in r for r in stored_reasons)
+          and any(st in str(stored_reasons) for st in UNFAVOURABLE_STATES))
+    check("the row records the headline finding that R1 is not currently readable",
+          any("not currently readable" in r for r in stored_reasons))
+    check("the row carries no row-like item/quantity/location value",
+          not ROW_LIKE_RE.search(str(row.details_json)))
     check("the stored provenance names no other request's packet identity",
-          not any(marker in str(row.details_json) for marker in OTHER_PACKET_MARKERS))
+          not any(m in str(row.details_json) for m in OTHER_PACKET_MARKERS
+                  if m != "pkt_internal_test_r9_location_bin_model_001"))
 
     # Nothing else was written.
     check("no Client row was created", session.query(Client).count() == 0)
@@ -636,61 +740,71 @@ def doc_checks() -> None:
     doc = read(DOC_REL)
     f = flat(doc)
     for phrase, label in (
-        ("one r9 source ingestion record", "exactly one R9 record was created"),
-        ("location/bin naming model", "R9 is a location/bin naming model artifact"),
+        ("one r10 source ingestion record", "exactly one R10 record was created"),
+        ("measured location model answer set", "R10 is a measured answer set"),
+        ("question set", "R10 responds to R9's question set"),
+        ("negative", "the answer set includes negative answers"),
+        ("unknown", "the answer set includes unknown answers"),
         ("outside the repository", "the artifact body lives outside the repository"),
         ("metadata", "only metadata was persisted"),
         ("packet_hash", "the hash is named as what was persisted"),
         ("internal-test-artifact://", "the logical location reference is recorded"),
-        ("unblock", "R9 is collected to unblock future R1 location-dimension review"),
+        ("needs_review", "R10 remains needs_review"),
+        ("authoritative=false", "R10 remains non-authoritative"),
+        ("must be reviewed", "R10 must be reviewed before evidence use"),
         ("does not validate inventory quantities",
-         "R9 does not validate inventory quantities"),
-        ("does not make r1 evidence-ready", "R9 does not make R1 evidence-ready by itself"),
-        ("must be reviewed", "R9 must be reviewed before evidence use"),
+         "R10 does not validate inventory quantities"),
+        ("does not lift r1's provisional location marking",
+         "R10 does not lift R1's provisional location marking"),
+        ("does not resolve r8 authority precedence",
+         "R10 does not resolve R8 authority precedence"),
+        ("does not resolve r5 wms scope", "R10 does not resolve R5 WMS scope"),
         ("no evidence reference", "no evidence_reference was created"),
         ("no review record", "no review record was created"),
         ("no report", "no report record was created"),
         ("no capsule", "no capsule was created"),
         ("no client-facing output", "no client-facing output was created"),
         ("resolver", "the AgentNet resolver posture is stated"),
-        ("publication remains unauthorized", "resolver publication remains unauthorized"),
-        ("needs_review", "R8 remains needs_review"),
-        ("authoritative=false", "R8 remains non-authoritative"),
+        ("publication remains", "resolver publication remains gated"),
+        ("phase 73", "the likely Phase 73 next step is named"),
         (ANCHOR_ID, "the engagement anchor is named"),
         (SCOPE, "the authorization scope is named"),
     ):
         check(f"doc states: {label}", phrase in f)
 
-    check("doc states: R8 remains provisional / draft",
-          "provisional" in f and "draft" in f)
-    # Written with an en dash in prose; accept either dash so the check tests the claim, not
-    # the typography.
     check("doc states: R3-R7 remain deferred",
-          re.search(r"r3[-–—]r7", f) is not None and "defer" in f)
+          re.search(r"r3[-\u2013\u2014]r7", f) is not None and "defer" in f)
+    check("doc records the headline finding rather than only the mechanics",
+          "not currently readable" in f or "not reliable enough" in f)
+    check("doc states no checklist item was omitted",
+          "15" in f and ("dropped" in f or "omitted" in f or "none was" in f))
 
     check("doc embeds no real-looking DSN", not REAL_DSN_RE.search(doc))
     check("doc prints no environment value",
           not re.search(r"(?m)^\s*(?:export\s+)?PEAK_\w+\s*=\s*\S", doc))
     check("doc contains no artifact filesystem path",
           not any(name in doc for name in ARTIFACT_BASENAMES))
+    check("doc carries no row-like item/quantity/location value", not ROW_LIKE_RE.search(doc))
 
     for rel in ("docs/IMPLEMENTATION_PLAN.md", "docs/DATABASE_ACCESS_AND_AUDIT.md",
-                "docs/DATABASE_SCAFFOLD.md", PLAN_REL, PHASE65_DOC_REL, PHASE68_DOC_REL):
+                "docs/DATABASE_SCAFFOLD.md", PLAN_REL, PHASE70_DOC_REL, PHASE69_DOC_REL):
         blob = flat(read(rel))
         name = os.path.basename(rel)
-        check(f"{name} records Phase 69", "phase 69" in blob)
-        check(f"{name} states no evidence reference was created for R9",
-              "no evidence reference" in blob or "evidence_references still" in blob)
+        check(f"{name} records Phase 72", "phase 72" in blob)
+        check(f"{name} states no evidence reference was created",
+              any(t in blob for t in ("no evidence reference", "no evidence_reference",
+                                      "evidence_references still")))
+        check(f"{name} states R1 remains provisional", "remains provisional" in blob)
 
     mk = read("Makefile")
-    check("Makefile declares validate-phase69", "validate-phase69" in mk)
-    check("validate depends on validate-phase69",
-          re.search(r"^validate:.*validate-phase69", mk, re.MULTILINE) is not None)
+    check("Makefile declares validate-phase72", "validate-phase72" in mk)
+    check("validate depends on validate-phase72",
+          re.search(r"^validate:.*validate-phase72", mk, re.MULTILINE) is not None)
     check("the live gates remain opt-in",
           re.search(r"^validate:.*(?:runtime-connectivity|writer-enablement|"
                     r"production-mysql-collation-verify)", mk, re.MULTILINE) is None)
     check("the record-creation utility is not wired into validate",
-          "create_internal_test_r9_source_ingestion_record" not in mk)
+          "create_internal_test_r10_source_ingestion_record" not in mk)
 
 
 # --------------------------------------------------------------------------- 7. isolation
@@ -735,14 +849,19 @@ def isolation_checks() -> None:
                    if c.endswith((".json", ".csv", ".txt"))])
 
     # Phase 69 must add nothing beyond its own operator, harness, and docs.
-    scope = git("diff", "--name-only", f"{BASELINE_COMMIT}..{PHASE_COMMIT}").splitlines()
-    if not scope:  # pre-commit: fall back to the working tree
-        scope = git("diff", "--name-only", BASELINE_COMMIT).splitlines()
-    added = [c for c in scope
-             if c not in (TOOL_REL, HARNESS_REL, DOC_REL, "Makefile")
-             and not c.startswith("docs/")]
-    check("this phase changed nothing outside its operator, harness, docs, and the Makefile",
-          not added)
+    scope = git("diff", "--name-only", BASELINE_COMMIT).splitlines()
+    untracked = git("ls-files", "--others", "--exclude-standard").splitlines()
+    allowed = {TOOL_REL, HARNESS_REL, DOC_REL, "Makefile", *PRIOR_HARNESS_FIXES}
+    added = [c for c in set(scope + untracked)
+             if c and c not in allowed and not c.startswith("docs/")]
+    check("this phase changed nothing outside its operator, harness, docs, the Makefile, and the "
+          "three named prior-phase harness fixes", not added)
+    # The prior-harness exception must stay an exception: it may cover test files only.
+    check("every prior-phase file this fix touched is a validation harness, not production code",
+          all(h.startswith("tests/") and h.endswith(".py") for h in PRIOR_HARNESS_FIXES))
+    check("no prior-phase operator utility was modified",
+          not [c for c in set(scope + untracked)
+               if c.startswith("tools/") and c != TOOL_REL])
 
     for rel in (TOOL_REL, HARNESS_REL, DOC_REL):
         if not os.path.isfile(os.path.join(REPO_ROOT, rel)):
@@ -763,7 +882,7 @@ def isolation_checks() -> None:
 
 
 def main() -> int:
-    print("Peak Phase 69 R9 location/bin naming model source ingestion check")
+    print("Peak Phase 72 R10 measured location model answer set source ingestion check")
     print("=" * 70)
     try:
         baseline_checks()
@@ -772,7 +891,7 @@ def main() -> int:
             import sqlalchemy  # noqa: F401
         except ImportError:
             print("\n  [skip] SQLAlchemy not installed - contract/packet/writer layers skipped.")
-            print("         Run: make validate-phase69 PYTHON=.venv/bin/python")
+            print("         Run: make validate-phase72 PYTHON=.venv/bin/python")
         else:
             writer_contract_checks()
             packet_checks()

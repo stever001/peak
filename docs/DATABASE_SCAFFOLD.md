@@ -702,3 +702,39 @@ publication, client-facing output, and **AgentNet resolver publication remain un
 
 **No artifact body was read into the repository, printed, or committed.** See
 [`PHASE71_R1_R9_EVIDENCE_READINESS_PLAN.md`](PHASE71_R1_R9_EVIDENCE_READINESS_PLAN.md).
+
+## Phase 72 — the R10 location model answer set source ingestion
+
+Phase 72 creates **one** `source_ingestion_records` row in production (`ing_b26d137a0a334ee9`) through
+the unchanged **Phase 24** writer, registering the internal test **R10 measured location model
+answer set** under the stored `internal_test_001` / `99999` / `internal_peak_only` anchor. **No
+migration, no migration 015, no model, no writer, and no allowlist pair** — head stays
+`014_engagement_classification` with 14 migrations, 18 tables, and 12 writers.
+
+**Metadata only, as the writer requires.** The row stores the packet reference
+(`pkt_internal_test_r10_location_model_answer_set_001`, persisted as `source_reference_id`), schema
+name and version, source type, the **logical** location reference
+`internal-test-artifact://phase72/r10-location-model-answer-set-v1`, and the `packet_hash` — a
+SHA-256 over the exact artifact bytes. **The artifact body lives outside the repository** and never
+enters the database, the repository, or the operator's output.
+
+**R9 defines the questions; R10 supplies the measured answers.** All 15 Phase 71 checklist items
+carry an explicit answer state, and **R10 includes negative and unknown answers** — none of the 15
+was dropped or softened, and 11 of 15 are negative, unknown, or blocked. The honest measurement
+basis is the registered artifact descriptions only; no live ERP, WMS, or client system exists in this
+internal_test engagement. The headline finding is that **R1's location dimension is not currently
+readable**.
+
+**Collection, not review or validation.** R10 landed `needs_review` / `draft` /
+`authoritative=false` and **must be reviewed before use in evidence references**. It **does not
+validate inventory quantities**, **does not lift R1's provisional location marking**, **does not
+resolve R8 authority precedence**, and **does not resolve R5 WMS scope**.
+
+**No evidence reference, no review record, no report, no capsule, no client-facing output, and no
+AgentNet publication record was created.** **R1 remains provisional**, **R3–R7 stay deferred**, and
+report drafting, capsule publication, client-facing output, and **AgentNet resolver publication
+remain unauthorized** despite the live public resolver. Likely **Phase 73** is the R10
+source-ingestion review decision.
+
+**No artifact body was read into memory as text, printed, committed, or stored.** See
+[`PHASE72_R10_LOCATION_MODEL_ANSWER_SET_SOURCE_INGESTION.md`](PHASE72_R10_LOCATION_MODEL_ANSWER_SET_SOURCE_INGESTION.md).

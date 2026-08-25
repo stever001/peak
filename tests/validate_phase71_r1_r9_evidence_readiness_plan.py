@@ -36,6 +36,9 @@ for _p in (REPO_ROOT, os.path.join(REPO_ROOT, "tools")):
         sys.path.insert(0, _p)
 
 BASELINE_COMMIT = "d177c5f"   # Add Phase 70 R9 source ingestion review decision
+#: The last commit belonging to Phase 71 itself. Pinning the range keeps later phases' files
+#: out of "what this phase touched".
+PHASE_COMMIT = "fb1ffdb"   # Fix Phase 71 harness to diff the baseline commit, not HEAD
 
 DOC_REL = "docs/PHASE71_R1_R9_EVIDENCE_READINESS_PLAN.md"
 HARNESS_REL = "tests/validate_phase71_r1_r9_evidence_readiness_plan.py"
@@ -153,15 +156,22 @@ def flat(text: str) -> str:
 
 
 def changed_files() -> list:
-    """Every path this phase touched, measured against the **baseline commit**.
+    """Every path **this phase** touched, as a fixed commit range.
 
-    Deliberately not ``git diff HEAD``: once the phase is committed, a diff against HEAD is
-    empty, and every "this phase added only X" check would then pass vacuously rather than
-    testing anything. Diffing the baseline gives the same answer before and after the commit.
+    Two traps are avoided here. Diffing ``HEAD`` goes empty once the phase is committed, so every
+    "this phase added only X" check would pass vacuously rather than testing anything. Diffing the
+    baseline against the *working tree* fixes that, but then sweeps in every later phase's files
+    once Phase 72 and beyond exist. Pinning both ends to the phase's own commits gives the same
+    answer forever: before the commit the range is empty and the untracked/uncommitted fallback
+    supplies the files; after it, the range is authoritative.
     """
-    changed = [c for c in git("diff", "--name-only", BASELINE_COMMIT).splitlines() if c]
+    committed = [c for c in git("diff", "--name-only",
+                                f"{BASELINE_COMMIT}..{PHASE_COMMIT}").splitlines() if c]
+    if committed:
+        return sorted(set(committed))
+    pending = [c for c in git("diff", "--name-only", BASELINE_COMMIT).splitlines() if c]
     untracked = [c for c in git("ls-files", "--others", "--exclude-standard").splitlines() if c]
-    return sorted(set(changed + untracked))
+    return sorted(set(pending + untracked))
 
 
 # --------------------------------------------------------------------------- 1. baseline
@@ -180,9 +190,9 @@ def baseline_checks() -> None:
     check("no migration 015 or later - Phase 71 adds no migration",
           not any(re.match(r"^0*(?:1[5-9]|[2-9]\d)_", f) for f in versions))
     check("no file under alembic/ was changed by this phase",
-          not git("diff", "--name-only", BASELINE_COMMIT, "--", "alembic"))
+          not git("diff", "--name-only", f"{BASELINE_COMMIT}..{PHASE_COMMIT}", "--", "alembic"))
     check("no file under peak/ was changed by this phase",
-          not git("diff", "--name-only", BASELINE_COMMIT, "--", "peak"))
+          not git("diff", "--name-only", f"{BASELINE_COMMIT}..{PHASE_COMMIT}", "--", "peak"))
 
     try:
         py_compile.compile(os.path.join(REPO_ROOT, HARNESS_REL), doraise=True)
@@ -197,7 +207,7 @@ def baseline_checks() -> None:
     check(f"still exactly {EXPECTED_WRITERS} writers - no writer added",
           len(writers) == EXPECTED_WRITERS)
     check("the allowlist module was not modified - no allowlist pair added",
-          not git("diff", "--name-only", BASELINE_COMMIT, "--", ALLOWLIST_REL))
+          not git("diff", "--name-only", f"{BASELINE_COMMIT}..{PHASE_COMMIT}", "--", ALLOWLIST_REL))
 
     from peak.persistence.allowlist import (
         ALLOWED_ACTIONS, ALLOWED_ANCHOR_CREATION_PAIRS, ALLOWED_TABLES, is_allowed_table,
@@ -212,7 +222,7 @@ def baseline_checks() -> None:
     check("clients remains never writable by any controlled path",
           is_never_writable_table("clients"))
     check("docs/Peak_Investor_Overview_AI.docx has no pending diff",
-          not git("diff", "--name-only", BASELINE_COMMIT, "--", "docs/Peak_Investor_Overview_AI.docx"))
+          not git("diff", "--name-only", f"{BASELINE_COMMIT}..{PHASE_COMMIT}", "--", "docs/Peak_Investor_Overview_AI.docx"))
 
 
 # --------------------------------------------------------------------------- 2. no write surface
@@ -249,7 +259,7 @@ def no_write_surface_checks() -> None:
               not any(n in code for n in ARTIFACT_BASENAMES)
               and "peak-internal-test-artifacts" not in code)
 
-    mk_diff = git("diff", "-U0", BASELINE_COMMIT, "--", "Makefile")
+    mk_diff = git("diff", "-U0", f"{BASELINE_COMMIT}..{PHASE_COMMIT}", "--", "Makefile")
     added_mk = [ln[1:].strip() for ln in mk_diff.splitlines()
                 if ln.startswith("+") and not ln.startswith("+++") and ln[1:].strip()]
     removed_mk = [ln[1:].strip() for ln in mk_diff.splitlines()

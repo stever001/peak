@@ -957,3 +957,43 @@ useful production step is likely an **R10 measured location model answer set sou
 **structure only** — field names, roles, and counts — with no body printed, copied, or committed and
 no location, bin, aisle, rack, warehouse, or site values read or recorded. See
 [`PHASE71_R1_R9_EVIDENCE_READINESS_PLAN.md`](PHASE71_R1_R9_EVIDENCE_READINESS_PLAN.md).
+
+## Phase 72 — collecting the R10 answer set, under the same stored anchor
+
+Phase 72 writes **exactly one** `source_ingestion_records` row (`ing_b26d137a0a334ee9`) through the
+unchanged **Phase 24** source ingestion writer, registering the internal test **R10 measured
+location model answer set**. Same stored anchor as every phase since 59: `internal_test_001` /
+`99999` / `peak_internal_admin` / `internal_peak_only`, loaded from the database at write time and
+compared against the request scope. Head stays `014` — no migration, no model, no writer, no
+allowlist pair.
+
+| credential | what it did in Phase 72 | wrote? |
+| --- | --- | --- |
+| read-only | pre-write and post-write schema/collation verify only; no app rows read | no |
+| runtime | the one `INSERT`, via the writer only (`SELECT` + `INSERT` grants only) | yes — one row |
+| migration | **not used** | — |
+
+**R10 is a measured location model answer set responding to R9's question set**, and its **body
+lives outside the repository**. Only **metadata, the `packet_hash`, and the logical location
+reference** `internal-test-artifact://phase72/r10-location-model-answer-set-v1` were persisted —
+never a filesystem path, an export row, an item or SKU value, a quantity, or a location identifier,
+bin code, aisle, rack, warehouse, or site name.
+
+**R10 includes negative and unknown answers.** All 15 Phase 71 checklist items are present, none was
+dropped or softened, and 11 of 15 resolve to a negative, unknown, or blocked state. The headline
+finding is that **R1's location dimension is not currently readable**.
+
+**R10 remains `needs_review` / `draft` / `authoritative=false` and must be reviewed before use in
+evidence references.** It **does not validate inventory quantities**, **does not lift R1's
+provisional location marking**, **does not resolve R8 authority precedence** (items recorded
+`blocked_by_r8`), and **does not resolve R5 WMS scope** (items recorded `blocked_by_r5`).
+
+**No evidence reference, no review record, no report, no capsule, no client-facing output, and no
+AgentNet publication record was created.** **R1 remains provisional**, **R3–R7 remain deferred**, and
+the AgentNet public resolver is live but **publication remains gated and unauthorized**.
+
+**No artifact body was printed, committed, or stored.** The operator opens the file in binary solely
+to compute its length and SHA-256; the bytes are never decoded or logged. No `UPDATE`, `DELETE`,
+manual SQL, cleanup, or `alembic stamp` was issued, and no app table was scanned, counted, or probed
+beyond the writer's own stored-engagement load and idempotency lookup. See
+[`PHASE72_R10_LOCATION_MODEL_ANSWER_SET_SOURCE_INGESTION.md`](PHASE72_R10_LOCATION_MODEL_ANSWER_SET_SOURCE_INGESTION.md).

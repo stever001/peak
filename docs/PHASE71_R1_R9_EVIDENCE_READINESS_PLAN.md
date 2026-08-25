@@ -207,3 +207,30 @@ change that.
 R8 review, R5 WMS scope clarification, and R3–R7 collection remain outstanding alongside this
 sequence, and report drafting, capsule publication, client-facing output, and **AgentNet resolver
 publication remain gated and unauthorized** throughout.
+
+## 10. What Phase 72 collected against this plan
+
+**Phase 72 collected R10**, the measured location model answer set this plan recommended in §7, as
+one `source_ingestion_records` row (`ing_b26d137a0a334ee9`) through the unchanged Phase 24 writer under
+the same `internal_test_001` / `internal_peak_only` anchor. Metadata, a SHA-256 `packet_hash`, and
+the logical reference `internal-test-artifact://phase72/r10-location-model-answer-set-v1` were
+persisted; the **artifact body lives outside the repository**.
+
+**All 15 §5 checklist items were answered**, each with an explicit answer state. The §7 caution was
+honoured: **R10 includes negative and unknown answers**, none of the 15 was dropped, merged, or
+softened, and **11 of 15 resolve to a negative, unknown, or blocked state**.
+
+**The thresholds this plan fixed in advance did their job.** All six §5-item-12 "readable"
+conditions are unmet and five §5-item-13 "not reliable enough" conditions are met, so the honest
+present reading — **R1's location dimension is not currently readable** — is a reportable outcome
+rather than a stall, exactly as §5 anticipated. Items 6, 7, 14, and 15 are recorded `blocked_by_r8`
+or `blocked_by_r5`, confirming this plan's §5 reading that some answers cannot move until those
+phases run.
+
+**Nothing in §6 was violated.** **No `evidence_reference` was created**; **R1's location dimension
+remains provisional**; no inventory accuracy or quantity reliability conclusion was made; and no
+report, capsule, client-facing output, or AgentNet publication was created or authorized. **R10 is
+`needs_review` / `draft` / `authoritative=false` and must be reviewed before evidence use.** The §9
+sequence continues at **Phase 73 — the R10 source-ingestion review decision**, still separately
+approved. See
+[`PHASE72_R10_LOCATION_MODEL_ANSWER_SET_SOURCE_INGESTION.md`](PHASE72_R10_LOCATION_MODEL_ANSWER_SET_SOURCE_INGESTION.md).

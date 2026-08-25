@@ -48,6 +48,10 @@ for _p in (REPO_ROOT, os.path.join(REPO_ROOT, "tools")):
 PY = sys.executable or "python3"
 
 BASELINE_COMMIT = "608bf4e"   # Add Phase 69 R9 location bin model source ingestion
+#: The last commit belonging to this phase. The "changed nothing outside" check below
+#: is pinned to this range: scoped to the working tree it would go empty once the phase
+#: is committed, and would flag a *later* phase's in-progress edits as this phase's.
+PHASE_COMMIT = "d177c5f"   # Add Phase 70 R9 source ingestion review decision
 
 TOOL_REL = "tools/create_internal_test_r9_source_review_decision.py"
 PHASE66_TOOL_REL = "tools/create_internal_test_r2_source_review_decision.py"
@@ -754,7 +758,10 @@ def isolation_checks() -> None:
                    if c.endswith((".json", ".csv", ".txt"))])
 
     # Phase 70 must add nothing beyond its own operator, harness, and docs.
-    added = [c for c in git("diff", "--name-only", "HEAD").splitlines()
+    scope = git("diff", "--name-only", f"{BASELINE_COMMIT}..{PHASE_COMMIT}").splitlines()
+    if not scope:  # pre-commit: fall back to the working tree
+        scope = git("diff", "--name-only", BASELINE_COMMIT).splitlines()
+    added = [c for c in scope
              if c not in (TOOL_REL, HARNESS_REL, DOC_REL, "Makefile")
              and not c.startswith("docs/")]
     check("this phase changed nothing outside its operator, harness, docs, and the Makefile",

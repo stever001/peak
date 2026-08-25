@@ -161,3 +161,24 @@ deferred, and no inventory accuracy conclusion, report, capsule, client-facing o
 resolver publication was created or authorized. The recommended next production step is **R10 — a
 measured location model answer set source ingestion** (Phase 72), a **separately approved phase**.
 See [`PHASE71_R1_R9_EVIDENCE_READINESS_PLAN.md`](PHASE71_R1_R9_EVIDENCE_READINESS_PLAN.md).
+
+## 10. What Phase 72 collected against this decision
+
+**Phase 72 collected R10**, the measured location model answer set, as one
+`source_ingestion_records` row (`ing_b26d137a0a334ee9`) through the unchanged Phase 24 writer under this
+same `internal_test_001` / `internal_peak_only` anchor.
+
+R10 is the direct consequence of this decision's central finding. **This review recorded that R9 is
+a question set, not an answered model**; R10 is the answer set for those questions, covering all 15
+Phase 71 checklist items with explicit answer states. **It includes negative and unknown answers** —
+11 of 15 resolve to a negative, unknown, or blocked state — and its headline finding is that **R1's
+location dimension is not currently readable**.
+
+**Nothing this decision established was changed.** R9's own row and this review record are untouched
+— the source ingestion writer has no `UPDATE` path. **R1 remains provisional**, and this decision's
+scope (R9 approved only for future evidence work about R1 location-dimension readiness) is exactly
+what R10 serves. **No evidence reference, no review record**, no report, no capsule, no
+client-facing output, and no AgentNet publication was created. **R10 itself remains `needs_review` /
+`draft` / `authoritative=false`** and must be reviewed before evidence use; **R8 precedence and R5
+WMS scope remain unresolved**, recorded on R10 as `blocked_by_r8` and `blocked_by_r5`. See
+[`PHASE72_R10_LOCATION_MODEL_ANSWER_SET_SOURCE_INGESTION.md`](PHASE72_R10_LOCATION_MODEL_ANSWER_SET_SOURCE_INGESTION.md).

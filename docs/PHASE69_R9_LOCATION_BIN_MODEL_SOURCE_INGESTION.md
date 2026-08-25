@@ -185,3 +185,27 @@ question set, registered as its own source ingestion (Phase 72) and non-authorit
 reviewed. That is a **recommendation only**; report drafting, capsule publication, client-facing
 output, and **AgentNet resolver publication remain unauthorized**. See
 [`PHASE71_R1_R9_EVIDENCE_READINESS_PLAN.md`](PHASE71_R1_R9_EVIDENCE_READINESS_PLAN.md).
+
+## 12. What Phase 72 collected in answer to this record
+
+**Phase 72 collected R10**, the measured location model answer set that responds to **this record's
+question set**, as one `source_ingestion_records` row (`ing_b26d137a0a334ee9`) through the same
+unchanged Phase 24 writer and the same `internal_test_001` / `internal_peak_only` anchor. Metadata,
+a SHA-256 `packet_hash`, and the logical reference
+`internal-test-artifact://phase72/r10-location-model-answer-set-v1` were persisted; the artifact body
+lives **outside the repository**.
+
+**R9 defines the questions; R10 supplies the answers.** All 15 Phase 71 checklist items are answered
+with explicit answer states, and **R10 includes negative and unknown answers** — 11 of 15 are
+negative, unknown, or blocked. The headline finding is that **R1's location dimension is not
+currently readable**.
+
+**This record was not modified** and its posture is unchanged: `needs_review` / `draft` /
+`authoritative=false`. R10 answers this question set; it does not replace it. **R1's location
+dimension remains provisional** — R10 records that it is not yet readable rather than making it
+readable. **R10 itself remains `needs_review` / `draft` / `authoritative=false`** and must be
+reviewed before evidence use. **No evidence reference, no review record**, no report, no capsule, no
+client-facing output, and no AgentNet publication was created; **R8 precedence and R5 WMS scope
+remain unresolved**; **R3–R7 remain deferred**; and the resolver is live but **publication remains
+gated and unauthorized**. See
+[`PHASE72_R10_LOCATION_MODEL_ANSWER_SET_SOURCE_INGESTION.md`](PHASE72_R10_LOCATION_MODEL_ANSWER_SET_SOURCE_INGESTION.md).
