@@ -2193,9 +2193,36 @@ allowlist pair):**
   remains provisional**; **R8 precedence and R5 WMS scope remain unresolved** (recorded as
   `blocked_by_r8` / `blocked_by_r5`); **R3–R7 remain deferred**; the resolver is live but
   **publication remains gated**.
-- [ ] **Next: Phase 73 — the R10 source-ingestion review decision**, which must confront the
-  headline finding directly: an answer set concluding *not readable* supports a **data-readiness or
-  reliability finding**, not an inventory accuracy one. Separately approved, as is every phase.
+- [x] **Next: Phase 73 reviewed R10 and recorded the finding** — see below.
+
+**R10 Review and the Location-Readiness Evidence (Phase 73 — two production application records;
+no source ingestion record, no report, no capsule, no migration, no writer, no allowlist pair, and
+no new operator or harness):**
+
+- [x] **One `review_records` row** (`rev_9b6b0a67bae54a51`) reviewing the R10 source ingestion
+  (`ing_b26d137a0a334ee9`) through the unchanged Phase 22 writer: `approve_internal`,
+  `authoritative=false`, approved **only** for evidence about R1 location-dimension data readiness.
+  It confirmed R10's registration integrity and **accepts R10's unfavourable answer set as a valid
+  data-readiness input** — 11 of 15 items negative, unknown, or blocked — while recording that the
+  two `answered_yes` items are threshold *definitions*, not favourable data findings.
+- [x] **One `evidence_references` row** (`evid_f26c5f8fc0aa44d4`) through the unchanged Phase 21
+  writer, carrying the first **controlled negative finding** in the chain: **under thresholds fixed
+  in advance, R1's location dimension is not currently readable and not reliable enough to carry
+  location-attributed evidence** (0 of 6 readable conditions met; 5 not-reliable-enough conditions
+  met). `document` / `document`, reliability `low`, `needs_review` / `draft`, non-authoritative.
+- [x] **Write 2 was gated on write 1**, and both were newly created rather than replayed.
+- [x] **No new infrastructure.** Both writes used existing writers via a temporary executor held
+  outside the repository and never committed — no persistent operator and no phase-specific harness,
+  since neither was demonstrably needed.
+- [x] **This is a data-readiness and reliability finding, not an inventory accuracy finding.** **No
+  inventory accuracy conclusion** was made; **R1 remains provisional**; **R8 and R5 remain
+  unresolved** (dependent R10 items stay `blocked_by_r8` / `blocked_by_r5`); **R3–R7 remain
+  deferred**; and no report, capsule, client-facing output, or AgentNet publication was created or
+  authorized.
+- [ ] **Next: likely a minimal internal assessment finding or report-outline step — not more source
+  collection**, which would not change the answer. Worth weighing first: addressing **R8 precedence
+  or R5 WMS scope**, since four of R10's fifteen items are blocked on exactly those. Separately
+  approved either way.
 
 **Still to do:**
 

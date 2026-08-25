@@ -151,3 +151,28 @@ inventory accuracy finding.
 That phase, like every phase before it, remains **separately approved**, as do R8 review, R5 WMS
 scope clarification, R3–R7 collection, report drafting, capsule publication, and AgentNet resolver
 publication.
+
+## 10. What Phase 73 decided and recorded
+
+**Phase 73 reviewed this record and recorded the finding it supports**, in two writes under the same
+anchor: one `review_records` row (`rev_9b6b0a67bae54a51`, Phase 22 writer) reviewing this R10 source
+ingestion, and one `evidence_references` row (`evid_f26c5f8fc0aa44d4`, Phase 21 writer).
+
+**The review is `approve_internal` and non-authoritative**, approving R10 **only** for evidence
+about R1 location-dimension data readiness. It confirmed **registration integrity** — this record's
+`packet_hash` still matches the artifact — and **accepted the unfavourable answer set as a valid
+data-readiness input** rather than treating §3's negative tally as an incomplete phase. It also
+recorded the §3 caution explicitly: the two `answered_yes` items are threshold *definitions*, not
+favourable findings about the data.
+
+**The evidence reference carries §5's headline finding as a controlled negative result**: under
+thresholds fixed in advance, **R1's location dimension is not currently readable and not reliable
+enough** for location-attributed evidence. As §5 anticipated, this is a **data-readiness and
+reliability finding, not an inventory accuracy finding**.
+
+**This record was not modified** — the review writer has no `UPDATE` path, so it stays
+`needs_review` / `draft` / `authoritative=false`. **R1 remains provisional**; **R8 authority
+precedence and R5 WMS scope remain unresolved**, with this record's dependent items still
+`blocked_by_r8` and `blocked_by_r5`; **R3–R7 remain deferred**; and no report, capsule,
+client-facing output, or AgentNet publication was created or authorized. See
+[`PHASE73_R10_REVIEW_LOCATION_READINESS_EVIDENCE.md`](PHASE73_R10_REVIEW_LOCATION_READINESS_EVIDENCE.md).

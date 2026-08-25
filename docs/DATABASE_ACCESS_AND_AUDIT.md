@@ -997,3 +997,38 @@ to compute its length and SHA-256; the bytes are never decoded or logged. No `UP
 manual SQL, cleanup, or `alembic stamp` was issued, and no app table was scanned, counted, or probed
 beyond the writer's own stored-engagement load and idempotency lookup. See
 [`PHASE72_R10_LOCATION_MODEL_ANSWER_SET_SOURCE_INGESTION.md`](PHASE72_R10_LOCATION_MODEL_ANSWER_SET_SOURCE_INGESTION.md).
+
+## Phase 73 — two writes: the R10 review and the first negative finding
+
+Phase 73 writes **exactly two** rows under the same stored anchor (`internal_test_001` / `99999` /
+`peak_internal_admin` / `internal_peak_only`): one `review_records` row (`rev_9b6b0a67bae54a51`)
+through the unchanged **Phase 22** writer, reviewing the R10 source ingestion
+(`ing_b26d137a0a334ee9`), and one `evidence_references` row (`evid_f26c5f8fc0aa44d4`) through the
+unchanged **Phase 21** writer. Head stays `014` — **no migration, model, writer, allowlist pair,
+operator utility, or harness was added**. Both writes were driven by a temporary executor held
+outside the repository and never committed.
+
+| credential | what it did in Phase 73 | wrote? |
+| --- | --- | --- |
+| read-only | pre-write and post-write schema/collation verify only; no app rows read | no |
+| runtime | the two `INSERT`s, via the writers only (`SELECT` + `INSERT` grants only) | yes — two rows |
+| migration | **not used** | — |
+
+**The review is `approve_internal`, non-authoritative**, approving R10 only for evidence about R1
+location-dimension data readiness. **The evidence finding is unfavourable**: under thresholds fixed
+in advance, **R1's location dimension is not currently readable and not reliable enough** to carry
+location-attributed evidence. Write 2 proceeded only because write 1 was created; both were newly
+created, not replays.
+
+**This is a data-readiness and reliability finding, not an inventory accuracy finding.** No
+inventory accuracy conclusion was made. **R1 remains provisional**, **R8 authority precedence and R5
+WMS scope remain unresolved**, **R3–R7 remain deferred**, and report drafting, capsule publication,
+client-facing output, and **AgentNet resolver publication remain unauthorized** despite the live
+public resolver.
+
+**No artifact body was read, printed, committed, or stored.** The stored records carry answer-state
+counts, threshold results, posture flags, and record ids only. The reviewed R10 row and the R1/R9
+records were **not modified** — neither writer has an `UPDATE` path. No `UPDATE`, `DELETE`, manual
+SQL, cleanup, or `alembic stamp` was issued, and no app table was scanned, counted, or probed beyond
+the writers' own stored-engagement loads and idempotency lookups. See
+[`PHASE73_R10_REVIEW_LOCATION_READINESS_EVIDENCE.md`](PHASE73_R10_REVIEW_LOCATION_READINESS_EVIDENCE.md).

@@ -738,3 +738,31 @@ source-ingestion review decision.
 
 **No artifact body was read into memory as text, printed, committed, or stored.** See
 [`PHASE72_R10_LOCATION_MODEL_ANSWER_SET_SOURCE_INGESTION.md`](PHASE72_R10_LOCATION_MODEL_ANSWER_SET_SOURCE_INGESTION.md).
+
+## Phase 73 — the R10 review and the location-readiness evidence
+
+Phase 73 creates **two** rows in production through unchanged writers: one `review_records` row
+(`rev_9b6b0a67bae54a51`, Phase 22 writer) reviewing the R10 source ingestion
+(`ing_b26d137a0a334ee9`), and one `evidence_references` row (`evid_f26c5f8fc0aa44d4`, Phase 21
+writer) recording the location-readiness finding — both under the stored `internal_test_001` /
+`99999` / `internal_peak_only` anchor. **No migration, no migration 015, no model, no writer, no
+allowlist pair, and no new operator or harness** — head stays `014_engagement_classification` with
+14 migrations, 18 tables, and 12 writers.
+
+**No field is overloaded.** The review writer separates the authorization anchor from the reviewed
+target (`subject_record_type='source_ingestion_record'`, the Phase 66/70 convention). The evidence
+writer has no typed related-object slots, so the supporting R1/R9/R10 record ids live in the
+`summary` and `observed_condition` text as concise sanitized references — the Phase 67 pattern.
+
+**The review is `approve_internal` and non-authoritative**, approving R10 only for
+location-dimension data-readiness evidence and accepting its unfavourable answer set (11 of 15
+items negative, unknown, or blocked) as a valid input. **The evidence finding is unfavourable**:
+R1's location dimension is **not currently readable** and **not reliable enough** for
+location-attributed evidence under thresholds fixed in advance — a **data-readiness and reliability
+finding, not an inventory accuracy finding**.
+
+**R1 remains provisional**, **R8 and R5 remain unresolved**, **R3–R7 stay deferred**, and report
+drafting, capsule publication, client-facing output, and **AgentNet resolver publication remain
+unauthorized** despite the live public resolver. **No artifact body was read, printed, committed, or
+stored.** See
+[`PHASE73_R10_REVIEW_LOCATION_READINESS_EVIDENCE.md`](PHASE73_R10_REVIEW_LOCATION_READINESS_EVIDENCE.md).

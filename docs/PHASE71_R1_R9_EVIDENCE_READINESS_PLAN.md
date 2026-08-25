@@ -234,3 +234,24 @@ report, capsule, client-facing output, or AgentNet publication was created or au
 sequence continues at **Phase 73 — the R10 source-ingestion review decision**, still separately
 approved. See
 [`PHASE72_R10_LOCATION_MODEL_ANSWER_SET_SOURCE_INGESTION.md`](PHASE72_R10_LOCATION_MODEL_ANSWER_SET_SOURCE_INGESTION.md).
+
+## 11. Where the §9 sequence actually went
+
+The §9 sequence anticipated Phase 73 as an R10 review and Phase 74 as a separate evidence
+reference. **Phase 73 did both**, as two writes in one phase — the review
+(`rev_9b6b0a67bae54a51`) and the location-readiness evidence reference (`evid_f26c5f8fc0aa44d4`) —
+rather than splitting a bounded pair across two phases.
+
+**The §5 thresholds decided the outcome, as intended.** 0 of 6 "readable" conditions met, 5
+"not reliable enough" conditions met, so the recorded finding is the **negative** one this plan
+fixed in advance: **R1's location dimension is not currently readable**. §9's caveat that the
+sequence "may legitimately end early" is what happened — the honest result is a **data-readiness and
+reliability finding, not an inventory accuracy finding**, and further source collection would not
+change it.
+
+**Phase 74/75 as sketched are therefore superseded.** The likely next useful step is a minimal
+internal assessment finding or report-outline step, or first addressing **R8 precedence** or **R5
+WMS scope**, on which four of R10's fifteen items are blocked. **R1 remains provisional**, R3–R7
+remain deferred, and report drafting, capsule publication, client-facing output, and AgentNet
+resolver publication remain unauthorized. See
+[`PHASE73_R10_REVIEW_LOCATION_READINESS_EVIDENCE.md`](PHASE73_R10_REVIEW_LOCATION_READINESS_EVIDENCE.md).
