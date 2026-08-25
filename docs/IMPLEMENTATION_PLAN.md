@@ -2095,9 +2095,42 @@ allowlist pair):**
   provisional** (`needs_review` / `draft` / `authoritative=false`, precedence unconfirmed),
   **R3–R7 remain deferred**, and the AgentNet resolver is live but **publication remains gated and
   unauthorized**.
-- [ ] **Next: an R9 review**, then a possible R1 location-dimension review. A future internal
+- [x] **Next: Phase 70 reviewed R9.** A possible R1 location-dimension review, a future internal
   assessment finding, R8 review, and R3–R7 remain outstanding. Any further production record
   remains separately approved.
+
+**The R9 Source Ingestion Review Decision (Phase 70 — one production application record; no
+evidence reference, no source record, no report, no capsule, no migration, no writer, no allowlist
+pair):**
+
+- [x] **One `review_records` row was created** (`rev_3ecc0891f4fe48ce`), recording the internal review
+  decision on the Phase 69 **R9 source ingestion record** (`ing_64b2e2648ac1402b`, the location/bin
+  naming model), through the unchanged Phase 22 review writer under the stored `internal_test_001`
+  anchor. Head stays `014` with 14 migrations, 18 tables, and 12 writers.
+- [x] **No field was overloaded and no writer was added.** `subject_record_type =
+  'source_ingestion_record'` is the same value **Phase 66** used for the R2 source-ingestion review;
+  `source_reference_id` carries the reviewed packet reference and `reasons` carries the limits as
+  findings.
+- [x] **The decision is `approve_internal`, non-authoritative**, landing on `approved_internal` with
+  output still `draft`. It authorizes exactly one narrow next step: **future evidence work about R1
+  location-dimension readiness** — and nothing wider.
+- [x] **Registration integrity confirmed:** the reviewed artifact's hash still matches the
+  `packet_hash` registered in Phase 69.
+- [x] **The central recorded limit: R9 is a question set, not an answered model.** All 6 hierarchy
+  levels and all 3 type/status fields are presence-unknown, and roughly 53 structural questions are
+  posed without any being answered. R9 defines what must be measured rather than reporting what is
+  true, so it **cannot by itself lift R1's provisional location marking**, and it gives no basis for
+  choosing among the 4 candidate ownership postures.
+- [x] **It authorizes nothing wider, and says so on the row.** **No `evidence_reference` was
+  created**; **no inventory quantity is validated** (R9 holds no instance data); **R1's location
+  dimension remains provisional**; **R8 authority precedence is not resolved**; **R5 WMS scope is
+  not resolved**; **R3–R7 stay deferred**; and report drafting, capsule publication, client-facing
+  output, and **AgentNet resolver publication remain unauthorized**.
+- [x] **The reviewed R9 record was not modified** — a review records a decision about a target, and
+  the writer has no `UPDATE` path. **No artifact body was read**: the operator opens no file at all.
+- [ ] **Next: Phase 71** likely creates a narrow R9 evidence reference scoped to location-model
+  availability and readiness, or alternatively begins a combined R1/R9 evidence-readiness planning
+  step. Any further production record remains separately approved.
 
 **Still to do:**
 

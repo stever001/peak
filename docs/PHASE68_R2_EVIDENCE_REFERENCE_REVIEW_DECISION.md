@@ -175,3 +175,25 @@ gated and unauthorized**. The other step this decision supports — a future int
 finding about item-master source availability and data readiness — **remains a separately approved
 phase**. See
 [`PHASE69_R9_LOCATION_BIN_MODEL_SOURCE_INGESTION.md`](PHASE69_R9_LOCATION_BIN_MODEL_SOURCE_INGESTION.md).
+
+## 11. What Phase 70 added alongside this decision
+
+**Phase 70 reviewed the Phase 69 R9 source ingestion record** (`ing_64b2e2648ac1402b`, the
+location/bin naming model), creating one `review_records` row (`rev_3ecc0891f4fe48ce`) through the same
+unchanged Phase 22 writer and the same `internal_test_001` / `internal_peak_only` anchor — the same
+shape as this decision, with `subject_record_type='source_ingestion_record'` rather than
+`'evidence_reference'`.
+
+**That decision is `approve_internal` and non-authoritative**, scoped **only to future evidence work
+about R1 location-dimension readiness**. It changed nothing this decision established: the R2
+evidence reference and this review record are untouched, since the review writer has no `UPDATE`
+path.
+
+**No evidence reference was created by Phase 70.** R1's location dimension **remains provisional** —
+the R9 review explicitly declined to lift it, recording that R9 is a question set rather than an
+answered model. **R9 does not validate inventory quantities**; **R8 authority precedence and R5 WMS
+scope remain unresolved**; **R3–R7 remain deferred**; and no report, capsule, client-facing output,
+or AgentNet publication was created or authorized. The other step this decision supports — a future
+internal assessment finding about item-master source availability and data readiness — **remains a
+separately approved phase**. See
+[`PHASE70_R9_SOURCE_INGESTION_REVIEW_DECISION.md`](PHASE70_R9_SOURCE_INGESTION_REVIEW_DECISION.md).

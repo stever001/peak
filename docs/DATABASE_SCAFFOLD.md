@@ -648,3 +648,32 @@ resolver publication remain unauthorized** despite the live public resolver.
 
 **No artifact body was read into memory as text, printed, committed, or stored.** See
 [`PHASE69_R9_LOCATION_BIN_MODEL_SOURCE_INGESTION.md`](PHASE69_R9_LOCATION_BIN_MODEL_SOURCE_INGESTION.md).
+
+## Phase 70 — the R9 source ingestion review decision
+
+Phase 70 creates **one** `review_records` row in production (`rev_3ecc0891f4fe48ce`) through the
+unchanged **Phase 22** writer, recording the internal review decision on the Phase 69 **R9 source
+ingestion record** (`ing_64b2e2648ac1402b`) under the stored `internal_test_001` / `99999` /
+`internal_peak_only` anchor. **No migration, no migration 015, no model, no writer, and no allowlist
+pair** — head stays `014_engagement_classification` with 14 migrations, 18 tables, and 12 writers.
+
+**No field is overloaded.** The review writer separates the authorization anchor (`request.subject`,
+required to be the engagement) from the reviewed target (`subject_record_id` /
+`subject_record_type`, stored as `target_id`), and persists `draft.reasons` into `details_json`, so
+the limits are stored as findings. `subject_record_type='source_ingestion_record'` is the same value
+**Phase 66** used for the R2 source-ingestion review — the reviewed target is the same class of
+record.
+
+**The decision is `approve_internal` and non-authoritative**, approving R9 **only for future
+evidence work about R1 location-dimension readiness**. The recorded central limit is that **R9 is a
+question set, not an answered model**: every hierarchy level and type/status field is
+presence-unknown, so R9 defines what must be measured rather than reporting what is true.
+
+**No evidence reference was created.** **R1's location dimension remains provisional**, **R9 does
+not validate inventory quantities**, **R8 authority precedence is not resolved**, **R5 WMS scope is
+not resolved**, **R3–R7 stay deferred**, and report drafting, capsule publication, client-facing
+output, and **AgentNet resolver publication remain unauthorized** despite the live public resolver.
+The reviewed R9 row is **not modified** — the review writer has no `UPDATE` path.
+
+**No artifact body was read, printed, committed, or stored.** See
+[`PHASE70_R9_SOURCE_INGESTION_REVIEW_DECISION.md`](PHASE70_R9_SOURCE_INGESTION_REVIEW_DECISION.md).

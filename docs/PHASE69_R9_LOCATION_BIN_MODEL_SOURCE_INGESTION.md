@@ -138,3 +138,29 @@ already written production rows. Phase 69 leaves both untouched and states the s
 its own single fixed packet: identity, idempotency key, packet reference, and logical location
 reference are module constants, and the only flags are the run mode and the artifact path — which
 is itself refused unless it is the one approved external artifact.
+
+## 10. What Phase 70 decided about this record
+
+**Phase 70 reviewed this R9 source ingestion record** and created one `review_records` row
+(`rev_3ecc0891f4fe48ce`) through the unchanged Phase 22 review writer, under this same
+`internal_test_001` / `internal_peak_only` anchor, with `subject_record_type =
+'source_ingestion_record'` and `target_id = ing_64b2e2648ac1402b`.
+
+**The decision is `approve_internal` and non-authoritative**, approving R9 **only for future
+evidence work about R1 location-dimension readiness** — the §4 purpose this record was collected
+for, and nothing wider. The review confirmed **registration integrity**: the artifact's hash still
+matches the `packet_hash` registered here.
+
+**The review recorded one central limit.** R9 is a **question set, not an answered model** — every
+hierarchy level and type/status field is presence-unknown, and the structural questions are posed
+without being answered. That is appropriate for a collected source, but it confirms §5's statement
+directly: **R9 cannot by itself lift R1's provisional location marking**, because only measured
+answers could.
+
+**This record was not modified.** A review records a decision about a target, and the review writer
+has no `UPDATE` path, so this row still reads `needs_review` / `draft` / `authoritative=false`.
+**No evidence reference was created**; R1's location dimension **remains provisional**; R9 **does
+not validate inventory quantities**; **R8 authority precedence and R5 WMS scope remain unresolved**;
+**R3–R7 remain deferred**; and report, capsule, client-facing output, and **AgentNet resolver
+publication remain unauthorized** despite the live public resolver. See
+[`PHASE70_R9_SOURCE_INGESTION_REVIEW_DECISION.md`](PHASE70_R9_SOURCE_INGESTION_REVIEW_DECISION.md).

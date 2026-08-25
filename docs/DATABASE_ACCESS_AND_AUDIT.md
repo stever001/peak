@@ -892,3 +892,40 @@ to compute its length and SHA-256; the bytes are never decoded or logged. No `UP
 manual SQL, cleanup, or `alembic stamp` was issued, and no app table was scanned, counted, or probed
 beyond the writer's own stored-engagement load and idempotency lookup. See
 [`PHASE69_R9_LOCATION_BIN_MODEL_SOURCE_INGESTION.md`](PHASE69_R9_LOCATION_BIN_MODEL_SOURCE_INGESTION.md).
+
+## Phase 70 — reviewing the R9 location model, under the same stored anchor
+
+Phase 70 writes **exactly one** `review_records` row (`rev_3ecc0891f4fe48ce`) through the unchanged
+**Phase 22** review writer, recording the internal review decision on the Phase 69 **R9 source
+ingestion record** (`ing_64b2e2648ac1402b`, the location/bin naming model). Same stored anchor as
+every phase since 59: `internal_test_001` / `99999` / `peak_internal_admin` / `internal_peak_only`,
+loaded from the database at write time and compared against the request scope. Head stays `014` —
+no migration, no model, no writer, no allowlist pair.
+
+| credential | what it did in Phase 70 | wrote? |
+| --- | --- | --- |
+| read-only | pre-write and post-write schema/collation verify only; no app rows read | no |
+| runtime | the one `INSERT`, via the writer only (`SELECT` + `INSERT` grants only) | yes — one row |
+| migration | **not used** | — |
+
+**The decision is `approve_internal`, non-authoritative.** It approves R9 **only for future evidence
+work about R1 location-dimension readiness** and nothing wider. `authoritative` was left false
+deliberately: R9 answers none of its own questions, its ownership is undetermined, and R8 is
+unreviewed.
+
+**No evidence reference was created.** **R1's location dimension remains provisional** — this
+decision does not lift that marking. **R9 does not validate inventory quantities** (it holds no
+instance data at all), **does not resolve R8 authority precedence**, and **does not resolve R5 WMS
+scope uncertainty**. **R3–R7 stay deferred**, and report drafting, capsule publication,
+client-facing output, and **AgentNet resolver publication remain unauthorized** despite the live
+public resolver.
+
+**The reviewed R9 row is not modified**: a review records a decision about a target, and the writer
+has no `UPDATE` path — R9 still reads `needs_review` / `draft`.
+
+**No artifact body was read.** The Phase 70 operator opens no file and computes no hash; the stored
+findings are sanitized structural counts, posture flags, and named gaps, never artifact text, item
+or SKU values, quantities, or location identifiers. No `UPDATE`, `DELETE`, manual SQL, cleanup, or
+`alembic stamp` was issued, and no app table was scanned, counted, or probed beyond the writer's own
+stored-engagement load and idempotency lookup. See
+[`PHASE70_R9_SOURCE_INGESTION_REVIEW_DECISION.md`](PHASE70_R9_SOURCE_INGESTION_REVIEW_DECISION.md).
