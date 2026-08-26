@@ -198,3 +198,13 @@ corroboration exists in this chain as `review_records`, which the Phase 36 plann
 category for. Clearing it honestly means a **Phase 36 planner contract change** in its own approved
 phase; leaving it as written is recommended. See
 [`PHASE75_LOCATION_ASSESSMENT_REVIEW_SUPPORT.md`](PHASE75_LOCATION_ASSESSMENT_REVIEW_SUPPORT.md).
+
+**Update — Phase 76 pursued candidate (1), the R8/R5 blockers.** It reviewed R8
+(`rev_1d9696e9218b4e35`, `approve_internal`, non-authoritative) and registered an R5 WMS scope
+clarification (`ing_f7a4cc20f1f148c7`, `draft` / `needs_review`). Both blockers were **clarified, not
+resolved** — R8's precedence rule remains `provisional_unconfirmed`, and the R5 enumeration resolved
+**0 of 15 items favourably** — so **R8 and R5 both remain unresolved**. **This outline is
+unmodified** at `plan_persisted` / `needs_review` / `draft`, `fnd_000` is still
+`blocked_no_review_support`, and the finding in §4 is **unchanged and still data-readiness /
+reliability only**. See
+[`PHASE76_R8_R5_BLOCKER_CLARIFICATION.md`](PHASE76_R8_R5_BLOCKER_CLARIFICATION.md).

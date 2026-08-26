@@ -2277,10 +2277,42 @@ honesty grounds; no migration, writer, allowlist pair, schema, operator, or harn
   readable or reliable enough for location-attributed evidence — **data-readiness / reliability
   only, never inventory accuracy**. R1 provisional; R8 and R5 unresolved; R3–R7 deferred; report
   finalization, capsule publication, and AgentNet publication unauthorized.
-- [ ] **Next:** leaving the block in place is recommended — it is accurate and nothing waits on it.
-  Clearing it honestly means a **Phase 36 planner contract change** (accept `review_records` as
-  finding support), which needs its own approved phase. The only step that changes the **finding**
-  remains **R8 precedence** or **R5 WMS scope**. Separately approved either way.
+- [x] **Next: Phase 76 went after R8 precedence and R5 WMS scope** — see below.
+
+**R8 Authority Review and R5 WMS Scope Clarification (Phase 76 — two production application records;
+no evidence reference, no report draft, no review bundle, no capsule, no client-facing output, no
+migration, no writer, no allowlist pair, and no new operator or harness):**
+
+- [x] **One `review_records` row** (`rev_1d9696e9218b4e35`) reviewing the R8 source ingestion
+  (`ing_4fb70519cbf84401`) through the unchanged Phase 22 writer: `approve_internal`,
+  `authoritative=false`, approved as a **source-map and authority-precedence framing artifact** only.
+- [x] **The review does not confirm authority precedence, because R8 does not.** R8's own
+  `authority_precedence_rule` carries status `provisional_unconfirmed` with **2 items requiring
+  confirmation first**. R8 maps 7 requested exports (2 `expected`, 4 `uncertain`, 1 `partial`);
+  **5 of 7 carry a recorded blocker, only 1 carries none**, and 4 open questions stay open.
+- [x] **Registration integrity was deliberately not re-verified** — no `packet_hash` is committed to
+  the repo, and reading the stored row would exceed this phase's permitted lookups. The review claims
+  no integrity confirmation.
+- [x] **One `source_ingestion_records` row** (`ing_f7a4cc20f1f148c7`) through the unchanged Phase 24
+  writer, registering the **R5 WMS scope clarification** — `draft` / `needs_review` / `active`,
+  `authoritative=false`, body outside the repo, only metadata and the SHA-256 persisted.
+- [x] **This is not the Phase 64 "R5 receiving and putaway" export**, which remains uncollected under
+  its own packet reference. It clarifies the WMS-scope blocker R8 records against R5.
+- [x] **15 scope items, zero favourable**: 0 `answered_yes`, 1 `answered_no`, 3 `unknown`,
+  9 `not_measured`, 2 `blocked_by_r8`. The nine unmeasured items are unmeasured **by necessity** —
+  this engagement has no live warehouse management, ERP, production, or client system, and the
+  artifact asserts no system landscape.
+- [x] **Clarified, not resolved.** Both blockers moved from prose into enumerated, checkable
+  structure; **no answer to either changed. R8 precedence and R5 WMS scope both remain unresolved.**
+- [x] **No new infrastructure.** Existing writers via a temporary executor outside the repository.
+- [x] **No inventory accuracy conclusion.** **R1 remains provisional**; the Phase 73 negative finding
+  stands and is **data-readiness / reliability only, never inventory accuracy**; **R3–R7 remain
+  deferred**; the Phase 74 outline is unmodified and `fnd_000` still `blocked_no_review_support`; and
+  no report, capsule, client-facing output, or AgentNet publication was created or authorized.
+- [ ] **Next:** review the R5 clarification (it is `needs_review`), then address **R8's 2 named
+  confirmation prerequisites** — the only route to lifting `blocked_by_r8` on anything — and
+  establish whether a warehouse management system exists in the scenario at all. Separately approved
+  either way.
 
 **Still to do:**
 

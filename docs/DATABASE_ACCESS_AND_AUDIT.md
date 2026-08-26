@@ -1108,3 +1108,47 @@ provisional**, **R8 and R5 remain unresolved**, **R3–R7 remain deferred**; and
 capsule publication, client-facing output, and **AgentNet resolver publication remain unauthorized**.
 **No artifact body was read, printed, committed, or stored.** See
 [`PHASE75_LOCATION_ASSESSMENT_REVIEW_SUPPORT.md`](PHASE75_LOCATION_ASSESSMENT_REVIEW_SUPPORT.md).
+
+---
+
+## Phase 76 — two writes: the R8 review and the R5 WMS scope clarification
+
+Phase 76 writes **exactly two** rows under the same stored anchor (`internal_test_001` / `99999` /
+`peak_internal_admin` / `internal_peak_only`): one `review_records` row (`rev_1d9696e9218b4e35`)
+through the unchanged **Phase 22** writer, reviewing the R8 source ingestion
+(`ing_4fb70519cbf84401`), and one `source_ingestion_records` row (`ing_f7a4cc20f1f148c7`) through the
+unchanged **Phase 24** writer, registering the R5 WMS scope clarification. Head stays `014` — **no
+migration, model, writer, allowlist pair, schema, operator utility, or harness was added**. Both
+writes were driven by a temporary executor held outside the repository and never committed.
+
+| credential | what it did in Phase 76 | wrote? |
+| --- | --- | --- |
+| read-only | pre-write and post-write schema/collation verify only; no app rows read | no |
+| runtime | the two `INSERT`s, via the writers only (`SELECT` + `INSERT` grants only) | yes — two rows |
+| migration | **not used** | — |
+
+**The R8 review is `approve_internal`, non-authoritative**, approving R8 as a source-map and
+precedence **framing** artifact only. It **does not confirm authority precedence** — R8's own rule is
+`provisional_unconfirmed` with 2 prerequisites. **Registration integrity was not re-verified**: no
+`packet_hash` is committed to the repo, and reading the stored row would be an app-row read outside
+this phase's permitted stored-engagement and idempotency lookups, so no integrity claim is made.
+
+**The R5 row registers a blocker enumeration**, `draft` / `needs_review` / `active`,
+`authoritative=false` — 15 scope items with 0 favourable resolutions (1 `answered_no`, 3 `unknown`,
+9 `not_measured`, 2 `blocked_by_r8`). Write 2 proceeded only because write 1 was created; both were
+newly created, not replays.
+
+**Clarified, not resolved: R8 authority precedence and R5 WMS scope both remain unresolved.** No
+inventory accuracy conclusion was made. **R1 remains provisional**, the Phase 73 negative finding
+stands as **data-readiness / reliability only and must not be restated as inventory accuracy**,
+**R3–R7 remain deferred**, the Phase 74 outline is unmodified with `fnd_000` still
+`blocked_no_review_support`, and report finalization, capsule publication, client-facing output, and
+**AgentNet resolver publication remain unauthorized**.
+
+**No artifact body was printed, committed, or stored.** The stored rows carry packet metadata,
+answer-state counts, posture flags, and record ids only — no organisation or system names, item or
+SKU values, quantities, or location, bin, aisle, rack, warehouse or site identifiers. The reviewed R8
+row was **not modified** — the review writer has no `UPDATE` path. No `UPDATE`, `DELETE`, manual SQL,
+cleanup, or `alembic stamp` was issued, and no app table was scanned, counted, or probed beyond the
+writers' own stored-engagement loads and idempotency lookups. See
+[`PHASE76_R8_R5_BLOCKER_CLARIFICATION.md`](PHASE76_R8_R5_BLOCKER_CLARIFICATION.md).

@@ -845,3 +845,44 @@ remains provisional**, **R8 and R5 remain unresolved**, **R3–R7 stay deferred*
 finalization, capsule publication, client-facing output, and **AgentNet resolver publication remain
 unauthorized**. See
 [`PHASE75_LOCATION_ASSESSMENT_REVIEW_SUPPORT.md`](PHASE75_LOCATION_ASSESSMENT_REVIEW_SUPPORT.md).
+
+---
+
+## Phase 76 — the R8 authority review and the R5 WMS scope clarification
+
+Phase 76 creates **two** rows in production through unchanged writers: one `review_records` row
+(`rev_1d9696e9218b4e35`, Phase 22 writer) reviewing the R8 source ingestion
+(`ing_4fb70519cbf84401`), and one `source_ingestion_records` row (`ing_f7a4cc20f1f148c7`, Phase 24
+writer) registering the **R5 WMS scope clarification** — both under the stored `internal_test_001` /
+`99999` / `internal_peak_only` anchor. **No migration, model, writer, allowlist pair, schema,
+operator, or harness** — head stays `014_engagement_classification` with 14 migrations, 18 tables,
+and 12 writers.
+
+**No field is overloaded.** The review writer separates the authorization anchor from the reviewed
+target (`subject_record_type='source_ingestion_record'`, the Phase 66/70/73 convention), and the
+finding text lives in `draft.reasons` → `details_json`. The source ingestion writer stores **packet
+metadata only** — reference id, schema name and version, source type, the logical
+`internal-test-artifact://phase76/…` location reference, and the SHA-256 `packet_hash`. The artifact
+body stays outside the repository and out of the database.
+
+**The R8 review approves framing, not precedence.** `approve_internal` / `authoritative=false`:
+R8 is approved as a source-map and authority-precedence *framing* artifact. It **does not confirm
+authority precedence**, because R8's own `authority_precedence_rule` carries status
+`provisional_unconfirmed` with 2 items requiring confirmation first. R8 maps 7 exports (2 `expected`,
+4 `uncertain`, 1 `partial`) with 5 of 7 blocked and 4 open questions left open. **Registration
+integrity was deliberately not re-verified** — no `packet_hash` is committed to the repo and reading
+the stored row would exceed this phase's permitted lookups.
+
+**The R5 row is a blocker enumeration, not an answer.** It is **not** the Phase 64 "R5 receiving and
+putaway" export, which remains uncollected under its own packet reference. 15 scope items resolve as
+0 `answered_yes`, 1 `answered_no`, 3 `unknown`, 9 `not_measured`, 2 `blocked_by_r8` — unmeasured by
+necessity, since this engagement has no live warehouse management, ERP, production, or client system,
+and the artifact asserts no system landscape and carries no organisation or system names, item or SKU
+values, quantities, or location, bin, aisle, rack, warehouse or site identifiers.
+
+**Clarified, not resolved.** **R8 authority precedence and R5 WMS scope both remain unresolved**;
+R5 stays `needs_review` / `draft` / `authoritative=false`. **No inventory accuracy conclusion** was
+made, **R1 remains provisional**, **R3–R7 stay deferred**, the Phase 74 outline is unmodified, and
+report finalization, capsule publication, client-facing output, and **AgentNet resolver publication
+remain unauthorized**. See
+[`PHASE76_R8_R5_BLOCKER_CLARIFICATION.md`](PHASE76_R8_R5_BLOCKER_CLARIFICATION.md).

@@ -145,3 +145,17 @@ review-support bookkeeping will move the answer.
 
 Each remains a **separately approved phase**, as do report finalization, capsule publication, and
 AgentNet resolver publication.
+
+**Update — Phase 76 took the third option.** It reviewed R8 (`rev_1d9696e9218b4e35`,
+`approve_internal`, non-authoritative) and registered an R5 WMS scope clarification
+(`ing_f7a4cc20f1f148c7`, `draft` / `needs_review`), both through unchanged writers with **no new
+infrastructure**. Both blockers were **clarified, not resolved**: R8's own precedence rule is still
+`provisional_unconfirmed`, and the R5 enumeration resolved **0 of 15 items favourably**. So **R8
+authority precedence and R5 WMS scope both remain unresolved**, and the finding they gate is
+unchanged.
+
+**Nothing in this phase's conclusion changed.** Phase 76 created no `review_bundle_records` row and
+no revised outline; `iard_50814a78a44243c2` is unmodified and **`fnd_000` remains
+`blocked_no_review_support`**. The recommendation here still stands: leave the block in place, and
+clear it — if ever — through a Phase 36 planner contract change rather than a production row. See
+[`PHASE76_R8_R5_BLOCKER_CLARIFICATION.md`](PHASE76_R8_R5_BLOCKER_CLARIFICATION.md).
