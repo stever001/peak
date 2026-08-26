@@ -182,3 +182,19 @@ Three candidates, in the order they are worth weighing:
 More source collection is **not** among them; it would not change the answer. Each candidate remains
 a **separately approved phase**, as do report drafting, capsule publication, and AgentNet resolver
 publication.
+
+**Update — Phase 75 examined candidate (2) and declined it.** The Phase 30 `review_bundle_records`
+writer would have accepted a bundle and its id would have cleared `fnd_000`, but a review bundle is a
+Phase 29-derived **inbox item**: it records subjects as *queued for* human review
+(`ready_for_human_review`, `approval_allowed=false`, `requires_human_review=true`), not as reviewed.
+It also has **no field or column for a review record id** — the model excludes "a final review
+decision" by design — so `rev_d94d4711ac12420b` has no honest home in it, and forcing it into
+`subject_refs` would mirror the very misuse §3 refused here. **Phase 75 wrote nothing**, and created
+no substitute `review_records` row. `fnd_000` therefore **remains `blocked_no_review_support`**, and
+this outline is **unmodified** at `plan_persisted` / `needs_review` / `draft`.
+
+That block is best read as a **false negative from a vocabulary gap, not a governance block**: the
+corroboration exists in this chain as `review_records`, which the Phase 36 planner has no reference
+category for. Clearing it honestly means a **Phase 36 planner contract change** in its own approved
+phase; leaving it as written is recommended. See
+[`PHASE75_LOCATION_ASSESSMENT_REVIEW_SUPPORT.md`](PHASE75_LOCATION_ASSESSMENT_REVIEW_SUPPORT.md).

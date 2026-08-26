@@ -805,3 +805,43 @@ remain unresolved**, **R3–R7 stay deferred**, and report finalization, capsule
 client-facing output, and **AgentNet resolver publication remain unauthorized** despite the live
 public resolver. **No artifact body was read, printed, committed, or stored.** See
 [`PHASE74_LOCATION_READINESS_INTERNAL_ASSESSMENT.md`](PHASE74_LOCATION_READINESS_INTERNAL_ASSESSMENT.md).
+
+---
+
+## Phase 75 — the location assessment review support decision (no rows written)
+
+Phase 75 creates **no production rows**. It evaluated whether the existing Phase 30
+`review_bundle_records` writer could honestly supply the review support that Phase 74's finding
+candidate `fnd_000` reports missing, and **declined the path**. Head stays
+`014_engagement_classification` with 14 migrations, 18 tables, and 12 writers — **no migration,
+model, writer, allowlist pair, schema, operator, or harness added**.
+
+**Why `review_bundle_records` is the wrong table for this.** A bundle is the persistence counterpart
+to the Phase 29 packet review orchestration boundary: subjects gathered from one processed packet and
+queued **for** a human reviewer, readiness `ready_for_human_review`, with Phase 29's own warning that
+"ready for human review does not mean approved". Phase 30 hard-stamps every row `needs_review` /
+`draft` / `draft`, `authoritative=false`, `approval_allowed=false`, `requires_human_review=true`. It
+is an **inbox item, not an attestation** — so satisfying a check named "review support" with one
+would clear the block using a record whose stored meaning is that nothing has been reviewed yet.
+
+**And it cannot hold the support that exists.** `ReviewBundleDraft` carries
+`source_ingestion_record_ids`, `evidence_reference_ids`, `agent_task_queue_record_ids`, and
+`subject_refs` — **no review-record field** — and `review_bundle_records` has no such column, the
+model noting `details_json` holds safe references "never raw payload/content **or a final review
+decision**". The declared `subject_refs` types are `source_ingestion_record`, `evidence_reference`,
+`agent_task_queue_record`, `packet_processing_receipt`; there is no `review_record` type, and forcing
+`rev_d94d4711ac12420b` into that free string is the exact misuse Phase 74 already refused in the
+other direction. A Phase 75 bundle would also have been the first in the system with no
+packet-processing run behind it.
+
+**`fnd_000`'s `blocked_no_review_support` is a false negative from a vocabulary gap, not a governance
+block** — the corroboration exists as `review_records`, which the Phase 36 planner has no reference
+category for. The recommended fix is to leave the state as written; clearing it honestly is a
+**Phase 36 planner contract change** requiring its own approved phase.
+
+**Nothing moved.** The Phase 74 outline stays `plan_persisted` / `needs_review` / `draft`; the finding
+stays **data-readiness / reliability only and must not be restated as inventory accuracy**; **R1
+remains provisional**, **R8 and R5 remain unresolved**, **R3–R7 stay deferred**; and report
+finalization, capsule publication, client-facing output, and **AgentNet resolver publication remain
+unauthorized**. See
+[`PHASE75_LOCATION_ASSESSMENT_REVIEW_SUPPORT.md`](PHASE75_LOCATION_ASSESSMENT_REVIEW_SUPPORT.md).

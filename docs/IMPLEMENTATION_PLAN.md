@@ -2249,10 +2249,38 @@ client-facing output, no migration, no writer, no allowlist pair, and no new ope
   **downstream reports must not reframe it as one**. **No inventory accuracy conclusion** was made;
   **R1 remains provisional**; **R8 and R5 remain unresolved**; **R3–R7 remain deferred**; and no
   report, capsule, client-facing output, or AgentNet publication was created or authorized.
-- [ ] **Next:** resolving **R8 precedence** or **R5 WMS scope** is the only path that changes the
-  finding — four of R10's fifteen items are blocked on exactly those. Alternatives: review the
-  assessment outline itself, or give the finding candidate real review support. More source
-  collection would not change the answer. Separately approved either way.
+- [x] **Next: Phase 75 examined "give the finding candidate real review support" and declined it** —
+  see below.
+
+**Location Assessment Review Support (Phase 75 — no production writes; preferred path declined on
+honesty grounds; no migration, writer, allowlist pair, schema, operator, or harness):**
+
+- [x] **The preferred path was mechanically available and was not taken.** The Phase 30
+  `review_bundle_records` writer would have accepted a bundle for this engagement, and its id would
+  have moved `fnd_000` from `blocked_no_review_support` to `internal_draft_candidate`.
+- [x] **A review bundle records that review has *not* happened.** It is the persistence counterpart
+  to the Phase 29 packet review boundary: subjects gathered and queued **for** a human reviewer,
+  readiness `ready_for_human_review`, carrying Phase 29's own warning that "ready for human review
+  does not mean approved". Phase 30 hard-stamps `needs_review` / `draft` / `approval_allowed=false`.
+  Clearing a "no review support" block with it would assert the opposite of what the block asks for.
+- [x] **It cannot carry the support that exists.** `ReviewBundleDraft` has no review-record field and
+  `review_bundle_records` has no such column — the model states `details_json` holds safe references
+  "never ... a final review decision". `rev_d94d4711ac12420b` has no honest home in it, and forcing
+  it into `subject_refs` would be the exact mirror of the Phase 74 misuse already refused.
+- [x] **No production rows were created**, and **no substitute `review_records` row** was created to
+  appear to progress. No source ingestion, evidence reference, Client, Engagement, intake, capsule,
+  report, client-facing output, or AgentNet publication.
+- [x] **`blocked_no_review_support` is a false negative from a vocabulary gap, not a governance
+  block.** The corroboration exists in this chain; it is typed `review_records`, which the Phase 36
+  planner has no category for.
+- [x] **The finding is unchanged and stays narrow**: R1's location dimension is not currently
+  readable or reliable enough for location-attributed evidence — **data-readiness / reliability
+  only, never inventory accuracy**. R1 provisional; R8 and R5 unresolved; R3–R7 deferred; report
+  finalization, capsule publication, and AgentNet publication unauthorized.
+- [ ] **Next:** leaving the block in place is recommended — it is accurate and nothing waits on it.
+  Clearing it honestly means a **Phase 36 planner contract change** (accept `review_records` as
+  finding support), which needs its own approved phase. The only step that changes the **finding**
+  remains **R8 precedence** or **R5 WMS scope**. Separately approved either way.
 
 **Still to do:**
 
