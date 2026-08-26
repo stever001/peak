@@ -2219,10 +2219,40 @@ no new operator or harness):**
   unresolved** (dependent R10 items stay `blocked_by_r8` / `blocked_by_r5`); **R3–R7 remain
   deferred**; and no report, capsule, client-facing output, or AgentNet publication was created or
   authorized.
-- [ ] **Next: likely a minimal internal assessment finding or report-outline step — not more source
-  collection**, which would not change the answer. Worth weighing first: addressing **R8 precedence
-  or R5 WMS scope**, since four of R10's fifteen items are blocked on exactly those. Separately
-  approved either way.
+- [x] **Next: Phase 74 took the minimal internal assessment step** — see below.
+
+**Location-Readiness Evidence Review and the Minimal Internal Assessment Outline (Phase 74 — two
+production application records; no source ingestion record, no evidence reference, no capsule, no
+client-facing output, no migration, no writer, no allowlist pair, and no new operator or harness):**
+
+- [x] **One `review_records` row** (`rev_d94d4711ac12420b`) reviewing the Phase 73 location-readiness
+  evidence reference (`evid_f26c5f8fc0aa44d4`) through the unchanged Phase 22 writer:
+  `approve_internal`, `authoritative=false`, approved **only** for one minimal internal assessment
+  finding / report outline. Its `reasons` record the finding and every limit, in `details_json` —
+  the Phase 68 shape, with no field overloaded.
+- [x] **One `internal_assessment_report_drafts` row** (`iard_50814a78a44243c2`) through the unchanged
+  Phase 37 writer, planned by the DB-free Phase 36 planner: five sections
+  (`evidence_summary`, `operational_findings`, `system_data_readiness`, `evidence_gaps`,
+  `next_steps_internal`), one finding candidate, zero recommendation candidates, zero open gaps.
+  `output_status=plan_persisted` — a persisted **outline**, never report prose — `audience=internal`,
+  `needs_review` / `draft`, every approval/verification/publication/execution flag `false`.
+- [x] **`inventory_risk_areas` was deliberately excluded** so a data-readiness result cannot be read
+  as an inventory-risk conclusion. The single finding candidate is honestly **blocked**
+  (`blocked_no_review_support`): this chain has `review_records`, not `review_bundle_records`, and
+  the Phase 74 review record was **not** smuggled into `review_bundle_record_ids` to clear it.
+- [x] **The assessment finding:** **R1's location dimension is not currently readable or reliable
+  enough to carry location-attributed evidence under the thresholds fixed in advance.**
+- [x] **Write 2 was gated on write 1**, and both were newly created rather than replayed.
+- [x] **No new infrastructure.** Both writes used existing writers via a temporary executor held
+  outside the repository and never committed — no persistent operator and no phase-specific harness.
+- [x] **This is a data-readiness and reliability finding, not an inventory accuracy finding**, and
+  **downstream reports must not reframe it as one**. **No inventory accuracy conclusion** was made;
+  **R1 remains provisional**; **R8 and R5 remain unresolved**; **R3–R7 remain deferred**; and no
+  report, capsule, client-facing output, or AgentNet publication was created or authorized.
+- [ ] **Next:** resolving **R8 precedence** or **R5 WMS scope** is the only path that changes the
+  finding — four of R10's fifteen items are blocked on exactly those. Alternatives: review the
+  assessment outline itself, or give the finding candidate real review support. More source
+  collection would not change the answer. Separately approved either way.
 
 **Still to do:**
 

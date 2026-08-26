@@ -105,3 +105,16 @@ blocked on exactly those two and cannot move otherwise.
 
 Whichever is chosen, it remains a **separately approved phase**, as do report drafting, capsule
 publication, and AgentNet resolver publication.
+
+**Update — Phase 74 took the first of those.** It reviewed this evidence reference
+(`rev_d94d4711ac12420b`, `approve_internal`, non-authoritative) and created one minimal internal
+assessment outline (`iard_50814a78a44243c2`, `plan_persisted` / `needs_review` / `draft`,
+`audience=internal`) through the unchanged Phase 37 writer — **no new infrastructure**. The outline
+records the finding that **R1's location dimension is not currently readable or reliable enough to
+carry location-attributed evidence**, still as a **data-readiness finding, not an inventory accuracy
+finding**. This evidence reference itself was **not modified**: it stays `needs_review` / `draft`,
+reliability `low`, non-authoritative. **R1 remains provisional; R8 and R5 remain unresolved; R3–R7
+remain deferred**; and no client-facing output, capsule, or AgentNet publication was created or
+authorized. Resolving **R8 precedence** or **R5 WMS scope** remains the only path that changes the
+finding. See
+[`PHASE74_LOCATION_READINESS_INTERNAL_ASSESSMENT.md`](PHASE74_LOCATION_READINESS_INTERNAL_ASSESSMENT.md).

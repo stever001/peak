@@ -1032,3 +1032,46 @@ records were **not modified** — neither writer has an `UPDATE` path. No `UPDAT
 SQL, cleanup, or `alembic stamp` was issued, and no app table was scanned, counted, or probed beyond
 the writers' own stored-engagement loads and idempotency lookups. See
 [`PHASE73_R10_REVIEW_LOCATION_READINESS_EVIDENCE.md`](PHASE73_R10_REVIEW_LOCATION_READINESS_EVIDENCE.md).
+
+---
+
+## Phase 74 — two writes: the evidence review and the minimal internal assessment outline
+
+Phase 74 writes **exactly two** rows under the same stored anchor (`internal_test_001` / `99999` /
+`peak_internal_admin` / `internal_peak_only`): one `review_records` row (`rev_d94d4711ac12420b`)
+through the unchanged **Phase 22** writer, reviewing the Phase 73 location-readiness evidence
+reference (`evid_f26c5f8fc0aa44d4`), and one `internal_assessment_report_drafts` row
+(`iard_50814a78a44243c2`) through the unchanged **Phase 37** writer, planned by the DB-free
+**Phase 36** planner. Head stays `014` — **no migration, model, writer, allowlist pair, operator
+utility, or harness was added**. Both writes were driven by a temporary executor held outside the
+repository and never committed.
+
+| credential | what it did in Phase 74 | wrote? |
+| --- | --- | --- |
+| read-only | pre-write and post-write schema/collation verify only; no app rows read | no |
+| runtime | the two `INSERT`s, via the writers only (`SELECT` + `INSERT` grants only) | yes — two rows |
+| migration | **not used** | — |
+
+**The review is `approve_internal`, non-authoritative**, approving the location-readiness evidence
+only for one minimal internal assessment finding / report outline. **The assessment outline is
+`plan_persisted` / `needs_review` / `draft`, `audience=internal`**, with every approval, financial,
+capsule, publication, and execution flag `false` and `requires_human_review=true`. Write 2 proceeded
+only because write 1 was created; both were newly created, not replays.
+
+**The assessment finding: R1's location dimension is not currently readable or reliable enough to
+carry location-attributed evidence under thresholds fixed in advance. This is a data-readiness and
+reliability finding, not an inventory accuracy finding**, and downstream reports must not reframe it
+as one — an instruction recorded on the review row's `warnings` as well as in the docs. **R1 remains
+provisional**, **R8 authority precedence and R5 WMS scope remain unresolved**, **R3–R7 remain
+deferred**, and report finalization, capsule publication, client-facing output, and **AgentNet
+resolver publication remain unauthorized** despite the live public resolver. No capsule candidate was
+created: `future_capsule_candidate_items_json` names a *future* gate, and the row's
+`capsule_candidate_ready` / `publication_allowed` are `false`.
+
+**No artifact body was read, printed, committed, or stored.** The stored records carry record ids,
+readiness states, section metadata, posture flags, and short safe labels only. The reviewed evidence
+reference and every upstream record were **not modified** — neither writer has an `UPDATE` path. No
+`UPDATE`, `DELETE`, manual SQL, cleanup, or `alembic stamp` was issued, and no app table was
+scanned, counted, or probed beyond the writers' own stored-engagement loads and idempotency lookups.
+See
+[`PHASE74_LOCATION_READINESS_INTERNAL_ASSESSMENT.md`](PHASE74_LOCATION_READINESS_INTERNAL_ASSESSMENT.md).

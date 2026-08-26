@@ -766,3 +766,42 @@ drafting, capsule publication, client-facing output, and **AgentNet resolver pub
 unauthorized** despite the live public resolver. **No artifact body was read, printed, committed, or
 stored.** See
 [`PHASE73_R10_REVIEW_LOCATION_READINESS_EVIDENCE.md`](PHASE73_R10_REVIEW_LOCATION_READINESS_EVIDENCE.md).
+
+---
+
+## Phase 74 — the location-readiness evidence review and the minimal internal assessment outline
+
+Phase 74 creates **two** rows in production through unchanged writers: one `review_records` row
+(`rev_d94d4711ac12420b`, Phase 22 writer) reviewing the Phase 73 location-readiness evidence
+reference (`evid_f26c5f8fc0aa44d4`), and one `internal_assessment_report_drafts` row
+(`iard_50814a78a44243c2`, Phase 37 writer, planned by the DB-free Phase 36 planner) — both under the
+stored `internal_test_001` / `99999` / `internal_peak_only` anchor. **No migration, no model, no
+writer, no allowlist pair, and no new operator or harness** — head stays
+`014_engagement_classification` with 14 migrations, 18 tables, and 12 writers. This is the first use
+of `internal_assessment_report_drafts` (the sixteenth table, added by migration
+`010_internal_assessment_report_drafts`) in the internal_test chain.
+
+**No field is overloaded.** The review writer keeps the authorization anchor (`request.subject`, the
+engagement) apart from the reviewed target (`subject_record_type='evidence_reference'`, the Phase 68
+convention), and the finding text lives in `draft.reasons` → `details_json`. The report-draft writer
+stores **structure and reference ids only**: `output_status` is fixed at `plan_persisted` precisely
+so a row can never be misread as report prose, `audience` is forced to `internal`, and every
+approval / financial / capsule / publication / execution flag is hard-coded `false` with
+`requires_human_review=true`.
+
+**The row is an outline, not a report:** five sections (`evidence_summary`, `operational_findings`,
+`system_data_readiness`, `evidence_gaps`, `next_steps_internal`), one finding candidate anchored to
+`evid_f26c5f8fc0aa44d4`, zero recommendation candidates, zero open gaps. `inventory_risk_areas` was
+excluded deliberately. The single finding candidate is honestly `blocked_no_review_support` — this
+chain has `review_records`, not `review_bundle_records` — and no id was forced into
+`review_bundle_record_ids` to clear it. `future_capsule_candidate_items_json` lists the three source
+ingestion ids as a **named future gate**; no capsule candidate was created and
+`capsule_candidate_ready` / `publication_allowed` are `false`.
+
+**The assessment finding:** R1's location dimension is **not currently readable or reliable enough**
+to carry location-attributed evidence under thresholds fixed in advance — a **data-readiness and
+reliability finding, not an inventory accuracy finding**. **R1 remains provisional**, **R8 and R5
+remain unresolved**, **R3–R7 stay deferred**, and report finalization, capsule publication,
+client-facing output, and **AgentNet resolver publication remain unauthorized** despite the live
+public resolver. **No artifact body was read, printed, committed, or stored.** See
+[`PHASE74_LOCATION_READINESS_INTERNAL_ASSESSMENT.md`](PHASE74_LOCATION_READINESS_INTERNAL_ASSESSMENT.md).
