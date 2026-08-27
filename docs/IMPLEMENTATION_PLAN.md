@@ -2543,12 +2543,66 @@ no new infrastructure, no branch or commit; docs only):**
   Phase 82's control is procedural — a dedicated lab shell that never held a production value.
   Production being already at head `014` makes a misdirected `upgrade head` a no-op today, which
   **stops being true the moment a `015` exists**.
-- [ ] **Next (Phase 82): environment creation, migration, and verification only** — provision the
-  service, create `peak_lab` and the three credentials, write an out-of-repo env template with names
-  but no values, apply the existing 14 migrations, verify head/tables/charset/collation and the
-  runtime grant posture, and document the result. **No measured rows, no writer invocation, no Peak
-  record** unless separately approved. Seeding `peak_lab_scenario` and the measured records is
-  **Phase 83**.
+- [x] **Next: write the provisioning runbook before provisioning anything. Done in Phase 82 — see
+  below.**
+
+**The Lab MySQL Provisioning Readiness Runbook (Phase 82 — readiness only; no production access, no
+cloud contact, no database, service, schema, user, credential, migration, writer, or record):**
+
+- [x] **Phase 82 creates nothing.** It contacts **no cloud service, API, or console**, sources no
+  environment file, opens no connection, runs no migration, invokes no writer, and creates no record.
+  The runtime connectivity gate was run in `--self-test` mode only. **No new infrastructure** — docs
+  only. Head stays `014_engagement_classification` with 14 migrations, 18 tables, 12 writers, and no
+  standing production write enablement; **production remains untouched**. See
+  [`PHASE82_LAB_MYSQL_PROVISIONING_READINESS.md`](PHASE82_LAB_MYSQL_PROVISIONING_READINESS.md).
+- [x] **Phase renumbering.** Inserting a readiness phase shifts Phase 81's labels: what Phase 81
+  called "Phase 82" (provisioning) is now **Phase 83**, and its "Phase 83" (scenario seeding) is now
+  **Phase 84**.
+- [x] **Naming fixed:** managed service label `peak_lab`, controlled Alembic-managed schema
+  `peak_lab`, scenario schema `peak_lab_scenario` — **named and reserved now, created only later
+  under separate approval.** Explicitly **not production**, **not staging**, **not a second database
+  inside the production service**, and **not `--env test`**.
+- [x] **Credential plan, names and posture only, no values:** `peak_lab_migrate` (DDL on `peak_lab`
+  only), `peak_lab_runtime` (**exactly `SELECT` + `INSERT`**), `peak_lab_verify_ro` (`SELECT` only —
+  renamed from Phase 81's `peak_lab_readonly`). No `GRANT OPTION`, no broad grants, no global
+  privilege beyond `USAGE`, no `UPDATE`/`DELETE` for runtime unless separately approved, no
+  production credential reused, and **no credential for AgentNet publication, capsule publication,
+  final report, or client-facing output.**
+- [x] **Env files named, not created:** `peak-lab-migrate.env` (`PEAK_DATABASE_URL`),
+  `peak-lab-runtime.env` (`PEAK_RUNTIME_DATABASE_URL`), `peak-lab-ro.env`
+  (`PEAK_PRODUCTION_DB_URL` + `PEAK_PRODUCTION_DB_READONLY_CONFIRM=1`) — all outside the repository,
+  **no secret value in any repo document.** `PEAK_LAB_CONFIRM` is reserved and **reads as a no-op**;
+  Phase 81's `PEAK_LAB_*_URL` names are **retired as operative names**, since nothing reads them.
+- [x] **The seam is wider than Phase 81 recorded, so the lab-only shell guard is mandatory.** Every
+  tool reads a fixed **production-named** variable and nothing else — Alembic only
+  `PEAK_DATABASE_URL`, the connectivity gate only `PEAK_RUNTIME_DATABASE_URL`, the verifier
+  `PEAK_PRODUCTION_DB_URL` / `PEAK_DATABASE_URL` with a production-named affirmation variable. **No
+  variable name says "lab."** Guard: fresh shell, no production env ever sourced in it, exactly one
+  lab file at a time, context verified before migrating, never `env`/`printenv`/`set`/`set -x`, an
+  explicit lab assertion on host/service/user before `alembic upgrade`, stop on any
+  production-looking name, close or unset afterwards.
+- [x] **Phase 83 migration and verification plan:** apply the existing **14** migrations to an empty
+  `peak_lab` only, head `014_engagement_classification`, **18** tables plus `alembic_version`,
+  `InnoDB`/`utf8mb4` with `utf8mb4_bin` pinned per-column. **No `015`.** Verify head, table count,
+  migration count, and governed collation via the lab read-only credential
+  (`production_mysql_collation_verify.py` works **unmodified**), then each credential's grants, with
+  the connectivity gate run live under the runtime file expecting `required_grants_present=true` and
+  `excess_grants_present=false`. Confirm `peak_lab_scenario` does **not** exist yet, no measured rows
+  exist, and production was never touched.
+- [x] **Tooling gaps recorded, deliberately not fixed:** `make mysql-parity-staging` is **not** a live
+  verifier (`run_staging()` emits `[hold]` and returns 0 without connecting) and reads
+  `PEAK_MANAGED_MYSQL_TEST_DSN` rather than the staging variable; the read-only verifier's output says
+  `production_connection_made` even against the lab; `alembic/env.py` has no lab target — the largest
+  residual risk; and `GOVERNED_MYSQL_COLLATION_POLICY.md` states 211/308 governed columns while the
+  audit reports 212/309 (migration `014`'s `engagement_category`, correctly pinned — stale text, not a
+  defect). Lab-specific wrappers are a later **source-only** decision, and only **after** the lab
+  exists.
+- [ ] **Next (Phase 83): provisioning, migration, and verification only — and it requires explicit
+  user approval, because it creates recurring-cost managed infrastructure.** Approval is needed for
+  each of: the recurring managed MySQL cost, cloud provisioning, lab service creation, lab
+  schema/user/credential creation, and applying the existing migrations to the lab. **No
+  `peak_lab_scenario`, no measured rows, no writer invocation, and no Peak record** until later,
+  separate approval. Seeding the measured scenario is **Phase 84**.
 
 **Still to do:**
 

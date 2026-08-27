@@ -371,3 +371,35 @@ version slug, never a rewrite.
 8. **Adding `--env lab` to the managed-MySQL tools** would touch `choices` and `ENV_DSN_VARS` in two
    files. Phase 82 does not need it — the read-only verifier and connectivity gate reach the lab by
    role variable alone. Deferred.
+
+---
+
+## 13. Superseded by Phase 82 — read this first
+
+A readiness phase was inserted after this plan was written, so **every phase number in §8–§9 above
+shifts by one**: what this document calls "Phase 82" (provisioning) is now **Phase 83**, and what it
+calls "Phase 83" (scenario seeding) is now **Phase 84**. The substance is unchanged; only the labels
+move. See
+[`PHASE82_LAB_MYSQL_PROVISIONING_READINESS.md`](PHASE82_LAB_MYSQL_PROVISIONING_READINESS.md), which is
+current where the two disagree.
+
+Three specifics above are superseded:
+
+1. **The read-only lab user is `peak_lab_verify_ro`**, not `peak_lab_readonly` (§4). The role is
+   verification, and `_ro` states the posture in the name an operator types.
+2. **`PEAK_LAB_MIGRATION_URL` / `PEAK_LAB_RUNTIME_URL` / `PEAK_LAB_READONLY_URL` are retired as
+   operative names** (§4). **No tool reads them.** Each tool reads one fixed, production-named
+   variable: `alembic/env.py` reads `PEAK_DATABASE_URL`, the connectivity gate reads
+   `PEAK_RUNTIME_DATABASE_URL`, and the collation verifier reads
+   `PEAK_PRODUCTION_DB_URL` / `PEAK_DATABASE_URL` with `PEAK_PRODUCTION_DB_READONLY_CONFIRM`. Out-of-
+   repo env files are `peak-lab-migrate.env`, `peak-lab-runtime.env`, and
+   `peak-lab-ro.env`; a `PEAK_LAB_*` variable no tool reads is a false sense of separation.
+3. **The `alembic/env.py` seam recorded in §12.1 is wider than stated** — it is not Alembic-only.
+   **All three roles** place a lab DSN in a production-named variable, so **no variable name says
+   "lab"** for any of them, and the lab-only shell guard is the sole separation control for the
+   migrate and read-only roles. The connectivity gate is the one exception: it scrubs
+   `PEAK_DATABASE_URL`, `PEAK_PRODUCTION_DB_URL`, and `PEAK_PRODUCTION_DB_READONLY_CONFIRM` from its
+   own process environment in code.
+
+**Provisioning still has not happened, and still requires explicit user approval** — it creates
+recurring-cost managed infrastructure. Nothing in either document authorizes it.

@@ -1165,3 +1165,69 @@ measured records is **Phase 83**, separately approved.
 lab DSN in the production-named variable. Phase 82's control is procedural — a dedicated lab shell that
 never held a production value. Production being already at head `014` makes a misdirected
 `upgrade head` a no-op today; that stops being true once a `015` exists.
+
+## Phase 82 — the lab MySQL provisioning runbook (still nothing created)
+
+Phase 82 is **readiness/runbook only**. It creates **no database, service, schema, user, or
+credential**, contacts **no cloud service, API, or console**, sources no environment file, opens no
+connection, runs no migration, invokes no writer, and creates no record. Head stays
+`014_engagement_classification` with 14 migrations, 18 tables, and 12 writers — **no migration,
+model, writer, allowlist pair, schema, operator, or harness added** — and **production remains
+untouched**. See
+[`PHASE82_LAB_MYSQL_PROVISIONING_READINESS.md`](PHASE82_LAB_MYSQL_PROVISIONING_READINESS.md).
+
+**Phase renumbering.** A readiness phase was inserted after Phase 81, so what Phase 81 called
+"Phase 82" (provisioning) is now **Phase 83**, and what it called "Phase 83" (scenario seeding) is now
+**Phase 84**. **Phase 83 requires explicit user approval, because it creates recurring-cost managed
+infrastructure.**
+
+**Naming, fixed.** Managed service label `peak_lab`; controlled Alembic-managed schema `peak_lab`;
+scenario schema `peak_lab_scenario` — **named and reserved now, created only in a later, separately
+approved phase.** Explicitly **not production**, **not staging** (the staging variables already mean
+*empty and disposable*, the opposite contract), **not a second database inside the production
+service**, and **not `--env test`** (which collides with the `internal_test` classification).
+
+**Credentials — names and posture only, no values.** `peak_lab_migrate` (DDL on `peak_lab` only),
+`peak_lab_runtime` (**exactly `SELECT` + `INSERT`**), `peak_lab_verify_ro` (`SELECT` only; renamed
+from Phase 81's `peak_lab_readonly`). No `GRANT OPTION`, no broad grants, no global privilege beyond
+`USAGE`, no `UPDATE`/`DELETE` for runtime unless separately approved, and no production credential
+reused. The runtime posture is not a formality: the Phase 50 gate's `REQUIRED_GRANTS` and
+`FORBIDDEN_GRANTS` are **fixed in source**, so a lab runtime user carrying `DELETE` for convenience
+**fails the gate**.
+
+**Env files are named, not created:** `peak-lab-migrate.env` (sets `PEAK_DATABASE_URL`),
+`peak-lab-runtime.env` (sets `PEAK_RUNTIME_DATABASE_URL`), `peak-lab-ro.env` (sets
+`PEAK_PRODUCTION_DB_URL` plus `PEAK_PRODUCTION_DB_READONLY_CONFIRM=1`) — all outside the repository,
+with **no secret value in any repo document**.
+
+**The lab-only shell guard is mandatory, and the seam is wider than Phase 81 recorded.** Every tool
+reads a **fixed, production-named** variable and nothing else: `alembic/env.py` only
+`PEAK_DATABASE_URL`; the connectivity gate only `PEAK_RUNTIME_DATABASE_URL`; the collation verifier
+`PEAK_PRODUCTION_DB_URL` / `PEAK_DATABASE_URL` with an affirmation variable also named for
+production. **No variable name says "lab"**, so only shell discipline separates the environments:
+fresh shell, no production env ever sourced in it, exactly one lab file at a time, context verified
+before migrating, never `env` / `printenv` / `set` / `set -x`, an explicit lab assertion on
+host/service/user before `alembic upgrade`, stop on any production-looking name, and close or unset
+afterwards. Production being already at head `014` makes a misdirected `upgrade head` a no-op today —
+a mitigating accident, **not a control**, and it expires the moment a `015` exists.
+
+**Phase 83 migration and verification posture.** Apply the existing **14** migrations to an empty
+`peak_lab` only; head `014_engagement_classification`; **18** tables plus `alembic_version`;
+`InnoDB` / `utf8mb4` with `utf8mb4_bin` pinned per-column on governed columns. **No `015`.** The
+Phase 47 preflight runs automatically in online mode, so a fresh lab bootstrap does not hit the
+Phase 46 `VARCHAR(32)` failure. Verify head, table count, migration count, and governed collation with
+`tools/production_mysql_collation_verify.py` under the lab read-only credential — it already pins
+`EXPECTED_ALEMBIC_HEAD = "014_engagement_classification"` and `EXPECTED_TABLE_COUNT = 18`, so it works
+**unmodified** — then verify each credential's grants, with the connectivity gate run live under the
+lab runtime file expecting `required_grants_present=true` and `excess_grants_present=false`. **No
+measured rows, no writer invocation, and no Peak record until later approval.**
+
+**Known tooling gaps, recorded and deliberately not fixed here.** `make mysql-parity-staging` is not a
+live verifier — `run_staging()` emits `[hold]` and returns 0 **without connecting** — and it reads
+`PEAK_MANAGED_MYSQL_TEST_DSN`, not the staging variable. The read-only verifier's output says
+`production_connection_made` even when pointed at the lab, so any lab run recorded as evidence must be
+captioned with the environment it actually read. `alembic/env.py` has no lab target — the largest
+residual risk. And `GOVERNED_MYSQL_COLLATION_POLICY.md` still states **211 governed columns of 308**
+while the audit reports **212 of 309**; the difference is migration `014`'s `engagement_category`,
+correctly pinned — **stale text, not a defect.** Lab-specific wrappers are a later, source-only
+decision, and only **after** the lab exists.

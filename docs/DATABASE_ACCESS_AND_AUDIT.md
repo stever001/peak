@@ -1409,3 +1409,70 @@ enumeration only**, the **Phase 64 R5 export remains uncollected**, **R3–R7 re
 Phase 74 outline is unmodified with `fnd_000` still `blocked_no_review_support`, and report
 finalization, client-facing output, capsule publication, and **AgentNet resolver publication remain
 unauthorized**.
+
+---
+
+## Phase 82 — no production access, no cloud contact, no credentials created
+
+Phase 82 **contacted no database and no cloud service, API, or console**. No environment file was
+created or sourced, no connection was opened, no writer was invoked, and **no row of any kind was
+created** — in production or anywhere else. **No database, service, schema, user, or credential was
+created**, and no migration was run.
+
+| credential | what it did in Phase 82 | wrote? |
+| --- | --- | --- |
+| read-only | **not used** — no verifier was run | no |
+| runtime | **not used** — the runtime connectivity gate was run in `--self-test` mode only | no |
+| migration | **not used** | — |
+
+Phase 82 is a **readiness/runbook phase** for the production-parity lab MySQL environment. It writes
+the runbook Phase 83 executes; it provisions nothing. See
+[`PHASE82_LAB_MYSQL_PROVISIONING_READINESS.md`](PHASE82_LAB_MYSQL_PROVISIONING_READINESS.md).
+**Phase 83 requires explicit user approval, because it creates recurring-cost managed
+infrastructure** — approval is not implied by the runbook's existence.
+
+**The lab credential plan, superseding the Phase 81 read-only name.** Names only; **no secret value
+enters this repository in any phase.**
+
+| lab role | lab user | privileges | out-of-repo env file | the one variable that file sets |
+| --- | --- | --- | --- | --- |
+| migration | `peak_lab_migrate` | DDL on `peak_lab` only | `peak-lab-migrate.env` | `PEAK_DATABASE_URL` |
+| runtime | `peak_lab_runtime` | **`SELECT` + `INSERT` only** | `peak-lab-runtime.env` | `PEAK_RUNTIME_DATABASE_URL` |
+| read-only verifier | `peak_lab_verify_ro` *(was `peak_lab_readonly`)* | `SELECT` only | `peak-lab-ro.env` | `PEAK_PRODUCTION_DB_URL` + `PEAK_PRODUCTION_DB_READONLY_CONFIRM=1` |
+
+**None of these files exist.** They are named here and created in Phase 83, outside the repository.
+No `GRANT OPTION`, no broad grants, no global privileges beyond `USAGE`, no `UPDATE`/`DELETE` for
+runtime unless separately approved, **no production credential reused**, and **no credential for
+AgentNet publication, capsule publication, final report, or client-facing output**.
+
+**The seam is wider than Phase 81 recorded, and the shell guard is therefore mandatory.** Phase 81
+flagged that `alembic/env.py` reads only `PEAK_DATABASE_URL`. Reading the tools shows **all three
+roles** place a lab DSN in a production-named variable: the connectivity gate reads only
+`PEAK_RUNTIME_DATABASE_URL` and the collation verifier reads `PEAK_PRODUCTION_DB_URL` /
+`PEAK_DATABASE_URL` and requires `PEAK_PRODUCTION_DB_READONLY_CONFIRM`. **No variable name says
+"lab", so the name cannot tell an operator which environment it points at.** Phase 83's control is
+procedural and required: a fresh shell that has never held a production value, no production env
+sourced, exactly one lab env file at a time, context verified before migrating, **never** `env` /
+`printenv` / `set` / `set -x`, an explicit lab assertion on host/service/user before
+`alembic upgrade`, a full stop if any name mentions the production service or a production user, and
+the shell closed or unset afterwards. `PEAK_LAB_CONFIRM` is **reserved and reads as a no-op** — no
+script reads it — and the `PEAK_LAB_*_URL` names from Phase 81 are **retired as operative names**,
+since nothing reads them either.
+
+**One control is real rather than procedural:** the connectivity gate scrubs `PEAK_DATABASE_URL`,
+`PEAK_PRODUCTION_DB_URL`, and `PEAK_PRODUCTION_DB_READONLY_CONFIRM` from its own process environment
+before anything else runs, so it cannot silently fall back to a migration or production variable.
+
+**Phase 83 is provisioning, migration, and verification only** — apply the existing **14** migrations
+to `peak_lab` alone, reach head `014_engagement_classification`, expect **18** tables plus
+`alembic_version`, verify head/table/migration counts, governed collation via the lab read-only
+credential, and the grant posture of each lab credential. **No `015`. No `peak_lab_scenario`. No
+measured rows. No writer invocation. No Peak record.** Production is not touched at any step.
+
+**Nothing moved.** Head stays `014_engagement_classification` with 14 migrations, 18 tables, and 12
+writers, and **no standing production write enablement**. **R1 remains provisional**, the location
+finding stays **data-readiness and reliability only, never inventory accuracy**, the **R5 WMS scope
+clarification remains a reviewed scope-blocker enumeration only**, the **Phase 64 R5 export remains
+uncollected**, **R3–R7 remain deferred**, the Phase 74 outline is unmodified with `fnd_000` still
+`blocked_no_review_support`, and report finalization, client-facing output, capsule publication, and
+**AgentNet resolver publication remain unauthorized**.
