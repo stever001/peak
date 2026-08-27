@@ -1245,3 +1245,54 @@ remain deferred with R4 conditionally required / scope-dependent**, the Phase 74
 unmodified with `fnd_000` still `blocked_no_review_support`, and report finalization, capsule
 publication, client-facing output, and **AgentNet resolver publication remain unauthorized**. See
 [`PHASE78_R5_WMS_SCOPE_REVIEW.md`](PHASE78_R5_WMS_SCOPE_REVIEW.md).
+
+---
+
+## Phase 79 — one write: the R8 measurement-feasibility source ingestion
+
+Phase 79 creates **one** production row: a `source_ingestion_records` row (`ing_0d671226f2ba4760`,
+Phase 24 writer) registering an **R8 authority-precedence measurement-feasibility assessment**, under
+the unchanged `internal_test_001` / `99999` / `internal_peak_only` anchor.
+
+| credential | what it did in Phase 79 | wrote? |
+| --- | --- | --- |
+| read-only | pre-write and post-write collation verification; `readonly_queries_only=true`, information-schema only, no app rows read | no |
+| runtime | connectivity gate (`app_table_read_made=false`), then **one** `INSERT` through the source-ingestion writer | **yes — one row** |
+| migration | **not used** | — |
+
+**Both pre-checks passed before the write** — head `014_engagement_classification`, 18 base tables
+plus `alembic_version`, 0 governed columns at risk; `required_grants_present=true`,
+`excess_grants_present=false`, `global_privileges_present=false`, `grant_option_present=false`. The
+verifier was re-run after the write and returned `verified_safe_no_remediation_required` unchanged.
+
+**Idempotency was rehearsed off-production first**, against temporary SQLite, varying fields the
+payload fingerprint actually covers — the packet location reference and the packet hash — each of
+which produced `idempotency_conflict`. This writer's fingerprint covers packet **metadata only**;
+`reasons` and `warnings` do not participate, unlike the review writer. Production returned `created`
+with `stored_record_created=true` and `transaction_committed=true` — exactly one row.
+
+**No `UPDATE`, `DELETE`, manual SQL, cleanup, or `alembic stamp` was issued**, no application table
+was scanned, counted, or probed beyond the writer's own stored-engagement load and idempotency
+lookup, no schema was changed, and no migration was run. Head stays `014` and **no new infrastructure
+was added** — a temporary scratchpad executor outside the repository, nothing persistent committed.
+
+**No artifact body was printed, committed, or stored.** The stored row carries packet metadata and a
+SHA-256 only; the body lives outside the repository and outside the database, and the hash value is
+not disclosed in the docs. Prior artifacts were inspected **structurally only**.
+
+**The feasibility result is a clean negative.** The internal_test scenario **cannot produce** either
+R8 confirmation prerequisite — quantitative findings, or an evidence reliability rating — both
+recorded `blocked_by_missing_measurement`. Every collected source is description-level and there is
+no live system to measure against, so this is a **measurement gap, not a collection gap**; collecting
+the remaining requests would not resolve it. **Nothing was fabricated.**
+
+**Registration is collection, not review.** The row is `needs_review` / `draft` /
+`authoritative=false` and **is not evidence**. **R8 authority precedence remains unresolved** and R8
+remains non-authoritative; recording that a question cannot be answered here is not closing it. **R1
+remains provisional**, the location finding stays **data-readiness and reliability only**, the **R5
+WMS scope clarification remains a reviewed scope-blocker enumeration only**, the **Phase 64 R5
+export remains uncollected**, **R3–R7 remain deferred** with the count/variance request conditionally
+required, the Phase 74 outline is unmodified with `fnd_000` still `blocked_no_review_support`, and
+report finalization, capsule publication, client-facing output, and **AgentNet resolver publication
+remain unauthorized**. See
+[`PHASE79_R8_MEASUREMENT_FEASIBILITY_SOURCE_INGESTION.md`](PHASE79_R8_MEASUREMENT_FEASIBILITY_SOURCE_INGESTION.md).

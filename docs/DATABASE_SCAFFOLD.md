@@ -994,3 +994,54 @@ export remains uncollected**; **R1 remains provisional**; **R3, R4, R6, R7 stay 
 conclusion** was made; and report finalization, capsule publication, client-facing output, and
 **AgentNet resolver publication remain unauthorized**. See
 [`PHASE78_R5_WMS_SCOPE_REVIEW.md`](PHASE78_R5_WMS_SCOPE_REVIEW.md).
+
+---
+
+## Phase 79 — the R8 measurement-feasibility source ingestion
+
+Phase 79 creates **one** row in production through an unchanged writer: a `source_ingestion_records`
+row (`ing_0d671226f2ba4760`, Phase 24 writer) registering an **R8 authority-precedence
+measurement-feasibility assessment**, under the stored `internal_test_001` / `99999` /
+`internal_peak_only` anchor. **No migration, model, writer, allowlist pair, schema, operator, or
+harness** — head stays `014_engagement_classification` with 14 migrations, 18 tables, and 12 writers.
+Execution used a temporary scratchpad executor outside the repository.
+
+**The row stores packet metadata only.** Reference id, schema name and version, source type, the
+logical `internal-test-artifact://phase79/…` location reference, and the SHA-256 `packet_hash`. The
+artifact body stays outside the repository and out of the database, and the hash value is not
+disclosed in the docs. The posture is **server-stamped, not chosen** — the writer hard-requires
+`draft` / `needs_review` / `active` and denies any draft arriving authoritative or
+publication-flagged.
+
+**The feasibility answer is a clean negative.** The internal_test scenario **cannot produce** either
+of R8's two confirmation prerequisites — quantitative findings, or an evidence reliability rating.
+Both are recorded `blocked_by_missing_measurement`. Every collected source in this engagement records
+its basis as registered artifact descriptions only, with no live system access; the location-model
+answer set states outright that an artifact-level assertion may not be upgraded into a measured fact,
+and R8's own readiness records its rule as not machine-checkable because no measured claim can be
+attributed to a system of record.
+
+**This is a measurement gap, not a collection gap.** Collecting the remaining uncollected requests
+would not resolve either prerequisite — those requests describe exports from a system that does not
+exist in this scenario. **Nothing was fabricated:** no quantitative finding was computed or estimated
+and no reliability rating was assigned. **Absence of a measurement basis is a negative feasibility
+result and must not be read as favourable, nor restated as inventory accuracy.**
+
+**Idempotency was rehearsed correctly.** Off-production against temporary SQLite, varying the packet
+location reference and the packet hash — both fingerprinted — each yielded `idempotency_conflict`.
+Note this writer's fingerprint covers packet **metadata only**: `reasons` and `warnings` do not
+participate, unlike the review writer, so only a metadata field proves conflict detection here.
+
+**Registration is collection, not review.** The row is `needs_review` and **is not evidence**. **R8
+authority precedence remains unresolved** and R8 remains non-authoritative — recording that a
+question cannot be answered in this scenario is not closing it; a negative closure would need its own
+reviewed decision in a separately approved phase.
+
+**Nothing else moved.** The **R5 WMS scope clarification remains a reviewed scope-blocker enumeration
+only**; **R5 WMS scope remains unresolved**; the **Phase 64 R5 receiving/putaway export remains
+uncollected**; **R1 remains provisional**; **R3–R7 stay deferred** with the count/variance request
+**conditionally required / scope-dependent**; the Phase 74 outline is unmodified with `fnd_000` still
+`blocked_no_review_support`; **no inventory accuracy conclusion** was made; and report finalization,
+capsule publication, client-facing output, and **AgentNet resolver publication remain unauthorized**.
+See
+[`PHASE79_R8_MEASUREMENT_FEASIBILITY_SOURCE_INGESTION.md`](PHASE79_R8_MEASUREMENT_FEASIBILITY_SOURCE_INGESTION.md).

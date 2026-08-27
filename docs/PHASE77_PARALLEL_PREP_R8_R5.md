@@ -447,6 +447,17 @@ does not act on the superseded version; the rest of the document stands.
 2. **§4's R4 wording was corrected**, in place, above: R4 is **conditionally required /
    scope-dependent**, not automatically required.
 
+**§6's Phase 79/80 sequencing is also superseded.** It proposed collecting an *authority-precedence
+confirmation answer set* — an artifact carrying measured answers to the two prerequisites. Phase 79
+established that **no such artifact can be produced in this scenario**: both prerequisites are
+`blocked_by_missing_measurement`, because this engagement has no live system to measure against.
+Phase 79 instead registered a **measurement-feasibility assessment** recording that negative result
+(`ing_0d671226f2ba4760`). The §6 note that the honest outcome might be "the scenario has no system
+landscape against which precedence can be confirmed" was correct; that is now the recorded finding,
+and the recommended disposition is a **reviewed negative closure** rather than a confirmation answer
+set. See
+[`PHASE79_R8_MEASUREMENT_FEASIBILITY_SOURCE_INGESTION.md`](PHASE79_R8_MEASUREMENT_FEASIBILITY_SOURCE_INGESTION.md).
+
 Phase 78 also executed §6's recommended write: `rev_e283136f679a46dd`, `approve_internal` /
 `authoritative=false`, approving the R5 WMS scope clarification as a scope-blocker enumeration only.
 The §2 packet was correct as corrected — the three pre-connection omissions it names were all

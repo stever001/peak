@@ -2415,9 +2415,50 @@ client-facing output, migration, allowlist pair, or new operator or harness):**
   uncollected**; **R3, R4, R6, R7 stay deferred**; the Phase 74 outline is unmodified with `fnd_000`
   still `blocked_no_review_support`; and no report, capsule, client-facing output, or AgentNet
   publication was created or authorized.
-- [ ] **Next:** because R8's prerequisites are measurement work, establish whether this scenario can
-  produce quantitative findings and an evidence reliability rating at all. If it cannot, record that
-  negatively and close the precedence question rather than leaving it open. Separately approved.
+- [x] **Next:** because R8's prerequisites are measurement work, establish whether this scenario can
+  produce quantitative findings and an evidence reliability rating at all. **Done in Phase 79 — see
+  below. It cannot.**
+
+**The R8 Measurement Feasibility Source Ingestion (Phase 79 — one production application record; no
+review record, evidence reference, report draft, review bundle, capsule, client-facing output,
+migration, allowlist pair, or new operator or harness):**
+
+- [x] **One `source_ingestion_records` row** (`ing_0d671226f2ba4760`) through the unchanged Phase 24
+  writer, registering an **R8 authority-precedence measurement-feasibility assessment** —
+  `draft` / `needs_review` / `active`, `authoritative=false`, body outside the repo, only metadata
+  and a SHA-256 persisted (hash value not disclosed in docs).
+- [x] **The answer is a clean negative.** The internal_test scenario **cannot produce** either
+  prerequisite: quantitative findings and an evidence reliability rating are both
+  `blocked_by_missing_measurement`.
+- [x] **Why.** Every collected source records its basis as **registered artifact descriptions only**,
+  with **no live system access**. The location-model answer set states outright that an artifact-level
+  assertion may not be upgraded into a measured fact; R8's own readiness records its rule as **not
+  machine-checkable** because no measured claim can be attributed to a system of record. A reliability
+  rating rates a measurement basis, and none exists.
+- [x] **This is a measurement gap, not a collection gap and not a documentation gap.** Collecting the
+  remaining uncollected requests would **not** resolve it — they describe exports from a system that
+  does not exist in this scenario. No sequencing or batching changes the answer.
+- [x] **Nothing was fabricated.** No quantitative finding was computed or estimated; no reliability
+  rating was assigned. Absence is recorded as absence.
+- [x] **Absence of a measurement basis is a negative feasibility result** — not a favourable finding,
+  and never to be restated as inventory accuracy.
+- [x] **No new infrastructure.** Existing writer via a temporary scratchpad executor outside the
+  repository. Idempotency rehearsed off-production against temporary SQLite by varying **fingerprinted
+  metadata** (this writer's fingerprint excludes `reasons`/`warnings`, unlike the review writer);
+  production returned `created` with exactly one row.
+- [x] **Registration is collection, not review.** The row **is not evidence** and needs review.
+  **R8 authority precedence remains unresolved** and R8 remains non-authoritative — recording that a
+  question cannot be answered here is **not** closing it.
+- [x] **Nothing else moved.** **R1 remains provisional**; the location finding stays **data-readiness
+  and reliability only**; the **R5 WMS scope clarification remains a reviewed scope-blocker
+  enumeration only** and R5 WMS scope is unresolved; the **Phase 64 R5 export stays uncollected**;
+  **R3–R7 stay deferred** with the count/variance request **conditionally required /
+  scope-dependent**; the Phase 74 outline is unmodified with `fnd_000` still
+  `blocked_no_review_support`; and no report, capsule, client-facing output, or AgentNet publication
+  was created or authorized.
+- [ ] **Next:** review the feasibility assessment, and — if the review agrees — record the **negative
+  closure** of the R8 precedence question for this scenario, rather than leaving it open
+  indefinitely. Separately approved.
 
 **Still to do:**
 

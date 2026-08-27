@@ -197,3 +197,18 @@ as do report finalization, capsule publication, and AgentNet resolver publicatio
 > addressing them is **measurement work, not documentation work**. **R8 authority precedence remains
 > unresolved**, R8 remains non-authoritative, and no R8 hash or integrity check is claimed. See
 > [`PHASE78_R5_WMS_SCOPE_REVIEW.md`](PHASE78_R5_WMS_SCOPE_REVIEW.md).
+
+> **Third forward clarification, added by Phase 79 (one production write).** As before, nothing here
+> changes what Phase 76 knew, did, or concluded; the record above stands as written.
+>
+> §7's candidate 2 — addressing R8's two confirmation prerequisites — has now been **tested for
+> feasibility and found unachievable in this scenario**. Phase 79 registered a measurement-feasibility
+> assessment (`ing_0d671226f2ba4760`, `needs_review` / `draft` / `authoritative=false`) recording both
+> prerequisites as `blocked_by_missing_measurement`: this engagement has no live system to measure
+> against, so quantitative findings cannot be produced and there is no measurement basis to rate.
+> Candidate 3 — whether such a system exists in the scenario at all — is answered the same way and for
+> the same reason.
+>
+> **R8 authority precedence remains unresolved** and R8 remains non-authoritative. The recommended
+> disposition is a **reviewed negative closure** in a separately approved phase. See
+> [`PHASE79_R8_MEASUREMENT_FEASIBILITY_SOURCE_INGESTION.md`](PHASE79_R8_MEASUREMENT_FEASIBILITY_SOURCE_INGESTION.md).

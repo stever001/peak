@@ -196,3 +196,22 @@ runtime connectivity gate (`required_grants_present=true`, `excess_grants_presen
 documentation, the honest next question is whether this scenario can produce quantitative findings
 and an evidence reliability rating at all. If it cannot, the correct outcome is to record that
 negatively — closing the precedence question rather than leaving it open indefinitely.
+
+---
+
+## 7. Answered by Phase 79 (forward note)
+
+§6 named the next honest question: whether this scenario can produce the quantitative findings and
+the evidence reliability rating that R8 confirmation requires. **Phase 79 answered it: it cannot.**
+
+Both prerequisites are recorded `blocked_by_missing_measurement` in a registered
+measurement-feasibility assessment (`ing_0d671226f2ba4760`, `needs_review` / `draft` /
+`authoritative=false`). Every collected source in this engagement records its basis as registered
+artifact descriptions only, with no live system access, so there is nothing to measure and nothing to
+rate. This is a **measurement gap, not a collection gap** — collecting the remaining uncollected
+requests would not resolve it.
+
+**R8 authority precedence still remains unresolved**, and R8 remains non-authoritative: recording
+that a question cannot be answered in this scenario is not the same as closing it. A **reviewed
+negative closure** is recommended in a later separately approved phase. See
+[`PHASE79_R8_MEASUREMENT_FEASIBILITY_SOURCE_INGESTION.md`](PHASE79_R8_MEASUREMENT_FEASIBILITY_SOURCE_INGESTION.md).
