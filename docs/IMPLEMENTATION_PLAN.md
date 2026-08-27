@@ -2456,9 +2456,44 @@ migration, allowlist pair, or new operator or harness):**
   scope-dependent**; the Phase 74 outline is unmodified with `fnd_000` still
   `blocked_no_review_support`; and no report, capsule, client-facing output, or AgentNet publication
   was created or authorized.
-- [ ] **Next:** review the feasibility assessment, and — if the review agrees — record the **negative
-  closure** of the R8 precedence question for this scenario, rather than leaving it open
-  indefinitely. Separately approved.
+- [x] **Next:** review the feasibility assessment and record the negative closure. **Done in Phase 80
+  — see below.**
+
+**The R8 Measurement Feasibility Review and the Scenario-Specific Closure (Phase 80 — one production
+application record; no source ingestion, evidence reference, report draft, review bundle, capsule,
+client-facing output, migration, allowlist pair, or new operator or harness):**
+
+- [x] **One `review_records` row** (`rev_4208b1882d044069`) reviewing the R8 measurement-feasibility
+  source ingestion (`ing_0d671226f2ba4760`) through the unchanged Phase 22 writer:
+  `approve_internal`, `authoritative=false`, `approved_internal` / `draft` / `active`, both
+  publication flags false. The reviewed source **remains source-only and is not evidence**.
+- [x] **Scenario-specific negative closure recorded:** this internal_test scenario **cannot confirm
+  R8 authority precedence**, because it cannot produce measured quantitative findings or a
+  reliability rating for the underlying evidence.
+- [x] **The closure is a recorded decision, not a database state change.** There is no closure
+  decision in the writer's vocabulary and none was simulated. **No R8 row was modified** — the R8
+  source ingestion and the earlier R8 review are untouched (no `UPDATE` path), so R8 still reads
+  non-authoritative with its precedence rule unconfirmed.
+- [x] **The closure is narrow.** It does **not** mean R8 precedence is false — nothing evaluated
+  whether the direction is correct, and an unconfirmable claim is not a refuted one. It does **not**
+  mean real client data could not confirm R8 later; the limitation belongs to *this scenario*, not to
+  the question.
+- [x] **Registration integrity is not claimed** — the review writer has no `packet_hash` path, so the
+  Phase 79 source is evaluated **as registered**.
+- [x] **No new infrastructure.** Existing writer via a temporary scratchpad executor outside the
+  repository. Idempotency rehearsed off-production by varying `reasons` (fingerprinted here);
+  production returned `created` with exactly one row.
+- [x] **No inventory accuracy conclusion.** **R1 remains provisional**; the location finding stays
+  **data-readiness and reliability only**; the **R5 WMS scope clarification remains a reviewed
+  scope-blocker enumeration only**; the **Phase 64 R5 export stays uncollected**; **R3–R7 stay
+  deferred** with the count/variance request **conditionally required / scope-dependent**; the Phase
+  74 outline is unmodified with `fnd_000` still `blocked_no_review_support`; and no report, capsule,
+  client-facing output, or AgentNet publication was created or authorized.
+- [ ] **Next: production-parity staging or lab database planning.** The artifact-only internal_test
+  chain has reached its **measurement limit** — every remaining R8-track question needs data measured
+  against a running system, which this scenario structurally cannot supply. Further collection or
+  review inside the current setup would be motion without progress. Separately approved, and a change
+  in kind rather than another increment.
 
 **Still to do:**
 

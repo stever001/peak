@@ -1045,3 +1045,53 @@ uncollected**; **R1 remains provisional**; **R3–R7 stay deferred** with the co
 capsule publication, client-facing output, and **AgentNet resolver publication remain unauthorized**.
 See
 [`PHASE79_R8_MEASUREMENT_FEASIBILITY_SOURCE_INGESTION.md`](PHASE79_R8_MEASUREMENT_FEASIBILITY_SOURCE_INGESTION.md).
+
+---
+
+## Phase 80 — the R8 measurement-feasibility review and the scenario-specific closure
+
+Phase 80 creates **one** row in production through an unchanged writer: a `review_records` row
+(`rev_4208b1882d044069`, Phase 22 writer) reviewing the R8 measurement-feasibility source ingestion
+(`ing_0d671226f2ba4760`), under the stored `internal_test_001` / `99999` / `internal_peak_only`
+anchor. **No migration, model, writer, allowlist pair, schema, operator, or harness** — head stays
+`014_engagement_classification` with 14 migrations, 18 tables, and 12 writers. Execution used a
+temporary scratchpad executor outside the repository.
+
+**`approve_internal` / `authoritative=false`.** The feasibility assessment accurately states what
+this engagement can and cannot produce, so it is approved for internal reliance. It **remains
+source-only and is not evidence**. `authoritative=false` is a **reviewer decision, not a writer
+constraint** — the writer's `approve_internal` validation never inspects the field.
+
+**Registration integrity is not claimed.** The review writer has no `packet_hash` path, so the Phase
+79 source is evaluated **as registered**, with no hash or integrity confirmation.
+
+**The closure is a recorded decision, not a database state change.** There is no closure decision in
+the writer's vocabulary and none was simulated. The recorded conclusion is that **this internal_test
+scenario cannot confirm R8 authority precedence**, because it cannot produce measured quantitative
+findings or a reliability rating for the underlying evidence. **No R8 row was modified** — the R8
+source ingestion (`ing_4fb70519cbf84401`) and the earlier R8 review (`rev_1d9696e9218b4e35`) are
+untouched, since this writer has no `UPDATE` path. R8 still reads exactly as before:
+non-authoritative, precedence rule unconfirmed.
+
+**The closure is narrow and scenario-specific.** It does **not** mean R8 precedence is false —
+nothing evaluated whether the precedence direction is correct, and an unconfirmable claim is not a
+refuted one. It does **not** mean real client data could not confirm R8 in a future engagement; the
+limitation is a property of *this scenario*, not of the question.
+
+**Idempotency was rehearsed correctly.** Off-production against temporary SQLite, varying `reasons` —
+fingerprinted here — yielded `idempotency_conflict`; varying only `source_phase` yielded
+`idempotent_replay`, since the fingerprint excludes it. Production returned `created` with exactly
+one row.
+
+**Nothing else moved.** **R1 remains provisional** and the location finding stays **data-readiness
+and reliability only, never inventory accuracy**; the **R5 WMS scope clarification remains a reviewed
+scope-blocker enumeration only** and R5 WMS scope is unresolved; the **Phase 64 R5 receiving/putaway
+export remains uncollected**; **R3–R7 stay deferred** with the count/variance request **conditionally
+required / scope-dependent**; the Phase 74 outline is unmodified with `fnd_000` still
+`blocked_no_review_support`; and report finalization, capsule publication, client-facing output, and
+**AgentNet resolver publication remain unauthorized**.
+
+**The artifact-only internal_test chain has reached its measurement limit.** The next useful step is
+**production-parity staging or lab database planning**, where measured data exists — a change in kind
+rather than another increment of the same kind. See
+[`PHASE80_R8_MEASUREMENT_FEASIBILITY_REVIEW_CLOSURE.md`](PHASE80_R8_MEASUREMENT_FEASIBILITY_REVIEW_CLOSURE.md).

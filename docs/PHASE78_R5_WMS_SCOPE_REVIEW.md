@@ -215,3 +215,19 @@ requests would not resolve it.
 that a question cannot be answered in this scenario is not the same as closing it. A **reviewed
 negative closure** is recommended in a later separately approved phase. See
 [`PHASE79_R8_MEASUREMENT_FEASIBILITY_SOURCE_INGESTION.md`](PHASE79_R8_MEASUREMENT_FEASIBILITY_SOURCE_INGESTION.md).
+
+---
+
+## 8. Closed in Phase 80 (forward note)
+
+The re-scoping recorded in §2 — that R8 confirmation is measurement work rather than documentation
+work — has now run to its conclusion. Phase 79 established that this scenario can produce neither
+prerequisite, and **Phase 80 reviewed that finding (`rev_4208b1882d044069`) and recorded a
+scenario-specific negative closure**: this internal_test scenario cannot confirm R8 authority
+precedence.
+
+**R8 was not modified and is not refuted.** No R8 row changed, the precedence rule remains
+unconfirmed rather than disproved, and a real engagement with a live system of record could still
+confirm it. The R5 WMS scope clarification reviewed in this phase remains what it was — an approved
+scope-blocker enumeration only, `authoritative=false`. See
+[`PHASE80_R8_MEASUREMENT_FEASIBILITY_REVIEW_CLOSURE.md`](PHASE80_R8_MEASUREMENT_FEASIBILITY_REVIEW_CLOSURE.md).

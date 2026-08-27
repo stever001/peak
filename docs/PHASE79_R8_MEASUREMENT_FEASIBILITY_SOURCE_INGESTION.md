@@ -195,3 +195,23 @@ verifier was re-run afterwards and returned `verified_safe_no_remediation_requir
 
 **Next, separately approved:** review this feasibility assessment, and — if the review agrees —
 record the negative closure of the R8 precedence question for this scenario.
+
+---
+
+## 9. Reviewed and closed in Phase 80 (forward note)
+
+§8 named the next step: review this assessment and, if the review agreed, record the negative
+closure. **Phase 80 did both.**
+
+The feasibility source was reviewed at `rev_4208b1882d044069` — `approve_internal`,
+`authoritative=false` — and it **remains source-only, not evidence**. The review agreed with the
+registered conclusion and recorded a **scenario-specific negative closure**: this internal_test
+scenario cannot confirm R8 authority precedence, because it cannot produce the required measurement
+basis.
+
+**The closure changed no database state.** No R8 row was modified — the R8 source ingestion and the
+earlier R8 review are untouched, since the review writer has no `UPDATE` path. R8 still reads
+non-authoritative with its precedence rule unconfirmed. The closure is a recorded internal decision
+to stop pursuing the question in this scenario; it does **not** mean R8 precedence is false, and it
+does **not** mean real client data could not confirm it later. See
+[`PHASE80_R8_MEASUREMENT_FEASIBILITY_REVIEW_CLOSURE.md`](PHASE80_R8_MEASUREMENT_FEASIBILITY_REVIEW_CLOSURE.md).

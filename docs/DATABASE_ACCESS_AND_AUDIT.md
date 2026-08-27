@@ -1296,3 +1296,53 @@ required, the Phase 74 outline is unmodified with `fnd_000` still `blocked_no_re
 report finalization, capsule publication, client-facing output, and **AgentNet resolver publication
 remain unauthorized**. See
 [`PHASE79_R8_MEASUREMENT_FEASIBILITY_SOURCE_INGESTION.md`](PHASE79_R8_MEASUREMENT_FEASIBILITY_SOURCE_INGESTION.md).
+
+---
+
+## Phase 80 — one write: the R8 measurement-feasibility review and scenario closure
+
+Phase 80 creates **one** production row: a `review_records` row (`rev_4208b1882d044069`, Phase 22
+writer) reviewing the R8 measurement-feasibility source ingestion (`ing_0d671226f2ba4760`), under the
+unchanged `internal_test_001` / `99999` / `internal_peak_only` anchor.
+
+| credential | what it did in Phase 80 | wrote? |
+| --- | --- | --- |
+| read-only | pre-write and post-write collation verification; `readonly_queries_only=true`, information-schema only, no app rows read | no |
+| runtime | connectivity gate (`app_table_read_made=false`), then **one** `INSERT` through the review writer | **yes — one row** |
+| migration | **not used** | — |
+
+**Both pre-checks passed before the write** — head `014_engagement_classification`, 18 base tables
+plus `alembic_version`, 0 governed columns at risk; `required_grants_present=true`,
+`excess_grants_present=false`. The verifier was re-run after the write and returned
+`verified_safe_no_remediation_required` unchanged.
+
+**Idempotency was rehearsed off-production first**, against temporary SQLite, varying `reasons` — a
+field this writer's fingerprint covers — which produced `idempotency_conflict`; varying only
+`source_phase` produced `idempotent_replay`, since the fingerprint excludes it. Production returned
+`created` with `stored_record_created=true` and `transaction_committed=true` — exactly one row.
+
+**The closure is a recorded decision, not a state change.** `approve_internal` /
+`authoritative=false` approves the feasibility assessment for internal reliance and records that
+**this internal_test scenario cannot confirm R8 authority precedence**, because it cannot produce
+either required input. Critically, **no R8 row was modified**: the R8 source ingestion
+(`ing_4fb70519cbf84401`) and the earlier R8 review (`rev_1d9696e9218b4e35`) are untouched — this
+writer has no `UPDATE` path — so R8 still reads exactly as before, non-authoritative with its
+precedence rule unconfirmed. The closure lives in the new review's recorded reasons, not as a status
+transition.
+
+**No `UPDATE`, `DELETE`, manual SQL, cleanup, or `alembic stamp` was issued**, no application table
+was scanned, counted, or probed beyond the writer's own stored-engagement load and idempotency
+lookup, no schema was changed, and no migration was run. Head stays `014` and **no new infrastructure
+was added** — a temporary scratchpad executor outside the repository, nothing persistent committed.
+**No artifact body was printed, committed, or stored**, and **no hash or integrity confirmation is
+claimed** — the Phase 79 source is evaluated **as registered**.
+
+**The closure is scenario-specific and narrow.** It does **not** mean R8 precedence is false, and it
+does **not** mean real client data could not confirm R8 in a future engagement. The reviewed source
+remains **source-only, not evidence**. **R1 remains provisional**, the location finding stays
+**data-readiness and reliability only**, the **R5 WMS scope clarification remains a reviewed
+scope-blocker enumeration only**, the **Phase 64 R5 export remains uncollected**, **R3–R7 remain
+deferred** with the count/variance request conditionally required, the Phase 74 outline is unmodified
+with `fnd_000` still `blocked_no_review_support`, and report finalization, capsule publication,
+client-facing output, and **AgentNet resolver publication remain unauthorized**. See
+[`PHASE80_R8_MEASUREMENT_FEASIBILITY_REVIEW_CLOSURE.md`](PHASE80_R8_MEASUREMENT_FEASIBILITY_REVIEW_CLOSURE.md).

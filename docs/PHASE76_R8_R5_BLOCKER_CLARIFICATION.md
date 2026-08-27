@@ -212,3 +212,11 @@ as do report finalization, capsule publication, and AgentNet resolver publicatio
 > **R8 authority precedence remains unresolved** and R8 remains non-authoritative. The recommended
 > disposition is a **reviewed negative closure** in a separately approved phase. See
 > [`PHASE79_R8_MEASUREMENT_FEASIBILITY_SOURCE_INGESTION.md`](PHASE79_R8_MEASUREMENT_FEASIBILITY_SOURCE_INGESTION.md).
+
+> **Fourth forward clarification, added by Phase 80.** As before, nothing here changes what Phase 76
+> knew, did, or concluded. The reviewed negative closure recommended in the note above **has now been
+> recorded** (`rev_4208b1882d044069`): this internal_test scenario cannot confirm R8 authority
+> precedence, because it cannot produce the required measurement basis. **No R8 row was modified** —
+> R8 still reads non-authoritative with its precedence rule unconfirmed — and the closure means
+> neither that R8 precedence is false nor that real client data could not confirm it later. See
+> [`PHASE80_R8_MEASUREMENT_FEASIBILITY_REVIEW_CLOSURE.md`](PHASE80_R8_MEASUREMENT_FEASIBILITY_REVIEW_CLOSURE.md).
