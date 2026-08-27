@@ -182,3 +182,18 @@ as do report finalization, capsule publication, and AgentNet resolver publicatio
 > needed before anything depends on more than the inference. Candidate 3 is not
 > sensibly separable from candidate 2 and should be answered in the same artifact. See
 > [`PHASE77_PARALLEL_PREP_R8_R5.md`](PHASE77_PARALLEL_PREP_R8_R5.md).
+
+> **Second forward clarification, added by Phase 78 (one production write).** As with the note above,
+> nothing here changes what Phase 76 knew, did, or concluded; the record above stands as written.
+>
+> §7's candidate 1 is **done**: the R5 WMS scope clarification was reviewed at
+> `rev_e283136f679a46dd` — `approve_internal`, `authoritative=false`, approved as a scope-blocker
+> enumeration only. It resolves nothing; 0 of 15 items remain favourable, and the review validates no
+> inventory quantities and no inventory accuracy.
+>
+> §7's candidate 2 is now **actionable but re-scoped**. Phase 78 read R8's two confirmation
+> prerequisites from the local artifact and records them as sanitized concepts: **quantitative
+> findings**, and **an evidence reliability rating**. They are evidentiary-quality gates, so
+> addressing them is **measurement work, not documentation work**. **R8 authority precedence remains
+> unresolved**, R8 remains non-authoritative, and no R8 hash or integrity check is claimed. See
+> [`PHASE78_R5_WMS_SCOPE_REVIEW.md`](PHASE78_R5_WMS_SCOPE_REVIEW.md).

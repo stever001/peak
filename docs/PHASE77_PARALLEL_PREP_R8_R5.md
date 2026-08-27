@@ -191,25 +191,30 @@ blocker.
 **Required before a meaningful refreshed location-readiness assessment.** The blocking dependencies
 are R8 precedence confirmation (the single load-bearing one); R5 WMS scope resolution, which itself
 requires the former; and review of the R5 WMS scope clarification, which is cheap and is a
-precondition for citing it. **The full required source set is R1, R2, R4, and R8** — the four
-requests Phase 62 marks *required*
-(`docs/PHASE62_INTERNAL_TEST_SOURCE_EVIDENCE_REQUEST_PLAN.md:106-113`). **Within R3–R7, R4 is
-required**; R3, R6, R7, and the Phase 64 R5 receiving/putaway export are not.
+precondition for citing it.
 
-Two qualifications on R4, so its inclusion is not over-read. First, this is a **Phase 77 scoping
-decision about completeness of the required set**, not a finding that the current assessment is
-wrong: Phases 73, 74, 75, and 76 each independently record that more R3–R7 collection would not move
-the *existing* answer, and nothing here disturbs that. Second, R4 is count and variance data —
-**including it in the required set does not license an inventory-accuracy conclusion, and must never
-be read as doing so.** The standing finding stays data-readiness and reliability only. If R4 ever
-supports an accuracy or variance claim, that is a separate finding requiring its own evidence,
-review, and approval.
+> **Corrected in Phase 78.** An earlier revision of this section stated that "the full required
+> source set is R1, R2, R4, and R8" and that "within R3–R7, R4 is required", which **overstated R4
+> as automatically required**. The corrected position follows.
 
-**Safe to defer for Internal MVP:** R3, R6, R7, and the Phase 64 R5 export — unless later evidence
-changes that. The blanket phrase "R3–R7 remain deferred" is imprecise on two counts: it flattens
-R4's *required* status into the same bucket as four *important* ones, and it conceals that R5's
-deferral is causally different (blocked upstream) from R3/R6/R7 (blocked on independent scoping
-questions). Worth splitting in any refreshed posture statement.
+**R4's status, stated precisely.** R4 is the only item inside R3–R7 that Phase 62 marks *required*
+rather than *important* (`docs/PHASE62_INTERNAL_TEST_SOURCE_EVIDENCE_REQUEST_PLAN.md:106-113`; R1,
+R2, and R8 are also *required*, but sit outside this block). That is a **priority marking in the
+original request plan**, not a dependency of the current track.
+
+**R4 is conditionally required — scope-dependent, not automatic.** It becomes required only if a
+refreshed assessment's scope **includes count or variance reconciliation**. It must **not** be
+treated as required for the next refreshed location-readiness assessment unless that assessment is
+explicitly scoped that way. For the current narrow **location-dimension data-readiness** track, R4
+is **not** required, and pulling it in would widen the finding into inventory accuracy, variance
+analysis, or quantity correctness — which this chain does not claim and is not authorized to claim.
+
+**Safe to defer for Internal MVP:** R3, R6, R7, and the Phase 64 R5 export, and **R4 as well** while
+the track stays scoped to location-dimension data-readiness — all unless later evidence changes that.
+The blanket phrase "R3–R7 remain deferred" is still imprecise on two counts: it hides R4's *required*
+priority marking and its scope-conditional status, and it conceals that R5's deferral is causally
+different (blocked upstream) from R3/R6/R7 (blocked on independent scoping questions). Worth
+splitting in any refreshed posture statement.
 
 **Dependency order — and a distinction that must not be blurred.** The chain
 R8 precedence confirmation → R5 WMS scope resolution → Phase 64 R5 export is a **scoping and
@@ -394,9 +399,10 @@ indefinitely. Collecting R3–R7 does not belong in this sequence.
 - **The R5 WMS scope clarification remains `needs_review` / `draft` / `authoritative=false`**, 0 of 15
   items favorably resolved. Reviewing it is proposed, not performed.
 - **The Phase 64 R5 receiving and putaway export remains uncollected.**
-- **R3, R4, R6, and R7 remain uncollected.** R3, R6, and R7 are safely deferred for Internal MVP;
-  **R4 is required** as part of the R1/R2/R4/R8 required set, per the §4 scoping decision — which
-  carries no inventory-accuracy implication.
+- **R3, R4, R6, and R7 remain uncollected and deferred.** R4 is the only Phase 62-*required* item
+  inside R3–R7, but it is **conditionally required / scope-dependent** — required only if a refreshed
+  assessment's scope includes count or variance reconciliation, which the current
+  location-dimension data-readiness track does not. (Corrected in Phase 78.)
 - **The Phase 74 outline is unmodified**, and `fnd_000` remains `blocked_no_review_support` — caused
   by a planner vocabulary false negative (`review_records` rows are invisible to a planner that
   accepts only `review_bundle_record_ids`), not by any defect in the underlying review.
@@ -421,3 +427,29 @@ and `tests/` contains no validator after `validate_phase72_*`, so **none of thes
 claim in §§1–8**. They establish that Phase 77 broke nothing and wrote nothing; they do not check
 this document. That is the same reproducibility gap recorded against Phases 73–76 in §5.7, now
 applying to Phase 77 as well — stated here rather than left for a reader to discover.
+
+---
+
+## 10. Superseded by Phase 78 (forward note)
+
+Two things in this document were corrected by the next phase. Recorded here so a reader of §3 or §4
+does not act on the superseded version; the rest of the document stands.
+
+1. **§3's inferred prerequisites were wrong.** Phase 78 read the two
+   `authority_precedence_rule.confirmation_required_before` entries from the local artifact after a
+   safety screen, and they are — sanitized — **quantitative findings** and **an evidence reliability
+   rating**. §3 inferred a system-of-record designation and a conflict/tie-break rule; **neither is
+   what the artifact records.** The rule already states a direction, so what is missing is its
+   *confirmation*, not its content, and the two gates are evidentiary-quality gates. Confirming R8
+   precedence is therefore **measurement work, not documentation work** — a material re-scoping of
+   the critical path in §6. R8 authority precedence nonetheless **remains unresolved** and R8 remains
+   non-authoritative.
+2. **§4's R4 wording was corrected**, in place, above: R4 is **conditionally required /
+   scope-dependent**, not automatically required.
+
+Phase 78 also executed §6's recommended write: `rev_e283136f679a46dd`, `approve_internal` /
+`authoritative=false`, approving the R5 WMS scope clarification as a scope-blocker enumeration only.
+The §2 packet was correct as corrected — the three pre-connection omissions it names were all
+required in practice — and §6.4's fingerprint caveat proved out exactly: varying `source_phase` alone
+yields `idempotent_replay`, not a conflict. See
+[`PHASE78_R5_WMS_SCOPE_REVIEW.md`](PHASE78_R5_WMS_SCOPE_REVIEW.md).

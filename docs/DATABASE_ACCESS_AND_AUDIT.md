@@ -1194,3 +1194,54 @@ remains provisional**, **R8 authority precedence and R5 WMS scope both remain un
 finalization, capsule publication, client-facing output, and **AgentNet resolver publication remain
 unauthorized**. See
 [`PHASE77_PARALLEL_PREP_R8_R5.md`](PHASE77_PARALLEL_PREP_R8_R5.md).
+
+---
+
+## Phase 78 — one write: the R5 WMS scope clarification review
+
+Phase 78 creates **one** production row: a `review_records` row (`rev_e283136f679a46dd`, Phase 22
+writer) reviewing the R5 WMS scope clarification source ingestion (`ing_f7a4cc20f1f148c7`), under the
+unchanged `internal_test_001` / `99999` / `internal_peak_only` anchor.
+
+| credential | what it did in Phase 78 | wrote? |
+| --- | --- | --- |
+| read-only | pre-write and post-write collation verification; `readonly_queries_only=true`, information-schema only, no app rows read | no |
+| runtime | connectivity gate (`app_table_read_made=false`), then **one** `INSERT` through the review writer | **yes — one row** |
+| migration | **not used** | — |
+
+**Both pre-checks passed before the write.** The read-only verifier confirmed production head
+`014_engagement_classification`, 18 base tables plus `alembic_version`, and 212/212 governed columns
+deterministic. The runtime gate confirmed `required_grants_present=true`,
+`excess_grants_present=false`, `global_privileges_present=false`, and `grant_option_present=false`.
+The verifier was re-run after the write and returned `verified_safe_no_remediation_required`
+unchanged.
+
+**Idempotency was rehearsed off-production first**, against a temporary SQLite database, varying a
+field the payload fingerprint actually covers (`reasons`) — which produced `idempotency_conflict` as
+required. Varying only `source_phase` produced `idempotent_replay`, because
+`_payload_fingerprint` excludes it; that control is why the rehearsal proves what it claims. The
+production write returned `created`, and an identical replay returned `idempotent_replay` with
+`database_write_made=false`, confirming **exactly one row**.
+
+**No `UPDATE`, `DELETE`, manual SQL, cleanup, or `alembic stamp` was issued**, no application table
+was scanned, counted, or probed beyond the writer's own stored-engagement load and idempotency
+lookup, no schema was changed, and no migration was run. Head stays `014` and **no new infrastructure
+was added** — execution used a temporary scratchpad executor outside the repository, and no
+persistent operator or harness was committed.
+
+**No artifact body was printed, committed, or stored.** The stored row carries posture flags,
+answer-state counts, non-claims, and record ids only. Phase 78 also read R8's two authority-precedence
+prerequisites from the **local artifact** — after a pattern safety screen showed both were
+single-token concept slugs with no digits, codes, identifiers, or quantities — and documents them as
+**sanitized concepts only**: quantitative findings, and an evidence reliability rating. **No
+production row was read to obtain them**, and no R8 hash or integrity verification is claimed.
+
+**Approved as a scope-blocker enumeration only.** The R5 WMS scope clarification is now
+`approved_internal` / `draft` / `authoritative=false`; **R5 WMS scope itself remains unresolved** (0
+of 15 items favourable) and the review **validates no inventory quantities and no inventory
+accuracy**. **R8 authority precedence remains unresolved** and R8 remains non-authoritative. **R1
+remains provisional**, the **Phase 64 R5 receiving/putaway export remains uncollected**, **R3–R7
+remain deferred with R4 conditionally required / scope-dependent**, the Phase 74 outline is
+unmodified with `fnd_000` still `blocked_no_review_support`, and report finalization, capsule
+publication, client-facing output, and **AgentNet resolver publication remain unauthorized**. See
+[`PHASE78_R5_WMS_SCOPE_REVIEW.md`](PHASE78_R5_WMS_SCOPE_REVIEW.md).

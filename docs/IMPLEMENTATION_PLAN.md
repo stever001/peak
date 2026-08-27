@@ -2348,12 +2348,14 @@ or harness):**
 - [x] **No new infrastructure is needed for the follow-up artifact** — the unchanged Phase 24
   ingestion writer plus the Phase 22 review writer suffice. Neither writer has an `UPDATE` path, so
   any confirmation must land as a *new* ingestion plus a *new* review, never as an amendment to R8.
-- [x] **R3–R7 all remain uncollected.** The **full required source set for a refreshed
-  location-readiness assessment is R1, R2, R4, and R8** — the four Phase 62 *required* requests.
-  **Within R3–R7, R4 is required**; R3, R6, R7, and the Phase 64 R5 export may remain deferred for
-  Internal MVP unless later evidence changes that. R4 is count and variance data, so **including it
-  carries no inventory-accuracy implication** — the standing finding stays data-readiness only. The
-  blanket phrase "R3–R7 deferred" conceals R4's status and is worth splitting.
+- [x] **R3–R7 all remain uncollected and deferred.** R4 is the only item inside R3–R7 that Phase 62
+  marks *required* rather than *important* — a **priority marking in the original request plan**, not
+  a dependency of the current track. **R4 is conditionally required / scope-dependent**: it becomes
+  required only if a refreshed assessment's scope includes **count or variance reconciliation**, and
+  must not be treated as required otherwise. For the current narrow **location-dimension
+  data-readiness** track it is **not** required, and pulling it in would widen the finding into
+  inventory accuracy, variance, or quantity correctness — which this chain does not claim.
+  *(An earlier Phase 77 revision overstated R4 as automatically required; corrected in Phase 78.)*
 - [x] **The dependency chain is a scoping and attribution order, not a collection gate.** Phase 64 is
   explicit that R1–R7 may be collected while R8 stays `needs_review`; precedence confirmation gates
   whether an export can be scoped and attributed, not whether it may be fetched. The live gate has
@@ -2371,9 +2373,51 @@ or harness):**
   `blocked_no_review_support`, **no inventory accuracy conclusion** was made, and report
   finalization, capsule publication, client-facing output, and AgentNet publication remain
   unauthorized.
-- [ ] **Next (Phase 78):** review the R5 WMS scope clarification as one bounded row, and — on the
-  documentation side, no write — obtain a permitted structural read of R8's two prerequisites and
-  record them sanitized, so the critical path stops depending on an inference. Separately approved.
+- [x] **Next (Phase 78):** review the R5 WMS scope clarification as one bounded row, and obtain a
+  permitted read of R8's two prerequisites. **Done — see below.**
+
+**The R5 WMS Scope Clarification Review and the R4 Scope Correction (Phase 78 — one production
+application record; no source ingestion, evidence reference, report draft, review bundle, capsule,
+client-facing output, migration, allowlist pair, or new operator or harness):**
+
+- [x] **One `review_records` row** (`rev_e283136f679a46dd`) reviewing the R5 WMS scope clarification
+  source ingestion (`ing_f7a4cc20f1f148c7`) through the unchanged Phase 22 writer:
+  `approve_internal`, `authoritative=false`, `approved_internal` / `draft` / `active`, both
+  publication flags false. Approved as a **scope-blocker enumeration only**.
+- [x] **`authoritative=false` was a reviewer decision, not a writer constraint** — the writer's
+  `approve_internal` validation never inspects the field. It was declined because the artifact
+  resolves nothing: **0 of 15 items favourable**.
+- [x] **Registration integrity is not claimed.** The review writer has no `packet_hash` path, so the
+  artifact is reviewed **as registered**, with no hash or integrity confirmation.
+- [x] **Idempotency was rehearsed correctly**, off-production against temporary SQLite: varying
+  `reasons` (fingerprinted) produced `idempotency_conflict`; varying only `source_phase` produced
+  `idempotent_replay`, because `_payload_fingerprint` excludes it — the Phase 77 QA point
+  demonstrated rather than asserted. Production returned `created`; an identical replay returned
+  `idempotent_replay` with `database_write_made=false`, confirming exactly one row.
+- [x] **R8's two prerequisites are now known, and the Phase 77 inference was wrong.** Read from the
+  local artifact after a pattern safety screen and recorded as **sanitized concepts only**:
+  **quantitative findings**, and **an evidence reliability rating**. Phase 77 had inferred a
+  system-of-record designation and a tie-break rule — neither is what the artifact records. The rule
+  already states a direction, so what is missing is its **confirmation, not its content**.
+- [x] **This makes R8 confirmation a measurement task, not a documentation task** — a material
+  re-scoping of the critical path. It also names the exact trigger that would pull R4 into scope.
+- [x] **R4 corrected to conditionally required / scope-dependent.** It is the only Phase 62-*required*
+  item inside R3–R7 (a priority marking, not a dependency), and is required only if a refreshed
+  assessment's scope includes **count or variance reconciliation**. The current location-dimension
+  data-readiness track is not so scoped.
+- [x] **No new infrastructure.** Existing writers via a temporary scratchpad executor outside the
+  repository. **No artifact body** printed, committed, or stored; **no production row read** to obtain
+  the prerequisites; **no `UPDATE`/`DELETE`/manual SQL/cleanup**; no app table scanned or counted
+  beyond the writer's own lookups.
+- [x] **No inventory accuracy conclusion.** **R1 remains provisional**; the location finding stays
+  **data-readiness and reliability only**; **R5 WMS scope remains unresolved**; **R8 authority
+  precedence remains unresolved** and R8 non-authoritative; the **Phase 64 R5 export stays
+  uncollected**; **R3, R4, R6, R7 stay deferred**; the Phase 74 outline is unmodified with `fnd_000`
+  still `blocked_no_review_support`; and no report, capsule, client-facing output, or AgentNet
+  publication was created or authorized.
+- [ ] **Next:** because R8's prerequisites are measurement work, establish whether this scenario can
+  produce quantitative findings and an evidence reliability rating at all. If it cannot, record that
+  negatively and close the precedence question rather than leaving it open. Separately approved.
 
 **Still to do:**
 

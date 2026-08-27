@@ -927,10 +927,14 @@ and deadline statement (priority *optional*, still uncollected), while Phase 71 
 for the location model answer set (`ing_b26d137a0a334ee9`) — the same hazard Phase 76 wrote a naming
 rule for in the R5 case, with no equivalent rule yet written for R10.
 
-**Scoping recorded.** The required source set for a refreshed location-readiness assessment is
-**R1, R2, R4, and R8**; within R3–R7 only **R4 is required**, and R3, R6, R7, and the Phase 64 R5
-export may remain deferred for Internal MVP. R4 is count/variance data — **its inclusion implies no
-inventory-accuracy conclusion**. A second label collision was also recorded: Phase 62's **R10**
+**Scoping recorded.** R4 is the only item inside R3–R7 that Phase 62 marks *required* — a priority
+marking, not a dependency. **R4 is conditionally required / scope-dependent**, becoming required only
+if a refreshed assessment's scope includes count or variance reconciliation; for the current narrow
+location-dimension data-readiness track it is **not** required, and R3, R4, R6, R7, and the Phase 64
+R5 export may all remain deferred for Internal MVP. Widening to R4 would widen the finding into
+inventory accuracy or variance, which this chain does not claim. *(An earlier Phase 77 revision
+overstated R4 as automatically required; corrected in Phase 78.)* A second label collision was also
+recorded: Phase 62's **R10**
 (target metric/baseline/deadline, *optional*, uncollected) is a different artifact from Phase 71+'s
 **R10** (location model answer set), documented without rewriting either record.
 
@@ -941,3 +945,52 @@ the Phase 74 outline is unmodified with `fnd_000` still `blocked_no_review_suppo
 accuracy conclusion** was made; and report finalization, capsule publication, client-facing output,
 and **AgentNet resolver publication remain unauthorized**. See
 [`PHASE77_PARALLEL_PREP_R8_R5.md`](PHASE77_PARALLEL_PREP_R8_R5.md).
+
+---
+
+## Phase 78 — the R5 WMS scope clarification review and the R4 scope correction
+
+Phase 78 creates **one** row in production through an unchanged writer: a `review_records` row
+(`rev_e283136f679a46dd`, Phase 22 writer) reviewing the R5 WMS scope clarification source ingestion
+(`ing_f7a4cc20f1f148c7`), under the stored `internal_test_001` / `99999` / `internal_peak_only`
+anchor. **No migration, model, writer, allowlist pair, schema, operator, or harness** — head stays
+`014_engagement_classification` with 14 migrations, 18 tables, and 12 writers. Execution used a
+temporary scratchpad executor outside the repository; nothing persistent was added.
+
+**Approved as an enumeration, not an answer.** `approve_internal` / `authoritative=false` /
+`approved_internal` / `draft` / `active`, both publication flags false. The artifact still resolves
+**0 of 15 items favourably**. `authoritative=false` is a **reviewer decision, not a writer
+constraint** — the writer's `approve_internal` validation never inspects the field.
+
+**Registration integrity is not claimed.** The review writer has no path that reads or compares
+`packet_hash`, so the review evaluates the artifact **as registered** and makes no hash or integrity
+confirmation.
+
+**Idempotency was rehearsed correctly.** Off-production against temporary SQLite, varying `reasons` —
+a field the payload fingerprint covers — yielded `idempotency_conflict`; varying only `source_phase`
+yielded `idempotent_replay`, since `_payload_fingerprint` excludes it. The production write returned
+`created`; an identical replay returned `idempotent_replay` with `database_write_made=false`,
+confirming exactly one row.
+
+**R8's prerequisites are now known rather than inferred, and Phase 77's inference was wrong.** Read
+from the local artifact after a safety screen and recorded as **sanitized concepts only**:
+**quantitative findings**, and **an evidence reliability rating**. Phase 77 had inferred a
+system-of-record designation and a tie-break rule; neither is what the artifact records. The
+precedence rule already states a direction — an ERP-class source over a spreadsheet-class source for
+item-master and balance data — so what is missing is its *confirmation*, not its content, and the two
+gates are **evidentiary-quality gates**, meaning confirmation is **measurement work, not
+documentation work**. **R8 authority precedence remains unresolved** and R8 remains non-authoritative;
+no production row was read and no R8 integrity check is claimed.
+
+**R4 corrected to conditionally required.** R4 is the only Phase 62-*required* item inside R3–R7 — a
+priority marking, not a dependency — and it is **required only if a refreshed assessment's scope
+includes count or variance reconciliation**. The current location-dimension data-readiness track is
+not so scoped, so R4 stays deferred; widening to it would widen the finding into inventory accuracy
+or variance, which this chain does not claim.
+
+**Nothing else moved.** **R5 WMS scope remains unresolved**; the **Phase 64 R5 receiving/putaway
+export remains uncollected**; **R1 remains provisional**; **R3, R4, R6, R7 stay deferred**; the Phase
+74 outline is unmodified with `fnd_000` still `blocked_no_review_support`; **no inventory accuracy
+conclusion** was made; and report finalization, capsule publication, client-facing output, and
+**AgentNet resolver publication remain unauthorized**. See
+[`PHASE78_R5_WMS_SCOPE_REVIEW.md`](PHASE78_R5_WMS_SCOPE_REVIEW.md).
