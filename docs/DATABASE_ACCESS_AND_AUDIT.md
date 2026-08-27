@@ -1346,3 +1346,66 @@ deferred** with the count/variance request conditionally required, the Phase 74 
 with `fnd_000` still `blocked_no_review_support`, and report finalization, capsule publication,
 client-facing output, and **AgentNet resolver publication remain unauthorized**. See
 [`PHASE80_R8_MEASUREMENT_FEASIBILITY_REVIEW_CLOSURE.md`](PHASE80_R8_MEASUREMENT_FEASIBILITY_REVIEW_CLOSURE.md).
+
+---
+
+## Phase 81 — no production access, no writes, no credentials created
+
+Phase 81 **contacted no database**. No environment file was sourced, no connection was opened, no
+cloud console or API was contacted, no writer was invoked, and **no row of any kind was created** —
+in production or anywhere else. **No database, service, schema, user, or credential was created**, and
+no migration was run.
+
+| credential | what it did in Phase 81 | wrote? |
+| --- | --- | --- |
+| read-only | **not used** — no write was attempted and no verifier was run | no |
+| runtime | **not used** — the runtime connectivity gate was run in `--self-test` mode only | no |
+| migration | **not used** | — |
+
+Phase 81 is a **planning phase** for a production-parity **lab** MySQL environment (`peak_lab`). It
+plans; it provisions nothing. See
+[`PHASE81_PRODUCTION_PARITY_LAB_MYSQL_PLAN.md`](PHASE81_PRODUCTION_PARITY_LAB_MYSQL_PLAN.md).
+
+**The lab credential model mirrors the Phase 49 split and reuses nothing from production.** Three lab
+users, three privilege sets, never interchangeable and never pointed at the same database user:
+
+| lab role | lab user | privileges | out-of-repo variable | mirrors |
+| --- | --- | --- | --- | --- |
+| migration | `peak_lab_migrate` | DDL on `peak_lab` only | `PEAK_LAB_MIGRATION_URL` | `PEAK_DATABASE_URL` |
+| runtime | `peak_lab_runtime` | **`SELECT` + `INSERT` only** | `PEAK_LAB_RUNTIME_URL` | `PEAK_RUNTIME_DATABASE_URL` |
+| read-only verifier | `peak_lab_readonly` | `SELECT` only | `PEAK_LAB_READONLY_URL` | `PEAK_PRODUCTION_DB_URL` |
+
+**The lab runtime credential must be provisioned to exactly `SELECT` + `INSERT`.** This is not a
+formality: the Phase 50 gate's `REQUIRED_GRANTS` / `FORBIDDEN_GRANTS` are fixed, so a lab runtime user
+carrying `DELETE` for convenience **fails the gate**. Matching the production posture keeps the gate
+reusable unmodified and preserves what a pass means. **Reset and teardown use the migration
+credential**, deliberately and separately — never runtime. The audit consequence carries over intact:
+a lab runtime process cannot rewrite or remove what it wrote, so **lab records are durable by
+construction** and must be designed that way rather than written and cleaned up.
+
+**Secrets stay outside the repository and are never printed.** Phase 82 may add documented variable
+*names* and an out-of-repo template — never a value. Failures continue to be reported by exception
+**type** only, because driver messages embed the connection string.
+
+**One seam is recorded rather than hidden.** `alembic/env.py` reads **only** `PEAK_DATABASE_URL` —
+there is no second target, no `-x`, and no section switching — so targeting the lab means placing a
+lab DSN in the production-named variable. Phase 82's control is procedural: a dedicated lab shell that
+has never held a production value, with one role variable exported at a time. Production being already
+at head `014` makes a misdirected `alembic upgrade head` a no-op today; **that stops being true the
+moment a `015` exists**, which is one more reason no `015` is authored while this seam stands.
+
+**No production credential is reused, no production data is copied, and no real client data enters the
+lab.** No pseudo-client data, fixture, example, or sample packet is committed to the repository. The
+lab receives **no client-facing report authority, no final-report authority, no capsule publication
+authority, and no AgentNet resolver publication authority**; the AgentNet resolver gate stays **shut
+rather than relaxed**, precisely because the public resolver is live. The lab does **not** reuse the
+production `internal_test_001` / `99999` / `internal_peak_only` anchor — that anchor is a production
+row.
+
+**Nothing moved.** Head stays `014_engagement_classification` with 14 migrations, 18 tables, and 12
+writers. **R1 remains provisional**, the location finding stays **data-readiness and reliability only,
+never inventory accuracy**, the **R5 WMS scope clarification remains a reviewed scope-blocker
+enumeration only**, the **Phase 64 R5 export remains uncollected**, **R3–R7 remain deferred**, the
+Phase 74 outline is unmodified with `fnd_000` still `blocked_no_review_support`, and report
+finalization, client-facing output, capsule publication, and **AgentNet resolver publication remain
+unauthorized**.

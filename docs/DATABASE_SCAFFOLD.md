@@ -1095,3 +1095,73 @@ required / scope-dependent**; the Phase 74 outline is unmodified with `fnd_000` 
 **production-parity staging or lab database planning**, where measured data exists — a change in kind
 rather than another increment of the same kind. See
 [`PHASE80_R8_MEASUREMENT_FEASIBILITY_REVIEW_CLOSURE.md`](PHASE80_R8_MEASUREMENT_FEASIBILITY_REVIEW_CLOSURE.md).
+
+---
+
+## Phase 81 — planning a production-parity lab MySQL environment (nothing created)
+
+Phase 81 is **planning only**. It creates **no database, service, schema, user, or credential**,
+contacts no production system, runs no migration, invokes no writer, and creates no record. Head stays
+`014_engagement_classification` with 14 migrations, 18 tables, and 12 writers — **no migration, model,
+writer, allowlist pair, schema, operator, or harness added**, and **production remains untouched**. See
+[`PHASE81_PRODUCTION_PARITY_LAB_MYSQL_PLAN.md`](PHASE81_PRODUCTION_PARITY_LAB_MYSQL_PLAN.md).
+
+**Why the scaffold needs this.** Local validation runs on SQLite, which this document has always
+described as a fast structural smoke path and **not** the production-readiness proof path.
+`make mysql-collation-audit` says so mechanically: its status is
+`MODEL_POLICY_SATISFIED_PRODUCTION_UNVERIFIED` — the model satisfies the governed-collation policy,
+and nothing has verified that a **server built from these migrations** delivers it. Phase 46 is the
+cautionary case: a fresh production bootstrap failed partway at migration `008` on the
+`alembic_version` `VARCHAR(32)` issue and needed manual recovery, and that failure mode has never been
+rehearsed anywhere it is safe to rehearse it.
+
+**Recommended environment: a separate managed MySQL service labelled `peak_lab`** — not a second
+database inside the production service, which shares a host, admin plane, connection endpoint, and
+limits with production. Purpose: **production-parity measured development and validation**. An
+ephemeral MySQL 8 container is an **optional** rehearsal tier for the fresh-bootstrap path; every
+container artifact must live **outside the repository**, since
+`tests/validate_phase49_runtime_database_url_separation.py` asserts that `docker-compose.yml`,
+`Procfile`, `deploy.yaml`, and `runtime.env` do not exist at repo root.
+
+**"staging" is deliberately not the name.** `PEAK_MANAGED_MYSQL_STAGING_DSN`,
+`make mysql-parity-staging`, and `PEAK_MANAGED_MYSQL_DISPOSABLE` already define a staging target as an
+**empty, disposable schema holding no data ever** — the parity gate refuses a DSN that is not marked
+disposable. A durable lab is the opposite contract, so it gets its own name.
+
+**Schema and migration posture.** The lab controlled schema starts at head
+`014_engagement_classification`, reached by applying the existing **14** migrations to an **empty**
+schema: **18** tables plus `alembic_version`, `mysql_engine="InnoDB"`, `mysql_charset="utf8mb4"`, and
+`utf8mb4_bin` pinned on governed columns — the determinism the
+`UNIQUE (owner_id, client_id, engagement_id, idempotency_key)` boundary depends on across 11 tables.
+`alembic/env.py` runs the Phase 47 `alembic_version` widening preflight automatically in online mode,
+so a fresh lab bootstrap does not hit the Phase 46 failure. **There is no migration `015`** in Phase 81
+or Phase 82, and Phase 82 applies migrations **to the lab, never to production**. Verification compares
+head, table count, charset, and collation against known expectations;
+`tools/production_mysql_collation_verify.py` already pins `EXPECTED_ALEMBIC_HEAD =
+"014_engagement_classification"` and `EXPECTED_TABLE_COUNT = 18`, so it works against the lab
+unmodified via the lab read-only credential.
+
+**Where measured data lives — a second, separate schema.** The controlled 18-table schema has **no
+table that holds measured operational data**: `source_ingestion_records` registers an export's
+*metadata*, never its rows. So the lab environment holds two schemas — `peak_lab`, the controlled Peak
+schema kept byte-identical to production at 14 migrations and 18 tables; and `peak_lab_scenario`, a
+simulated source system holding the measured item-master, on-hand, and location-model rows.
+`peak_lab_scenario` is **lab-only, never Alembic-managed, and never migrated into production**. This
+keeps the migration count matching production exactly, and puts measured data where it conceptually
+belongs: R1 and R2 are exports *from* a system of record, not Peak records.
+
+**No client data, ever** — and no pseudo-client data, fixture, example, or sample packet is committed
+to the repository. The repo stays **source-only**. Measured lab values are **lab-scenario values, not
+client evidence**: they cannot make R8 authoritative in the production record and do not reopen the
+Phase 80 closure. The lab carries **no client-facing report, final-report, capsule publication, or
+AgentNet resolver publication authority**.
+
+**Phase 82 is environment creation, migration, and verification only** — provision, create the three
+lab credentials (runtime **exactly** `SELECT` + `INSERT`), write an out-of-repo env template with names
+but no values, apply the 14 migrations, verify, document. Seeding `peak_lab_scenario` and creating
+measured records is **Phase 83**, separately approved.
+
+**One recorded seam:** `alembic/env.py` reads only `PEAK_DATABASE_URL`, so targeting the lab places a
+lab DSN in the production-named variable. Phase 82's control is procedural — a dedicated lab shell that
+never held a production value. Production being already at head `014` makes a misdirected
+`upgrade head` a no-op today; that stops being true once a `015` exists.

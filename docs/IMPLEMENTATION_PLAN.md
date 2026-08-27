@@ -2489,11 +2489,66 @@ client-facing output, migration, allowlist pair, or new operator or harness):**
   deferred** with the count/variance request **conditionally required / scope-dependent**; the Phase
   74 outline is unmodified with `fnd_000` still `blocked_no_review_support`; and no report, capsule,
   client-facing output, or AgentNet publication was created or authorized.
-- [ ] **Next: production-parity staging or lab database planning.** The artifact-only internal_test
+- [x] **Next: production-parity staging or lab database planning.** The artifact-only internal_test
   chain has reached its **measurement limit** — every remaining R8-track question needs data measured
   against a running system, which this scenario structurally cannot supply. Further collection or
   review inside the current setup would be motion without progress. Separately approved, and a change
-  in kind rather than another increment.
+  in kind rather than another increment. **Done in Phase 81 — see below.**
+
+**The Production-Parity Lab MySQL Plan (Phase 81 — planning only; no production access, no database,
+service, schema, user or credential created, no writer invoked, no record created, no migration run,
+no new infrastructure, no branch or commit; docs only):**
+
+- [x] **Phase 81 creates nothing.** It sources no environment file, opens no connection, contacts no
+  cloud console or API, issues no SQL, invokes no writer, and creates **no row of any kind** — in
+  production or anywhere else. The runtime connectivity gate was run in `--self-test` mode only.
+  Head stays `014_engagement_classification` with 14 migrations, 18 tables, and 12 writers, and
+  **production remains untouched**.
+- [x] **Recommended environment: a separate managed MySQL service labelled `peak_lab`**, provisioned
+  independently of production — *not* a second database inside the production service, which shares a
+  host, admin plane, and endpoint with production and is rejected for that reason. Purpose:
+  **production-parity measured development and validation**. An ephemeral local MySQL 8 container is
+  an **optional** rehearsal tier for the fresh-bootstrap path that broke in Phase 46; every container
+  artifact must live outside the repository, since a root `docker-compose.yml` fails `make validate`.
+- [x] **"staging" is deliberately rejected as the name.** `PEAK_MANAGED_MYSQL_STAGING_DSN`,
+  `make mysql-parity-staging`, and `PEAK_MANAGED_MYSQL_DISPOSABLE` already define a staging target as
+  an **empty, disposable schema holding no data ever** — the opposite of a durable lab. `peak_lab`
+  and the `PEAK_LAB_*` namespace have no collisions.
+- [x] **Credentials mirror the production three-role split and reuse nothing from production:**
+  `peak_lab_migrate` (DDL), `peak_lab_runtime` (**exactly `SELECT` + `INSERT`**, so the connectivity
+  gate stays reusable unmodified and keeps its meaning), `peak_lab_readonly` (`SELECT` only). Secrets
+  stay outside the repository and are never printed. Runtime still has **no `DELETE`**, so anything
+  the lab runtime writes is **permanent** and scenario data must be designed durable from the start.
+- [x] **Schema posture: the lab starts at head `014_engagement_classification`** by applying the
+  existing **14** migrations to an empty schema — **18** tables plus `alembic_version`, `InnoDB` /
+  `utf8mb4`, `utf8mb4_bin` pinned on governed columns. **No migration `015`** in Phase 81 or 82, and
+  Phase 82 applies migrations **to the lab, never to production**.
+- [x] **The measured scenario lives behind a source-system boundary.** The controlled 18-table schema
+  has **no table that holds measured operational data** — `source_ingestion_records` registers an
+  export's metadata, never its rows. So the lab holds **two schemas**: `peak_lab` (the controlled
+  Peak schema, byte-identical to production at 14 migrations and 18 tables) and `peak_lab_scenario`
+  (the simulated source system holding measured R1/R2/location rows — **lab-only, never
+  Alembic-managed, never in production**). This is also conceptually right: R1 and R2 are exports
+  *from* a system of record, not Peak records.
+- [x] **Measured lab data is not client evidence.** It cannot make R8 authoritative in the production
+  record, cannot upgrade `fnd_000` — that block is a **Phase 36 planner vocabulary limitation**, not
+  a measurement gap — and does not reopen the Phase 80 closure. **No real client data, and no
+  pseudo-client data, fixture, example, or sample packet is committed to the repository.** The lab
+  gets its own anchor; it does **not** reuse the production `internal_test_001` / `99999` anchor.
+- [x] **The lab carries no publication authority of any kind** — no client-facing report authority,
+  no final-report authority, no capsule publication authority, no AgentNet resolver publication
+  authority. The AgentNet resolver gate stays **shut rather than relaxed**.
+- [x] **Largest residual risk, recorded not hidden:** `alembic/env.py` reads **only**
+  `PEAK_DATABASE_URL`, so targeting the lab means putting a lab DSN in the production-named variable.
+  Phase 82's control is procedural — a dedicated lab shell that never held a production value.
+  Production being already at head `014` makes a misdirected `upgrade head` a no-op today, which
+  **stops being true the moment a `015` exists**.
+- [ ] **Next (Phase 82): environment creation, migration, and verification only** — provision the
+  service, create `peak_lab` and the three credentials, write an out-of-repo env template with names
+  but no values, apply the existing 14 migrations, verify head/tables/charset/collation and the
+  runtime grant posture, and document the result. **No measured rows, no writer invocation, no Peak
+  record** unless separately approved. Seeding `peak_lab_scenario` and the measured records is
+  **Phase 83**.
 
 **Still to do:**
 

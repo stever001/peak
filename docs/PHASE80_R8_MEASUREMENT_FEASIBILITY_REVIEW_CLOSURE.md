@@ -164,3 +164,42 @@ change that, and continuing to add artifacts would create motion without progres
 environment where measured data exists, so that quantitative findings and a reliability rating become
 ordinary work rather than a structural blocker. That is a separately approved planning phase, and it
 is a change in kind from the last several phases rather than another increment of the same kind.
+
+---
+
+## 7. Planned in Phase 81 (forward note)
+
+§6 named the next useful step: production-parity staging or lab database planning. **Phase 81 did
+that planning — and only the planning.**
+
+**Phase 81 created nothing.** No production access, no database, service, schema, user, or credential
+created, no writer invoked, no record created, no migration run, no new infrastructure, no commit.
+The runtime connectivity gate was run in `--self-test` mode only. Head stays
+`014_engagement_classification` with 14 migrations, 18 tables, and 12 writers, and **production
+remains untouched**.
+
+**The recommendation is a separate managed MySQL lab service labelled `peak_lab`** — deliberately
+**not** a second database inside the production service, and deliberately **not** named "staging",
+since `make mysql-parity-staging` already defines a staging target as an empty disposable schema
+holding no data ever. Its purpose is **measured development and validation**.
+
+**§6's phrasing is refined, not reversed.** It framed the alternative to this scenario as "a real
+engagement with access to a live system of record". A measured lab is a **third** option — neither
+this artifact-only scenario nor a real client engagement. The measurement limit §6 records is
+unchanged; what changes is that there is now a planned way to obtain a measurement basis that does
+not require real client data.
+
+**Nothing here reopens the closure.** The closure remains scenario-specific and recorded exactly as
+written: **no R8 row was modified**, R8 still reads non-authoritative with its precedence rule
+unconfirmed, and there is still no closure or `UPDATE` verb in any writer's vocabulary. Measured lab
+values would be **lab-scenario values, not client evidence** — they cannot make R8 authoritative in
+the production record, and cannot upgrade `fnd_000`, whose `blocked_no_review_support` is a **Phase 36
+planner vocabulary limitation rather than a measurement gap**. §2's non-claim stands unchanged: real
+client data could still confirm R8 later.
+
+**The lab authorizes no publication.** It carries no client-facing report authority, no final-report
+authority, no capsule publication authority, and no AgentNet resolver publication authority; the
+AgentNet resolver gate stays **shut rather than relaxed**. **Phase 82 is environment creation,
+migration, and verification only** unless explicitly approved otherwise; measured scenario rows are
+Phase 83. See
+[`PHASE81_PRODUCTION_PARITY_LAB_MYSQL_PLAN.md`](PHASE81_PRODUCTION_PARITY_LAB_MYSQL_PLAN.md).
