@@ -886,3 +886,58 @@ made, **R1 remains provisional**, **R3–R7 stay deferred**, the Phase 74 outlin
 report finalization, capsule publication, client-facing output, and **AgentNet resolver publication
 remain unauthorized**. See
 [`PHASE76_R8_R5_BLOCKER_CLARIFICATION.md`](PHASE76_R8_R5_BLOCKER_CLARIFICATION.md).
+
+---
+
+## Phase 77 — parallel prep for the R5 clarification review and R8 prerequisites (no rows written)
+
+Phase 77 creates **no production rows** and contacts no database. It is a preparation phase: three
+read-only workstreams mapped (a) the exact review posture for the R5 WMS scope clarification
+(`ing_f7a4cc20f1f148c7`), (b) R8's confirmation prerequisites, and (c) the remaining R3–R7 dependency
+order. **No migration, model, writer, allowlist pair, schema, operator, or harness** — head stays
+`014_engagement_classification` with 14 migrations, 18 tables, and 12 writers.
+
+**Analysis was parallelized; production writes were not**, because none were performed. No writer was
+invoked, no environment file sourced, no connection opened, and no artifact body read, printed, or
+stored — artifact contact was limited to structural shape only.
+
+**The proposed Phase 78 write is one row, fixed in advance:** a single `review_records` row against
+`ing_f7a4cc20f1f148c7` through the unchanged Phase 22 writer — `approve_internal`,
+`authoritative=false`, `approved_internal` / `draft` / `active`, both publication flags false —
+approving the artifact as a **scope-blocker enumeration only**. Three fields must be carried that a
+condensed reading omits, each of which otherwise denies **before any connection is opened**:
+`subject.stored_authorization_scope` (blank is a denial reason in
+`peak/persistence/governance.py:192-198`), the `draft.owner_id` / `client_id` / `engagement_id`
+triple (`peak/db/review_writer.py:120-127`), and `draft.requested_by` / `draft.reviewer_role`.
+Note also that the payload fingerprint (`peak/db/review_writer.py:87-109`) **excludes**
+`source_phase`, so an idempotency rehearsal must vary a fingerprinted field to prove conflict
+detection. Note that `authoritative=true` *is*
+permitted by the writer for `approve_internal`; the non-authoritative posture is a **reviewer
+decision, not a writer constraint**, and must be recorded as such.
+
+**The content of R8's two confirmation prerequisites is not recorded anywhere in this repository.**
+Only the shape is known — `authority_precedence_rule.confirmation_required_before` is an array of
+length 2, a count already on record in Phase 76. **The two strings themselves were never read.** The
+Phase 77 doc reconstructs their likely content by inference from downstream blocked items and labels
+it as inference. This makes Phase 76's recommended next step unactionable from the
+repo alone, and it is the largest remaining unknown in the dependency graph.
+
+**A second label collision was identified.** Phase 62 defines **R10** as a target metric, baseline,
+and deadline statement (priority *optional*, still uncollected), while Phase 71 onward uses **R10**
+for the location model answer set (`ing_b26d137a0a334ee9`) — the same hazard Phase 76 wrote a naming
+rule for in the R5 case, with no equivalent rule yet written for R10.
+
+**Scoping recorded.** The required source set for a refreshed location-readiness assessment is
+**R1, R2, R4, and R8**; within R3–R7 only **R4 is required**, and R3, R6, R7, and the Phase 64 R5
+export may remain deferred for Internal MVP. R4 is count/variance data — **its inclusion implies no
+inventory-accuracy conclusion**. A second label collision was also recorded: Phase 62's **R10**
+(target metric/baseline/deadline, *optional*, uncollected) is a different artifact from Phase 71+'s
+**R10** (location model answer set), documented without rewriting either record.
+
+**Nothing moved.** **R8 authority precedence and R5 WMS scope both remain unresolved**; the R5 WMS
+scope clarification stays `needs_review` / `draft` / `authoritative=false`; the **Phase 64 R5
+receiving/putaway export remains uncollected**; **R1 remains provisional**; **R3–R7 stay deferred**;
+the Phase 74 outline is unmodified with `fnd_000` still `blocked_no_review_support`; **no inventory
+accuracy conclusion** was made; and report finalization, capsule publication, client-facing output,
+and **AgentNet resolver publication remain unauthorized**. See
+[`PHASE77_PARALLEL_PREP_R8_R5.md`](PHASE77_PARALLEL_PREP_R8_R5.md).

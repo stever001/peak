@@ -2312,7 +2312,68 @@ migration, no writer, no allowlist pair, and no new operator or harness):**
 - [ ] **Next:** review the R5 clarification (it is `needs_review`), then address **R8's 2 named
   confirmation prerequisites** — the only route to lifting `blocked_by_r8` on anything — and
   establish whether a warehouse management system exists in the scenario at all. Separately approved
-  either way.
+  either way. **Phase 77 prepared this; it did not execute it** — see below.
+
+**Parallel Prep for the R5 Clarification Review and R8 Prerequisites (Phase 77 — no production
+record, no production access, no writer invoked, no migration, no allowlist pair, and no new operator
+or harness):**
+
+- [x] **Phase 77 creates no production record.** It opens no connection, issues no SQL, sources no
+  environment file, invokes no writer, and reads no artifact body. Three read-only workstreams ran in
+  parallel; **analysis was parallelized, production writes were not**, because none were performed.
+- [x] **The R5 WMS scope clarification is ready for internal review.** `ing_f7a4cc20f1f148c7` is
+  already `draft` / `needs_review` / `active`, the engagement anchor is unchanged, and reviewing a
+  `source_ingestion_record` target has precedent in Phases 66, 70, and 73. Readiness does **not**
+  depend on R8 precedence, because reviewing an *enumeration of a blocker* is not approving *answers*.
+- [x] **Recommended Phase 78 posture, fixed in advance:** exactly one `review_records` row through the
+  unchanged Phase 22 writer — `approve_internal`, `authoritative=false`, `approved_internal` /
+  `draft` / `active`, both publication flags false — approving a **scope-blocker enumeration only**.
+  `needs_more_info` would be incoherent (the missing information is what the artifact truthfully
+  records as unavailable) and `reject` would be wrong (no defect, no invented system landscape).
+- [x] **`authoritative=false` is a reviewer decision, not a writer constraint.** The writer's
+  `approve_internal` validation never inspects `authoritative` at all; declining it must be recorded
+  as a choice.
+- [x] **The proposed packet was incomplete as first drafted.** An adversarial QA pass caught three
+  omissions that would each deny **before any connection opens** — `subject.stored_authorization_scope`,
+  the `draft.owner_id` / `client_id` / `engagement_id` triple, and `draft.requested_by` /
+  `reviewer_role` — plus an idempotency rehearsal that would have proved less than claimed, since the
+  payload fingerprint excludes `source_phase`. All corrected in the Phase 77 doc.
+- [x] **The content of R8's two confirmation prerequisites is not recorded anywhere in this repo** —
+  only the shape is known (an array of length 2, a count already on record in Phase 76), and **the
+  two strings themselves were never read**. Phase 77 reconstructs their likely content by inference
+  from downstream blocked items and **labels it as inference**. This makes the Phase 76 next step
+  unactionable from the repository alone and is the largest remaining unknown.
+- [x] **Neither prerequisite depends on the Phase 64 R5 export or on the Phase 76 clarification** —
+  the dependency runs the other way: prerequisites → R5 WMS scope → the Phase 64 export.
+- [x] **No new infrastructure is needed for the follow-up artifact** — the unchanged Phase 24
+  ingestion writer plus the Phase 22 review writer suffice. Neither writer has an `UPDATE` path, so
+  any confirmation must land as a *new* ingestion plus a *new* review, never as an amendment to R8.
+- [x] **R3–R7 all remain uncollected.** The **full required source set for a refreshed
+  location-readiness assessment is R1, R2, R4, and R8** — the four Phase 62 *required* requests.
+  **Within R3–R7, R4 is required**; R3, R6, R7, and the Phase 64 R5 export may remain deferred for
+  Internal MVP unless later evidence changes that. R4 is count and variance data, so **including it
+  carries no inventory-accuracy implication** — the standing finding stays data-readiness only. The
+  blanket phrase "R3–R7 deferred" conceals R4's status and is worth splitting.
+- [x] **The dependency chain is a scoping and attribution order, not a collection gate.** Phase 64 is
+  explicit that R1–R7 may be collected while R8 stays `needs_review`; precedence confirmation gates
+  whether an export can be scoped and attributed, not whether it may be fetched. The live gate has
+  drifted since Phase 64 was written: R8 has now been reviewed and attribution is still blocked, so
+  the operative gate is **precedence confirmation, not R8 review**.
+- [x] **A second label collision was found: R10.** Phase 62's R10 (target metric, baseline, deadline;
+  *optional*, uncollected) is not Phase 71+'s R10 (location model answer set). No naming rule exists
+  for it, unlike the R5 case.
+- [x] **Reproducibility gap recorded:** `tools/` has no operator for Phases 73–76 and `tests/`
+  validators stop at Phase 72, so those writes have no in-repo replay path. A deliberate decision to
+  make, not a defect to fix silently.
+- [x] **Nothing moved.** **R8 precedence and R5 WMS scope remain unresolved**, the clarification stays
+  `needs_review` / `draft`, the **Phase 64 R5 export stays uncollected**, **R1 remains provisional**,
+  **R3–R7 stay deferred**, the Phase 74 outline is unmodified with `fnd_000` still
+  `blocked_no_review_support`, **no inventory accuracy conclusion** was made, and report
+  finalization, capsule publication, client-facing output, and AgentNet publication remain
+  unauthorized.
+- [ ] **Next (Phase 78):** review the R5 WMS scope clarification as one bounded row, and — on the
+  documentation side, no write — obtain a permitted structural read of R8's two prerequisites and
+  record them sanitized, so the critical path stops depending on an inference. Separately approved.
 
 **Still to do:**
 

@@ -168,3 +168,17 @@ The candidates, in order:
 
 More collection of R3–R7 would not move any of these. Each remains a **separately approved phase**,
 as do report finalization, capsule publication, and AgentNet resolver publication.
+
+> **Forward clarification added by Phase 77 (prep only, no writes).** Nothing below changes what
+> Phase 76 knew, did, or concluded — the record above stands as written and is not amended. This note
+> only records what a *later* phase discovered when it tried to act on the next steps named in §7.
+>
+> Candidate 1 has been prepared but **not executed** — the
+> R5 clarification is still `needs_review` / `draft` / `authoritative=false`. Candidate 2 is **not
+> actionable from this repository**: R8's two confirmation prerequisites are named only inside the
+> external artifact, and no repo doc records them. Phase 77 reconstructs their likely content by
+> inference from downstream blocked items and labels it as inference. Phase 77 confirmed the array's
+> *shape* only and never read the two strings; **explicit authorization to read their content** is
+> needed before anything depends on more than the inference. Candidate 3 is not
+> sensibly separable from candidate 2 and should be answered in the same artifact. See
+> [`PHASE77_PARALLEL_PREP_R8_R5.md`](PHASE77_PARALLEL_PREP_R8_R5.md).
