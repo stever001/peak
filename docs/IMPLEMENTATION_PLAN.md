@@ -2597,12 +2597,64 @@ cloud contact, no database, service, schema, user, credential, migration, writer
   audit reports 212/309 (migration `014`'s `engagement_category`, correctly pinned — stale text, not a
   defect). Lab-specific wrappers are a later **source-only** decision, and only **after** the lab
   exists.
-- [ ] **Next (Phase 83): provisioning, migration, and verification only — and it requires explicit
-  user approval, because it creates recurring-cost managed infrastructure.** Approval is needed for
-  each of: the recurring managed MySQL cost, cloud provisioning, lab service creation, lab
-  schema/user/credential creation, and applying the existing migrations to the lab. **No
-  `peak_lab_scenario`, no measured rows, no writer invocation, and no Peak record** until later,
-  separate approval. Seeding the measured scenario is **Phase 84**.
+- [x] **Next: provision and verify the lab. Done in Phase 83 — see below.**
+
+**The peak_lab Managed MySQL Lab (Phase 83 — provisioning, migration, and verification only; no
+production access, no writer, no record, no measured row):**
+
+- [x] **Executed under explicit user approval** for the recurring managed MySQL cost, cloud
+  provisioning, lab service creation, lab schema/user/credential creation, and applying the existing
+  migrations to the lab. **Production was not touched** — no production env sourced, no production
+  connection opened, no production verifier run, no production service/network/config changed. See
+  [`PHASE83_PEAK_LAB_PROVISIONING_AND_VERIFICATION.md`](PHASE83_PEAK_LAB_PROVISIONING_AND_VERIFICATION.md).
+- [x] **Naming correction: the service label is `peak-lab`, not `peak_lab`** — the provider rejects
+  underscores in service names. **Only the label changed**: the schema is still `peak_lab` and the
+  credentials still `peak_lab_migrate` / `peak_lab_runtime` / `peak_lab_verify_ro`, created through
+  SQL where MySQL's identifier rules apply. The schema was created by `CREATE DATABASE` from an admin
+  session rather than the provider console, so a hyphenated schema name could not appear by accident.
+- [x] **Minimal single-node plan** — no high availability, no replicas, no standby, no paid extras.
+  **The provider name, hostnames, DSNs, credentials, and cost figures are not recorded in this
+  repository**, by standing rule.
+- [x] **Grant posture verified on the server by `SHOW GRANTS`:** `peak_lab_migrate` holds schema-scoped
+  DDL, `peak_lab_runtime` holds **exactly `SELECT` + `INSERT`**, `peak_lab_verify_ro` holds **`SELECT`
+  only** — each with `USAGE` as its only `*.*` privilege and **none holding `GRANT OPTION`**. Every
+  credential was reduced with `REVOKE ALL PRIVILEGES, GRANT OPTION` first. No production credential
+  reused, no production data copied.
+- [x] **The 14 migrations applied to `peak_lab` alone, in one clean pass** — head
+  `014_engagement_classification`, **19 base tables** (18 controlled plus `alembic_version`), all
+  `InnoDB`, charset `utf8mb4`. **No `015`.** **The Phase 46 failure did not recur**: the Phase 47
+  preflight widened `alembic_version` automatically, so the bootstrap that once broke at migration
+  `008` completed. **First fresh bootstrap of this schema rehearsed where it was safe to do so.**
+- [x] **Read-only verification passed** via `production_mysql_collation_verify.py` unmodified under
+  the lab read-only credential: `verified_safe_no_remediation_required`, head matches, **212 governed
+  columns all deterministic, 0 at risk**, **11 idempotency boundaries, 0 at risk**, no mutation, no
+  write. **First server-verified evidence that the governed-collation policy holds on a server built
+  from these migrations** — the offline audit's `MODEL_POLICY_SATISFIED_PRODUCTION_UNVERIFIED` status
+  is unchanged and still accurate, because this verified the **lab**.
+- [x] **Runtime gate passed live** against the lab runtime credential:
+  `required_grants_present=true`, `excess_grants_present=false`, `global_privileges_present=false`,
+  `grant_option_present=false`, `app_table_read_made=false`, `writer_invoked=false`.
+- [x] **The lab is empty and `peak_lab_scenario` does not exist** — `alembic_version` holds 1 row and
+  **all 18 controlled tables hold 0 rows**. No writer was invoked and no Peak record was created.
+- [x] **Mandatory output caption.** Both tools read production-named variables and print
+  production-named results — `production_connection_made=true`,
+  `production_connectivity_result=succeeded`, `ready_for_later_writer_enablement=true`. **All refer to
+  the lab.** No production connection was attempted; the last is prerequisite evidence about a lab
+  credential, not permission. The Phase 51 gate still reports `safe_to_write_production_now=false`.
+- [x] **One incident, recorded not hidden.** An **unquoted** DSN in an env file made the shell fail
+  glob expansion on `?` and **echo the migration credential's password** before any guard could run.
+  **`peak_lab_migrate` was rotated**; the exposed value was never used again. All lab env values are
+  now single-quoted and generated by an out-of-repo helper using hidden input and URL-encoding.
+- [ ] **Open: version-family parity is unverified.** The lab runs **MySQL 8.4**; **production's
+  version was not read**, since that needs a production connection this phase was barred from. Settle
+  it out-of-band before treating the lab as authoritative for production behaviour.
+- [ ] **Next (Phase 84), separately approved:** create `peak_lab_scenario` and seed the Phase 81 §7
+  simulated source-system measurement data (a **migration-credential** operation, never runtime),
+  create a lab engagement anchor and durable measured records through **existing, unchanged writers**,
+  and add lab validation/measurement tests. **The writer-enablement gate is environment-blind and
+  hardcodes every authorization to `false`** — authorizing lab writes is a deliberate source edit with
+  its own review, never an env var. **Writers are create-only**, so correcting a scenario means a new
+  version slug, never a rewrite.
 
 **Still to do:**
 

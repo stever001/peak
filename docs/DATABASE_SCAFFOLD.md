@@ -1231,3 +1231,53 @@ residual risk. And `GOVERNED_MYSQL_COLLATION_POLICY.md` still states **211 gover
 while the audit reports **212 of 309**; the difference is migration `014`'s `engagement_category`,
 correctly pinned — **stale text, not a defect.** Lab-specific wrappers are a later, source-only
 decision, and only **after** the lab exists.
+
+## Phase 83 — the production-parity lab exists, at head 014 and empty
+
+Phase 83 executed the Phase 82 runbook under explicit user approval: it provisioned a **separate
+managed MySQL lab service**, created the controlled schema `peak_lab` and three lab credentials,
+applied the existing **14** migrations to the lab, and verified the result. **Production was not
+touched**, **no writer was invoked**, **no record was created**, **no `peak_lab_scenario` was
+created**, **no measured row exists**, **no migration `015`** was authored, and **no repository
+infrastructure was added** — docs only. Repo head stays `014_engagement_classification` with 14
+migrations, 18 tables, and 12 writers. See
+[`PHASE83_PEAK_LAB_PROVISIONING_AND_VERIFICATION.md`](PHASE83_PEAK_LAB_PROVISIONING_AND_VERIFICATION.md).
+
+**Naming correction.** Phase 82 specified a managed service label of `peak_lab`; **the provider does
+not accept underscores in service names**, so the service label is **`peak-lab`**. **Only the label
+changed** — the schema is still **`peak_lab`** and the credentials are still `peak_lab_migrate`,
+`peak_lab_runtime`, `peak_lab_verify_ro`, because those are created through SQL where MySQL's
+identifier rules apply. The schema was created with `CREATE DATABASE peak_lab CHARACTER SET utf8mb4`
+from an admin SQL session rather than the provider console, specifically so a hyphenated schema name
+could not be produced by accident.
+
+**Migration result.** The existing 14 migrations applied to the empty schema in one clean pass:
+**head `014_engagement_classification`**, **19 base tables** (the 18 controlled tables plus
+`alembic_version`), all `InnoDB`, database charset `utf8mb4`. **The Phase 46 failure did not recur** —
+that bootstrap broke at migration `008` on the `alembic_version` `VARCHAR(32)` limit, and here the
+Phase 47 preflight widened the column automatically before Alembic wrote a revision. **This is the
+first fresh bootstrap of this schema rehearsed anywhere it was safe to rehearse it.**
+
+**Verification, via the lab read-only credential using `production_mysql_collation_verify.py`
+unmodified:** outcome `verified_safe_no_remediation_required`, head matches, 19 base tables,
+**212 governed columns checked, 212 deterministic, 0 at risk**, **11 idempotency boundaries checked,
+0 at risk**, no mutation and no write. **This is the first server-verified evidence that the
+governed-collation policy holds on a MySQL server built from these migrations** — `make
+mysql-collation-audit` has always reported `MODEL_POLICY_SATISFIED_PRODUCTION_UNVERIFIED`, and that
+status is **unchanged and still accurate**, because this verified the lab, not production.
+
+**Emptiness, verified:** `peak_lab` exists, **`peak_lab_scenario` does not**, `alembic_version` holds
+1 row, and **all 18 controlled tables hold 0 rows**.
+
+**Required caption.** Both operational tools read production-named variables and therefore print
+production-named results: the verifier reported `production_connection_made=true`, and the gate
+reported `production_connectivity_result=succeeded` and
+`ready_for_later_writer_enablement=true`. **Every one of those refers to the lab.** No production
+connection was attempted or made, and the last is prerequisite evidence about a lab credential, not
+write permission — the Phase 51 gate still reports `safe_to_write_production_now=false`.
+
+**Two things to know before building on this.** The lab runs **MySQL 8.4**, and **production's
+version was not read** — that would need a production connection this phase was barred from — so
+**version-family parity is an open question, not a verified match**. And `alembic/env.py` still reads
+only `PEAK_DATABASE_URL` with no lab target; the mitigation that a misdirected `upgrade head` is a
+no-op holds only while nothing beyond `014` exists to apply, and **expires the moment a `015` does**.

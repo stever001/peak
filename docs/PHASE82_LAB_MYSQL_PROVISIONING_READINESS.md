@@ -409,3 +409,41 @@ approval later:
    answer before Phase 83, and it is the user's call alone.
 9. **`docker-compose.yml` at repo root fails `make validate`.** Any optional container rehearsal must
    keep every artifact outside the repository.
+
+---
+
+## 12. Corrected by Phase 83 — read this first
+
+Phase 83 executed this runbook. See
+[`PHASE83_PEAK_LAB_PROVISIONING_AND_VERIFICATION.md`](PHASE83_PEAK_LAB_PROVISIONING_AND_VERIFICATION.md),
+which is current where the two disagree. Three corrections:
+
+1. **The managed service label is `peak-lab`, not `peak_lab`.** §1 of this document specifies a
+   service label the provider cannot accept — **its service names disallow underscores.** This was a
+   defect in the runbook, discovered at provisioning time. **Only the service label changes:** the
+   controlled schema is still **`peak_lab`** and the credentials are still `peak_lab_migrate`,
+   `peak_lab_runtime`, `peak_lab_verify_ro`, because those are created through SQL, where MySQL's
+   identifier rules apply rather than the provider's. The schema was created by `CREATE DATABASE`
+   from an admin session rather than the provider console, so the hyphenated label could not become a
+   schema name by accident. The isolation posture is unaffected — `peak-lab` is plainly neither
+   production nor staging.
+2. **The `peak_lab_scenario` reservation held.** §6 check 9 required that it not exist after
+   Phase 83, and verification confirmed it does not.
+3. **§4's shell guard was applied and proved necessary, but was not sufficient on its own.** The guard
+   governs commands; it does not govern **file authoring**, and that is where the one incident
+   occurred. A DSN written **unquoted** into a lab env file caused the shell to fail glob expansion on
+   the `?` in its query string and **echo the line, including the migration credential's password**,
+   before any guard check could run. **`peak_lab_migrate` was rotated** and the exposed value was
+   never used again. **Add to the guard, for any future environment file:** every value is
+   **single-quoted**, and files are produced by an out-of-repo generator with hidden password input
+   and URL-encoding rather than hand-edited. Hand-editing produced five distinct DSN defects across
+   three attempts — missing `KEY=` prefix, missing `@`, hyphenated schema name, relative certificate
+   path, and the unquoted value that caused the exposure.
+
+**The fourth, temporary admin env file contemplated in §3 was never created** — the administrative SQL
+ran in an operator session instead, so that deviation did not occur.
+
+**§7's tooling-gap notes all held.** The verifier worked against the lab unmodified and printed
+production-named output exactly as predicted (§7.3/§7.4), requiring the captions Phase 83 supplies;
+`make mysql-parity-staging` was neither used nor fixed; and the governed-column count in
+`GOVERNED_MYSQL_COLLATION_POLICY.md` remains stale at 211/308 against a verified **212**.
