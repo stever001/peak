@@ -9,6 +9,13 @@ column ``alembic_version.version_num`` is created or widened to hold this reposi
 identifiers, several of which exceed Alembic's default ``VARCHAR(32)``. See
 ``alembic/version_table_hardening.py`` for the reasoning and the exact, fixed statements. The
 preflight is Alembic bookkeeping only: it never touches an application table.
+
+Phase 84 adds a target guard. ``PEAK_DATABASE_URL`` alone never said *which* environment it pointed
+at, so a lab migration run in a shell still holding a production value would have migrated
+production. For MySQL/MariaDB URLs the operator must now name and confirm the target
+(``PEAK_ALEMBIC_TARGET`` plus the matching confirmation variable) and the URL must match it, checked
+before any engine is created. SQLite and every other dialect bypass the guard, so temporary-file
+harnesses are unaffected. See ``alembic/migration_target_guard.py``.
 """
 
 from __future__ import annotations
@@ -44,7 +51,19 @@ def _load_hardening():
     return module
 
 
+def _load_guard():
+    """Load the sibling target-guard module by path, for the same reason as the hardening module."""
+    spec = importlib.util.spec_from_file_location(
+        "peak_alembic_migration_target_guard",
+        os.path.join(ALEMBIC_DIR, "migration_target_guard.py"),
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 hardening = _load_hardening()
+target_guard = _load_guard()
 
 from peak.db.base import Base  # noqa: E402
 import peak.db.models  # noqa: F401,E402  (registers models on Base.metadata)
@@ -66,12 +85,24 @@ def _get_url() -> str:
     return url
 
 
+def _guarded_url() -> str:
+    """Resolve the migration URL and require it to match an explicitly declared target.
+
+    Every failure raised here happens before any engine exists, so a mis-aimed run never reaches a
+    connection. The guard reads environment variables only; it holds no credential and logs no
+    connection value.
+    """
+    url = _get_url()
+    target_guard.assert_migration_target(url)
+    return url
+
+
 def run_migrations_offline() -> None:
     # Source-only guard: no connection is opened in offline mode, but a revision identifier that
     # could never be recorded is a source defect worth failing on either way.
     hardening.assert_revision_ids_fit(VERSIONS_DIR)
     context.configure(
-        url=_get_url(),
+        url=_guarded_url(),
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
@@ -84,7 +115,7 @@ def run_migrations_online() -> None:
     from sqlalchemy import create_engine
 
     hardening.assert_revision_ids_fit(VERSIONS_DIR)
-    connectable = create_engine(_get_url(), pool_pre_ping=True)
+    connectable = create_engine(_guarded_url(), pool_pre_ping=True)
     # Preflight on its own short transaction, before the migration connection is opened, so the
     # version table can hold long revision identifiers by the time Alembic writes one. A no-op on
     # SQLite and on any already-wide column.

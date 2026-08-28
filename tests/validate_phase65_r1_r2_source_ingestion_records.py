@@ -185,8 +185,10 @@ def baseline_checks() -> None:
           versions[-1] == f"{HEAD_REVISION}.py")
     check("no migration 015 or later - Phase 65 adds no migration",
           not any(re.match(r"^0*(?:1[5-9]|[2-9]\d)_", f) for f in versions))
+    # Pathspec narrowed to match the label: it read "alembic", which also covered
+    # alembic/env.py and froze that file against every later phase.
     check("no migration file was added or modified by this phase",
-          not git("diff", "--name-only", "HEAD", "--", "alembic"))
+          not git("diff", "--name-only", "HEAD", "--", "alembic/versions"))
 
     for rel in (TOOL_REL, HARNESS_REL):
         try:

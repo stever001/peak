@@ -2648,13 +2648,57 @@ production access, no writer, no record, no measured row):**
 - [ ] **Open: version-family parity is unverified.** The lab runs **MySQL 8.4**; **production's
   version was not read**, since that needs a production connection this phase was barred from. Settle
   it out-of-band before treating the lab as authoritative for production behaviour.
-- [ ] **Next (Phase 84), separately approved:** create `peak_lab_scenario` and seed the Phase 81 §7
-  simulated source-system measurement data (a **migration-credential** operation, never runtime),
-  create a lab engagement anchor and durable measured records through **existing, unchanged writers**,
-  and add lab validation/measurement tests. **The writer-enablement gate is environment-blind and
-  hardcodes every authorization to `false`** — authorizing lab writes is a deliberate source edit with
-  its own review, never an env var. **Writers are create-only**, so correcting a scenario means a new
-  version slug, never a rewrite.
+- [x] **Next was scenario seeding — deferred, and renumbered to Phase 85.** §7.7's `alembic/env.py`
+  seam was fixed first, as Phase 84 below. Phase 85, separately approved, creates `peak_lab_scenario`
+  and seeds the Phase 81 §7 simulated source-system measurement data (a **migration-credential**
+  operation, never runtime), creates a lab engagement anchor and durable measured records through
+  **existing, unchanged writers**, and adds lab validation/measurement tests. **The writer-enablement
+  gate is environment-blind and hardcodes every authorization to `false`** — authorizing lab writes is
+  a deliberate source edit with its own review, never an env var. **Writers are create-only**, so
+  correcting a scenario means a new version slug, never a rewrite.
+
+**The Alembic migration target guard (Phase 84 — Fix Now, source-only; no production or lab database
+contacted, no migration executed, no `015`, no writer, no record):**
+
+- [x] **Fixes Phase 83 §7.7, the largest residual risk.** `alembic/env.py` read `PEAK_DATABASE_URL`
+  and nothing else, so **no variable name said which environment the URL pointed at** and only shell
+  discipline kept a lab migration off production. Survivable only while both sat at head `014` with
+  nothing left to apply — **an accident of timing, not a control**, expiring the moment a `015` exists.
+  See [`PHASE84_ALEMBIC_TARGET_GUARD_FIX.md`](PHASE84_ALEMBIC_TARGET_GUARD_FIX.md).
+- [x] **No database was contacted, at all.** No env file sourced, no connection opened, **no migration
+  run against any live target**, no `015` created, no `peak_lab_scenario` created, no writer invoked,
+  no record created, no cloud/provider/API/console contact, and no dependency installed. Source, tests,
+  and docs only; **every URL exercised is synthetic**.
+- [x] **MySQL/MariaDB migrations now require an explicit, confirmed target**, checked **before the
+  engine is created**: `PEAK_ALEMBIC_TARGET` set to `lab` or `production`, plus
+  `PEAK_LAB_MIGRATION_CONFIRM=1` or `PEAK_PRODUCTION_MIGRATION_CONFIRM=1`. Each confirmation accepts
+  the exact value `1` and neither substitutes for the other. **`PEAK_LAB_CONFIRM` is deliberately not
+  reused** — Phase 82 published it as a reserved no-op.
+- [x] **Lab target:** must name schema **`peak_lab`** and connect as **`peak_lab_migrate`** with the
+  lab confirmation set. `defaultdb` and the system schemas, any other schema, any other user
+  (including `peak_lab_runtime`), and any production marker are refused, each with its own reason code.
+- [x] **Production target:** requires its own confirmation, refuses any `peak_lab` marker in user or
+  schema, and **remains unauthorized outside a separately approved phase** — passing means the URL is
+  *consistent with* production, never that the migration is approved. The guard authorizes nothing.
+- [x] **SQLite and every other dialect bypass the guard entirely**, with no environment set, so
+  temporary-file harnesses are unaffected — Phase 47's live SQLite `upgrade`/`downgrade`/re-`upgrade`
+  regression passes unchanged through the guarded accessor.
+- [x] **Value-free by construction.** `alembic/migration_target_guard.py` is stdlib-only: it opens no
+  file, imports no driver, creates no engine, issues no SQL, and keeps only the parsed username and
+  database — host, port, password, and query string are discarded. `make validate-phase84` runs the
+  whole decision table on synthetic URLs and asserts no failure message contains a password, host,
+  port, query parameter, or connection string.
+- [x] **One test change:** Phase 49's *unconditional* "`alembic/env.py` has no pending diff" assertion
+  was an authoring-time scope claim left ungated, i.e. a permanent freeze on the file — the failure
+  mode Phase 49's own comments describe. It is now gated with the rest of that harness's working-tree
+  scope guard; Phase 49's substantive content assertions are untouched and still pass.
+- [ ] **Open, and deliberately not addressed here:** the guard checks the URL's **names, not the host**
+  behind them; the production branch is necessarily weaker than the lab branch, since production's
+  names are not recorded in this repository and must not be; and the connectivity gate and collation
+  verifier still take a lab DSN in a production-named variable with **no target of their own**.
+- [ ] **Next: commit and accept this fix before any migration `015` or further lab migration work.**
+  Only then may **Phase 85** proceed to `peak_lab_scenario` planning and seeding, under its own
+  separate approval.
 
 **Still to do:**
 

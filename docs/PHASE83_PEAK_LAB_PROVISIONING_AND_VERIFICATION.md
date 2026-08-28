@@ -228,6 +228,15 @@ Phase 82 three-file plan — did not happen.
    at Phase 82**: the mitigation that a misdirected `upgrade head` is a harmless no-op held only while
    production and the repository were both at head `014` with nothing further to apply. That is still
    true today, and **it stops being true the moment a `015` exists.**
+   **CLOSED by Phase 84**, before any `015` was authored. `alembic/env.py` now requires
+   `PEAK_ALEMBIC_TARGET=lab` with `PEAK_LAB_MIGRATION_CONFIRM=1` — and a URL naming schema `peak_lab`
+   with user `peak_lab_migrate` — or `PEAK_ALEMBIC_TARGET=production` with
+   `PEAK_PRODUCTION_MIGRATION_CONFIRM=1`, refusing the run **before any engine is created** on a
+   mismatch. SQLite bypasses the guard, so local harnesses are unaffected. **Phase 84 is source-only:
+   it contacted no production or lab database, ran no migration against any live target, created no
+   `015` and no `peak_lab_scenario`, invoked no writer, and created no record.** See
+   [`PHASE84_ALEMBIC_TARGET_GUARD_FIX.md`](PHASE84_ALEMBIC_TARGET_GUARD_FIX.md). **Items 1–6 and 8
+   above remain open.**
 8. **`GOVERNED_MYSQL_COLLATION_POLICY.md` still states 211 governed columns of 308** while both the
    offline audit and this lab verification report **212**. Stale text, not a defect; still uncorrected.
 
@@ -278,7 +287,12 @@ Phase 82 three-file plan — did not happen.
 - **Report finalization, client-facing output, capsule publication, and AgentNet resolver publication
   remain unauthorized.**
 
-## 10. What Phase 84 may do, with separate approval
+## 10. What the next phase may do, with separate approval — now Phase 85
+
+**Renumbered.** Phase 84 was taken by the **Fix Now** source-only defect fix for §7.7 above
+([`PHASE84_ALEMBIC_TARGET_GUARD_FIX.md`](PHASE84_ALEMBIC_TARGET_GUARD_FIX.md)), which had to land
+before any migration `015` or further lab migration work. The scenario work below is therefore
+**Phase 85**, and may proceed only after that fix is committed and accepted.
 
 **Nothing below is authorized by Phase 83.**
 

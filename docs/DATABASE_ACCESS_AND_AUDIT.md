@@ -1539,3 +1539,58 @@ accuracy**, the **R5 WMS scope clarification remains a reviewed scope-blocker en
 **Phase 64 R5 export remains uncollected**, **R3–R7 remain deferred**, the Phase 74 outline is
 unmodified with `fnd_000` still `blocked_no_review_support`, and report finalization, client-facing
 output, capsule publication, and **AgentNet resolver publication remain unauthorized**.
+
+---
+
+## Phase 84 — the Alembic migration target guard (source-only Fix Now; no database contacted)
+
+**Phase 83's largest residual risk is closed.** `alembic/env.py` read `PEAK_DATABASE_URL` and nothing
+else, so **no variable name said which environment the URL pointed at** and only shell discipline kept
+a lab migration off production. That was survivable only while production and the repository were both
+at head `014` with nothing left to apply — an accident of timing, not a control, and one that expires
+the moment a `015` exists. See
+[`PHASE84_ALEMBIC_TARGET_GUARD_FIX.md`](PHASE84_ALEMBIC_TARGET_GUARD_FIX.md).
+
+**No production or lab database was contacted.** No environment file was sourced, no connection
+opened, **no migration run against any live target**, no `015` created, no `peak_lab_scenario` created,
+no writer invoked, and no record created. Source, tests, and docs only; every URL exercised is
+**synthetic**.
+
+**MySQL/MariaDB migrations now require an explicit, confirmed target**, checked before the engine is
+created:
+
+| variable | value | required when |
+| --- | --- | --- |
+| `PEAK_ALEMBIC_TARGET` | `lab` \| `production` | every MySQL/MariaDB migration |
+| `PEAK_LAB_MIGRATION_CONFIRM` | `1` | target is `lab` |
+| `PEAK_PRODUCTION_MIGRATION_CONFIRM` | `1` | target is `production` |
+
+**Lab migrations must name `peak_lab` and connect as `peak_lab_migrate`**, with the lab confirmation
+set; `defaultdb`, any other schema, any other user (including `peak_lab_runtime`), and any
+production marker are refused. **Production migrations require their own separate confirmation**,
+refuse any `peak_lab` marker, and **remain unauthorized outside a separately approved phase** — passing
+the guard means the URL is consistent with production, never that the migration is approved.
+`PEAK_DATABASE_URL` is unchanged and remains the one variable naming the URL. **`PEAK_LAB_CONFIRM` is
+deliberately not used**, because Phase 82 published it as reserved and a no-op.
+
+**SQLite and every other dialect bypass the guard entirely** with no environment set, so local
+temporary-file harnesses are unaffected.
+
+**Value-free by construction.** The guard opens no file, imports no driver, creates no engine, issues
+no SQL, and keeps only the parsed user and database — host, port, password, and query string are
+discarded. Failure messages carry the target, a classification of the user and schema, and a reason
+code, and the harness asserts that none of them contains a password, host, port, query parameter, or
+connection string.
+
+**The shell discipline still applies in full.** The guard does not replace it; it is a second,
+independent control that fails the run rather than trusting the shell was right. **Three known gaps
+stay open:** the guard checks the URL's names, not which host is behind them; the production branch is
+necessarily weaker than the lab branch, since production's names are not recorded in this repository
+and must not be; and the connectivity gate and collation verifier still take a lab DSN in a
+production-named variable with no target of their own.
+
+**Nothing moved.** Head stays `014_engagement_classification` with 14 migrations, 18 tables, and 12
+writers, and **no standing production write enablement** — the Phase 51 gate still reports
+`safe_to_write_production_now=false`. **This fix must be committed and accepted before any migration
+`015` or further lab migration work**; the scenario-seeding work Phase 83 §10 called "Phase 84" is
+renumbered to **Phase 85**.

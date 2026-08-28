@@ -143,8 +143,10 @@ def baseline_checks() -> None:
     try:
         check(f"baseline commit {BASELINE_COMMIT} present in history",
               BASELINE_COMMIT in git("log", "--oneline", "-40"))
+        # Pathspec narrowed to match the label: it read "alembic", which also covered
+        # alembic/env.py and froze that file against every later phase.
         check("no alembic/versions file was modified",
-              not git("diff", "--name-only", "HEAD", "--", "alembic"))
+              not git("diff", "--name-only", "HEAD", "--", "alembic/versions"))
         # A correction to a writer's module *docstring* is documentation, not behaviour — later
         # phases legitimately update those narratives (Phase 59 recorded that the anchor writer
         # has now been used once in production). What this guard protects is writer *code*, so

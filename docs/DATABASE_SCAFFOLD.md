@@ -1281,3 +1281,26 @@ version was not read** — that would need a production connection this phase wa
 **version-family parity is an open question, not a verified match**. And `alembic/env.py` still reads
 only `PEAK_DATABASE_URL` with no lab target; the mitigation that a misdirected `upgrade head` is a
 no-op holds only while nothing beyond `014` exists to apply, and **expires the moment a `015` does**.
+
+**Phase 84 closes that seam, in source.** `alembic/env.py` now requires an explicit, confirmed
+migration target for MySQL/MariaDB URLs — `PEAK_ALEMBIC_TARGET=lab` with
+`PEAK_LAB_MIGRATION_CONFIRM=1`, or `PEAK_ALEMBIC_TARGET=production` with
+`PEAK_PRODUCTION_MIGRATION_CONFIRM=1` — and refuses the run **before any engine is created** when the
+URL does not match. **Lab migrations must name schema `peak_lab` and connect as `peak_lab_migrate`**;
+`defaultdb`, any other schema or user, and any production marker are refused. **Production migrations
+refuse any `peak_lab` marker and remain unauthorized outside a separately approved phase** — the guard
+stops the wrong environment being migrated, it authorizes nothing. `PEAK_DATABASE_URL` is unchanged
+and remains the one variable naming the URL, and **`PEAK_LAB_CONFIRM` is deliberately not reused**,
+since Phase 82 published it as a reserved no-op. **SQLite and every other dialect bypass the guard
+entirely**, so temporary-file harnesses keep working with no environment set at all.
+
+The guard lives in `alembic/migration_target_guard.py`: stdlib-only, it opens no file, imports no
+driver, creates no engine, issues no SQL, and keeps only the parsed username and database — host,
+port, password, and query string are discarded, so its failure messages are value-free by
+construction. `make validate-phase84` exercises the whole decision table on **synthetic URLs**; it
+contacts no database. **Phase 84 ran no migration against any live target, created no `015`, created
+no `peak_lab_scenario`, invoked no writer, and created no record**, and no secret, DSN, host, provider
+name, environment value, or local secret path is committed. See
+[`PHASE84_ALEMBIC_TARGET_GUARD_FIX.md`](PHASE84_ALEMBIC_TARGET_GUARD_FIX.md). **The fix must be
+committed and accepted before any migration `015` or further lab migration work**; scenario seeding
+is renumbered to **Phase 85**.

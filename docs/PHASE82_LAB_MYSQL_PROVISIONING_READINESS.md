@@ -393,7 +393,16 @@ approval later:
    Alembic, as Phase 81 recorded. There is no variable name that says "lab", so **the §4 shell guard
    is the only separation control** for the migrate and read-only roles. The connectivity gate is the
    sole exception: it scrubs the production variables in code.
-3. **`PEAK_LAB_CONFIRM` is a no-op.** No script reads it. It must not be relied on as a guard unless
+3. **`PEAK_LAB_CONFIRM` is a no-op.** No script reads it, and **Phase 84 deliberately did not adopt
+   it**: a guard must not share a name with something this document published as reserved and inert.
+   Phase 84's real variables are `PEAK_ALEMBIC_TARGET` plus `PEAK_LAB_MIGRATION_CONFIRM` /
+   `PEAK_PRODUCTION_MIGRATION_CONFIRM`, and `alembic/env.py` now refuses a MySQL migration that
+   declares no target or whose URL does not match the declared one, **before any engine is created**.
+   That closes the §7 seam this document recorded, in source rather than by procedure — the shell
+   discipline above still applies in full alongside it. **Phase 84 contacted no database, ran no
+   migration against any live target, created no `015`, invoked no writer, and created no record.**
+   See [`PHASE84_ALEMBIC_TARGET_GUARD_FIX.md`](PHASE84_ALEMBIC_TARGET_GUARD_FIX.md). The name below
+   must not be relied on as a guard unless
    a later, separately approved source change makes it load-bearing.
 4. **Env-file *paths* are deliberately absent from every tracked file (§3).** Only basenames appear,
    because the repo's hygiene harnesses ban naming the operator credential directory. If a future

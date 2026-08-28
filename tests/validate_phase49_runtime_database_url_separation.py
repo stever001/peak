@@ -219,12 +219,18 @@ def baseline_checks() -> None:
             check("only the intended narrow set of files changed", not unexpected)
             if unexpected:
                 print(f"        unexpected: {unexpected}")
+            # Authoring-time scope, and gated with the rest of it. "env.py was not modified by
+            # *this* phase" was left unconditional, which made it a permanent freeze on env.py —
+            # the exact failure mode the gating above exists to prevent. Phase 84 legitimately owns
+            # env.py (it adds the lab/production migration target guard), and the properties
+            # Phase 49 actually promises about env.py are asserted unconditionally in
+            # role_split_checks() from the file's *content*, not from its diff.
+            check("alembic/env.py was not modified by this phase",
+                  not git("diff", "--name-only", "HEAD", "--", ENV_REL))
         else:
             print("  [skip] Phase 49 is committed — working-tree scope guard not applicable")
         check("no alembic/versions file was modified",
               not git("diff", "--name-only", "HEAD", "--", "alembic/versions"))
-        check("alembic/env.py was not modified by this phase",
-              not git("diff", "--name-only", "HEAD", "--", ENV_REL))
         # Unconditional invariants — these are not authoring-time scope, they are the properties
         # Phase 49 promises regardless of when this harness runs.
         # Authoring-time claim about *this* phase's own working tree, not a permanent freeze

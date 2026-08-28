@@ -234,8 +234,10 @@ def baseline_checks() -> None:
           versions[-1] == f"{HEAD_REVISION}.py")
     check("no migration 015 or later - Phase 72 adds no migration",
           not any(re.match(r"^0*(?:1[5-9]|[2-9]\d)_", f) for f in versions))
+    # Pathspec narrowed to match the label: it read "alembic", which also covered
+    # alembic/env.py and froze that file against every later phase.
     check("no migration file was added or modified by this phase",
-          not git("diff", "--name-only", "HEAD", "--", "alembic"))
+          not git("diff", "--name-only", "HEAD", "--", "alembic/versions"))
 
     for rel in (TOOL_REL, HARNESS_REL):
         try:
@@ -848,14 +850,23 @@ def isolation_checks() -> None:
           and not [c for c in git("ls-files", "--others", "--exclude-standard").splitlines()
                    if c.endswith((".json", ".csv", ".txt"))])
 
-    # Phase 69 must add nothing beyond its own operator, harness, and docs.
+    # Phase 72 must add nothing beyond its own operator, harness, and docs. Authoring-time only:
+    # gated on whether this phase has landed, because the diff is taken from Phase 72's baseline and
+    # would otherwise judge every later phase's files against Phase 72's allowlist — a permanent
+    # freeze on the repository rather than a claim about this phase. Phase 84 is the first later
+    # phase to add a non-docs file (the Alembic migration target guard) and tripped it.
     scope = git("diff", "--name-only", BASELINE_COMMIT).splitlines()
     untracked = git("ls-files", "--others", "--exclude-standard").splitlines()
-    allowed = {TOOL_REL, HARNESS_REL, DOC_REL, "Makefile", *PRIOR_HARNESS_FIXES}
-    added = [c for c in set(scope + untracked)
-             if c and c not in allowed and not c.startswith("docs/")]
-    check("this phase changed nothing outside its operator, harness, docs, the Makefile, and the "
-          "three named prior-phase harness fixes", not added)
+    if not git("log", "-1", "--format=%H", "--", HARNESS_REL).strip():
+        allowed = {TOOL_REL, HARNESS_REL, DOC_REL, "Makefile", *PRIOR_HARNESS_FIXES}
+        added = [c for c in set(scope + untracked)
+                 if c and c not in allowed and not c.startswith("docs/")]
+        check("this phase changed nothing outside its operator, harness, docs, the Makefile, and "
+              "the three named prior-phase harness fixes", not added)
+        if added:
+            print(f"        unexpected: {sorted(added)}")
+    else:
+        print("  [skip] Phase 72 is committed — working-tree scope guard not applicable")
     # The prior-harness exception must stay an exception: it may cover test files only.
     check("every prior-phase file this fix touched is a validation harness, not production code",
           all(h.startswith("tests/") and h.endswith(".py") for h in PRIOR_HARNESS_FIXES))
