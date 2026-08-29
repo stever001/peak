@@ -177,6 +177,13 @@ def git(*args: str) -> str:
                           capture_output=True, text=True, timeout=20).stdout.strip()
 
 
+def git_succeeds(*args: str) -> bool:
+    """Run a git command for its exit status alone; stdout and stderr are discarded, so
+    nothing a path or remote might carry can reach this harness's output."""
+    return subprocess.run(["git", "-C", REPO_ROOT, *args],
+                          capture_output=True, text=True, timeout=20).returncode == 0
+
+
 # --------------------------------------------------------------------------- 1. baseline
 
 
@@ -218,9 +225,16 @@ def baseline_checks() -> None:
           len(writers) == EXPECTED_WRITERS)
 
     try:
-        history = git("log", "--oneline", "-40")
-        check(f"baseline commit {BASELINE_COMMIT} present in history",
-              BASELINE_COMMIT in history)
+        # Ancestry, not recency. This asserted membership in `git log --oneline -40`, which is a
+        # *sliding window*, not a history check: the baseline sat at position 40 until one further
+        # commit pushed it to 41, at which point the assertion failed on a commit whose content had
+        # nothing to do with Phase 47. The invariant meant here is that Phase 47's baseline is still
+        # reachable from HEAD, which `merge-base --is-ancestor` states directly and which never
+        # expires. Widening the window would only move the expiry date.
+        is_ancestor = git_succeeds("merge-base", "--is-ancestor", BASELINE_COMMIT, "HEAD")
+        check(f"baseline commit {BASELINE_COMMIT} present in history", is_ancestor)
+        if not is_ancestor:
+            print("        reason: phase47_baseline_commit_not_ancestor")
         # The whole-tree scope guard is an *authoring-time* check: it means "the work in progress
         # for this phase touched nothing extra". Once Phase 47 is committed it must go quiet, or it
         # would freeze the repository against every later phase's legitimate changes.
