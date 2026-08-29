@@ -93,6 +93,13 @@ def git(*args: str) -> str:
                           capture_output=True, text=True, timeout=20).stdout.strip()
 
 
+def git_succeeds(*args: str) -> bool:
+    """Run a git command for its exit status alone; stdout and stderr are discarded, so
+    nothing a path or remote might carry can reach this harness's output."""
+    return subprocess.run(["git", "-C", REPO_ROOT, *args],
+                          capture_output=True, text=True, timeout=20).returncode == 0
+
+
 def scrubbed_env():
     env = {k: v for k, v in os.environ.items() if k not in ROLE_VARS}
     env["PYTHONPATH"] = REPO_ROOT
@@ -141,8 +148,16 @@ def baseline_checks() -> None:
     check("clients remains never writable", is_never_writable_table("clients"))
 
     try:
-        check(f"baseline commit {BASELINE_COMMIT} present in history",
-              BASELINE_COMMIT in git("log", "--oneline", "-40"))
+        # Ancestry, not recency. This asserted membership in a bounded `git log ... -40` window,
+        # which is a *sliding window*, not a history check: the baseline falls out of range as later
+        # phases land, failing on commits whose content has nothing to do with this phase. The
+        # invariant meant here is that the baseline is still reachable from HEAD, which
+        # `merge-base --is-ancestor` states directly and which never expires. Widening the window
+        # would only move the expiry date.
+        is_ancestor = git_succeeds("merge-base", "--is-ancestor", BASELINE_COMMIT, "HEAD")
+        check(f"baseline commit {BASELINE_COMMIT} present in history", is_ancestor)
+        if not is_ancestor:
+            print("        reason: phase57_baseline_commit_not_ancestor")
         # Pathspec narrowed to match the label: it read "alembic", which also covered
         # alembic/env.py and froze that file against every later phase.
         check("no alembic/versions file was modified",
