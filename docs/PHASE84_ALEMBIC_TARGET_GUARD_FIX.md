@@ -249,6 +249,17 @@ work.** The scenario-seeding phase Phase 83 §10 described as "Phase 84" is ther
 Phase 85**, which may proceed to `peak_lab_scenario` planning and seeding — under its own separate
 approval — only after this fix is committed and accepted.
 
+**Phase 85 has since landed**, under its own separate approval: it created and seeded
+`peak_lab_scenario` on the lab service only. **It did not exercise this guard, and could not have** —
+`peak_lab_scenario` is **not Alembic-managed** and was built and seeded by direct SQL under dedicated
+scenario credentials, so no Alembic code path ran. **No live Alembic migration was executed, no
+migration `015` was created, no `peak_lab` controlled table was written, no writer was invoked, and no
+production database was contacted.** The guard's scope is therefore unchanged by Phase 85, and one
+consequence is worth stating plainly: **the guard protects Alembic targets only**, so the scenario
+schema's protection rests on the credential boundary instead — the scenario credentials cannot see
+`peak_lab`, and the controlled credentials cannot see the scenario schema. See
+[`PHASE85_PEAK_LAB_SCENARIO_SEEDING.md`](PHASE85_PEAK_LAB_SCENARIO_SEEDING.md).
+
 ---
 
 ## 12. Warnings and decisions needing review

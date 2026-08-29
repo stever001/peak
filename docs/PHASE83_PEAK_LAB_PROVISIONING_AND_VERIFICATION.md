@@ -299,9 +299,29 @@ before any migration `015` or further lab migration work. The scenario work belo
 - Create `peak_lab_scenario` and seed the simulated source-system measurement data described in
   Phase 81 §7. Seeding is a **migration-credential** operation — never runtime, which cannot delete
   what it writes.
+  **Done in Phase 85**, with one deliberate departure: seeding used a **new, dedicated
+  `peak_lab_scenario_loader` credential scoped to `peak_lab_scenario.*`**, not the migration
+  credential. `peak_lab_migrate` is scoped to `peak_lab` and holds only global `USAGE`, so it could
+  not have created the scenario schema; widening it would have given one credential both schemas.
+  The scenario credentials **cannot enumerate a single `peak_lab` table.** See
+  [`PHASE85_PEAK_LAB_SCENARIO_SEEDING.md`](PHASE85_PEAK_LAB_SCENARIO_SEEDING.md).
 - Create a lab engagement anchor and durable measured Peak records through **existing, unchanged
   writers**, in the lab only.
 - Add lab validation and measurement tests.
+
+**Phase 85 did the first item only.** It created and seeded `peak_lab_scenario`
+(`internal_test_inventory_ops_v1`, 120 rows, hash `18459dc1…`) and **stopped there**: **no lab
+engagement anchor was created, no writer was invoked, no Peak record of any kind exists, and no lab
+validation or measurement test was added.** Those remain unauthorized and require separate approval.
+**§5.3's finding still holds** — `peak_lab` was re-verified after seeding at head
+`014_engagement_classification` with **0 application rows across all 18 controlled tables**. **§7 items
+1–6 and 8 remain open**; Phase 85 addresses none of them.
+
+**One correction to §5.3's wording, for future readers.** It records `peak_lab_scenario` as not
+existing, which was accurate then. It is now **created and seeded** — but note that a re-run of that
+same check under `peak_lab_verify_ro` still reports it absent, because **that credential holds no grant
+on the scenario schema and cannot enumerate it.** That is least privilege working, not evidence of
+absence.
 
 Two constraints carry forward unchanged. **The writer-enablement decision gate is environment-blind
 and hardcodes every authorization to `false`**, so authorizing lab writes is a deliberate source edit

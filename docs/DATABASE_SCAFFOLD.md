@@ -1304,3 +1304,30 @@ name, environment value, or local secret path is committed. See
 [`PHASE84_ALEMBIC_TARGET_GUARD_FIX.md`](PHASE84_ALEMBIC_TARGET_GUARD_FIX.md). **The fix must be
 committed and accepted before any migration `015` or further lab migration work**; scenario seeding
 is renumbered to **Phase 85**.
+
+## Phase 85 — the peak_lab_scenario source-system schema exists and is seeded
+
+**`peak_lab_scenario` is a separate, lab-only simulated source-system schema — not a Peak controlled
+schema, and never production.** It holds internal synthetic data of the kind an upstream WMS or ERP
+would expose, as *input* to future measurement. **It is not Alembic-managed, has no `alembic_version`
+table, and holds no Peak controlled table.** `peak_lab` remains the Alembic-managed controlled schema;
+the two must not be conflated.
+
+**Eight tables**, all `InnoDB` / `utf8mb4_0900_ai_ci`, with **37 identity and code columns pinned to
+`utf8mb4_bin`** — the same per-column determinism discipline the controlled schema uses:
+`scenario_runs`, `source_systems`, `r8_system_record_map`, `r2_item_master`, `r9_location_bin_model`,
+`r1_inventory_snapshot`, `r5_receiving_putaway_events`, `scenario_control_totals`. Every table's
+primary key includes the scenario identity, so a duplicate seed row cannot be inserted.
+
+Seeded scenario **`internal_test_inventory_ops_v1`** — 87 data rows plus 33 control totals, **120 rows
+total**, content hash `18459dc1964bc5622d7c7b40ba88b4b2ed7fbc268bf65e20e66f22c828bea1cb`, agreeing
+across the definition, the rows read back from the database, and the stored control total. The dataset
+deliberately mixes populations that should pass a future readiness check with populations that should
+fail it. **Correcting a scenario requires a new version slug, never a rewrite** — the applier stops on
+divergence rather than updating, which was exercised, not merely asserted.
+
+**Phase 85 created no migration `015`, ran no live Alembic migration, wrote nothing to any `peak_lab`
+controlled table, invoked no writer, created no Peak record, and made no production access.** `peak_lab`
+was re-verified afterwards at head `014_engagement_classification` with **0 application rows across all
+18 controlled tables**. **No scenario row body is committed.** See
+[`PHASE85_PEAK_LAB_SCENARIO_SEEDING.md`](PHASE85_PEAK_LAB_SCENARIO_SEEDING.md).

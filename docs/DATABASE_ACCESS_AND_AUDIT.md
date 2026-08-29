@@ -1594,3 +1594,49 @@ writers, and **no standing production write enablement** — the Phase 51 gate s
 `safe_to_write_production_now=false`. **This fix must be committed and accepted before any migration
 `015` or further lab migration work**; the scenario-seeding work Phase 83 §10 called "Phase 84" is
 renumbered to **Phase 85**.
+
+## Phase 85 — two scenario-scoped lab credentials, and the schema they can reach
+
+Phase 85 created and seeded **`peak_lab_scenario`**, a **lab-only simulated source-system schema** that
+is **not Alembic-managed**, holds **no Peak controlled table**, and is **never production**. It added
+**two new dedicated credentials**; **no controlled-schema credential was expanded**, and **no
+production credential was used, created, or altered.**
+
+| credential | global | on `peak_lab_scenario.*` | `GRANT OPTION` | can enumerate `peak_lab`? |
+| --- | --- | --- | --- | --- |
+| `peak_lab_scenario_loader` | `USAGE` only | `SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, REFERENCES, INDEX, ALTER` | **none** | **no** |
+| `peak_lab_scenario_ro` | `USAGE` only | **`SELECT`** | **none** | **no** |
+
+Verified by reading `SHOW GRANTS` back **as each credential in turn**: each holds **exactly one**
+database-level grant, on the scenario schema, and **neither can enumerate a single `peak_lab` table**.
+Isolation is confirmed by measurement, not inferred from grant text.
+
+**Newly provisioned service users on this lab platform arrive holding global `ALL PRIVILEGES` WITH
+`GRANT OPTION`, including `CREATE USER`.** As created, both scenario credentials could read and write
+every controlled `peak_lab` table. **Reduction is a mandatory provisioning step, not tidying**, and its
+result must be verified by connecting as the credential rather than assumed. Two operational notes
+follow from this and are recorded in full in the phase document: the reduction requires globals to be
+stripped **before** the database grant is issued, by a second account still holding `GRANT OPTION`,
+because on this server `REVOKE ALL PRIVILEGES ON *.*` also clears database-level grants; and the
+control-plane API **returns a masked placeholder instead of a stored password**, so service
+credentials can be reset but never recovered. **The service administrator password was deliberately not
+reset.**
+
+Both credentials live in **out-of-repo environment files, mode `600`**, each setting exactly one
+single-quoted variable with a URL-encoded password: `peak-lab-scenario-loader.env` sets
+`PEAK_LAB_SCENARIO_LOADER_URL`, and `peak-lab-scenario-ro.env` sets `PEAK_LAB_SCENARIO_RO_URL`. **No
+repository tool reads either variable**, and none was changed to — the scenario tooling is out-of-repo,
+so it names its own variables honestly instead of extending the Phase 82 §3 seam, where every lab DSN
+sits in a production-named variable that cannot say which environment it points at.
+
+**Caption, required.** Under `peak_lab_verify_ro`, the scenario schema reports as **not present**. That
+is least privilege working correctly — that credential holds no grant on the scenario schema — **not
+evidence that the schema is absent.** Do not read a `peak_lab_verify_ro` schema listing as proof either
+way.
+
+**Phase 85 made no production access, ran no live Alembic migration, created no migration `015`, wrote
+nothing to any `peak_lab` controlled table, invoked no writer, and created no Peak record.** `peak_lab`
+was re-verified afterwards at head `014_engagement_classification`, `alembic_version` **1 row**, and **0
+application rows across all 18 controlled tables**. **No scenario row body, secret, DSN, host, port,
+service URI, provider name, certificate path, environment value, or local secret path is committed.**
+See [`PHASE85_PEAK_LAB_SCENARIO_SEEDING.md`](PHASE85_PEAK_LAB_SCENARIO_SEEDING.md).

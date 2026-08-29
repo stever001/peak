@@ -2700,6 +2700,46 @@ contacted, no migration executed, no `015`, no writer, no record):**
   Only then may **Phase 85** proceed to `peak_lab_scenario` planning and seeding, under its own
   separate approval.
 
+**The peak_lab_scenario source-system schema (Phase 85 — lab-only creation and seeding; no production
+access, no live migration, no `015`, no writer, no Peak record):**
+
+- [x] **`peak_lab_scenario` exists and is seeded**, on the lab service only. It is a **simulated
+  source-system schema**, not a Peak controlled schema and never production: **not Alembic-managed, no
+  `alembic_version` table, no controlled table.** `peak_lab` stays the Alembic-managed controlled
+  schema. See [`PHASE85_PEAK_LAB_SCENARIO_SEEDING.md`](PHASE85_PEAK_LAB_SCENARIO_SEEDING.md).
+- [x] **Eight tables**, all `InnoDB` / `utf8mb4_0900_ai_ci`, 37 identity columns pinned `utf8mb4_bin`;
+  every primary key includes the scenario identity, so a duplicate seed row cannot be inserted.
+- [x] **Scenario `internal_test_inventory_ops_v1`** — 87 data rows plus 33 control totals, **120 rows**,
+  hash `18459dc1964bc5622d7c7b40ba88b4b2ed7fbc268bf65e20e66f22c828bea1cb`, agreeing across the
+  definition, the rows read back from the database, and the stored control total. Deliberately mixed:
+  populations that should pass a future readiness check and populations that should fail it. **All
+  identifiers are obvious internal synthetic tokens; no client, customer, vendor, brand, address, or
+  personal datum appears, and no pseudo-client stands in for one.**
+- [x] **Correction policy enforced, not merely stated:** absent → insert; identical → idempotent replay,
+  nothing written; **different → stop, new version slug required, no `UPDATE` and no `DELETE`.** Both
+  the replay and the divergence-stop paths were exercised.
+- [x] **Two new least-privilege credentials**, `peak_lab_scenario_loader` and `peak_lab_scenario_ro`,
+  each global `USAGE` only with exactly one database-level grant on `peak_lab_scenario.*` and **no
+  `GRANT OPTION`**; **neither can enumerate a single `peak_lab` table.** No controlled-schema credential
+  was expanded and no production credential was touched.
+- [x] **`peak_lab` re-verified untouched** — head `014_engagement_classification`, `alembic_version` 1
+  row, **0 application rows across all 18 controlled tables**. No writer invoked, no Peak record created,
+  no production access, no live Alembic migration, **no migration `015`**. Docs only; **no scenario row
+  body is committed.**
+- [ ] **Open: lab service users arrive over-privileged.** The platform grants new service users global
+  `ALL PRIVILEGES` WITH `GRANT OPTION`, so **every future lab credential is over-privileged until
+  explicitly reduced**, and the reduction must be verified by connecting as the credential. Two further
+  operational hazards are recorded in the phase document: the non-obvious revoke/grant ordering this
+  server requires, and that the control plane returns a **masked placeholder** for a stored password,
+  so credentials can be reset but never recovered.
+- [ ] **Open: the scenario schema is outside the Phase 84 guard**, which covers Alembic only. Protection
+  rests on the credential boundary instead — a real control, but a different one.
+- [ ] **Next: measurement against the scenario remains unauthorized.** Future evidence, extraction, and
+  source-ingestion phases may now measure against it, **each under its own separate approval**. Measured
+  values are **lab-scenario values, never client evidence and never a finding.** The writer-enablement
+  gate stays environment-blind with every authorization hardcoded `false`, and writers stay create-only.
+- [ ] **All Phase 83 §7 open items remain open**, and Phase 85 closes none of them.
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing
