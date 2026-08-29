@@ -6,6 +6,11 @@ system, without overbuilding. Each phase is shippable and de-risks the next.
 **Guiding rule:** prove the workflow with the lightest possible machinery before
 adding structure, storage, or automation.
 
+**Reader-facing phase navigation is maintained in [`PHASE_INDEX.md`](PHASE_INDEX.md).**
+Note that this plan uses two numbering schemes: the `##` headings below are a strategic
+Phase 0–5 sequence, while delivery Phases 11–85 appear as bold sub-entries inside
+*Phase 5 — Hardening & scale (internal)*. Use the index to locate a specific phase.
+
 ---
 
 ## Phase 0 — Scaffolding *(this phase)*

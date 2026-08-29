@@ -133,7 +133,9 @@ peak/
 │   ├── MANAGED_MYSQL_PRODUCTION_PARITY_VALIDATION.md # Offline MySQL parity checks + opt-in staging gate (Phase 41)
 │   ├── GOVERNED_MYSQL_COLLATION_POLICY.md          # Governed column classification + migration 013 plan (Phase 42)
 │   ├── PRODUCTION_MYSQL_COLLATION_VERIFICATION.md  # Read-only production collation verification + go/no-go (Phase 43)
-│   └── IMPLEMENTATION_PLAN.md
+│   ├── IMPLEMENTATION_PLAN.md
+│   ├── PHASE_INDEX.md                              # Reader-facing map of all phases + future phase convention
+│   └── PHASE45_*.md … PHASE85_*.md                 # Dedicated per-phase records from Phase 45 onward
 ├── peak/                         # Python tooling layer (source only; no data)
 │   ├── db/                       # base, enums, models, session + agent_run (P20), evidence (P21), review (P22), source-ingestion (P24), agent-task-queue (P27), review-bundle (P30), internal-reviewer-decision (P33), intake-note (P34), internal-assessment-report-draft (P37), internal-report-review-packet (P38) & packet-decision (P39) writers
 │   ├── agentnet/                 # Governance wrapper for the AgentNet MCP connector (no calls)
@@ -1426,6 +1428,15 @@ governed columns** across all 18 tables now pin **`utf8mb4_bin`** in source cont
 make validate-phase44                              # offline; no credentials, no network
 make mysql-collation-audit PYTHON=.venv/bin/python # MODEL_POLICY_SATISFIED_PRODUCTION_UNVERIFIED
 ```
+
+## Phase history
+
+The narrative sections above cover **Phases 11–44**. Phase history after Phase 44 is tracked in
+[`docs/PHASE_INDEX.md`](docs/PHASE_INDEX.md), with detailed phase records under
+`docs/PHASE##_*.md` where applicable. That index also maps Phases 1–10, which are recorded in
+commit history and their policy documents.
+
+`README.md` remains a high-level project overview rather than the complete phase ledger.
 
 ## Design constraints
 
