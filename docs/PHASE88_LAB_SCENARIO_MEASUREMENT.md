@@ -306,3 +306,18 @@ so a corrected measurement means a new version slug rather than a rewrite.
 
 **Measured values obtained against this scenario are lab-scenario values.** They are not client
 evidence, they do not support a finding, and they must never be presented as either.
+
+---
+
+## 11. Followed by Phase 89
+
+[`PHASE89_LAB_WRITER_ENABLEMENT_GATE.md`](PHASE89_LAB_WRITER_ENABLEMENT_GATE.md) added the
+lab-only writer enablement decision path these measurements point toward. It answers §8.1 above
+directly: the new variables name their own purpose, and the production-named variables are
+explicitly refused as lab writer authorizers.
+
+**Phase 89 changed nothing measured here.** It invoked no writer, created no record, and contacted
+no database. `peak_lab_scenario` and `peak_lab` are exactly as this document left them, and
+**creating Peak records from these measurements remains separately unauthorized** — a decision path
+is not an approval to write.
+

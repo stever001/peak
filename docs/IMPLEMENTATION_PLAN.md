@@ -2772,6 +2772,41 @@ no writer, no production access, no schema change):**
   propose it under its own approval, naming writer, table, action, scope, idempotency key and cleanup
   posture in advance. **Writer enablement remains separately unauthorized.**
 
+**The lab-only writer enablement decision gate (Phase 89 — source, test and docs only; no writer
+invoked, no record created, no database contacted, no production access):**
+
+- [x] **Lab enablement is now a separate axis from production enablement.** The Phase 51 gate is
+  environment-blind and hardcodes every authorization `false` — right for production, useless for a
+  lab rehearsal, and it left lab enablement as an undifferentiated source edit. A new module decides
+  the lab question; **the production gate is byte-identical and untouched**, asserted as a git-backed
+  check rather than inferred from a passing run.
+- [x] **A positive lab decision requires eight things at once**: an explicit `lab` target, an exact
+  confirmation value, a MySQL/MariaDB URL, a schema that is not the scenario schema, not the
+  provider default, not production-marked and **exactly** `peak_lab`, a user that is not
+  production-marked and is the approved lab runtime role, and a requested writer target set wholly
+  inside the enableable three. Any one failing denies with a stable, value-free reason code.
+- [x] **Nine variables are explicitly refused as authorizers**, including the Phase 82 reserved
+  no-op, the Phase 84 migration variables, the Phase 85 scenario variables, and the production-named
+  variables — so one confirmation can never grant two authorities. This answers the Phase 82 §3 seam
+  Phase 88 hit: the new variables name their own purpose honestly.
+- [x] **Writer targets are scoped, not blanket-enabled** — three create-only pairs, a strict subset
+  of the controlled allowlist, with the engagement authorization anchor in a separate
+  never-enableable set so the exclusion is testable. A mixed request fails whole.
+- [x] **123 harness checks plus 31 self-test assertions**, all offline with synthetic URLs, wired
+  into `make validate` as `validate-phase89`.
+- [ ] **Open: the anchor exclusion may block the first rehearsal.** A lab rehearsal needing an
+  engagement anchor will find that pair refused. That is deliberate, but a future phase may need to
+  request it, and that request must be its own reviewed change.
+- [x] **One unrelated harness fix was required.** Phase 72's "no prior-phase operator utility was
+  modified" check sat outside its own authoring-time gate and judged every later phase's `tools/`
+  file against Phase 72's allowlist, so adding any operator utility failed `make validate`
+  permanently. The check was **moved inside the existing gate**, unchanged in assertion, label, and
+  allowlist — the same defect class Phase 86 swept, missed when the adjacent guard was gated.
+- [ ] **Next: no lab write is approved.** Phase 89 invokes no writer. A future phase must name the
+  writer, the records and expected count, the source measurements, the authorization scope, the
+  idempotency keys, the expected receipts, the verification plan, and the cleanup posture —
+  decided before the write, given the runtime role has no removal path.
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

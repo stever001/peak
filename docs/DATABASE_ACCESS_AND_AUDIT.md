@@ -1678,3 +1678,39 @@ wrote nothing to `peak_lab` or `peak_lab_scenario`, invoked no writer, and creat
 with **0 application rows across all 18 controlled tables**. **No row body, secret, DSN, host, port,
 service URI, provider name, certificate path, environment value, or local secret path is committed.**
 See [`PHASE88_LAB_SCENARIO_MEASUREMENT.md`](PHASE88_LAB_SCENARIO_MEASUREMENT.md).
+
+---
+
+## Phase 89 — a lab writer authority, named separately from every other authority
+
+Phase 89 added a **lab-only** writer enablement decision path. **It contacted no database**, read no
+credential file, invoked no writer, and created no record; every URL in the module and its tests is
+synthetic and unroutable.
+
+The point for access and audit is the **variable contract**. Lab writer enablement is authorized by
+`PEAK_WRITER_TARGET=lab` plus `PEAK_LAB_WRITER_ENABLEMENT_CONFIRM=1`, with the target DSN in
+`PEAK_LAB_WRITER_TARGET_URL` and the requested writer targets in `PEAK_LAB_WRITER_TARGETS`. The
+confirmation accepts **only** the exact string `1`, so a half-set or inherited variable fails closed.
+
+**Nine variables are explicitly refused as authorizers**, and each refusal is tested: the Phase 82
+reserved no-op; the three Phase 84 migration variables — migrating the lab and writing rows to it
+are different powers; the two Phase 85 scenario variables, neither of which is a Peak writer
+credential; and the three production-named URL variables, which must never authorize a lab write.
+**One confirmation must never grant two authorities.**
+
+This is the direct answer to the Phase 82 §3 seam recorded above and encountered in Phase 88, where
+a production-named variable pointed at the lab and the name could not say which environment it
+meant. The new variables name their own purpose. The seam itself is unchanged for the existing lab
+roles and remains open.
+
+**Only `peak_lab_runtime` is an approved lab writer role** — `SELECT` + `INSERT`, no `DELETE`, the
+right shape for create-only writers. The lab **migration** role and the scenario read-only role are
+both refused, as are any production-marked user, the scenario schema, the provider default schema,
+and any schema that is not exactly `peak_lab`.
+
+**Production is unreachable from this path.** Every production field is false on every branch, and
+running the Phase 51 production gate with every lab variable set produces **byte-identical** output
+to running it with none. **No secret, DSN, host, port, certificate path, query parameter, or
+environment value appears in any decision output** — the harness asserts a decision built from a URL
+containing all of them contains none. See
+[`PHASE89_LAB_WRITER_ENABLEMENT_GATE.md`](PHASE89_LAB_WRITER_ENABLEMENT_GATE.md).

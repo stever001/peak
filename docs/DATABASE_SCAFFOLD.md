@@ -1354,3 +1354,25 @@ and made no production access.** `peak_lab` was re-verified afterwards at head
 `014_engagement_classification` with **0 application rows across all 18 controlled tables**. **No
 scenario row body is committed** — this phase's record carries aggregates only. See
 [`PHASE88_LAB_SCENARIO_MEASUREMENT.md`](PHASE88_LAB_SCENARIO_MEASUREMENT.md).
+
+---
+
+## Phase 89 — a decision path for lab writes, and nothing written
+
+Phase 89 added `tools/lab_writer_enablement_decision_gate.py`: a pure, offline decision about
+whether a **lab** writer rehearsal is correctly targeted and scoped. **No writer was invoked, no
+record was created, and no database was contacted** — not production, not `peak_lab`, not
+`peak_lab_scenario`.
+
+A positive decision requires an explicit `lab` target, an exact confirmation, and a DSN whose schema
+is **exactly `peak_lab`** — the scenario schema, the provider default schema, any production-marked
+schema, and any other schema are all refused — under the approved lab runtime role, with every
+requested writer target inside a narrow enableable set of **three create-only pairs**
+(`source_ingestion_records`, `evidence_references`, `review_records`). That set is a strict subset of
+the controlled allowlist, and the engagement authorization anchor pair is in a separate
+never-enableable set so its exclusion is testable rather than implied.
+
+**No migration `015` was created, no live Alembic migration ran, no schema changed, and the 18
+controlled tables and 12 writers are unchanged.** The Phase 51 production gate is byte-identical and
+production write enablement remains false. See
+[`PHASE89_LAB_WRITER_ENABLEMENT_GATE.md`](PHASE89_LAB_WRITER_ENABLEMENT_GATE.md).

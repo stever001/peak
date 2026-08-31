@@ -880,14 +880,20 @@ def isolation_checks() -> None:
               "the three named prior-phase harness fixes", not added)
         if added:
             print(f"        unexpected: {sorted(added)}")
+        # Same authoring-time gate, same reason. This check reads the same baseline-to-worktree
+        # diff, so once Phase 72 landed it judged every later phase's tools/ file against Phase
+        # 72's allowlist — the permanent freeze the comment above describes, simply missed when
+        # the adjacent guard was gated. Phase 89 added tools/lab_writer_enablement_decision_gate.py
+        # and tripped it. Moved inside the gate rather than widened: the assertion is unchanged
+        # and still runs while Phase 72 is being authored, which is the only time it means anything.
+        check("no prior-phase operator utility was modified",
+              not [c for c in set(scope + untracked)
+                   if c.startswith("tools/") and c != TOOL_REL])
     else:
         print("  [skip] Phase 72 is committed — working-tree scope guard not applicable")
     # The prior-harness exception must stay an exception: it may cover test files only.
     check("every prior-phase file this fix touched is a validation harness, not production code",
           all(h.startswith("tests/") and h.endswith(".py") for h in PRIOR_HARNESS_FIXES))
-    check("no prior-phase operator utility was modified",
-          not [c for c in set(scope + untracked)
-               if c.startswith("tools/") and c != TOOL_REL])
 
     for rel in (TOOL_REL, HARNESS_REL, DOC_REL):
         if not os.path.isfile(os.path.join(REPO_ROOT, rel)):
