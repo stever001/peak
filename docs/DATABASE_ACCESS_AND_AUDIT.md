@@ -1770,3 +1770,39 @@ output is reduced to value-free findings before it enters documentation: **no ag
 record a secret, connection string, host, port, certificate path, environment value, local secret
 path, row body, or client data.** See
 [`PHASE91_DRIFT_TEST_SPRAWL_PARALLEL_WORKFLOW_REVIEW.md`](PHASE91_DRIFT_TEST_SPRAWL_PARALLEL_WORKFLOW_REVIEW.md).
+
+## Phase 92 — the ordinary lab data-record path, exercised once
+
+The Phase 89 lab writer-enablement gate was used **unmodified** and evaluated **before any
+connection existed**: `outcome=lab_write_authorized`, granting exactly
+`source_ingestion_records/create_source_ingestion_record`, with `anchor_bootstrap_authorized=false`
+and `production_write_authorized` / `safe_to_write_production_now` /
+`production_writer_enablement_authorized` all false. The Phase 90 anchor-bootstrap confirmation was
+neither set nor needed — an ordinary data-record target never reaches that branch. This is the first
+exercise of the ordinary lab data-record authority, distinct from Phase 90's bootstrap authority.
+
+**The credential, checked value-free.** Structural checks only against the out-of-repo runtime env
+file: present, mode `600`, exactly one variable named `PEAK_RUNTIME_DATABASE_URL`, expected scheme,
+the lab runtime role, database `peak_lab`, password/host/port/CA **presence** (never content), not
+the provider default, not the scenario schema, no production marker. **No value was printed, echoed,
+or logged, and no production variable was read.**
+
+Read back as the credential itself: `SELECT` and `INSERT` only — **no `UPDATE`, `DELETE`, `DROP`,
+`CREATE`, `ALTER`, or `GRANT OPTION`** — and **no visibility into `peak_lab_scenario`**, which is
+absent from the role's visible schema set. Writing to or reading the scenario schema was
+structurally impossible on this path, not merely disallowed by policy.
+
+**No removal path, by design.** The runtime role holds no `DELETE`. The record is durable; no
+cleanup was attempted or built, and a correction means an append-only or versioned successor record,
+never a runtime deletion or in-place rewrite. Removal would require the migration credential — a
+separate approval and a separate risk, not authorized here.
+
+**A carried-forward caveat.** The gate reads `PEAK_LAB_WRITER_TARGET_URL` while the writer connects
+via `PEAK_RUNTIME_DATABASE_URL`; the gate cannot verify what the writer will actually connect to.
+Both were sourced from the same single-variable lab runtime file, and post-write verification
+confirmed the row landed in `peak_lab` at head `014_engagement_classification`.
+
+**Production is unchanged.** No production connection, credential, or verifier run. **No secret,
+DSN, host, port, certificate path, query parameter, environment value, local secret path, or row
+body appears in any output or in this repository.** See
+[`PHASE92_FIRST_LAB_SOURCE_INGESTION_WRITE.md`](PHASE92_FIRST_LAB_SOURCE_INGESTION_WRITE.md).

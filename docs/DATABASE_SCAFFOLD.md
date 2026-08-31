@@ -1398,3 +1398,28 @@ all 18 controlled tables". That is now false by design. Future verifiers must ex
 governance edit; still 18 controlled tables and 12 writers. Idempotency was exercised: a second run
 returned `idempotent_replay` with no write, and the table still holds one row. See
 [`PHASE90_LAB_ENGAGEMENT_ANCHOR_BOOTSTRAP.md`](PHASE90_LAB_ENGAGEMENT_ANCHOR_BOOTSTRAP.md).
+
+## Phase 92 — the lab holds its first data record
+
+`peak_lab` now contains **exactly two** application rows: the Phase 90 `engagements` anchor and one
+`source_ingestion_records` row, `ing_d67b76327aba4add`, hung off engagement `lab_internal_test_001`
+under scope `internal_peak_only` and review-gated at `needs_review` / `draft` / `active`. It was
+created through the existing Phase 24 controlled writer on the ordinary Phase 89 lab data-record
+path — the first use of that path.
+
+Before the write: 19 base tables, 18 controlled, `alembic_version` 1 row at
+`014_engagement_classification`, **1 application row**. After: the same schema, the same head, and
+**2 application rows, in `engagements` and `source_ingestion_records` only** — every other
+controlled table still holds none.
+
+**The standing assertion moves again.** Verifiers must now expect exactly one `engagements` row and
+exactly one `source_ingestion_records` row, and must not read either as drift. The row stores packet
+**metadata only** — schema, source type, a logical location reference, and the Phase 85 scenario
+content hash — never a packet payload, raw content, or scenario row body.
+
+**No schema change.** No migration `015`, no live Alembic migration, no model, enum, allowlist,
+writer, or gate edit; still 18 controlled tables and 12 writers, and no new test harness. The
+DB-enforced idempotency boundary `uq_source_ingestion_records_idem` is present over four columns and
+the row carries a 64-character payload fingerprint; idempotency was verified structurally rather
+than by a second invocation. See
+[`PHASE92_FIRST_LAB_SOURCE_INGESTION_WRITE.md`](PHASE92_FIRST_LAB_SOURCE_INGESTION_WRITE.md).

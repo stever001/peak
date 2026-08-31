@@ -2870,6 +2870,47 @@ migration, writer, record, or scenario activity; no migration 015; no harness ad
 Full record: [`PHASE91_DRIFT_TEST_SPRAWL_PARALLEL_WORKFLOW_REVIEW.md`](PHASE91_DRIFT_TEST_SPRAWL_PARALLEL_WORKFLOW_REVIEW.md).
 
 
+**The first lab source-ingestion write (Phase 92 — one durable lab record; no production access, no
+migration, no schema change, no new harness):**
+
+- [x] **The Phase 89 lab data-record path was used as-is, for the first time.** The gate returned
+  `lab_write_authorized` / `lab_target_confirmed_and_scoped`, granting exactly
+  `source_ingestion_records/create_source_ingestion_record` with `anchor_bootstrap_authorized=false`
+  and all three production fields false. The Phase 90 anchor-bootstrap confirmation was neither set
+  nor needed — an ordinary data-record target never reaches that branch.
+- [x] **One record exists in `peak_lab`**: `source_ingestion_records` row `ing_d67b76327aba4add`,
+  engagement `lab_internal_test_001`, client `99999`, scope `internal_peak_only`, source reference
+  `pkt_lab_phase88_scenario_measurement_001`, review-gated at `needs_review` / `draft` / `active`.
+  Before: 1 application row. After: **2**, in `engagements` and `source_ingestion_records` only.
+  Head stays `014_engagement_classification`.
+- [x] **Packet metadata only, derived from the Phase 88 measurement.** Schema/source type
+  `lab_scenario_measurement`, a logical location reference rather than a filesystem path, and the
+  Phase 85 scenario content hash. `authoritative`, `client_facing_approved`, and
+  `capsule_candidate_ready` are all false. No scenario row body, SQL, JSON, or CSV extract entered
+  the request, the record, or the docs.
+- [x] **The runtime role cannot undo this.** Read back as the credential itself: `SELECT` + `INSERT`
+  only, no `UPDATE`/`DELETE`/`DROP`/`CREATE`/`ALTER`/`GRANT OPTION`, and no visibility into
+  `peak_lab_scenario`. Writing to the scenario schema was structurally impossible, not merely
+  disallowed.
+- [x] **No new harness was added.** No defect required one, and Phase 91's policy is that a phase
+  may ship without one. The one-time invocation ran from an out-of-repo operator script; every field
+  needed to reconstruct the request is recorded in the phase document.
+- [ ] **Open: idempotency was verified structurally, not by replay.** The DB-enforced boundary
+  `uq_source_ingestion_records_idem` is present over four columns and the row carries its key and a
+  64-character payload fingerprint, but this phase authorized exactly one writer call, so no second
+  invocation was made. A replay would return `idempotent_replay` without writing.
+- [ ] **Open: the gate and the writer read different variables.** The gate reads
+  `PEAK_LAB_WRITER_TARGET_URL`; the writer connects via `PEAK_RUNTIME_DATABASE_URL`. The gate cannot
+  verify what the writer will actually connect to. Both came from the same single-variable lab file
+  here, and post-write verification confirmed the row landed in `peak_lab`.
+- [ ] **Next: a first lab evidence reference OR a first review record — not both.** Both pairs are
+  already *enableable* by the Phase 89 gate; that is reachability, not approval. Each needs its own
+  phase naming writer, records, expected count, scope, idempotency key, receipts, verification and
+  cleanup posture.
+
+Full record: [`PHASE92_FIRST_LAB_SOURCE_INGESTION_WRITE.md`](PHASE92_FIRST_LAB_SOURCE_INGESTION_WRITE.md).
+
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing
