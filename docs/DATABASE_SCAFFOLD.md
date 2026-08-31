@@ -1423,3 +1423,27 @@ DB-enforced idempotency boundary `uq_source_ingestion_records_idem` is present o
 the row carries a 64-character payload fingerprint; idempotency was verified structurally rather
 than by a second invocation. See
 [`PHASE92_FIRST_LAB_SOURCE_INGESTION_WRITE.md`](PHASE92_FIRST_LAB_SOURCE_INGESTION_WRITE.md).
+
+## Phase 93 — the lab holds its first evidence reference
+
+`peak_lab` now contains **exactly three** application rows: the Phase 90 `engagements` anchor, the
+Phase 92 `source_ingestion_records` row, and one `evidence_references` row, `evid_f094cbe4b47d4048`,
+hung off engagement `lab_internal_test_001` under scope `internal_peak_only` and review-gated at
+`needs_review` / `draft` / `active`. It was created through the existing Phase 21 controlled writer
+on the ordinary Phase 89 lab data-record path.
+
+Before the write: 19 base tables, 18 controlled, `alembic_version` 1 row at
+`014_engagement_classification`, **2 application rows**. After: the same schema, the same head, and
+**3 application rows, in `engagements`, `source_ingestion_records`, and `evidence_references` only**
+— every other controlled table still holds none.
+
+**The standing assertion moves again.** Verifiers must now expect exactly one row in each of those
+three tables and must not read any of them as drift. The evidence row stores record ids, posture
+flags, and logical locators only — never a scenario row body, artifact body, field value, quantity,
+or location identifier.
+
+**No schema change.** No migration `015`, no live Alembic migration, no model, enum, allowlist,
+writer, or gate edit; still 18 controlled tables and 12 writers, and no new test harness. The
+DB-enforced boundary `uq_evidence_references_idem` is present over four columns; idempotency was
+verified structurally rather than by a second invocation. See
+[`PHASE93_FIRST_LAB_EVIDENCE_REFERENCE.md`](PHASE93_FIRST_LAB_EVIDENCE_REFERENCE.md).

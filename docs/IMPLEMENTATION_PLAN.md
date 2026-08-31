@@ -2911,6 +2911,41 @@ migration, no schema change, no new harness):**
 Full record: [`PHASE92_FIRST_LAB_SOURCE_INGESTION_WRITE.md`](PHASE92_FIRST_LAB_SOURCE_INGESTION_WRITE.md).
 
 
+**The first lab evidence reference (Phase 93 — one durable lab record; no production access, no
+migration, no schema change, no new harness):**
+
+- [x] **The Phase 89 lab data-record path was used as-is, a second time.** The gate granted exactly
+  `evidence_references/create_draft` with `anchor_bootstrap_authorized=false` and all three
+  production fields false. The Phase 90 bootstrap confirmation was neither set nor needed.
+- [x] **One record exists in `peak_lab`**: `evidence_references` row `evid_f094cbe4b47d4048`,
+  engagement `lab_internal_test_001`, client `99999`, scope `internal_peak_only`, review-gated at
+  `needs_review` / `draft` / `active`, linked to the Phase 92 record `ing_d67b76327aba4add`.
+  Before: 2 application rows. After: **3**. Head stays `014_engagement_classification`.
+- [x] **The claim is bounded in the record itself.** The stored summary supports exactly one
+  statement — that a Phase 88 lab scenario measurement exists as a controlled Peak source-ingestion
+  record — and records that it does not support an inventory accuracy conclusion, does not assert
+  source-system truth, is not reviewed, not authoritative, not client-facing, not capsule-ready, and
+  that publication remains unauthorized.
+- [x] **Three contract differences were followed, not worked around.** `evidence_type` and
+  `source_type` are bounded by `schemas/evidence-reference.schema.json`, so the proposed
+  `lab_source_ingestion_readiness_reference` / `source_ingestion_records` were refused in favour of
+  the schema-valid `other`; `evidence_references` has no typed link column, so the link to Phase 92
+  is carried three free-form ways; and the table has no `authoritative` column, so that posture is
+  enforced pre-connection and stated in the summary but not stored as a flag.
+- [ ] **Open: the non-authoritative posture is not independently readable on an evidence row.**
+  Unlike `source_ingestion_records`, which records the three flags in `details_json`, the evidence
+  writer enforces them and drops them. A future verifier cannot read them back from the row.
+- [ ] **Open: idempotency was verified structurally, not by replay**, as in Phase 92 — the boundary
+  `uq_evidence_references_idem` is present over four columns and the row carries a 64-character
+  fingerprint, but only one writer call was authorized.
+- [ ] **Next: a first lab review record.** It would let a reviewer decision act on this evidence
+  reference and move it off `needs_review`. Enableable by the Phase 89 gate, which is reachability,
+  not approval; it needs its own phase naming writer, records, expected count, scope, idempotency
+  key, receipts, verification and cleanup posture.
+
+Full record: [`PHASE93_FIRST_LAB_EVIDENCE_REFERENCE.md`](PHASE93_FIRST_LAB_EVIDENCE_REFERENCE.md).
+
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

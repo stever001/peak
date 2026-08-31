@@ -11,7 +11,7 @@ replacement for the detailed records it points at.
 | [`docs/IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md) | The evolving implementation roadmap and the long-form running record for **Phases 11–85**, plus a Phase 88 pointer |
 | `docs/PHASE##_*.md` | Dedicated per-phase records, present from **Phase 45 onward** (Phases 52, 86 and 87 excepted) |
 | Commit history | The primary record for **Phases 1–10** and for code-only maintenance phases |
-| This index | The single entry point covering **Phases 1–92** and the convention for future phases |
+| This index | The single entry point covering **Phases 1–93** and the convention for future phases |
 
 Two navigation traps are worth knowing before reading the plan:
 
@@ -146,6 +146,7 @@ Phase 44**; this table is the entry point for everything after it.
 | 90 | Bootstrap-only lab enablement of the engagement anchor writer, and the first Peak writer invocation against `peak_lab` | [`PHASE90_LAB_ENGAGEMENT_ANCHOR_BOOTSTRAP.md`](PHASE90_LAB_ENGAGEMENT_ANCHOR_BOOTSTRAP.md) | **One durable lab `engagements` row created**; production enablement unchanged and still false |
 | 91 | Drift, test-sprawl, and parallel agentic workflow review | [`PHASE91_DRIFT_TEST_SPRAWL_PARALLEL_WORKFLOW_REVIEW.md`](PHASE91_DRIFT_TEST_SPRAWL_PARALLEL_WORKFLOW_REVIEW.md) | Docs-only review; no database, cloud, environment, migration, writer, record, or scenario activity; no harness added; recommendations only, plus one `README.md` status-banner accuracy correction |
 | 92 | First controlled lab source-ingestion write, derived from the Phase 88 measurement | [`PHASE92_FIRST_LAB_SOURCE_INGESTION_WRITE.md`](PHASE92_FIRST_LAB_SOURCE_INGESTION_WRITE.md) | **One durable lab `source_ingestion_records` row created**; Phase 89 gate used as-is; no new harness; production enablement unchanged and still false |
+| 93 | First controlled lab evidence reference, derived from the Phase 92 source-ingestion record | [`PHASE93_FIRST_LAB_EVIDENCE_REFERENCE.md`](PHASE93_FIRST_LAB_EVIDENCE_REFERENCE.md) | **One durable lab `evidence_references` row created**; Phase 89 gate used as-is; no new harness; claim bounded to source availability; production enablement unchanged and still false |
 
 ### Phases without a dedicated phase doc
 
@@ -157,8 +158,8 @@ Phase 44**; this table is the entry point for everything after it.
 
 ## Current baseline
 
-As of Phase 92, whose baseline is the committed Phase 91 commit `98629da` — *Document Phase 91
-drift and workflow review*:
+As of Phase 93, whose baseline is the committed Phase 92 commit `9ece39b` — *Document Phase 92 lab
+source ingestion*:
 
 | Property | Value |
 |---|---|
@@ -168,11 +169,11 @@ drift and workflow review*:
 | Controlled writers | 12 |
 | Migration 015 | Does not exist |
 | Production write enablement | None standing |
-| Lab write enablement | Anchor bootstrap enabled (Phase 90); source-ingestion exercised once (Phase 92); **lab evidence and review writes remain unapproved** |
-| `peak_lab` controlled tables | 18, head `014_engagement_classification`, **2 application rows** (the Phase 90 `engagements` anchor and the Phase 92 `source_ingestion_records` row) |
+| Lab write enablement | Anchor bootstrap enabled (Phase 90); source-ingestion exercised once (Phase 92); evidence reference exercised once (Phase 93); **lab review writes remain unapproved** |
+| `peak_lab` controlled tables | 18, head `014_engagement_classification`, **3 application rows** (the Phase 90 `engagements` anchor, the Phase 92 `source_ingestion_records` row, and the Phase 93 `evidence_references` row) |
 | `peak_lab_scenario` | seeded, 120 rows, content hash re-verified in Phase 88 |
 
-Phases 87–92 changed no migration, table, or writer, so the first six values are unchanged since
+Phases 87–93 changed no migration, table, or writer, so the first six values are unchanged since
 Phase 86. **Phase 90 changed the `peak_lab` row count**: it is no longer empty, and "0 application
 rows" is no longer a valid safety assertion against the lab. **Any later phase that changes the schema, writer count, or baseline commit must
 refresh this block.**
