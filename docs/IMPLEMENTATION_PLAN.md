@@ -2946,6 +2946,43 @@ migration, no schema change, no new harness):**
 Full record: [`PHASE93_FIRST_LAB_EVIDENCE_REFERENCE.md`](PHASE93_FIRST_LAB_EVIDENCE_REFERENCE.md).
 
 
+**The first lab review record (Phase 94 — one durable lab record; no production access, no
+migration, no schema change, no new harness):**
+
+- [x] **The Phase 89 lab data-record path was used as-is, a third time.** The gate granted exactly
+  `review_records/create_review_record` with `anchor_bootstrap_authorized=false` and all three
+  production fields false. All three enableable pairs have now been exercised once each.
+- [x] **One record exists in `peak_lab`**: `review_records` row `rev_70b5da9f14d54488`, decision
+  `approve_internal`, `authoritative=false`, reviewing target `evid_f094cbe4b47d4048` as
+  `subject_record_type=evidence_reference`, linked to `ing_d67b76327aba4add`. Before: 3 application
+  rows. After: **4**. Head stays `014_engagement_classification`.
+- [x] **The decision is internal-only and claim-bounded.** It approves that a Phase 88 lab scenario
+  measurement exists as a controlled source-ingestion record and that the evidence reference
+  describing it is well formed. It establishes none of: inventory accuracy, source-system truth,
+  client evidence, production evidence, or authoritative status.
+- [x] **The Phase 93 asymmetry was respected, not assumed.** `evidence_references` has no
+  `authoritative` column — confirmed directly — so no such flag was read from it. The posture rests
+  on writer-enforced pre-connection validation, governed state, and the claim-boundary summary
+  verified as booleans. The review row itself does carry a stored `authoritative` column.
+- [x] **No mutation, and none was needed.** The writer is INSERT-only, so no `UPDATE` grant was
+  required and none exists. The evidence row is unchanged, still `needs_review`, with `updated_at`
+  still equal to `created_at`.
+- [ ] **Open: the approval is recorded, not propagated.** `review_status=approved_internal` lives on
+  the review record; anything reading `evidence_references` alone still sees `needs_review`. There is
+  no typed join between them, so correlating the two is the reader's job.
+- [ ] **Open: the writer never loads the reviewed target.** `target_id` is a free-form column with no
+  foreign key and no write-time existence check; a dangling id would be accepted. This phase verified
+  the target out of band, which is operator discipline rather than a contract guarantee.
+- [ ] **Open: idempotency was verified structurally, not by replay**, as in Phases 92–93.
+- [ ] **Next: a decision, not another guardrail phase.** The lab chain is now complete end to end at
+  depth one — anchor, source ingestion, evidence reference, review decision. The question is whether
+  that is sufficient to attempt a minimal internal lab assessment or report draft, or whether the
+  chain needs more breadth first. Weigh that the measurement is partial, the evidence is low
+  reliability and non-authoritative, and the approval is internal-only and unpropagated.
+
+Full record: [`PHASE94_FIRST_LAB_REVIEW_RECORD.md`](PHASE94_FIRST_LAB_REVIEW_RECORD.md).
+
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

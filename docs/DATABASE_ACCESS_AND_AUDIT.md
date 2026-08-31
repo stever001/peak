@@ -1806,3 +1806,31 @@ confirmed the row landed in `peak_lab` at head `014_engagement_classification`.
 DSN, host, port, certificate path, query parameter, environment value, local secret path, or row
 body appears in any output or in this repository.** See
 [`PHASE92_FIRST_LAB_SOURCE_INGESTION_WRITE.md`](PHASE92_FIRST_LAB_SOURCE_INGESTION_WRITE.md).
+
+## Phase 94 — the lab data-record path is fully exercised, still within the create-only grant
+
+The Phase 89 gate was used **unmodified** and evaluated **before any connection existed**:
+`outcome=lab_write_authorized`, granting exactly `review_records/create_review_record`, with
+`anchor_bootstrap_authorized=false` and all three production fields false. With Phases 92 and 93,
+**all three enableable pairs have now been exercised once each**. That exhausts what the Phase 89
+gate can grant; it creates no standing authority, and each future write still needs its own phase
+approval.
+
+**A review could have required `UPDATE`. It does not.** A review that advanced its target's status
+in place would need an `UPDATE` grant the runtime role does not hold. The Phase 22 writer is
+INSERT-only — one insert, no update or delete path — so the whole chain ran inside the existing
+create-only grant set. **No grant was altered, and none needed to be.** Verified after the write: the
+reviewed evidence row is unchanged, with `updated_at` still equal to `created_at`.
+
+The access consequence is worth stating plainly: **an internal approval is recorded beside its
+target, never on it.** A reader of `evidence_references` alone sees `needs_review`; the
+`approved_internal` decision lives on the review record, and there is no typed join. Any future
+consumer of this chain must correlate the two deliberately.
+
+**Credential posture unchanged.** Structural checks only, no value printed: one variable, expected
+scheme, lab runtime role, database `peak_lab`, presence-only checks on password/host/port/CA. Read
+back as the credential itself: `SELECT` and `INSERT` only, and no visibility into
+`peak_lab_scenario`. No production credential was read and no production connection was made.
+**No secret, DSN, host, port, certificate path, environment value, local secret path, or row body
+appears in any output or in this repository.** See
+[`PHASE94_FIRST_LAB_REVIEW_RECORD.md`](PHASE94_FIRST_LAB_REVIEW_RECORD.md).

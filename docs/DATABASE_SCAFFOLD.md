@@ -1447,3 +1447,29 @@ writer, or gate edit; still 18 controlled tables and 12 writers, and no new test
 DB-enforced boundary `uq_evidence_references_idem` is present over four columns; idempotency was
 verified structurally rather than by a second invocation. See
 [`PHASE93_FIRST_LAB_EVIDENCE_REFERENCE.md`](PHASE93_FIRST_LAB_EVIDENCE_REFERENCE.md).
+
+## Phase 94 — the lab chain reaches a review decision
+
+`peak_lab` now contains **exactly four** application rows: the Phase 90 `engagements` anchor, the
+Phase 92 `source_ingestion_records` row, the Phase 93 `evidence_references` row, and one
+`review_records` row, `rev_70b5da9f14d54488` — decision `approve_internal`, `authoritative=false`,
+reviewing target `evid_f094cbe4b47d4048`. Created through the existing Phase 22 controlled writer on
+the ordinary Phase 89 lab data-record path.
+
+Before the write: 19 base tables, 18 controlled, `alembic_version` 1 row at
+`014_engagement_classification`, **3 application rows**. After: the same schema, the same head, and
+**4 application rows, in `engagements`, `source_ingestion_records`, `evidence_references`, and
+`review_records` only** — every other controlled table still holds none.
+
+**The standing assertion moves again.** Verifiers must now expect exactly one row in each of those
+four tables and must not read any of them as drift.
+
+**A review does not mutate its target.** The review writer is INSERT-only, so no `UPDATE` grant was
+needed and the runtime still holds none. The Phase 93 evidence row is unchanged — still
+`needs_review` / `draft` / `active`, with `updated_at` equal to `created_at`. The consequence for
+future readers: `approved_internal` lives on the review record, so anything reading
+`evidence_references` alone still sees `needs_review`, and there is no typed join between them.
+
+**No schema change.** No migration `015`, no live Alembic migration, no model, enum, allowlist,
+writer, or gate edit; still 18 controlled tables and 12 writers, and no new test harness. See
+[`PHASE94_FIRST_LAB_REVIEW_RECORD.md`](PHASE94_FIRST_LAB_REVIEW_RECORD.md).
