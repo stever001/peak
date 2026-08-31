@@ -11,7 +11,7 @@ replacement for the detailed records it points at.
 | [`docs/IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md) | The evolving implementation roadmap and the long-form running record for **Phases 11–85**, plus a Phase 88 pointer |
 | `docs/PHASE##_*.md` | Dedicated per-phase records, present from **Phase 45 onward** (Phases 52, 86 and 87 excepted) |
 | Commit history | The primary record for **Phases 1–10** and for code-only maintenance phases |
-| This index | The single entry point covering **Phases 1–90** and the convention for future phases |
+| This index | The single entry point covering **Phases 1–91** and the convention for future phases |
 
 Two navigation traps are worth knowing before reading the plan:
 
@@ -144,6 +144,7 @@ Phase 44**; this table is the entry point for everything after it.
 | 88 | Read-only measurement pass over the seeded lab scenario, establishing evidence-readiness coverage for R1/R2/R5/R8/R9/R10 | [`PHASE88_LAB_SCENARIO_MEASUREMENT.md`](PHASE88_LAB_SCENARIO_MEASUREMENT.md) | Lab-only, `SELECT` only; no Peak record created, no writer invoked, no production access |
 | 89 | Added a lab-only writer-enablement decision path, scoped to `peak_lab` and three create-only writer targets | [`PHASE89_LAB_WRITER_ENABLEMENT_GATE.md`](PHASE89_LAB_WRITER_ENABLEMENT_GATE.md) | Source/test/docs only; production enablement unchanged and still false; no writer invoked |
 | 90 | Bootstrap-only lab enablement of the engagement anchor writer, and the first Peak writer invocation against `peak_lab` | [`PHASE90_LAB_ENGAGEMENT_ANCHOR_BOOTSTRAP.md`](PHASE90_LAB_ENGAGEMENT_ANCHOR_BOOTSTRAP.md) | **One durable lab `engagements` row created**; production enablement unchanged and still false |
+| 91 | Drift, test-sprawl, and parallel agentic workflow review | [`PHASE91_DRIFT_TEST_SPRAWL_PARALLEL_WORKFLOW_REVIEW.md`](PHASE91_DRIFT_TEST_SPRAWL_PARALLEL_WORKFLOW_REVIEW.md) | Docs-only review; no database, cloud, environment, migration, writer, record, or scenario activity; no harness added; recommendations only, plus one `README.md` status-banner accuracy correction |
 
 ### Phases without a dedicated phase doc
 
@@ -155,8 +156,8 @@ Phase 44**; this table is the entry point for everything after it.
 
 ## Current baseline
 
-As of Phase 90, whose baseline is the committed Phase 89 commit `ebc3d13` — *Add lab writer
-enablement decision gate*:
+As of Phase 91, whose baseline is the committed Phase 90 commit `64a8e0b` — *Bootstrap lab
+engagement anchor*. Phase 91 is a docs-only review and changed none of these values:
 
 | Property | Value |
 |---|---|
@@ -170,7 +171,7 @@ enablement decision gate*:
 | `peak_lab` controlled tables | 18, head `014_engagement_classification`, **1 application row** (the Phase 90 `engagements` anchor) |
 | `peak_lab_scenario` | seeded, 120 rows, content hash re-verified in Phase 88 |
 
-Phases 87–90 changed no migration, table, or writer, so the first six values are unchanged since
+Phases 87–91 changed no migration, table, or writer, so the first six values are unchanged since
 Phase 86. **Phase 90 changed the `peak_lab` row count**: it is no longer empty, and "0 application
 rows" is no longer a valid safety assertion against the lab. **Any later phase that changes the schema, writer count, or baseline commit must
 refresh this block.**

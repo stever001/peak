@@ -2834,6 +2834,42 @@ migration, no other writer):**
   Phase 89 pairs are *enableable*; that is not approval to run them. Each needs its own phase naming
   writer, records, expected count, scope, idempotency keys, receipts, verification and durability.
 
+**The drift and test-sprawl review (Phase 91 — docs-only; no database, cloud, environment,
+migration, writer, record, or scenario activity; no migration 015; no harness added):**
+
+- [x] **Validation cost is now disproportionate to risk.** 72 phase harnesses, 9,292 pass lines,
+  ~39,400 harness source lines. Assertion mass concentrates in fourteen near-identical record-chain
+  harnesses (Phases 59-72) and in prose/path/history restatement rather than behaviour.
+- [x] **The harness convention is habit, not risk assessment.** Roughly one harness per
+  code-shipping phase from Phase 33 to Phase 72. Recorded policy: a phase may ship without a
+  harness, and one is added only for a durable safety invariant or a repeatable contract.
+- [x] **The known freeze defect class is still live in a slower form.** `EXPECTED_MIGRATIONS`,
+  `EXPECTED_TABLE_COUNT`, `HEAD_REVISION`, and `EXPECTED_WRITERS` are duplicated across 27-31
+  harnesses each, so the next migration or writer fails all of them at once. 34 harnesses freeze a
+  file path but only 5 use the authoring-time gate that makes such a claim correct.
+- [x] **Parallel read-only agentic workflows are recorded as acceptable**, with bounded prompts, a
+  single primary session owning the diff, no live/environment/write access without explicit
+  approval, and no printing of connection values or row bodies. Three were used in this phase and
+  their material claims were re-verified before being recorded.
+- [ ] **Open: consolidation is recommended but deliberately not done here.** All checks pass and
+  there is no active failure or false red, so no test was deleted or weakened. A scoped phase
+  should extract the shared baseline constants first, then the shared git helpers, then gate the
+  remaining file freezes. That removes freeze risk without reducing coverage.
+- [x] **`README.md`'s status banner was materially false and was corrected here.** It stated the
+  repository has no database, against 14 migrations, 18 controlled tables, and 12 writers. The
+  banner now names the controlled schema, the narrow create-only writers, and the enablement gates,
+  and records that production write enablement stays false, that rehearsal is lab-only, and that
+  there is still no frontend. Banner only; the rest of the README is unchanged.
+- [ ] **Next: Phase 92 returns to workflow execution — the first lab source-ingestion write.** Turn
+  a Phase 88 read-only measurement into a controlled Peak source-ingestion record against
+  `peak_lab`, using the Phase 89 gate as-is. It must name writer, records and expected count, source
+  measurement, authorization scope from the closed vocabulary, idempotency keys, expected receipts,
+  verification plan, and cleanup posture decided before the write. It should add no permanent
+  harness absent a specific unsafe condition, and no migration, schema, model, or writer.
+
+Full record: [`PHASE91_DRIFT_TEST_SPRAWL_PARALLEL_WORKFLOW_REVIEW.md`](PHASE91_DRIFT_TEST_SPRAWL_PARALLEL_WORKFLOW_REVIEW.md).
+
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

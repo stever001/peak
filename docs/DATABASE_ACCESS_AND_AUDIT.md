@@ -1750,3 +1750,23 @@ authorized here.
 with the bootstrap variables set. **No secret, DSN, host, port, certificate path, query parameter,
 environment value, or row body appears in any output or in this repository.** See
 [`PHASE90_LAB_ENGAGEMENT_ANCHOR_BOOTSTRAP.md`](PHASE90_LAB_ENGAGEMENT_ANCHOR_BOOTSTRAP.md).
+
+## Phase 91 — the access boundary applies to delegated agents
+
+Phase 91 contacted no database and read no environment value. It adds one access rule, because
+parallel agentic workflows were previously undefined here and are now in use.
+
+**A delegated agent inherits the access boundary; it does not widen it.** A parallel agent may be
+given repository inspection, documentation review, offline validation, and — only when a phase
+explicitly authorizes it — read-only lab measurement. A parallel agent may **not** read environment
+files or secret material, contact any database, run a migration, invoke a writer, reach production,
+run provider or cloud commands, alter grants or credentials, perform destructive cleanup, publish to
+AgentNet, or commit or push. If delegated work turns out to need live database, environment, cloud,
+or write access, it stops and returns for explicit approval rather than proceeding.
+
+**One primary session owns the diff.** Parallel agents inspect and draft; the primary session
+reconciles their output, re-verifies material claims, and is accountable for what lands. Parallel
+output is reduced to value-free findings before it enters documentation: **no agent may print or
+record a secret, connection string, host, port, certificate path, environment value, local secret
+path, row body, or client data.** See
+[`PHASE91_DRIFT_TEST_SPRAWL_PARALLEL_WORKFLOW_REVIEW.md`](PHASE91_DRIFT_TEST_SPRAWL_PARALLEL_WORKFLOW_REVIEW.md).

@@ -2,9 +2,12 @@
 
 An internal, AgentNet-grounded agent workflow system for **Peak Inventory Solutions**.
 
-> **Status:** Early-stage scaffolding. This repository currently defines the
-> operating model, agent workflow map, data objects, and implementation plan.
-> It does **not** yet contain production agent logic, a database, or a frontend.
+> **Status:** Internal, pre-production. Alongside the operating model, agent workflow
+> map, data objects, and implementation plan, the repository now defines a **controlled
+> database schema** (Alembic migrations), a set of **narrow create-only controlled
+> writers**, and the **validation and enablement gates** that govern their use.
+> **Production write enablement remains false**; writer rehearsal happens only in a
+> controlled lab. There is **no frontend and no client-facing application**.
 
 ---
 
