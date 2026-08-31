@@ -1376,3 +1376,25 @@ never-enableable set so its exclusion is testable rather than implied.
 controlled tables and 12 writers are unchanged.** The Phase 51 production gate is byte-identical and
 production write enablement remains false. See
 [`PHASE89_LAB_WRITER_ENABLEMENT_GATE.md`](PHASE89_LAB_WRITER_ENABLEMENT_GATE.md).
+
+---
+
+## Phase 90 — the lab holds its first application row
+
+`peak_lab` now contains **exactly one** application row: the `engagements` authorization anchor
+`lab_internal_test_001`, classified `engagement_category=internal_test`, `real_client_data=false`,
+`client_accessible=false`, `capsule_publication_authorized=false`, created through the existing
+Phase 54/56 controlled writer under a bootstrap-only lab enablement.
+
+Before the write: 19 base tables, 18 controlled, `alembic_version` 1 row at
+`014_engagement_classification`, **0 application rows**. After: the same schema, the same head, and
+**1 application row, in `engagements` only** — every other controlled table still holds none.
+
+**A standing assertion changed here.** Every prior lab phase could verify "0 application rows across
+all 18 controlled tables". That is now false by design. Future verifiers must expect exactly one
+`engagements` row and must not read its presence as drift.
+
+**No schema change.** No migration `015`, no live Alembic migration, no model, enum, allowlist, or
+governance edit; still 18 controlled tables and 12 writers. Idempotency was exercised: a second run
+returned `idempotent_replay` with no write, and the table still holds one row. See
+[`PHASE90_LAB_ENGAGEMENT_ANCHOR_BOOTSTRAP.md`](PHASE90_LAB_ENGAGEMENT_ANCHOR_BOOTSTRAP.md).

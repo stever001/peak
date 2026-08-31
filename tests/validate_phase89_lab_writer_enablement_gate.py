@@ -267,9 +267,17 @@ def writer_target_scoping() -> None:
               action in ALLOWED_ACTIONS)
     check("the enableable set is a strict subset of the allowlist's table space",
           {t for t, _ in g.LAB_ENABLEABLE_WRITER_TARGETS} < ALLOWED_TABLES)
-    check("the engagement authorization anchor pair is never lab-enableable",
-          not (ALLOWED_ANCHOR_CREATION_PAIRS & g.LAB_ENABLEABLE_WRITER_TARGETS)
-          and all(p in g.NEVER_LAB_ENABLEABLE for p in ALLOWED_ANCHOR_CREATION_PAIRS))
+    # Phase 90 superseded the original form of this check. The anchor pair was in
+    # NEVER_LAB_ENABLEABLE; it now reaches a separate bootstrap branch that requires its own
+    # confirmation. The invariant that still matters — and the one Phase 89 was really asserting —
+    # is that the anchor is **not generally lab-enableable**: it stays out of the ordinary
+    # enableable set, so no ordinary lab request can ever be granted it.
+    check("the engagement authorization anchor pair is not generally lab-enableable",
+          not (ALLOWED_ANCHOR_CREATION_PAIRS & g.LAB_ENABLEABLE_WRITER_TARGETS))
+    check("the anchor pair is reachable only through the named bootstrap pair",
+          g.ANCHOR_BOOTSTRAP_PAIR in ALLOWED_ANCHOR_CREATION_PAIRS)
+    check("clients/create_draft remains never lab-enableable on any path",
+          ("clients", "create_draft") in g.NEVER_LAB_ENABLEABLE)
     check("no never-enableable pair is also enableable",
           not (g.NEVER_LAB_ENABLEABLE & g.LAB_ENABLEABLE_WRITER_TARGETS))
     check("no update or supersede action is lab-enableable",
@@ -327,8 +335,11 @@ def decision_branches() -> None:
         ("an off-allowlist writer target denies",
          env(**{g.LAB_TARGETS_ENV: "intake_note_records/create_intake_note_record"}),
          g.REASON_TARGET_NOT_ENABLEABLE),
-        ("the engagement anchor target denies",
+        ("the engagement anchor target denies without its bootstrap confirmation",
          env(**{g.LAB_TARGETS_ENV: "engagements/create_engagement_authorization_anchor"}),
+         g.REASON_ANCHOR_NO_BOOTSTRAP_CONFIRM),
+        ("clients/create_draft denies on every path",
+         env(**{g.LAB_TARGETS_ENV: "clients/create_draft"}),
          g.REASON_TARGET_NEVER_ENABLEABLE),
     )
     for label, e, expected_reason in cases:

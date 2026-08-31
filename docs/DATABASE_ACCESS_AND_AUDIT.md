@@ -1714,3 +1714,39 @@ to running it with none. **No secret, DSN, host, port, certificate path, query p
 environment value appears in any decision output** — the harness asserts a decision built from a URL
 containing all of them contains none. See
 [`PHASE89_LAB_WRITER_ENABLEMENT_GATE.md`](PHASE89_LAB_WRITER_ENABLEMENT_GATE.md).
+
+---
+
+## Phase 90 — the first Peak writer invocation against the lab, under a second confirmation
+
+Phase 90 created **one** durable `engagements` row in `peak_lab` through the existing Phase 54/56
+controlled anchor writer. **No production access occurred**, no other writer was invoked, no other
+record was created, no live Alembic migration ran, and no migration `015` was created.
+
+**The credential.** The lab **runtime** role, verified before use by sixteen value-free structural
+checks of its environment file — mode `600`, exactly one variable, the expected variable name,
+scheme, role, target database, and the *presence* (never the content) of password, host, port and
+CA path; not the provider default, not the scenario schema, no production marker, and not the
+migration or scenario role. **No value was printed, echoed, or logged.**
+
+Read back as the credential itself: `SELECT, INSERT` plus `USAGE`, **no `GRANT OPTION`**, and **no
+visibility into `peak_lab_scenario`** — 0 schemas, 0 tables. Writing to the scenario schema was
+therefore structurally impossible on this path, not merely disallowed by policy.
+
+**The authority.** A new confirmation, `PEAK_LAB_ENGAGEMENT_ANCHOR_BOOTSTRAP_CONFIRM=1`, required
+**in addition to** every Phase 89 lab check, with the anchor as the **only** requested target. The
+anchor pair remains outside the ordinary enableable set, so no ordinary lab request can reach it,
+and mixing it with a data-record target denies the whole request. Bootstrapping an identity/root
+record and writing data records stay different authorities. Every previously refused authorizer —
+the Phase 82 reserved no-op, the Phase 84 migration variables, the Phase 85 scenario variables, and
+the production-named URL variables — remains refused.
+
+**No removal path, by design.** The runtime role holds no `DELETE`. The record is durable, no
+cleanup was attempted or built, and a correction means a new engagement id rather than a rewrite.
+Removing it would require the migration credential — a separate approval and a separate risk, not
+authorized here.
+
+**Production is unchanged.** The Phase 51 gate is byte-identical and its output is byte-identical
+with the bootstrap variables set. **No secret, DSN, host, port, certificate path, query parameter,
+environment value, or row body appears in any output or in this repository.** See
+[`PHASE90_LAB_ENGAGEMENT_ANCHOR_BOOTSTRAP.md`](PHASE90_LAB_ENGAGEMENT_ANCHOR_BOOTSTRAP.md).

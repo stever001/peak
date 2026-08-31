@@ -2807,6 +2807,33 @@ invoked, no record created, no database contacted, no production access):**
   idempotency keys, the expected receipts, the verification plan, and the cleanup posture —
   decided before the write, given the runtime role has no removal path.
 
+**The lab engagement anchor bootstrap (Phase 90 — one durable lab record; no production access, no
+migration, no other writer):**
+
+- [x] **The anchor writer is lab-enabled for bootstrap only.** A second confirmation,
+  `PEAK_LAB_ENGAGEMENT_ANCHOR_BOOTSTRAP_CONFIRM=1`, plus every Phase 89 check, plus the anchor as
+  the **only** requested target. The pair stays out of `LAB_ENABLEABLE_WRITER_TARGETS`, so no
+  ordinary lab request can reach it, and a request mixing it with data targets denies whole.
+- [x] **One record exists in `peak_lab`**: `engagements` row `lab_internal_test_001`,
+  `engagement_category=internal_test`, `real_client_data=false`, `client_accessible=false`,
+  `capsule_publication_authorized=false`. Before: 0 application rows across all 18 controlled
+  tables. After: **1**, in `engagements` only. Head stays `014_engagement_classification`.
+- [x] **Idempotency exercised, not asserted.** A second run returned `idempotent_replay` with
+  `database_write_made=false`, and the table still holds exactly one row.
+- [x] **Two contract corrections came from the writer, not the plan.** The planned
+  `authorization_scope=internal_peak_lab_only` is not a member of the closed `AuthorizationScope`
+  vocabulary and was refused **before any connection opened**; the canonical `internal_peak_only`
+  was used. `capsule_publication_authorized` is false here, more conservative than Phase 59.
+- [ ] **Open: the dry-run governance pre-check is weaker than the writer boundary.** It passed the
+  invalid scope the writer then refused. Nothing was written and defence in depth held, but a green
+  dry-run must not be read as proof a write will be accepted.
+- [ ] **Open: `peak_lab` is no longer empty.** "0 application rows" was a standing safety assertion
+  for every prior lab phase and is now false by design. Future verifiers must expect exactly one
+  `engagements` row and must not read it as drift.
+- [ ] **Next: lab source-ingestion, evidence and review writes remain unauthorized.** The three
+  Phase 89 pairs are *enableable*; that is not approval to run them. Each needs its own phase naming
+  writer, records, expected count, scope, idempotency keys, receipts, verification and durability.
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

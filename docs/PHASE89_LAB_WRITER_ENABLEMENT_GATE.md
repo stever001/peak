@@ -246,3 +246,26 @@ unapproved decision** that this gate does not touch.
 6. **`PEAK_WRITER_TARGET` is a new general-purpose name.** It currently accepts `lab` and refuses
    everything else including `production`. If a later phase gives it a production meaning, the
    refusal in this module must be revisited deliberately rather than relaxed in passing.
+
+---
+
+## 12. Superseded in part by Phase 90
+
+[`PHASE90_LAB_ENGAGEMENT_ANCHOR_BOOTSTRAP.md`](PHASE90_LAB_ENGAGEMENT_ANCHOR_BOOTSTRAP.md) acted on
+§11.1 above — the warning that the anchor exclusion would block the first rehearsal. It did.
+
+**What changed.** The engagement authorization anchor pair moved out of `NEVER_LAB_ENABLEABLE` into
+its own **bootstrap branch**, reachable only with a second confirmation
+(`PEAK_LAB_ENGAGEMENT_ANCHOR_BOOTSTRAP_CONFIRM=1`), every Phase 89 check still applying, and the
+anchor as the **only** requested target.
+
+**What did not change.** The anchor is still **absent** from `LAB_ENABLEABLE_WRITER_TARGETS`, so it
+is still not generally lab-enableable — the invariant this document's §5 was really asserting. The
+three data-record pairs behave exactly as described here and need no bootstrap confirmation.
+`clients/create_draft` remains the sole member of `NEVER_LAB_ENABLEABLE`. No `update_*` or `mark_*`
+action is enableable. Every refused authorizer in §3 remains refused. **Production remains denied on
+every path and the production gate remains byte-identical.**
+
+The Phase 89 harness assertion that named the anchor in `NEVER_LAB_ENABLEABLE` was updated to the
+durable form: **the anchor is not generally lab-enableable**.
+

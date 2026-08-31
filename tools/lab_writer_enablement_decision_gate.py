@@ -27,7 +27,15 @@ expected receipts, and the post-write verification before anything is written.
 ``PEAK_LAB_WRITER_ENABLEMENT_CONFIRM=1``    required; the exact string ``1`` and nothing else
 ``PEAK_LAB_WRITER_TARGET_URL``              the lab writer DSN; parsed for *shape* only
 ``PEAK_LAB_WRITER_TARGETS``                 comma-separated ``table/action`` requests
+``PEAK_LAB_ENGAGEMENT_ANCHOR_BOOTSTRAP_CONFIRM=1``  extra; required *only* for the anchor bootstrap
 ==========================================  ================================================
+
+**The anchor bootstrap (Phase 90).** Phase 89 refused the engagement authorization anchor writer
+outright, which was safe but left a lab rehearsal with nothing to hang records from. It is now
+reachable through a **separate branch**, never by widening the ordinary path: the anchor pair is
+still absent from ``LAB_ENABLEABLE_WRITER_TARGETS``, must be requested **alone**, and needs a
+second confirmation that names this writer specifically. Bootstrapping an identity/root record and
+writing data records stay different authorities, so one confirmation cannot carry both.
 
 ``PEAK_LAB_CONFIRM`` is deliberately not used — Phase 82 published it as a reserved no-op, and a
 gate must not share a name with something documented as doing nothing. The Phase 84 migration
@@ -65,6 +73,7 @@ TARGET_ENV = "PEAK_WRITER_TARGET"
 LAB_CONFIRM_ENV = "PEAK_LAB_WRITER_ENABLEMENT_CONFIRM"
 LAB_URL_ENV = "PEAK_LAB_WRITER_TARGET_URL"
 LAB_TARGETS_ENV = "PEAK_LAB_WRITER_TARGETS"
+ANCHOR_BOOTSTRAP_CONFIRM_ENV = "PEAK_LAB_ENGAGEMENT_ANCHOR_BOOTSTRAP_CONFIRM"
 
 TARGET_LAB = "lab"
 TARGET_PRODUCTION = "production"
@@ -113,16 +122,23 @@ LAB_ENABLEABLE_WRITER_TARGETS = frozenset({
     ("review_records", "create_review_record"),
 })
 
-#: Never enableable here, whatever is requested — stated explicitly so the exclusion is testable
-#: rather than merely implied by absence from the set above.
+#: The engagement authorization anchor. Phase 89 refused it outright. Phase 90 admits it through a
+#: **separate bootstrap branch only** — it is deliberately still absent from
+#: ``LAB_ENABLEABLE_WRITER_TARGETS`` above, so it can never be granted by the ordinary lab path,
+#: and reaching it needs a second confirmation naming this writer specifically. A lab rehearsal
+#: needs an anchor to hang records from; that is a bootstrap, not general writer authority.
+ANCHOR_BOOTSTRAP_PAIR = ("engagements", "create_engagement_authorization_anchor")
+
+#: Never enableable here on any path, bootstrap included — stated explicitly so the exclusion is
+#: testable rather than merely implied by absence from the sets above.
 NEVER_LAB_ENABLEABLE = frozenset({
-    ("engagements", "create_engagement_authorization_anchor"),
     ("clients", "create_draft"),
 })
 
 # --- outcomes and reason codes -------------------------------------------------------------
 
 OUTCOME_LAB_AUTHORIZED = "lab_write_authorized"
+OUTCOME_ANCHOR_BOOTSTRAP = "lab_anchor_bootstrap_authorized"
 OUTCOME_DENIED = "denied"
 
 REASON_OK = "lab_target_confirmed_and_scoped"
@@ -140,6 +156,9 @@ REASON_USER_NOT_APPROVED = "lab_target_user_not_an_approved_lab_writer_role"
 REASON_NO_TARGETS = "no_writer_target_requested"
 REASON_TARGET_NOT_ENABLEABLE = "writer_target_not_lab_enableable"
 REASON_TARGET_NEVER_ENABLEABLE = "writer_target_never_lab_enableable"
+REASON_ANCHOR_OK = "lab_anchor_bootstrap_confirmed_and_scoped"
+REASON_ANCHOR_NO_BOOTSTRAP_CONFIRM = "anchor_bootstrap_confirmation_absent_or_not_exact_value"
+REASON_ANCHOR_NOT_SOLE_TARGET = "anchor_bootstrap_must_be_the_only_requested_target"
 
 FIELDS = (
     "lab_writer_gate_version",
@@ -149,6 +168,7 @@ FIELDS = (
     "lab_write_authorized",
     "authorized_writer_targets",
     "requested_writer_targets",
+    "anchor_bootstrap_authorized",
     "target_user_class",
     "target_schema_class",
     # Production axis — structurally false on every path this module can take.
@@ -203,7 +223,8 @@ def _deny(reason: str, target: str, requested: Sequence, user_class: str = "not_
 
 
 def _record(outcome: str, reason: str, authorized: bool, authorized_targets: Sequence,
-            target: str, requested: Sequence, user_class: str, schema_class: str) -> dict:
+            target: str, requested: Sequence, user_class: str, schema_class: str,
+            anchor_bootstrap: bool = False) -> dict:
     return {
         "lab_writer_gate_version": LAB_WRITER_GATE_VERSION,
         "writer_target": target or "unset",
@@ -212,6 +233,7 @@ def _record(outcome: str, reason: str, authorized: bool, authorized_targets: Seq
         "lab_write_authorized": bool(authorized),
         "authorized_writer_targets": [f"{t}/{a}" for t, a in sorted(authorized_targets)],
         "requested_writer_targets": [f"{t}/{a}" for t, a in sorted(requested)],
+        "anchor_bootstrap_authorized": bool(anchor_bootstrap),
         "target_user_class": user_class,
         "target_schema_class": schema_class,
         # Hardcoded. No argument, variable, or branch reaches these as True.
@@ -278,8 +300,26 @@ def evaluate(env: Mapping[str, str]) -> dict:
 
     if not requested:
         return _deny(REASON_NO_TARGETS, target, requested, user_class, schema_class)
+    # Never-enableable pairs are refused first, so no later branch — bootstrap included — can
+    # reach them.
     if any(pair in NEVER_LAB_ENABLEABLE for pair in requested):
         return _deny(REASON_TARGET_NEVER_ENABLEABLE, target, requested, user_class, schema_class)
+
+    # The anchor bootstrap branch. It is deliberately separate from the ordinary lab path and
+    # cannot be reached by widening it: the anchor pair is not in LAB_ENABLEABLE_WRITER_TARGETS,
+    # so the only way here is to ask for the anchor *alone* and confirm it *specifically*.
+    if ANCHOR_BOOTSTRAP_PAIR in requested:
+        if set(requested) != {ANCHOR_BOOTSTRAP_PAIR}:
+            # Bootstrapping an identity/root record and writing data records are different
+            # authorities; bundling them would let one confirmation carry both.
+            return _deny(REASON_ANCHOR_NOT_SOLE_TARGET, target, requested,
+                         user_class, schema_class)
+        if (env.get(ANCHOR_BOOTSTRAP_CONFIRM_ENV) or "") != CONFIRM_VALUE:
+            return _deny(REASON_ANCHOR_NO_BOOTSTRAP_CONFIRM, target, requested,
+                         user_class, schema_class)
+        return _record(OUTCOME_ANCHOR_BOOTSTRAP, REASON_ANCHOR_OK, True, requested,
+                       target, requested, user_class, schema_class, anchor_bootstrap=True)
+
     if not set(requested) <= LAB_ENABLEABLE_WRITER_TARGETS:
         return _deny(REASON_TARGET_NOT_ENABLEABLE, target, requested, user_class, schema_class)
 
@@ -311,8 +351,18 @@ def is_consistent(decision: Mapping[str, object]) -> bool:
         return False
     if not authorized and granted:
         return False
+    bootstrap = decision["anchor_bootstrap_authorized"]
+    # The anchor pair may appear in a grant only on the bootstrap outcome, and then only alone.
+    if bootstrap:
+        if decision["outcome"] != OUTCOME_ANCHOR_BOOTSTRAP:
+            return False
+        if granted != [f"{ANCHOR_BOOTSTRAP_PAIR[0]}/{ANCHOR_BOOTSTRAP_PAIR[1]}"]:
+            return False
+        return True
     for item in granted:
         table, _, action = item.partition("/")
+        if (table, action) in NEVER_LAB_ENABLEABLE:
+            return False
         if (table, action) not in LAB_ENABLEABLE_WRITER_TARGETS:
             return False
     return True
@@ -389,9 +439,52 @@ _CASES = (
      {TARGET_ENV: "lab", LAB_CONFIRM_ENV: "1", LAB_URL_ENV: _LAB_OK,
       LAB_TARGETS_ENV: "intake_note_records/create_intake_note_record"},
      False, REASON_TARGET_NOT_ENABLEABLE),
-    ("the engagement anchor pair is never enableable here",
+    ("the anchor pair alone, without the bootstrap confirmation, denies",
      {TARGET_ENV: "lab", LAB_CONFIRM_ENV: "1", LAB_URL_ENV: _LAB_OK,
       LAB_TARGETS_ENV: "engagements/create_engagement_authorization_anchor"},
+     False, REASON_ANCHOR_NO_BOOTSTRAP_CONFIRM),
+    ("the anchor bootstrap confirmation accepts only the exact value 1",
+     {TARGET_ENV: "lab", LAB_CONFIRM_ENV: "1", LAB_URL_ENV: _LAB_OK,
+      ANCHOR_BOOTSTRAP_CONFIRM_ENV: "true",
+      LAB_TARGETS_ENV: "engagements/create_engagement_authorization_anchor"},
+     False, REASON_ANCHOR_NO_BOOTSTRAP_CONFIRM),
+    ("the anchor bootstrap cannot be mixed with a data-record target",
+     {TARGET_ENV: "lab", LAB_CONFIRM_ENV: "1", LAB_URL_ENV: _LAB_OK,
+      ANCHOR_BOOTSTRAP_CONFIRM_ENV: "1",
+      LAB_TARGETS_ENV: ("engagements/create_engagement_authorization_anchor,"
+                        "review_records/create_review_record")},
+     False, REASON_ANCHOR_NOT_SOLE_TARGET),
+    ("the anchor bootstrap still requires the ordinary lab confirmation",
+     {TARGET_ENV: "lab", LAB_URL_ENV: _LAB_OK, ANCHOR_BOOTSTRAP_CONFIRM_ENV: "1",
+      LAB_TARGETS_ENV: "engagements/create_engagement_authorization_anchor"},
+     False, REASON_NO_CONFIRM),
+    ("the anchor bootstrap still requires the exact peak_lab schema",
+     {TARGET_ENV: "lab", LAB_CONFIRM_ENV: "1", ANCHOR_BOOTSTRAP_CONFIRM_ENV: "1",
+      LAB_URL_ENV: "mysql+pymysql://peak_lab_runtime:x@h.invalid:3306/peak_lab_scenario",
+      LAB_TARGETS_ENV: "engagements/create_engagement_authorization_anchor"},
+     False, REASON_SCHEMA_SCENARIO),
+    ("the anchor bootstrap still refuses a production-marked schema",
+     {TARGET_ENV: "lab", LAB_CONFIRM_ENV: "1", ANCHOR_BOOTSTRAP_CONFIRM_ENV: "1",
+      LAB_URL_ENV: "mysql+pymysql://peak_lab_runtime:x@h.invalid:3306/peak_production",
+      LAB_TARGETS_ENV: "engagements/create_engagement_authorization_anchor"},
+     False, REASON_SCHEMA_PRODUCTION),
+    ("the anchor bootstrap still refuses an unapproved role",
+     {TARGET_ENV: "lab", LAB_CONFIRM_ENV: "1", ANCHOR_BOOTSTRAP_CONFIRM_ENV: "1",
+      LAB_URL_ENV: "mysql+pymysql://peak_lab_migrate:x@h.invalid:3306/peak_lab",
+      LAB_TARGETS_ENV: "engagements/create_engagement_authorization_anchor"},
+     False, REASON_USER_NOT_APPROVED),
+    ("a complete, correctly scoped anchor bootstrap is authorized",
+     {TARGET_ENV: "lab", LAB_CONFIRM_ENV: "1", ANCHOR_BOOTSTRAP_CONFIRM_ENV: "1",
+      LAB_URL_ENV: _LAB_OK,
+      LAB_TARGETS_ENV: "engagements/create_engagement_authorization_anchor"},
+     True, REASON_ANCHOR_OK),
+    ("the bootstrap confirmation does not enable ordinary data-record targets on its own",
+     {TARGET_ENV: "lab", ANCHOR_BOOTSTRAP_CONFIRM_ENV: "1", LAB_URL_ENV: _LAB_OK,
+      LAB_TARGETS_ENV: "review_records/create_review_record"},
+     False, REASON_NO_CONFIRM),
+    ("clients remains never enableable even with the bootstrap confirmation",
+     {TARGET_ENV: "lab", LAB_CONFIRM_ENV: "1", ANCHOR_BOOTSTRAP_CONFIRM_ENV: "1",
+      LAB_URL_ENV: _LAB_OK, LAB_TARGETS_ENV: "clients/create_draft"},
      False, REASON_TARGET_NEVER_ENABLEABLE),
     ("one enableable target inside a mixed request still denies the whole request",
      {TARGET_ENV: "lab", LAB_CONFIRM_ENV: "1", LAB_URL_ENV: _LAB_OK,
@@ -432,6 +525,23 @@ def self_test() -> int:
     failures += (not implies)
     print(f"  [{'PASS' if implies else 'FAIL'}] lab authorization does not imply production "
           f"authorization")
+
+    # The anchor bootstrap must not leak into the ordinary enableable set.
+    ok = ANCHOR_BOOTSTRAP_PAIR not in LAB_ENABLEABLE_WRITER_TARGETS
+    failures += (not ok)
+    print(f"  [{'PASS' if ok else 'FAIL'}] the anchor pair is not in the ordinary enableable set")
+
+    d = evaluate({TARGET_ENV: "lab", LAB_CONFIRM_ENV: "1", ANCHOR_BOOTSTRAP_CONFIRM_ENV: "1",
+                  LAB_URL_ENV: _LAB_OK,
+                  LAB_TARGETS_ENV: "engagements/create_engagement_authorization_anchor"})
+    ok = (d["anchor_bootstrap_authorized"] is True
+          and d["safe_to_write_production_now"] is False
+          and d["production_write_authorized"] is False
+          and d["authorized_writer_targets"] == [
+              "engagements/create_engagement_authorization_anchor"])
+    failures += (not ok)
+    print(f"  [{'PASS' if ok else 'FAIL'}] an authorized anchor bootstrap grants only the anchor "
+          f"and leaves production denied")
 
     # No rejected authorizer may substitute for the real confirmation.
     for var in REJECTED_AUTHORIZER_ENVS:
