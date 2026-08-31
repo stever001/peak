@@ -2745,6 +2745,33 @@ access, no live migration, no `015`, no writer, no Peak record):**
   gate stays environment-blind with every authorization hardcoded `false`, and writers stay create-only.
 - [ ] **All Phase 83 §7 open items remain open**, and Phase 85 closes none of them.
 
+**The read-only lab scenario measurement pass (Phase 88 — lab-only, `SELECT` only; no Peak record,
+no writer, no production access, no schema change):**
+
+- [x] **The seeded scenario was measured repeatably from the read-only scenario credential.** The
+  content hash matches the Phase 85 published value, **all 33 stored control totals were independently
+  recomputed from the rows and agreed**, and both referential checks held. Five write attempts were
+  issued as a deliberate negative control and **all five were refused by the server**, proving the
+  read-only posture by measurement rather than by grant text.
+- [x] **Aggregate coverage now exists for R1, R2, R5, R8, R9 and derived R10.** Every domain measures
+  **partial** — the scenario behaving as designed, since a dataset in which everything resolved could
+  not demonstrate that a readiness check works. Headline figures: inventory SKU attribution
+  unblocked (32/32) but only **43.8% of rows fully location-attributable**; 9 of 16 locations
+  structurally complete; **4 of 10 authority domains resolved**; 3 of 7 putaway events usable.
+- [x] **One design input for the next phase.** A presence-only item-master readiness rule
+  **over-counts usable items by 1 in 10**: `ambiguous` encodes a semantic conflict, not a missing
+  value. A future readiness rule must consult the completeness classification, not attribute
+  presence alone. See [`PHASE88_LAB_SCENARIO_MEASUREMENT.md`](PHASE88_LAB_SCENARIO_MEASUREMENT.md) §4.2.
+- [x] **`peak_lab` re-verified unchanged** — 18 controlled tables, head `014_engagement_classification`,
+  **0 application rows**. `peak_lab_scenario` unchanged at 120 rows.
+- [ ] **Open: the Phase 82 §3 variable-naming seam was encountered directly.** The lab read-only
+  credential file sets a **production-named variable** while pointing at the lab schema. Phase 88
+  guarded against it by asserting the target database and role **before** connecting, but the seam
+  remains a standing trap for any tool that reads a variable name as an environment label.
+- [ ] **Next: creating Peak records from these measurements remains unauthorized.** A future phase may
+  propose it under its own approval, naming writer, table, action, scope, idempotency key and cleanup
+  posture in advance. **Writer enablement remains separately unauthorized.**
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

@@ -1331,3 +1331,26 @@ controlled table, invoked no writer, created no Peak record, and made no product
 was re-verified afterwards at head `014_engagement_classification` with **0 application rows across all
 18 controlled tables**. **No scenario row body is committed.** See
 [`PHASE85_PEAK_LAB_SCENARIO_SEEDING.md`](PHASE85_PEAK_LAB_SCENARIO_SEEDING.md).
+
+---
+
+## Phase 88 — the scenario measured read-only, and found repeatably measurable
+
+Phase 88 read `peak_lab_scenario` and confirmed it is **unchanged since seeding and repeatably
+measurable**: the 8 expected tables present with **no `alembic_version` table**, 120 rows, the
+content hash matching the Phase 85 published value, **all 33 stored control totals independently
+recomputed from the rows and agreeing**, and both referential checks holding — every inventory row
+resolves to an item-master row, and no row flagged location-resolvable is in fact unresolvable.
+
+Aggregate coverage was computed for R1, R2, R5, R8, R9 and derived R10. **Every domain measures
+partial**, which is the mixed dataset behaving as designed. One finding is a design input for any
+future readiness rule: **a presence-only item-master check over-counts usable items by 1 in 10**,
+because `ambiguous` encodes a semantic conflict rather than a missing value, so attribute presence
+alone cannot detect it.
+
+**Phase 88 created no migration `015`, ran no live Alembic migration, wrote nothing to
+`peak_lab_scenario` or to any `peak_lab` controlled table, invoked no writer, created no Peak record,
+and made no production access.** `peak_lab` was re-verified afterwards at head
+`014_engagement_classification` with **0 application rows across all 18 controlled tables**. **No
+scenario row body is committed** — this phase's record carries aggregates only. See
+[`PHASE88_LAB_SCENARIO_MEASUREMENT.md`](PHASE88_LAB_SCENARIO_MEASUREMENT.md).

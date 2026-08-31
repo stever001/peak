@@ -8,10 +8,10 @@ replacement for the detailed records it points at.
 | Source | What it holds |
 |---|---|
 | [`README.md`](../README.md) | Project overview, plus narrative sections for **Phases 11–44** |
-| [`docs/IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md) | The evolving implementation roadmap and the long-form running record for **Phases 11–85** |
-| `docs/PHASE##_*.md` | Dedicated per-phase records, present from **Phase 45 onward** |
+| [`docs/IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md) | The evolving implementation roadmap and the long-form running record for **Phases 11–85**, plus a Phase 88 pointer |
+| `docs/PHASE##_*.md` | Dedicated per-phase records, present from **Phase 45 onward** (Phases 52, 86 and 87 excepted) |
 | Commit history | The primary record for **Phases 1–10** and for code-only maintenance phases |
-| This index | The single entry point covering **Phases 1–86** and the convention for future phases |
+| This index | The single entry point covering **Phases 1–88** and the convention for future phases |
 
 Two navigation traps are worth knowing before reading the plan:
 
@@ -140,6 +140,8 @@ Phase 44**; this table is the entry point for everything after it.
 | 84 | Fixing the Alembic lab/production target guard | [`PHASE84_ALEMBIC_TARGET_GUARD_FIX.md`](PHASE84_ALEMBIC_TARGET_GUARD_FIX.md) | Source-only guard fix; commit `3892693` does not carry the phase number |
 | 85 | Creating and seeding the lab scenario source-system schema | [`PHASE85_PEAK_LAB_SCENARIO_SEEDING.md`](PHASE85_PEAK_LAB_SCENARIO_SEEDING.md) | Lab only |
 | 86 | Swept expiring baseline-window validation checks and converted them to durable git ancestry checks | **No dedicated phase doc** (code-only maintenance); commit `ddade90`; the 22 harnesses under [`tests/`](../tests/) | Converted 22 checks across two families; Phase 47's earlier fix (`0301977`) set the pattern |
+| 87 | Added this phase index and reader navigation | **No dedicated phase doc** (docs-only); commit `fc943f5`; this file | Closed the post-Phase-44 discoverability gap in `README.md` |
+| 88 | Read-only measurement pass over the seeded lab scenario, establishing evidence-readiness coverage for R1/R2/R5/R8/R9/R10 | [`PHASE88_LAB_SCENARIO_MEASUREMENT.md`](PHASE88_LAB_SCENARIO_MEASUREMENT.md) | Lab-only, `SELECT` only; no Peak record created, no writer invoked, no production access |
 
 ### Phases without a dedicated phase doc
 
@@ -147,10 +149,11 @@ Phase 44**; this table is the entry point for everything after it.
   produced.
 - **Phase 52** — the implementation plan records it as "Phase 52A"; there is no `PHASE52_*.md`.
 - **Phase 86** — code-only validation maintenance, indexed here under the convention above.
+- **Phase 87** — docs-only navigation work; this file is its record.
 
 ## Current baseline
 
-As of Phase 86 (`ddade90` — *Sweep expiring baseline ancestry checks*):
+As of Phase 88 (baseline `fc943f5` — *Add phase index and reader navigation*):
 
 | Property | Value |
 |---|---|
@@ -160,6 +163,12 @@ As of Phase 86 (`ddade90` — *Sweep expiring baseline ancestry checks*):
 | Controlled writers | 12 |
 | Migration 015 | Does not exist |
 | Production write enablement | None standing |
+| `peak_lab` controlled tables | 18, head `014_engagement_classification`, **0 application rows** |
+| `peak_lab_scenario` | seeded, 120 rows, content hash re-verified in Phase 88 |
+
+Phases 87 and 88 changed no migration, table, or writer, so the first six values are unchanged
+since Phase 86. **Any later phase that changes the schema, writer count, or baseline commit must
+refresh this block.**
 
 ## Future phase convention
 

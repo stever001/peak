@@ -308,3 +308,24 @@ phase still requires its own separate approval**, and two constraints carry forw
 
 **Measured values obtained against this scenario are lab-scenario values.** They are not client
 evidence, they do not support a finding, and they must never be presented as either.
+
+---
+
+## 12. Measured in Phase 88
+
+[`PHASE88_LAB_SCENARIO_MEASUREMENT.md`](PHASE88_LAB_SCENARIO_MEASUREMENT.md) performed the first
+read-only measurement pass over this scenario, under the read-only credential, `SELECT` only.
+
+It confirmed the scenario is **unchanged and repeatably measurable**: content hash matching, **all 33
+control totals independently recomputed from the rows**, both referential checks holding, and the
+read-only posture proven by five deliberately refused write attempts rather than by grant text alone.
+
+Aggregate coverage was produced for R1, R2, R5, R8, R9 and derived R10; **every domain measures
+partial**, exactly as the mixed dataset was designed to produce. The §3 seeded defects are all
+detectable by measurement, including the unit-of-measure conflict and the putaway-precedes-receipt
+ordering error.
+
+**Phase 88 wrote nothing here, created no Peak record, invoked no writer, and made no production
+access.** The constraints in §11 carry forward unchanged: measured values are **lab-scenario values,
+never client evidence and never a finding**, and creating Peak records from them remains separately
+unauthorized.

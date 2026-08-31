@@ -1640,3 +1640,41 @@ was re-verified afterwards at head `014_engagement_classification`, `alembic_ver
 application rows across all 18 controlled tables**. **No scenario row body, secret, DSN, host, port,
 service URI, provider name, certificate path, environment value, or local secret path is committed.**
 See [`PHASE85_PEAK_LAB_SCENARIO_SEEDING.md`](PHASE85_PEAK_LAB_SCENARIO_SEEDING.md).
+
+---
+
+## Phase 88 — the scenario read-only credential, exercised and proven read-only
+
+Phase 88 measured `peak_lab_scenario` under **`peak_lab_scenario_ro`**, the read-only role Phase 85
+created. **Every statement was a `SELECT`.**
+
+Before connecting, **seventeen value-free structural checks** passed against the environment file:
+existence, mode `600`, exactly one variable, the expected variable name, a single-quoted value, the
+expected scheme, the expected role, the expected target database, and the *presence* — never the
+content — of password, host, port and certificate path. The target was confirmed to be neither the
+controlled lab schema, nor the platform default schema, nor anything carrying a production marker.
+**No value was printed, echoed, or logged.**
+
+Privileges were then read back **as the credential itself**: global `USAGE` only, **exactly one**
+database-level grant (`SELECT`, on the scenario schema), **no `GRANT OPTION`**, no grant naming the
+controlled schema, and **zero controlled-schema tables visible**.
+
+**Five write attempts were issued deliberately as a negative control** — `INSERT`, `UPDATE`,
+`DELETE`, `CREATE TABLE`, `DROP TABLE` — and **all five were refused by the server** with a
+permission error. Read-only posture is therefore established **by measurement, not by grant text
+alone**. Nothing was created or removed; each statement was rejected before execution. This is
+recorded here so that a reader of the server's audit log finds the explanation rather than an
+unexplained set of denied statements.
+
+**The Phase 82 §3 seam was encountered directly.** The lab read-only credential file sets a
+**production-named variable** while pointing at the lab schema. Phase 88 guarded against it by
+asserting the target database and role name **before** opening the connection rather than trusting
+the variable name. Nothing was changed; the seam remains a standing trap for any tool or operator
+that reads a variable name as an environment label.
+
+**Phase 88 made no production access, ran no live Alembic migration, created no migration `015`,
+wrote nothing to `peak_lab` or `peak_lab_scenario`, invoked no writer, and created no Peak record.**
+`peak_lab` was re-verified under its own read-only credential at head `014_engagement_classification`
+with **0 application rows across all 18 controlled tables**. **No row body, secret, DSN, host, port,
+service URI, provider name, certificate path, environment value, or local secret path is committed.**
+See [`PHASE88_LAB_SCENARIO_MEASUREMENT.md`](PHASE88_LAB_SCENARIO_MEASUREMENT.md).
