@@ -11,7 +11,7 @@ replacement for the detailed records it points at.
 | [`docs/IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md) | The evolving implementation roadmap and the long-form running record for **Phases 11–85**, plus a Phase 88 pointer |
 | `docs/PHASE##_*.md` | Dedicated per-phase records, present from **Phase 45 onward** (Phases 52, 86 and 87 excepted) |
 | Commit history | The primary record for **Phases 1–10** and for code-only maintenance phases |
-| This index | The single entry point covering **Phases 1–94** and the convention for future phases |
+| This index | The single entry point covering **Phases 1–95** and the convention for future phases |
 
 Two navigation traps are worth knowing before reading the plan:
 
@@ -148,6 +148,7 @@ Phase 44**; this table is the entry point for everything after it.
 | 92 | First controlled lab source-ingestion write, derived from the Phase 88 measurement | [`PHASE92_FIRST_LAB_SOURCE_INGESTION_WRITE.md`](PHASE92_FIRST_LAB_SOURCE_INGESTION_WRITE.md) | **One durable lab `source_ingestion_records` row created**; Phase 89 gate used as-is; no new harness; production enablement unchanged and still false |
 | 93 | First controlled lab evidence reference, derived from the Phase 92 source-ingestion record | [`PHASE93_FIRST_LAB_EVIDENCE_REFERENCE.md`](PHASE93_FIRST_LAB_EVIDENCE_REFERENCE.md) | **One durable lab `evidence_references` row created**; Phase 89 gate used as-is; no new harness; claim bounded to source availability; production enablement unchanged and still false |
 | 94 | First controlled lab review record, an internal decision on the Phase 93 evidence reference | [`PHASE94_FIRST_LAB_REVIEW_RECORD.md`](PHASE94_FIRST_LAB_REVIEW_RECORD.md) | **One durable lab `review_records` row created**; `approve_internal` with `authoritative=false`; reviewed target not mutated; Phase 89 gate used as-is; no new harness |
+| 95 | Minimal internal lab assessment draft from the completed depth-one lab chain | [`PHASE95_MINIMAL_INTERNAL_LAB_ASSESSMENT_DRAFT.md`](PHASE95_MINIMAL_INTERNAL_LAB_ASSESSMENT_DRAFT.md) | **Docs-only**; no writer invoked, no record created, no database contacted; report-draft writer verified as refused by the lab gate; `peak_lab` unchanged at 4 application rows |
 
 ### Phases without a dedicated phase doc
 
@@ -159,8 +160,8 @@ Phase 44**; this table is the entry point for everything after it.
 
 ## Current baseline
 
-As of Phase 94, whose baseline is the committed Phase 93 commit `9bdbbda` — *Document Phase 93 lab
-evidence reference*:
+As of Phase 95, whose baseline is the committed Phase 94 commit `a435772` — *Document Phase 94 lab
+review record*. Phase 95 is docs-only and changed none of these values:
 
 | Property | Value |
 |---|---|
@@ -174,7 +175,7 @@ evidence reference*:
 | `peak_lab` controlled tables | 18, head `014_engagement_classification`, **4 application rows** (the Phase 90 `engagements` anchor, the Phase 92 `source_ingestion_records` row, the Phase 93 `evidence_references` row, and the Phase 94 `review_records` row) |
 | `peak_lab_scenario` | seeded, 120 rows, content hash re-verified in Phase 88 |
 
-Phases 87–94 changed no migration, table, or writer, so the first six values are unchanged since
+Phases 87–95 changed no migration, table, or writer, so the first six values are unchanged since
 Phase 86. **Phase 90 changed the `peak_lab` row count**: it is no longer empty, and "0 application
 rows" is no longer a valid safety assertion against the lab. **Any later phase that changes the schema, writer count, or baseline commit must
 refresh this block.**

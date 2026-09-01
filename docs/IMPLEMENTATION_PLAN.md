@@ -2983,6 +2983,38 @@ migration, no schema change, no new harness):**
 Full record: [`PHASE94_FIRST_LAB_REVIEW_RECORD.md`](PHASE94_FIRST_LAB_REVIEW_RECORD.md).
 
 
+**The minimal internal lab assessment draft (Phase 95 — docs-only; no writer, no record, no
+database contact, no schema change, no new harness):**
+
+- [x] **The depth-one chain is sufficient for a docs-only internal assessment, and only that.** The
+  Phase 88 measurement was carried through source ingestion, evidence reference, and review decision,
+  and the narrow claim boundary survived all three hand-offs without widening — the most useful thing
+  the chain demonstrated.
+- [x] **A database-backed report draft was refused, and the refusal was verified rather than
+  assumed.** Evaluating the Phase 89 gate against
+  `internal_assessment_report_drafts/create_internal_assessment_report_draft` returns `denied` /
+  `writer_target_not_lab_enableable`, while a control pair authorizes in the same run. The gate's
+  enableable set is exactly the three data-record pairs already exercised; a report draft needs its
+  own authorization phase, which this phase did not open.
+- [x] **Findings are grounded in Phase 88, not invented.** Content hash matched and all 32 stored
+  counts/sums recomputed with 0 mismatches; five deliberate write attempts were all refused; every
+  measured dimension is *partial* by design; location attribution rather than SKU attribution is the
+  R1 constraint; a presence-only readiness rule would over-count usable items by 1 in 10; the R5
+  population is small enough that conclusions are directional even within the lab.
+- [ ] **Open, and the most consequential finding: the chain's review record is invisible to the
+  report planner.** The Phase 36 planner reads six reference categories, and `review_records` is not
+  one of them — it recognises `review_bundle_records` and `internal_reviewer_decision_records`
+  instead. Of its 14 sections the depth-one chain supplies references for 6, 3 need none, and 5 are
+  blocked. Neither review-bundle nor reviewer-decision writers are lab-enabled.
+- [ ] **Next: a deliberate breadth decision, not another default guardrail phase.** Either a second
+  evidence reference from a distinct Phase 88 dimension on the existing source-ingestion record — the
+  smaller step, answering the narrower question — or a second full chain on a different measurement
+  basis. Phase 95 performs neither; both need their own approval. If a richer assessment is meant to
+  use the existing planner, the gap is the record types the planner reads, not more evidence.
+
+Full record: [`PHASE95_MINIMAL_INTERNAL_LAB_ASSESSMENT_DRAFT.md`](PHASE95_MINIMAL_INTERNAL_LAB_ASSESSMENT_DRAFT.md).
+
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing
