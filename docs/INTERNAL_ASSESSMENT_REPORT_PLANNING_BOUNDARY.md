@@ -67,6 +67,7 @@ connection, makes no network call, and reads no database — every reference is 
 | `agent_task_queue_record_ids` | → `agent_task_queue_records` |
 | `review_bundle_record_ids` | → `review_bundle_records` |
 | `internal_reviewer_decision_record_ids` | → `internal_reviewer_decision_records` |
+| `review_record_ids` | → `review_records` (Phase 96) |
 | `workflow_id`, `managed_record_workflow_ref` | optional Phase 35 provenance |
 | `requested_sections` | optional; empty means all supported sections |
 | `report_purpose` | optional short safe internal label |
@@ -102,10 +103,26 @@ caller's order):
 | 7 | `process_improvement_candidates` | `evidence_reference_ids` |
 | 8 | `system_data_readiness` | `source_ingestion_refs` |
 | 9 | `ai_agent_readiness` | `agent_task_queue_record_ids` |
-| 10 | `internal_recommendations` | `internal_reviewer_decision_record_ids`, `review_bundle_record_ids` |
+| 10 | `internal_recommendations` | `internal_reviewer_decision_record_ids`, `review_bundle_record_ids`† |
 | 11 | `evidence_gaps` | *(synthesis)* |
-| 12 | `review_status` | `review_bundle_record_ids` |
+| 12 | `review_status` | `review_bundle_record_ids`† |
 | 13 | `next_steps_internal` | *(synthesis)* |
+
+† **Review support is interchangeable (Phase 96).** `REF_CATEGORY_ALTERNATIVES` declares
+`review_record_ids` equally satisfying wherever `review_bundle_record_ids` is required, and
+`REVIEW_SUPPORT_CATEGORIES` names both in canonical order. The same applies to the review support a
+finding or recommendation candidate needs. Nothing was removed: the `review_bundle_records` and
+`internal_reviewer_decision_records` paths are unchanged.
+
+**This support is category-level.** It means *a review reference was named*. The boundary reads no
+database, and `GovernedRecordReference` carries only identity and scope, so the planner never sees
+the reviewed row's stored `decision`, `review_status`, `subject_record_type`, or `authoritative`
+flag. A review reference therefore establishes no authoritative, client-facing, production, capsule,
+publication, or AgentNet posture; it approves nothing, propagates nothing to the reviewed target, and
+implies no FK enforcement or target load. **A consumer needing a higher assurance must correlate
+those stored fields deliberately, outside this boundary.** Plans whose support came from a
+`review_records` reference carry `REVIEW_RECORD_SUPPORT_CAVEAT` in their reasons and in the affected
+sections' notes. See [`PHASE96_PLANNER_REVIEW_RECORD_PATH.md`](PHASE96_PLANNER_REVIEW_RECORD_PATH.md).
 
 Each section plan carries a deterministic readiness state:
 

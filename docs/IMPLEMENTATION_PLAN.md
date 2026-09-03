@@ -3001,11 +3001,12 @@ database contact, no schema change, no new harness):**
   measured dimension is *partial* by design; location attribution rather than SKU attribution is the
   R1 constraint; a presence-only readiness rule would over-count usable items by 1 in 10; the R5
   population is small enough that conclusions are directional even within the lab.
-- [ ] **Open, and the most consequential finding: the chain's review record is invisible to the
-  report planner.** The Phase 36 planner reads six reference categories, and `review_records` is not
-  one of them — it recognises `review_bundle_records` and `internal_reviewer_decision_records`
-  instead. Of its 14 sections the depth-one chain supplies references for 6, 3 need none, and 5 are
-  blocked. Neither review-bundle nor reviewer-decision writers are lab-enabled.
+- [x] **The most consequential finding — the chain's review record was invisible to the report
+  planner — is resolved in Phase 96.** The Phase 36 planner read six reference categories, and
+  `review_records` was not one of them; it recognised `review_bundle_records` and
+  `internal_reviewer_decision_records` instead. Of its 14 sections the depth-one chain supplied
+  references for 6, 3 needed none, and 5 were blocked. Neither review-bundle nor reviewer-decision
+  writers are lab-enabled, and Phase 96 did not enable them.
 - [ ] **Next: a deliberate breadth decision, not another default guardrail phase.** Either a second
   evidence reference from a distinct Phase 88 dimension on the existing source-ingestion record — the
   smaller step, answering the narrower question — or a second full chain on a different measurement
@@ -3013,6 +3014,48 @@ database contact, no schema change, no new harness):**
   use the existing planner, the gap is the record types the planner reads, not more evidence.
 
 Full record: [`PHASE95_MINIMAL_INTERNAL_LAB_ASSESSMENT_DRAFT.md`](PHASE95_MINIMAL_INTERNAL_LAB_ASSESSMENT_DRAFT.md).
+
+
+**The planner `review_records` path (Phase 96 — planner/tests/docs only; no writer, no record, no
+database contact, no schema/model/enum/writer/allowlist/gate change, no migration 015, no new
+harness):**
+
+- [x] **The gap was vocabulary and request shape, not schema.** `review_records` already carries
+  `target_id`, `subject_record_type`, `decision`, `authoritative`, `output_status`, the governance
+  mixin's status/identity/scope columns, and the idempotency/fingerprint pair. Nothing had to be
+  added to the database, so **migration 015 was not created and was not needed.**
+- [x] **`review_records` is now an accepted review-support category.** `review_record_ids →
+  review_records` joins `REF_CATEGORY_RECORD_TYPES`; `REF_CATEGORY_ALTERNATIVES` declares it
+  interchangeable wherever `review_bundle_record_ids` is required, for sections and for candidate
+  slots alike. **Nothing was removed** — the review-bundle and reviewer-decision paths are unchanged.
+- [x] **The support is category-level, and the plan says so.** The boundary reads no database and
+  never sees the reviewed row's stored `decision`, `review_status`, `subject_record_type`, or
+  `authoritative` flag, so support means *a review reference was named* and nothing more. Plans
+  supported that way carry `REVIEW_RECORD_SUPPORT_CAVEAT` in their reasons and section notes. A
+  consumer needing higher assurance must correlate those stored fields deliberately, outside this
+  boundary.
+- [x] **Approval is still recorded, not propagated.** The change adds no approval propagation to
+  `evidence_references`, no FK or target-load enforcement to the review writer, and no authoritative,
+  client-facing, production, capsule, publication, or AgentNet posture.
+- [x] **The offline exercise confirms the unblock, value-free.** Over the depth-one chain shape with
+  approved synthetic ids: ready sections 6 → 7, blocked 5 → 3, open gaps 6 → 4, and the finding slot
+  moved from *blocked for want of review support* to *internal draft candidate*. `review_status` went
+  blocked → ready; `internal_recommendations` went blocked → partial.
+- [x] **Eight ungated harness freezes had to be repaired to land it, per Phase 91 recommendation
+  3.** Phases 65–70 and 72 each froze the whole `peak/` tree against the working tree with no
+  authoring-time gate; Phase 84 froze the same tree under a label naming only writer files. The
+  seven now run under the existing `phase_never_committed` gate and Phase 84's pathspec was narrowed
+  to match its label, with a new unconditional check on `models.py` and the allowlist beside it. No
+  coverage was weakened — every substantive invariant stays unconditional. Suite: 72 harnesses, 0
+  failures.
+- [ ] **Next: breadth, deliberately.** Three sections remain blocked — `engagement_context` and
+  `intake_summary` want intake-note records, `ai_agent_readiness` wants agent-task-queue records —
+  and no recommendation slot exists without a reviewer-decision reference. That is real missing
+  breadth, not planner invisibility. The planner now has enough support to plan the chain, so the
+  immediate step is a DB-free planner run or draft refinement; adding a further chain is a separate
+  decision needing its own approval.
+
+Full record: [`PHASE96_PLANNER_REVIEW_RECORD_PATH.md`](PHASE96_PLANNER_REVIEW_RECORD_PATH.md).
 
 
 **Still to do:**

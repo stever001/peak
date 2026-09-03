@@ -46,8 +46,38 @@ REF_CATEGORY_RECORD_TYPES = {
     "agent_task_queue_record_ids": "agent_task_queue_records",
     "review_bundle_record_ids": "review_bundle_records",
     "internal_reviewer_decision_record_ids": "internal_reviewer_decision_records",
+    # Phase 96: the Phase 22 controlled review writer persists `review_records` rows, which no
+    # reference category previously named, so a completed engagement -> source -> evidence ->
+    # review chain could not present its review to this boundary at all. The category is a
+    # *reference* only: it never implies the reviewed target was mutated, approved, loaded, or
+    # FK-enforced. See docs/PHASE96_PLANNER_REVIEW_RECORD_PATH.md.
+    "review_record_ids": "review_records",
 }
 REF_CATEGORIES = tuple(REF_CATEGORY_RECORD_TYPES)
+
+#: Interchangeable reference categories. A section that requires the key category is equally
+#: satisfied by any category listed here, and a candidate slot that needs review support accepts
+#: any of them. This is **category-level** support: the boundary sees record ids, not the reviewed
+#: decision, review_status, subject_record_type, or authoritative flag stored on the row. A
+#: consumer that needs a higher assurance than "a review record was named" must correlate those
+#: stored fields deliberately, outside this boundary. Adding an alternative never removes an
+#: existing path.
+REF_CATEGORY_ALTERNATIVES = {
+    "review_bundle_record_ids": ("review_record_ids",),
+}
+
+#: Every category the boundary accepts as review support, in canonical order.
+REVIEW_SUPPORT_CATEGORIES = ("review_bundle_record_ids",) + \
+    REF_CATEGORY_ALTERNATIVES["review_bundle_record_ids"]
+
+#: Recorded on any plan whose review support came from a `review_records` reference, so the
+#: category-level nature of that support travels with the plan instead of living only in docs.
+REVIEW_RECORD_SUPPORT_CAVEAT = (
+    "review support was supplied by a review_records reference; support is category-level "
+    "(a review record was named), it does not read the stored decision, review_status, "
+    "subject_record_type, or authoritative flag, it does not approve or mutate the reviewed "
+    "target, and it establishes no authoritative, client-facing, production, capsule, or "
+    "publication posture")
 
 # --- Supported internal report sections (canonical, deterministic order) -------------------
 SECTION_EXECUTIVE_OVERVIEW = "executive_overview"
@@ -193,6 +223,7 @@ class InternalAssessmentReportPlanRequest:
     agent_task_queue_record_ids: List[object] = field(default_factory=list)
     review_bundle_record_ids: List[object] = field(default_factory=list)
     internal_reviewer_decision_record_ids: List[object] = field(default_factory=list)
+    review_record_ids: List[object] = field(default_factory=list)  # Phase 22 review_records rows
     # Optional provenance links back to the Phase 35 managed-record workflow.
     workflow_id: Optional[str] = None
     managed_record_workflow_ref: Optional[str] = None

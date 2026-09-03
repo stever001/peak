@@ -798,6 +798,13 @@ chain has `review_records`, not `review_bundle_records` — and no id was forced
 ingestion ids as a **named future gate**; no capsule candidate was created and
 `capsule_candidate_ready` / `publication_allowed` are `false`.
 
+**Phase 96 note.** The planner now accepts `review_record_ids` as review support alongside
+`review_bundle_record_ids`, so a plan built today from that same chain would not carry the
+`blocked_no_review_support` slot. **The stored row is unchanged** — Phase 96 wrote nothing, contacted
+no database, and rewrote no persisted plan; the row remains an accurate record of what the planner
+produced at the time. See
+[`PHASE96_PLANNER_REVIEW_RECORD_PATH.md`](PHASE96_PLANNER_REVIEW_RECORD_PATH.md).
+
 **The assessment finding:** R1's location dimension is **not currently readable or reliable enough**
 to carry location-attributed evidence under thresholds fixed in advance — a **data-readiness and
 reliability finding, not an inventory accuracy finding**. **R1 remains provisional**, **R8 and R5

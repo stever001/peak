@@ -587,6 +587,7 @@ def planning_checks() -> None:
                                 evidence_reference_ids=[], agent_task_queue_record_ids=[],
                                 review_bundle_record_ids=[],
                                 internal_reviewer_decision_record_ids=[],
+                                review_record_ids=[],
                                 allow_empty_reference_plan=True))
     check("skeletal plan permitted with a warning",
           skeletal.outcome == "planned" and any("skeletal plan" in w for w in skeletal.warnings))
@@ -707,6 +708,159 @@ def planning_checks() -> None:
     check("under-limit requests emit no truncation warning",
           not _warns(plan_it(_request()), "truncated"))
 
+    print("\n21. Phase 96: review_records is an additional review-support path")
+    from peak.reports import (
+        RECOMMENDATION_BLOCKED_NO_REVIEW, REF_CATEGORIES, REF_CATEGORY_ALTERNATIVES,
+        REF_CATEGORY_RECORD_TYPES, REVIEW_RECORD_SUPPORT_CAVEAT, REVIEW_SUPPORT_CATEGORIES,
+        SECTION_PARTIAL,
+    )
+
+    def _state(res, section_id):
+        return next(s.readiness_state for s in res.report_plan.sections
+                    if s.section_id == section_id)
+
+    check("review_record_ids maps to the review_records table",
+          REF_CATEGORY_RECORD_TYPES.get("review_record_ids") == "review_records")
+    check("review_record_ids is a planner reference category",
+          "review_record_ids" in REF_CATEGORIES)
+    check("review_bundle_record_ids is still a planner reference category (nothing removed)",
+          "review_bundle_record_ids" in REF_CATEGORIES)
+    check("internal_reviewer_decision_record_ids is still a reference category (nothing removed)",
+          "internal_reviewer_decision_record_ids" in REF_CATEGORIES)
+    check("both review categories are accepted as review support",
+          set(REVIEW_SUPPORT_CATEGORIES)
+          == {"review_bundle_record_ids", "review_record_ids"})
+    check("review_records is declared interchangeable with review bundles",
+          REF_CATEGORY_ALTERNATIVES.get("review_bundle_record_ids") == ("review_record_ids",))
+    check("every reference category still names a real governed record type",
+          all(REF_CATEGORY_RECORD_TYPES.get(c) for c in REF_CATEGORIES))
+
+    # (a) The pre-existing review-bundle path is unchanged.
+    bundle_only = plan_it(_request(review_record_ids=[]))
+    check("review_bundle_records still satisfies the review_status section",
+          _state(bundle_only, "review_status") == SECTION_READY)
+    check("review_bundle_records still clears the finding review block",
+          all(f.blocked_reason is None and f.readiness_state == RECOMMENDATION_INTERNAL_DRAFT
+              for f in bundle_only.report_plan.finding_candidates))
+    check("internal_reviewer_decision_records still drives recommendation slots",
+          bundle_only.recommendation_candidate_count == 2)
+    check("a bundle-only plan carries no review_records caveat",
+          REVIEW_RECORD_SUPPORT_CAVEAT not in bundle_only.report_plan.reasons)
+
+    # (b) The depth-one chain shape: source + evidence + a review record, nothing else.
+    chain = dict(intake_note_refs=[], agent_task_queue_record_ids=[],
+                 review_bundle_record_ids=[], internal_reviewer_decision_record_ids=[])
+    without = plan_it(_request(**chain))
+    with_rev = plan_it(_request(**chain, review_record_ids=["rev_1"]))
+
+    check("without any review reference the review_status section is blocked",
+          _state(without, "review_status") == SECTION_BLOCKED_NO_REFS)
+    check("without any review reference the finding slot is blocked for want of review support",
+          all(f.readiness_state == RECOMMENDATION_BLOCKED_NO_REVIEW and f.blocked_reason
+              for f in without.report_plan.finding_candidates))
+
+    check("a review_records reference satisfies the review_status section",
+          _state(with_rev, "review_status") == SECTION_READY)
+    check("a review_records reference clears the finding review block",
+          with_rev.report_plan.finding_candidates
+          and all(f.readiness_state == RECOMMENDATION_INTERNAL_DRAFT and f.blocked_reason is None
+                  for f in with_rev.report_plan.finding_candidates))
+    check("the finding slot cites the review_records id as review support",
+          all(f.review_support_refs == ["rev_1"]
+              for f in with_rev.report_plan.finding_candidates))
+    check("review support strictly increases the sections that are not blocked",
+          len(with_rev.report_plan.blocked_items) < len(without.report_plan.blocked_items))
+    check("the evidence trace attributes the support to review_record_ids, not to bundles",
+          with_rev.report_plan.evidence_trace_map["review_status"].supporting_refs
+          == {"review_record_ids": ["rev_1"]})
+
+    # (c) Review support alone does not manufacture breadth the chain does not have.
+    check("sections needing intake notes stay blocked",
+          _state(with_rev, "intake_summary") == SECTION_BLOCKED_NO_REFS
+          and _state(with_rev, "engagement_context") == SECTION_BLOCKED_NO_REFS)
+    check("sections needing agent task-queue records stay blocked",
+          _state(with_rev, "ai_agent_readiness") == SECTION_BLOCKED_NO_REFS)
+    check("internal_recommendations stays partial: reviewer decisions are still missing",
+          _state(with_rev, "internal_recommendations") == SECTION_PARTIAL)
+    check("no recommendation slot is created without a reviewer decision reference",
+          with_rev.recommendation_candidate_count == 0)
+    check("gaps still name the categories the chain does not supply",
+          {"gap_intake_summary_intake_note_refs",
+           "gap_ai_agent_readiness_agent_task_queue_record_ids",
+           "gap_internal_recommendations_internal_reviewer_decision_record_ids"}
+          <= {g.gap_id for g in with_rev.report_plan.open_gaps})
+
+    # (d) A review record advances no posture: not client-facing, not production, not
+    #     authoritative, not capsule/AgentNet-ready, and it mutates or approves nothing.
+    wp = with_rev.report_plan
+    check("review_records implies no client-facing support",
+          wp.client_facing_approved is False
+          and all(s.client_facing_approved is False for s in wp.sections)
+          and all(f.client_facing_approved is False for f in wp.finding_candidates)
+          and with_rev.client_facing_output_created is False
+          and with_rev.client_facing_approval_made is False)
+    check("review_records implies no approval or review-record write",
+          with_rev.review_approval_made is False
+          and with_rev.review_records_write_made is False
+          and with_rev.stored_record_created is False)
+    check("review_records implies no evidence-row mutation or approval propagation",
+          with_rev.direct_database_write_made is False
+          and with_rev.sql_execution_made is False
+          and with_rev.database_connection_made is False)
+    check("review_records leaves the plan non-authoritative and needing human review",
+          wp.review_status == "needs_review" and wp.output_status == "plan"
+          and wp.lifecycle_status == "draft" and wp.requires_human_review is True
+          and all(s.requires_human_review is True for s in wp.sections))
+    _authoritative_mentions = [t for t in list(wp.reasons) + list(wp.warnings)
+                               + [n for sec in wp.sections for n in sec.notes]
+                               if "authoritative" in t.lower()]
+    check("the only mention of authoritative in the plan is the caveat that disclaims it",
+          all(t == REVIEW_RECORD_SUPPORT_CAVEAT for t in _authoritative_mentions))
+    check("review_records implies no capsule or AgentNet publication readiness",
+          wp.capsule_candidate_ready is False and wp.publication_allowed is False
+          and with_rev.capsule_candidate_created is False
+          and with_rev.capsule_publication_made is False
+          and with_rev.agentnet_publication_made is False
+          and with_rev.agentnet_call_made is False)
+    check("review_records implies no financial verification or execution",
+          wp.financial_verified is False and wp.execution_allowed is False
+          and with_rev.financial_verification_made is False)
+    check("a review_records plan produces no prohibited side effect", _no_effects(with_rev))
+    check("a review_records plan produces no controlled write request",
+          with_rev.controlled_write_request_count == 0)
+
+    # (e) The category-level nature of the support travels with the plan, not only with the docs.
+    check("the plan records the review_records support caveat",
+          REVIEW_RECORD_SUPPORT_CAVEAT in wp.reasons)
+    check("the supported section records the caveat as a note",
+          any(REVIEW_RECORD_SUPPORT_CAVEAT in s.notes for s in wp.sections
+              if s.section_id == "review_status"))
+    check("the caveat states the support is category-level and reads no stored field",
+          "category-level" in REVIEW_RECORD_SUPPORT_CAVEAT
+          and "review_status" in REVIEW_RECORD_SUPPORT_CAVEAT
+          and "does not approve or mutate the reviewed target"
+          in REVIEW_RECORD_SUPPORT_CAVEAT)
+
+    # (f) Determinism and leak safety are unchanged by the new category.
+    check("the new category is deterministic",
+          plan_it(_request(**chain, review_record_ids=["rev_1"])).plan_fingerprint
+          == with_rev.plan_fingerprint)
+    check("a review_records reference participates in the fingerprint",
+          with_rev.plan_fingerprint != without.plan_fingerprint)
+    check("review_records ordering and duplicates do not change the plan",
+          plan_it(_request(**chain,
+                           review_record_ids=["rev_2", "rev_1", "rev_1"])).plan_fingerprint
+          == plan_it(_request(**chain,
+                              review_record_ids=["rev_1", "rev_2"])).plan_fingerprint)
+    unsafe = plan_it(_request(**chain, review_record_ids=["rev_1\nrev_2"]))
+    check("an unsafe review_records reference is denied without echoing",
+          unsafe.outcome == "denied" and unsafe.reason_code == "prohibited_content"
+          and unsafe.report_plan is None and "rev_2" not in _blob(unsafe))
+    check("a review_records plan echoes no canary or unsafe marker",
+          _CANARY not in _blob(with_rev)
+          and not re.search(r"mysql://|postgres://|select \*|api_key=|source_bytes|Traceback",
+                            _blob(with_rev), re.IGNORECASE))
+
 
 # --------------------------------------------------------------------------- denials
 
@@ -716,7 +870,7 @@ def denial_checks() -> None:
         GovernedRecordReference, prepare_internal_assessment_report_plan as plan_it,
     )
 
-    print("\n21. Identity / scope / plan-id denials")
+    print("\n22. Identity / scope / plan-id denials")
     for field in ("owner_id", "client_id", "engagement_id", "authorization_scope",
                   "requested_by", "requester_role"):
         r = plan_it(_request(**{field: None}))
@@ -736,7 +890,7 @@ def denial_checks() -> None:
     r = plan_it(object())
     check("duck-typed request denied", r.reason_code == "invalid_request_type")
 
-    print("\n22. Audience and posture denials")
+    print("\n23. Audience and posture denials")
     for audience in ("client", "external", "public", ""):
         r = plan_it(_request(audience=audience))
         check(f"audience '{audience or '<empty>'}' denied",
@@ -749,7 +903,7 @@ def denial_checks() -> None:
     r = plan_it(_request(requires_human_review=False))
     check("requires_human_review=False denied", r.reason_code == "prohibited_posture")
 
-    print("\n23. Section denials")
+    print("\n24. Section denials")
     r = plan_it(_request(requested_sections=["not_a_section"]))
     check("unsupported section denied", r.reason_code == "unsupported_section")
     r = plan_it(_request(requested_sections=["final_client_report_section"]))
@@ -757,7 +911,7 @@ def denial_checks() -> None:
     r = plan_it(_request(requested_sections=["intake_summary", "intake_summary"]))
     check("duplicate section denied", r.reason_code == "duplicate_section")
 
-    print("\n24. Reference identity / scope denials (structured refs)")
+    print("\n25. Reference identity / scope denials (structured refs)")
     for label, ref in (
         ("cross-tenant", GovernedRecordReference(
             record_id="evid_1", owner_id="owner_1", client_id="other_client",
@@ -782,7 +936,7 @@ def denial_checks() -> None:
     r = plan_it(_request(evidence_reference_ids=[good]))
     check("a consistent structured reference is accepted", r.outcome == "planned")
 
-    print("\n25. Unsafe reference denials")
+    print("\n26. Unsafe reference denials")
     for label, value in (("multiline", "evid_1\nevid_2"),
                          ("overlong", "e" * 200),
                          ("whitespace", "evid 1"),
@@ -793,7 +947,7 @@ def denial_checks() -> None:
               r.outcome == "denied" and r.reason_code == "prohibited_content")
     r = plan_it(_request(intake_note_refs=[], source_ingestion_refs=[], evidence_reference_ids=[],
                          agent_task_queue_record_ids=[], review_bundle_record_ids=[],
-                         internal_reviewer_decision_record_ids=[]))
+                         internal_reviewer_decision_record_ids=[], review_record_ids=[]))
     check("no governed references denied without the explicit opt-in",
           r.reason_code == "no_governed_references")
     r = plan_it(_request(requested_action="publish_report"))
@@ -806,7 +960,7 @@ def denial_checks() -> None:
 def leak_safety_checks() -> None:
     from peak.reports import prepare_internal_assessment_report_plan as plan_it
 
-    print("\n26. Prohibited keys denied before any plan is assembled")
+    print("\n27. Prohibited keys denied before any plan is assembled")
     prohibited_keys = (
         "raw_note_text", "note_text", "packet_payload", "raw_evidence_text", "raw_interview_text",
         "source_bytes", "generated_output", "final_client_report", "client_facing_output",
@@ -822,7 +976,7 @@ def leak_safety_checks() -> None:
         check(f"prohibited key '{key}' denied without echoing its value",
               r.outcome == "denied" and r.report_plan is None and _CANARY not in _blob(r))
 
-    print("\n27. Prohibited values denied without echoing")
+    print("\n28. Prohibited values denied without echoing")
     marker_values = {
         "credential/secret": f"api_key={_CANARY}",
         "DB-URL/DSN": f"mysql://user:{_CANARY}@host/db",
@@ -842,7 +996,7 @@ def leak_safety_checks() -> None:
     r = plan_it(_request(report_purpose="x" * 400))
     check("overlong report_purpose denied", r.outcome == "denied")
 
-    print("\n28. Prohibited context keys denied")
+    print("\n29. Prohibited context keys denied")
     for key in ("note_text", "database_url", "approve_client_facing", "api_key"):
         r = plan_it(_request(context={key: _CANARY}))
         check(f"prohibited context key '{key}' denied without echoing",
@@ -850,7 +1004,7 @@ def leak_safety_checks() -> None:
     r = plan_it(_request(context={"engagement_stage": "assessment"}))
     check("a safe context key is accepted", r.outcome == "planned")
 
-    print("\n29. A successful plan echoes no raw content")
+    print("\n30. A successful plan echoes no raw content")
     r = plan_it(_request())
     blob = _blob(r)
     check("canary absent from a successful plan", _CANARY not in blob)

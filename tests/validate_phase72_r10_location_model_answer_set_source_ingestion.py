@@ -196,6 +196,20 @@ def git_succeeds(*args: str) -> bool:
                           capture_output=True, text=True, timeout=20).returncode == 0
 
 
+def phase_never_committed(rel: str) -> bool:
+    """True while ``rel`` has no commit yet — i.e. this phase's own work is still unstaged.
+
+    The whole-tree ``peak/`` freeze below is an *authoring-time* claim about **this** phase. Keyed
+    on "does the path have a pending diff", it judged every later phase's uncommitted work against
+    this phase's allowlist: Phase 96 legitimately owns the Phase 36 planning-boundary change, and
+    the ungated freeze failed it. Absence of any commit for this harness is the signal that
+    actually means "this phase has not landed yet". The substantive invariants this harness cares
+    about — no model, no writer, no allowlist pair — stay unconditional above and below.
+    See docs/PHASE91_DRIFT_TEST_SPRAWL_PARALLEL_WORKFLOW_REVIEW.md, recommendation 3.
+    """
+    return not git("log", "-1", "--format=%H", "--", rel).strip()
+
+
 def flat(text: str) -> str:
     """Prose flattened for phrase checks: blockquotes, code spans, and bold/italic asterisks
     removed, so a check tests the claim rather than the markdown formatting. Only ``*`` is
@@ -275,8 +289,9 @@ def baseline_checks() -> None:
     check("no controlled writer was modified by this phase",
           not [c for c in git("diff", "--name-only", "HEAD", "--", "peak").splitlines()
                if c.endswith("_writer.py")])
-    check("no file under peak/ was modified by this phase at all",
-          not git("diff", "--name-only", "HEAD", "--", "peak"))
+    if phase_never_committed(HARNESS_REL):
+        check("no file under peak/ was modified by this phase at all",
+              not git("diff", "--name-only", "HEAD", "--", "peak"))
     check("the allowlist module was not modified by this phase - no allowlist pair added",
           not git("diff", "--name-only", "HEAD", "--", ALLOWLIST_REL))
     for rel in (PHASE63_TOOL_REL, PHASE65_TOOL_REL, PHASE69_TOOL_REL):

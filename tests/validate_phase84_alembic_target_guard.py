@@ -132,8 +132,17 @@ def baseline_checks() -> None:
     try:
         check("no migration file was added or edited",
               not git("diff", "--name-only", "HEAD", "--", "alembic/versions").strip())
+        # Pathspec narrowed to match the label: it read "peak", which froze the whole package
+        # against every later phase rather than the writers the label names. Phase 96
+        # legitimately owns the DB-free Phase 36 planning-boundary change under peak/reports/.
+        # The narrowed form asserts the stated invariant unconditionally, which is stronger than
+        # gating it. See docs/PHASE91_DRIFT_TEST_SPRAWL_PARALLEL_WORKFLOW_REVIEW.md.
         check("no writer file was added or edited",
-              not git("diff", "--name-only", "HEAD", "--", "peak").strip())
+              not [c for c in git("diff", "--name-only", "HEAD", "--", "peak").splitlines()
+                   if c.endswith("_writer.py")])
+        check("peak/db/models.py and the controlled allowlist were not edited",
+              not git("diff", "--name-only", "HEAD", "--", "peak/db/models.py",
+                      "peak/persistence/allowlist.py").strip())
         check("docs/Peak_Investor_Overview_AI.docx has no pending diff",
               not git("diff", "--name-only", "HEAD", "--",
                       "docs/Peak_Investor_Overview_AI.docx").strip())

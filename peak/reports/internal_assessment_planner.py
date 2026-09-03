@@ -15,8 +15,15 @@ canonical order (never the caller's order), references are normalized and de-dup
 order, candidate ids are positional, and ``plan_fingerprint`` is a SHA-256 over the safe request
 fields and references. There are **no random ids and no timestamps**.
 
-See docs/INTERNAL_ASSESSMENT_REPORT_PLANNING_BOUNDARY.md and
-docs/INTERNAL_REPORT_ASSEMBLY_GOVERNANCE_POLICY.md.
+Review support (Phase 96): both ``review_bundle_record_ids`` and ``review_record_ids`` count as
+review support, at the **category** level — a review reference was named. The boundary reads no
+stored decision, review_status, subject_record_type, or authoritative flag, treats no review as
+approving or mutating its reviewed target, and infers no authoritative, client-facing, production,
+capsule, or publication posture from one.
+
+See docs/INTERNAL_ASSESSMENT_REPORT_PLANNING_BOUNDARY.md,
+docs/INTERNAL_REPORT_ASSEMBLY_GOVERNANCE_POLICY.md, and
+docs/PHASE96_PLANNER_REVIEW_RECORD_PATH.md.
 """
 
 from __future__ import annotations
@@ -37,7 +44,10 @@ from .contracts import (
     RECOMMENDATION_BLOCKED_NO_REVIEW,
     RECOMMENDATION_INTERNAL_DRAFT,
     REF_CATEGORIES,
+    REF_CATEGORY_ALTERNATIVES,
     REF_CATEGORY_RECORD_TYPES,
+    REVIEW_RECORD_SUPPORT_CAVEAT,
+    REVIEW_SUPPORT_CATEGORIES,
     SECTION_BLOCKED_NO_REFS,
     SECTION_INTERNAL_RECOMMENDATIONS,
     SECTION_OPERATIONAL_FINDINGS,
@@ -129,6 +139,10 @@ def prepare_internal_assessment_report_plan(
             f"{len(future_capsule)} source ingestion reference(s) are noted as possible future "
             "capsule candidates; capsule_candidate_ready and publication_allowed remain false and "
             "no capsule candidate was created or published")
+    if refs["review_record_ids"]:
+        # The caveat travels with the plan, not only with the docs: a downstream consumer sees
+        # exactly what this category-level support does and does not establish.
+        reasons.append(REVIEW_RECORD_SUPPORT_CAVEAT)
     reasons.append(
         "internal assessment report plan assembled: structure, traceability, and readiness only "
         "(no report draft, no client-facing language, no approval)")
@@ -217,13 +231,38 @@ def _selected_sections(request) -> List[str]:
 # --------------------------------------------------------------------------- sections
 
 
+def _supplying_categories(category: str, refs: Dict[str, List[str]]) -> List[str]:
+    """Return the categories that actually supply support for one required category.
+
+    A required category is satisfied by itself or by any interchangeable category declared in
+    ``REF_CATEGORY_ALTERNATIVES``. The returned list names the categories that really carry the
+    references, so the evidence trace stays truthful about which record type supplied the support
+    rather than reporting an alternative under the required category's name.
+    """
+    candidates = (category,) + tuple(REF_CATEGORY_ALTERNATIVES.get(category, ()))
+    return [name for name in candidates if refs.get(name)]
+
+
+def _gap_note(category: str, section_id: str) -> str:
+    """A gap note that also names any interchangeable category that would have satisfied it."""
+    alternatives = REF_CATEGORY_ALTERNATIVES.get(category, ())
+    note = f"no {category} reference was supplied to support '{section_id}'"
+    if alternatives:
+        note += f" (nor any interchangeable category: {', '.join(sorted(alternatives))})"
+    return note
+
+
 def _plan_section(section_id: str, order: int, refs: Dict[str, List[str]]):
     """Build one section plan, its evidence trace, and any gaps it opens."""
     required = list(SECTION_REF_REQUIREMENTS.get(section_id, ()))
-    satisfied = [category for category in required if refs.get(category)]
-    missing = [category for category in required if not refs.get(category)]
+    supplying = {category: _supplying_categories(category, refs) for category in required}
+    satisfied = [category for category in required if supplying[category]]
+    missing = [category for category in required if not supplying[category]]
 
-    supporting = {category: list(refs.get(category, [])) for category in satisfied}
+    supporting: Dict[str, List[str]] = {}
+    for category in satisfied:
+        for name in supplying[category]:
+            supporting.setdefault(name, list(refs.get(name, [])))
     supporting_count = sum(len(v) for v in supporting.values())
 
     if not required:
@@ -242,6 +281,8 @@ def _plan_section(section_id: str, order: int, refs: Dict[str, List[str]]):
     notes: List[str] = []
     if readiness == SECTION_SYNTHESIS_ONLY:
         notes.append("synthesis section: structured from the other sections, never from raw text")
+    if "review_record_ids" in supporting:
+        notes.append(REVIEW_RECORD_SUPPORT_CAVEAT)
 
     plan = InternalReportSectionPlan(
         section_id=section_id,
@@ -270,7 +311,7 @@ def _plan_section(section_id: str, order: int, refs: Dict[str, List[str]]):
             missing_ref_category=category,
             missing_record_type=REF_CATEGORY_RECORD_TYPES.get(category),
             blocks_section=(readiness == SECTION_BLOCKED_NO_REFS),
-            note=f"no {category} reference was supplied to support '{section_id}'",
+            note=_gap_note(category, section_id),
         )
         for category in missing
     ]
@@ -280,6 +321,19 @@ def _plan_section(section_id: str, order: int, refs: Dict[str, List[str]]):
 # --------------------------------------------------------------------------- candidates
 
 
+def _review_support(refs: Dict[str, List[str]]) -> List[str]:
+    """Every reference the boundary accepts as review support, in canonical category order.
+
+    Support is **category-level**: a named review_bundle_records or review_records reference. The
+    boundary never reads the reviewed row's decision, review_status, subject_record_type, or
+    authoritative flag, never treats a review as approving or mutating its target, and never
+    infers authoritative evidence, client-facing, production, capsule, or publication posture
+    from it.
+    """
+    return [record_id for category in REVIEW_SUPPORT_CATEGORIES
+            for record_id in refs.get(category, [])]
+
+
 def _finding_candidates(refs: Dict[str, List[str]], sections: List[str]):
     """One structured finding slot per evidence reference — references only, never narrative."""
     warnings: List[str] = []
@@ -287,7 +341,7 @@ def _finding_candidates(refs: Dict[str, List[str]], sections: List[str]):
         return [], warnings
 
     evidence = refs["evidence_reference_ids"]
-    review = refs["review_bundle_record_ids"]
+    review = _review_support(refs)
     if len(evidence) > MAX_CANDIDATES_PER_FAMILY:
         warnings.append(
             f"finding candidates truncated to the first {MAX_CANDIDATES_PER_FAMILY} of "
@@ -296,7 +350,9 @@ def _finding_candidates(refs: Dict[str, List[str]], sections: List[str]):
 
     candidates: List[InternalReportFindingCandidate] = []
     for index, evidence_ref in enumerate(evidence):
-        blocked = None if review else "no review bundle reference supports this finding slot"
+        blocked = (None if review else
+                   "no review support reference (review_bundle_records or review_records) "
+                   "supports this finding slot")
         candidates.append(InternalReportFindingCandidate(
             finding_candidate_id=f"fnd_{index:03d}",
             section_id=SECTION_OPERATIONAL_FINDINGS,
@@ -321,7 +377,7 @@ def _recommendation_candidates(refs: Dict[str, List[str]], sections: List[str]):
 
     decisions = refs["internal_reviewer_decision_record_ids"]
     evidence = refs["evidence_reference_ids"]
-    review = refs["review_bundle_record_ids"]
+    review = _review_support(refs)
     if len(decisions) > MAX_CANDIDATES_PER_FAMILY:
         warnings.append(
             f"recommendation candidates truncated to the first {MAX_CANDIDATES_PER_FAMILY} of "
@@ -336,7 +392,8 @@ def _recommendation_candidates(refs: Dict[str, List[str]], sections: List[str]):
             blocked = "no evidence reference supports this recommendation slot"
         elif not review:
             readiness = RECOMMENDATION_BLOCKED_NO_REVIEW
-            blocked = "no review bundle reference supports this recommendation slot"
+            blocked = ("no review support reference (review_bundle_records or review_records) "
+                       "supports this recommendation slot")
         else:
             readiness = RECOMMENDATION_INTERNAL_DRAFT
             blocked = None
