@@ -131,6 +131,14 @@ Each section plan carries a deterministic readiness state:
 - `blocked_no_supporting_references` — the section has requirements and none are satisfied
 - `synthesis_only` — no direct references required; structured from the other sections
 
+**Readiness is presence, not sufficiency (Phase 97).** `ready_for_internal_drafting` means each
+supporting category holds **at least one** reference. It is not a judgment that the section has
+enough material to say anything, and it must not be read as one: several sections can be "ready" off
+a single shared reference, and four of this boundary's sections take their support from the same
+`evidence_reference_ids` category. Check `supporting_ref_count` and the evidence trace before
+treating a ready section as substantively supported. See
+[`PHASE97_DB_FREE_INTERNAL_ASSESSMENT_PLANNER_RUN.md`](PHASE97_DB_FREE_INTERNAL_ASSESSMENT_PLANNER_RUN.md).
+
 ---
 
 ## Evidence trace map

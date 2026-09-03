@@ -107,6 +107,13 @@ summary want intake notes, AI agent readiness wants task-queue records, and inte
 and review status want review-bundle and reviewer-decision records. The Phase 94 review satisfies
 none of the planner's review categories.
 
+> **Superseded by Phases 96–97.** Phase 96 added `review_record_ids` as a category-level
+> review-support path, and Phase 97 ran the planner over this chain: 7 ready / 1 partial / 3 blocked
+> / 3 synthesis-only, with one finding candidate reaching internal-draft readiness. The three still
+> blocked sections want intake notes and agent-task-queue records. F8's count of 5 blocked sections
+> describes the pre-Phase-96 planner and is kept as the record of what this phase found.
+> See [`PHASE97_DB_FREE_INTERNAL_ASSESSMENT_PLANNER_RUN.md`](PHASE97_DB_FREE_INTERNAL_ASSESSMENT_PLANNER_RUN.md).
+
 ## Limitations
 
 This assessment establishes **none** of the following, and must not be read as establishing them:

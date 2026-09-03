@@ -3058,6 +3058,36 @@ harness):**
 Full record: [`PHASE96_PLANNER_REVIEW_RECORD_PATH.md`](PHASE96_PLANNER_REVIEW_RECORD_PATH.md).
 
 
+**The DB-free planner run over the depth-one chain (Phase 97 — docs-only; no writer, no record, no
+database contact, no env read, no schema change, no new harness):**
+
+- [x] **The planner runs clean over the real chain.** Called offline with the chain's actual
+  documented identity and scope rather than placeholders, supplying only the three categories the
+  chain has — source ingestion, evidence reference, review record. Deterministic, zero warnings,
+  zero controlled write requests, every side-effect flag false.
+- [x] **Result: 7 ready / 1 partial / 3 blocked / 3 synthesis-only**, 4 open gaps, 1 finding
+  candidate at `internal_draft_candidate`, 0 recommendation candidates. Posture stays
+  `plan` / `needs_review` / `draft` with `requires_human_review=true` and every readiness flag false.
+  The review-record caveat appears in the plan's reasons and in both affected sections' notes.
+- [x] **The finding that matters: readiness is presence, not sufficiency.** Seven "ready" sections
+  rest on **three** distinct references — four of them on the *same* single evidence reference, two
+  on the same single source record, every one with a supporting-reference count of exactly one.
+  `ready_for_internal_drafting` means "each supporting category has at least one reference", nothing
+  more. This is Phase 88's F6 over-counting shape reappearing at the planning boundary.
+- [x] **Posture decision: (B) with a narrow slice of (A).** The chain is sufficient for a refined
+  internal assessment *plan* and a very limited draft over the source → evidence → review spine. It
+  is **not** sufficient for a richer assessment: four sections drawing on one evidence reference
+  cannot carry four independent findings. One finding slot is the honest ceiling.
+- [ ] **Next, after explicit approval — one of three.** (1) Refine the DB-free draft into a bounded
+  internal report outline over the spine, carrying the presence-vs-sufficiency caveat — the smallest
+  step, adds no records, and the recommended one. (2) Add one intake-note reference chain, unblocking
+  engagement context and intake summary. (3) Add one agent-task-queue reference chain, unblocking
+  AI/agent readiness. Options 2 and 3 create durable records and each needs its own phase approval,
+  writer enablement decision, and cleanup posture decided in advance.
+
+Full record: [`PHASE97_DB_FREE_INTERNAL_ASSESSMENT_PLANNER_RUN.md`](PHASE97_DB_FREE_INTERNAL_ASSESSMENT_PLANNER_RUN.md).
+
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

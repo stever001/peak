@@ -150,6 +150,7 @@ Phase 44**; this table is the entry point for everything after it.
 | 94 | First controlled lab review record, an internal decision on the Phase 93 evidence reference | [`PHASE94_FIRST_LAB_REVIEW_RECORD.md`](PHASE94_FIRST_LAB_REVIEW_RECORD.md) | **One durable lab `review_records` row created**; `approve_internal` with `authoritative=false`; reviewed target not mutated; Phase 89 gate used as-is; no new harness |
 | 95 | Minimal internal lab assessment draft from the completed depth-one lab chain | [`PHASE95_MINIMAL_INTERNAL_LAB_ASSESSMENT_DRAFT.md`](PHASE95_MINIMAL_INTERNAL_LAB_ASSESSMENT_DRAFT.md) | **Docs-only**; no writer invoked, no record created, no database contacted; report-draft writer verified as refused by the lab gate; `peak_lab` unchanged at 4 application rows |
 | 96 | Internal assessment planner adapted to recognize `review_records` as review support, resolving the Phase 95 F8 visibility gap | [`PHASE96_PLANNER_REVIEW_RECORD_PATH.md`](PHASE96_PLANNER_REVIEW_RECORD_PATH.md) | Planner/tests/docs only; category-level support, no field correlation; existing review-bundle and reviewer-decision paths unchanged; **eight ungated harness freezes repaired** (Phase 91 recommendation 3) with no coverage weakened; no record created, no writer invoked, no database contacted, no migration 015; `peak_lab` unchanged at 4 application rows by documented state |
+| 97 | DB-free internal assessment planner run over the depth-one lab chain, and the refined assessment posture it supports | [`PHASE97_DB_FREE_INTERNAL_ASSESSMENT_PLANNER_RUN.md`](PHASE97_DB_FREE_INTERNAL_ASSESSMENT_PLANNER_RUN.md) | **Docs-only**; planner run offline with the chain's real documented identity; 7 ready / 1 partial / 3 blocked / 3 synthesis-only, 1 finding candidate, 0 recommendation candidates; **readiness is presence, not sufficiency** — 7 ready sections rest on 3 references; no record created, no writer invoked, no database contacted, no migration 015; `peak_lab` unchanged at 4 application rows by documented state |
 
 ### Phases without a dedicated phase doc
 
@@ -161,9 +162,8 @@ Phase 44**; this table is the entry point for everything after it.
 
 ## Current baseline
 
-As of Phase 96, whose baseline is the committed Phase 95 commit `e07e015` — *Draft Phase 95 minimal
-lab assessment*. Phase 96 changes the report-planning boundary only, and changed none of these
-values:
+As of Phase 97, whose baseline is the committed Phase 96 commit `10790ca` — *Adapt planner to
+review records*. Phase 97 is docs-only and changed none of these values:
 
 | Property | Value |
 |---|---|
@@ -177,7 +177,7 @@ values:
 | `peak_lab` controlled tables | 18, head `014_engagement_classification`, **4 application rows** (the Phase 90 `engagements` anchor, the Phase 92 `source_ingestion_records` row, the Phase 93 `evidence_references` row, and the Phase 94 `review_records` row) |
 | `peak_lab_scenario` | seeded, 120 rows, content hash re-verified in Phase 88 |
 
-Phases 87–96 changed no migration, table, or writer, so the first six values are unchanged since
+Phases 87–97 changed no migration, table, or writer, so the first six values are unchanged since
 Phase 86. Phase 96 added a reference *category* to the Phase 36 planning boundary
 (`review_record_ids → review_records`); that is a planner contract addition, not a schema, model,
 enum, writer, allowlist, or gate change, and it names a table that already existed. **Phase 90 changed the `peak_lab` row count**: it is no longer empty, and "0 application
