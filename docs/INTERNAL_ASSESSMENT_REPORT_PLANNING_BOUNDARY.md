@@ -162,6 +162,14 @@ and `blocked_reason` when not ready. Every recommendation candidate carries
 `financial_verified` / `capsule_candidate_ready` / `publication_allowed` / `execution_allowed` all
 false. **No candidate is ever marked final or client-facing.**
 
+**An empty candidate family is not a blocked one (Phase 98).** Because slots are created *per
+reference* — one finding slot per evidence reference, one recommendation slot per reviewer-decision
+reference — a family with no driving reference produces **zero slots**, not zero-of-N blocked slots.
+A section can therefore be `partial_supporting_references` while its candidate list is simply empty:
+`internal_recommendations` goes partial when review support is present and reviewer-decision support
+is not, and no recommendation candidate is created at all. Read a candidate count of 0 as "nothing
+to hang a slot on", never as "the slots were refused".
+
 Both families are bounded at 200 slots; truncation is always reported as a warning, never silently.
 
 ---

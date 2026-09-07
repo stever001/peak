@@ -151,6 +151,14 @@ review-bundle and reviewer-decision writers are not lab-enabled either.
 
 **This phase performs neither option.** Both need their own approval.
 
+> **Refined by Phase 98.** Phase 97 chose refinement over breadth, and Phase 98 carried out that
+> refinement: the assessment above is now framed as a bounded internal report **outline** over the
+> source → evidence → review spine, with **one** finding slot and the presence-vs-sufficiency
+> caveat controlling interpretation. Options (a) and (b) here — more evidence breadth — remain
+> unperformed and still need their own approval. Read this draft together with
+> [`PHASE98_BOUNDED_INTERNAL_REPORT_OUTLINE.md`](PHASE98_BOUNDED_INTERNAL_REPORT_OUTLINE.md), which
+> supersedes this section's recommendation.
+
 ---
 
 ## 4. Explicit non-actions

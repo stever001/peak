@@ -3088,6 +3088,39 @@ database contact, no env read, no schema change, no new harness):**
 Full record: [`PHASE97_DB_FREE_INTERNAL_ASSESSMENT_PLANNER_RUN.md`](PHASE97_DB_FREE_INTERNAL_ASSESSMENT_PLANNER_RUN.md).
 
 
+**The bounded internal report outline (Phase 98 — docs-only and DB-free; no writer, no record, no
+database contact, no env read, no schema change, no new harness):**
+
+- [x] **Option 1 of Phase 97 taken.** The Phase 95 minimal assessment was refined into a bounded
+  internal report **outline** over the source → evidence → review spine. No evidence breadth was
+  added, no harness was added, no record was created, and migration `015` was not created.
+- [x] **One finding slot, stated as the ceiling.** The outline carries exactly one finding — *Peak
+  can preserve a limited internal claim boundary across the chain* — backed by one evidence
+  reference and one review record, with the seven honest section headings around it.
+- [x] **The presence-vs-sufficiency caveat controls interpretation, in the outline itself.** Seven
+  ready sections rest on three references; four share the same evidence reference and two the same
+  source record; every ready section has a supporting-reference count of one. Anyone drafting from
+  the outline must check `supporting_ref_count` and `evidence_trace` before treating a section as
+  substantively supported.
+- [x] **Why recommendations are unavailable, stated plainly.** The planner creates one
+  recommendation slot per **reviewer-decision** reference; the chain has none, so no slot exists —
+  empty rather than blocked. `internal_recommendations` is `partial` because its review half is
+  supplied and its reviewer-decision half is not. The three blocked sections lack **intake-note**
+  and **agent-task-queue** references — missing categories, not review-record invisibility.
+- [x] **Bounded by construction.** Internal-only, non-authoritative, not client-facing, not
+  production evidence, not publication-ready. It establishes no inventory accuracy, source-system
+  truth, client or pseudo-client evidence, production evidence, authoritative evidence, capsule
+  readiness, publication readiness, or AgentNet readiness. `peak_lab` remains at four application
+  rows **by documented state only** — this phase did not connect to verify that.
+- [ ] **Next, after explicit approval — a deliberate choice.** (1) Refine the outline into a
+  human-readable internal memo, still DB-free and record-free — **the recommended smallest honest
+  step**. (2) Add one intake-note reference chain. (3) Add one agent-task-queue reference chain.
+  Options 2 and 3 create durable records and each needs its own phase approval, writer enablement
+  decision, and cleanup posture decided in advance.
+
+Full record: [`PHASE98_BOUNDED_INTERNAL_REPORT_OUTLINE.md`](PHASE98_BOUNDED_INTERNAL_REPORT_OUTLINE.md).
+
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing
