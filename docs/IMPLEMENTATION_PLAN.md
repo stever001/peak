@@ -3185,13 +3185,47 @@ no database contact, no env read, no schema change, no new harness, no new gate)
   publication-ready. Establishes no inventory accuracy, source-system truth, client evidence,
   production evidence, capsule readiness, publication readiness, or AgentNet readiness. `peak_lab`
   remains at four application rows **by documented state only**.
-- [ ] **Next — exercise one real consulting workflow end to end.** Intake or discovery, using the
-  existing prompts, agent registry entries, and mock executor, producing a **consultant-usable
-  artifact** (a structured intake summary, a discovery plan) rather than another safety proof. Keep
-  it DB-free unless the workflow genuinely needs persistence. Stop conditions from the memo apply: no
-  harness, gate, migration, or record without a specific workflow that needs it.
+- [x] **Next — exercise one real consulting workflow end to end. Done in Phase 101 (intake).**
+  Existing prompt contract, registry entry, and mock executor were used unchanged, DB-free, producing
+  a consultant intake brief. No harness, gate, migration, or record was added. See the Phase 101
+  entry below.
 
 Full record: [`PHASE100_INTERNAL_MEMO_CONTROLLED_LAB_CHAIN_VIABILITY.md`](PHASE100_INTERNAL_MEMO_CONTROLLED_LAB_CHAIN_VIABILITY.md).
+
+
+**First consulting-workflow exercise (Phase 101 — docs-only, DB-free, record-free; no writer, no
+record, no database contact, no env read, no schema change, no new harness, no new gate, and **no
+source change of any kind**):**
+
+- [x] **Intake selected, and it was the right pick.** Discovery's own stated job is to turn intake
+  into an assessment plan, so running discovery first would have meant inventing its input. Intake
+  also had the fullest existing support: a complete prompt contract, a registry entry pointing at it,
+  a `ClientIntake` target schema, and an executor that resolves the run.
+- [x] **The existing surface worked unchanged.** The mock executor resolved `new_client_intake_agent`,
+  confirmed the prompt contract exists, permitted the run, and returned
+  `planned_mock_no_execution` at `draft` / `needs_review` with `llm_call_made`, `agentnet_call_made`,
+  `database_write_made`, `client_facing_output_created`, and `resolver_context_used` all false. **No
+  product change was needed to exercise the workflow.**
+- [x] **The executor governs a run; it does not perform one.** Documented and deliberate, but it
+  means exercising intake today is: read the prompt contract, do the work, and let the executor
+  govern the shape. Worth naming plainly rather than implying an agent ran.
+- [x] **A consultant intake brief was produced** from a synthetic, unnamed internal scenario —
+  framing, operational domains, question sets across data readiness, walk-around, inventory accuracy,
+  receiving/putaway, item master, and location model, plus evidence to request, risks, discovery next
+  steps, and an explicit "what not to conclude yet". It reads on its own without knowledge of Phases
+  90–100.
+- [x] **The prompt's grounding rules earned their keep.** With thin notes, "use only what the notes
+  contain" is what kept the source-systems section honest — *no system was named*, so none was
+  listed, and that absence became the first thing to ask about.
+- [ ] **Smallest suggested product improvement, not made here.** Add a consultant-readable brief as a
+  second output option to the intake prompt contract alongside the `ClientIntake` JSON draft, and one
+  line noting that a question-heavy result is the expected outcome of thin first-call notes. A prompt
+  edit, not a framework — and its own small deliberate decision.
+- [ ] **Next — discovery, the same way.** Take this brief as input, exercise the discovery prompt
+  contract and registry entry DB-free, and produce a scoped assessment plan and interview plan. Keep
+  continuing practical workflow delivery; do not return to guardrail work by default.
+
+Full record: [`PHASE101_DB_FREE_INTAKE_WORKFLOW_EXERCISE.md`](PHASE101_DB_FREE_INTAKE_WORKFLOW_EXERCISE.md).
 
 
 **Still to do:**

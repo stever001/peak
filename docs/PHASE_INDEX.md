@@ -154,6 +154,7 @@ Phase 44**; this table is the entry point for everything after it.
 | 98 | Bounded internal report outline refined from the Phase 97 DB-free planner run over the depth-one lab chain | [`PHASE98_BOUNDED_INTERNAL_REPORT_OUTLINE.md`](PHASE98_BOUNDED_INTERNAL_REPORT_OUTLINE.md) | **Docs-only and DB-free**; outline over the source → evidence → review spine with **one** finding slot; the presence-vs-sufficiency caveat controls interpretation; internal-only, non-authoritative, not client-facing; no record created, no writer invoked, no database contacted, no env read, no migration 015; `peak_lab` unchanged at 4 application rows by documented state |
 | 99 | Peak course correction and practical delivery reset — proportionality review against Peak's actual business risk | [`PHASE99_PEAK_COURSE_CORRECTION.md`](PHASE99_PEAK_COURSE_CORRECTION.md) | **Docs-only**; Peak is an inventory/warehouse consulting platform, **not** a financial, medical, or regulated system, and governance is sized to that; ~3 lines of test-and-doc per line of product and **70 of 73 test files assert on doc prose**; stop new harnesses, doc-prose assertions, one-off tools, and records added for planner breadth; keep the data, production-write, and AgentNet gates; **Phase 100 should be a consultant-usable memo, not more guardrail work**; one stale planner-boundary sentence corrected; no record created, no writer invoked, no database contacted, no env read, no migration 015; `peak_lab` unchanged at 4 application rows by documented state |
 | 100 | Human-readable internal consultant memo refined from the Phase 98 bounded outline | [`PHASE100_INTERNAL_MEMO_CONTROLLED_LAB_CHAIN_VIABILITY.md`](PHASE100_INTERNAL_MEMO_CONTROLLED_LAB_CHAIN_VIABILITY.md) | **Docs-only, DB-free, record-free**; plain consulting language, no new breadth; states the one honest finding — Peak can preserve a controlled non-authoritative claim boundary across the chain — and the presence-vs-sufficiency catch that seven "ready" sections rest on three references; internal-only, non-authoritative, not client-facing; **next work is one real consulting workflow (intake or discovery), not more guardrail**; no record created, no writer invoked, no database contacted, no env read, no migration 015, no new harness or gate; `peak_lab` unchanged at 4 application rows by documented state |
+| 101 | First end-to-end exercise of a real Peak consulting workflow — DB-free intake — producing a consultant intake brief | [`PHASE101_DB_FREE_INTAKE_WORKFLOW_EXERCISE.md`](PHASE101_DB_FREE_INTAKE_WORKFLOW_EXERCISE.md) | **Docs-only, DB-free, record-free**; intake selected over discovery because discovery consumes intake; existing prompt contract, registry entry, and mock executor used **unchanged** — no source change was needed; executor resolved and permitted the run at `planned_mock_no_execution` with every side-effect flag false, confirming it governs a run but produces no content; artifact is a synthetic-scenario intake brief, internal-only and not client-facing; **next work continues practical workflow delivery (discovery), not guardrail work**; no record created, no writer invoked, no database contacted, no env read, no migration 015, no new harness or gate; `peak_lab` unchanged at 4 application rows by documented state |
 
 ### Phases without a dedicated phase doc
 
@@ -165,8 +166,8 @@ Phase 44**; this table is the entry point for everything after it.
 
 ## Current baseline
 
-As of Phase 100, whose baseline is the committed Phase 99 commit `50b9fd9` — *Reset Phase 99
-course correction*. Phase 100 is docs-only and DB-free, and changed none of these values:
+As of Phase 101, whose baseline is the committed Phase 100 commit `04304d3` — *Write Phase 100
+consultant memo*. Phase 101 is docs-only and DB-free, and changed none of these values:
 
 | Property | Value |
 |---|---|
@@ -180,7 +181,7 @@ course correction*. Phase 100 is docs-only and DB-free, and changed none of thes
 | `peak_lab` controlled tables | 18, head `014_engagement_classification`, **4 application rows** (the Phase 90 `engagements` anchor, the Phase 92 `source_ingestion_records` row, the Phase 93 `evidence_references` row, and the Phase 94 `review_records` row) |
 | `peak_lab_scenario` | seeded, 120 rows, content hash re-verified in Phase 88 |
 
-Phases 87–100 changed no migration, table, or writer, so the first six values are unchanged since
+Phases 87–101 changed no migration, table, or writer, so the first six values are unchanged since
 Phase 86. Phase 96 added a reference *category* to the Phase 36 planning boundary
 (`review_record_ids → review_records`); that is a planner contract addition, not a schema, model,
 enum, writer, allowlist, or gate change, and it names a table that already existed. **Phase 90 changed the `peak_lab` row count**: it is no longer empty, and "0 application
