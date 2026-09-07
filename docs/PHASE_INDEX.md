@@ -152,6 +152,7 @@ Phase 44**; this table is the entry point for everything after it.
 | 96 | Internal assessment planner adapted to recognize `review_records` as review support, resolving the Phase 95 F8 visibility gap | [`PHASE96_PLANNER_REVIEW_RECORD_PATH.md`](PHASE96_PLANNER_REVIEW_RECORD_PATH.md) | Planner/tests/docs only; category-level support, no field correlation; existing review-bundle and reviewer-decision paths unchanged; **eight ungated harness freezes repaired** (Phase 91 recommendation 3) with no coverage weakened; no record created, no writer invoked, no database contacted, no migration 015; `peak_lab` unchanged at 4 application rows by documented state |
 | 97 | DB-free internal assessment planner run over the depth-one lab chain, and the refined assessment posture it supports | [`PHASE97_DB_FREE_INTERNAL_ASSESSMENT_PLANNER_RUN.md`](PHASE97_DB_FREE_INTERNAL_ASSESSMENT_PLANNER_RUN.md) | **Docs-only**; planner run offline with the chain's real documented identity; 7 ready / 1 partial / 3 blocked / 3 synthesis-only, 1 finding candidate, 0 recommendation candidates; **readiness is presence, not sufficiency** — 7 ready sections rest on 3 references; no record created, no writer invoked, no database contacted, no migration 015; `peak_lab` unchanged at 4 application rows by documented state |
 | 98 | Bounded internal report outline refined from the Phase 97 DB-free planner run over the depth-one lab chain | [`PHASE98_BOUNDED_INTERNAL_REPORT_OUTLINE.md`](PHASE98_BOUNDED_INTERNAL_REPORT_OUTLINE.md) | **Docs-only and DB-free**; outline over the source → evidence → review spine with **one** finding slot; the presence-vs-sufficiency caveat controls interpretation; internal-only, non-authoritative, not client-facing; no record created, no writer invoked, no database contacted, no env read, no migration 015; `peak_lab` unchanged at 4 application rows by documented state |
+| 99 | Peak course correction and practical delivery reset — proportionality review against Peak's actual business risk | [`PHASE99_PEAK_COURSE_CORRECTION.md`](PHASE99_PEAK_COURSE_CORRECTION.md) | **Docs-only**; Peak is an inventory/warehouse consulting platform, **not** a financial, medical, or regulated system, and governance is sized to that; ~3 lines of test-and-doc per line of product and **70 of 73 test files assert on doc prose**; stop new harnesses, doc-prose assertions, one-off tools, and records added for planner breadth; keep the data, production-write, and AgentNet gates; **Phase 100 should be a consultant-usable memo, not more guardrail work**; one stale planner-boundary sentence corrected; no record created, no writer invoked, no database contacted, no env read, no migration 015; `peak_lab` unchanged at 4 application rows by documented state |
 
 ### Phases without a dedicated phase doc
 
@@ -163,8 +164,8 @@ Phase 44**; this table is the entry point for everything after it.
 
 ## Current baseline
 
-As of Phase 98, whose baseline is the committed Phase 97 commit `da2ceef` — *Run planner over lab
-chain*. Phase 98 is docs-only and DB-free, and changed none of these values:
+As of Phase 99, whose baseline is the committed Phase 98 commit `baee362` — *Draft Phase 98
+bounded report outline*. Phase 99 is docs-only and DB-free, and changed none of these values:
 
 | Property | Value |
 |---|---|
@@ -178,7 +179,7 @@ chain*. Phase 98 is docs-only and DB-free, and changed none of these values:
 | `peak_lab` controlled tables | 18, head `014_engagement_classification`, **4 application rows** (the Phase 90 `engagements` anchor, the Phase 92 `source_ingestion_records` row, the Phase 93 `evidence_references` row, and the Phase 94 `review_records` row) |
 | `peak_lab_scenario` | seeded, 120 rows, content hash re-verified in Phase 88 |
 
-Phases 87–98 changed no migration, table, or writer, so the first six values are unchanged since
+Phases 87–99 changed no migration, table, or writer, so the first six values are unchanged since
 Phase 86. Phase 96 added a reference *category* to the Phase 36 planning boundary
 (`review_record_ids → review_records`); that is a planner contract addition, not a schema, model,
 enum, writer, allowlist, or gate change, and it names a table that already existed. **Phase 90 changed the `peak_lab` row count**: it is no longer empty, and "0 application

@@ -3121,6 +3121,47 @@ database contact, no env read, no schema change, no new harness):**
 Full record: [`PHASE98_BOUNDED_INTERNAL_REPORT_OUTLINE.md`](PHASE98_BOUNDED_INTERNAL_REPORT_OUTLINE.md).
 
 
+**Course correction and practical delivery reset (Phase 99 — docs-only; no writer, no record, no
+database contact, no env read, no schema change, no new harness):**
+
+- [x] **Proportionality reset.** Peak is an **inventory and warehouse operations consulting
+  automation platform** — not a financial transaction system, and not a medical, legal, or otherwise
+  highly regulated one. Governance is sized to operational-consulting risk: mishandling client data,
+  writing to production by accident, and publishing an unreviewed claim as authoritative are worth
+  real controls; an internal lab artifact about a synthetic scenario is not.
+- [x] **Drift confirmed and measured.** Roughly **3 lines of test-and-doc per line of product**
+  (~39,900 test / ~29,600 doc / ~23,400 product). **70 of 73 test files read `docs/*.md` and assert
+  on its prose** — the direct cause of Phase 96's eight ungated harness freezes. 12 of 21 `tools/`
+  scripts are single-use record creators. 86 Make targets. Phases 95–98 produced 694 doc lines, zero
+  consulting artifacts, and zero records.
+- [x] **The product itself is the gap.** The ten consulting workflows have prompts and registry
+  entries for all ten agents, but the only two implemented workflow modules are *governance*
+  workflows. Intake, discovery, interview structuring, walk-around, reporting, quick-win, and
+  proposal remain unexercised end to end.
+- [x] **Keep:** no real client data and no secrets in the repo; the production writer enablement
+  gate, lab writer gate, Alembic target guard, and runtime-connectivity separation; AgentNet
+  publication gating; clear evidence/claim boundaries; durable lab records with cleanup posture
+  decided before a write.
+- [x] **Stop, unless a real defect appears:** a new harness per phase; asserting on documentation
+  prose in tests; migration `015` without a concrete workflow blocker; expanding a gate because a
+  path exists; creating records solely to satisfy planner breadth; turning every internal document
+  into a compliance artifact; re-documenting unchanged access posture or row counts; one-off tools.
+- [x] **The Phase 91 correction is the model.** It named the per-phase harness habit, and Phases
+  92–98 added none. Name the habit, stop it, and do not build a mechanism to enforce stopping it.
+- [x] **One stale sentence corrected** in the planning boundary: a blocked finding is now described
+  in post-Phase-96 review-support terms (`review_bundle_records` or `review_records`).
+- [ ] **Phase 100 — a consultant-usable internal memo.** Refine Phase 98 into human-readable prose a
+  Peak consultant could actually use: what was measured, what it means, what it does not mean, what
+  to do next, carrying the one finding and the presence-vs-sufficiency caveat in plain language.
+  DB-free and record-free; no migration `015`, no new harness, no DB write, no new gate. **Do not add
+  breadth unless the memo cannot be useful without it.**
+- [ ] **After Phase 100 — exercise one real consulting workflow.** Intake or discovery, through the
+  existing prompts and mock executor, to produce a consulting artifact. That is the product; the
+  governance layer has been ready for it for some time.
+
+Full record: [`PHASE99_PEAK_COURSE_CORRECTION.md`](PHASE99_PEAK_COURSE_CORRECTION.md).
+
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

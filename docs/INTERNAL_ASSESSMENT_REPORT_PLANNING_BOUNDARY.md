@@ -153,7 +153,8 @@ categories. It never holds record content.
 
 **Finding candidates** are structured placeholders tied to references, never generated narrative:
 one slot per evidence reference (in sorted order), with `evidence_support_refs`,
-`review_support_refs`, and a readiness state. A finding with no supporting review bundle is blocked.
+`review_support_refs`, and a readiness state. A finding with no review support reference —
+`review_bundle_records` or `review_records` (Phase 96) — is blocked.
 
 **Recommendation candidates** are **internal-only** slots: one per reviewer-decision reference,
 carrying `reviewer_decision_refs`, `evidence_support_refs`, `review_support_refs`, a readiness state,
