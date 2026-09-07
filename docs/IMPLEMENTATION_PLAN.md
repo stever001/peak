@@ -3221,11 +3221,52 @@ source change of any kind**):**
   second output option to the intake prompt contract alongside the `ClientIntake` JSON draft, and one
   line noting that a question-heavy result is the expected outcome of thin first-call notes. A prompt
   edit, not a framework — and its own small deliberate decision.
-- [ ] **Next — discovery, the same way.** Take this brief as input, exercise the discovery prompt
-  contract and registry entry DB-free, and produce a scoped assessment plan and interview plan. Keep
-  continuing practical workflow delivery; do not return to guardrail work by default.
+- [x] **Next — discovery, the same way. Done in Phase 102.** The intake brief was used as input, the
+  discovery prompt contract and registry entry were exercised DB-free, and a scoped assessment plan
+  and interview plan were produced. No prompt or source change was needed. See the Phase 102 entry
+  below.
 
 Full record: [`PHASE101_DB_FREE_INTAKE_WORKFLOW_EXERCISE.md`](PHASE101_DB_FREE_INTAKE_WORKFLOW_EXERCISE.md).
+
+
+**Second consulting-workflow exercise (Phase 102 — docs-only, DB-free, record-free; no writer, no
+record, no database contact, no env read, no schema change, no new harness, no new gate, and **no
+prompt or source change**):**
+
+- [x] **Discovery ran on the existing surface, unchanged.** The mock executor resolved
+  `discovery_planning_agent`, confirmed its prompt contract exists, permitted the run, and returned
+  `planned_mock_no_execution` at `draft` / `needs_review` with every side-effect flag false. The agent
+  is flagged `resolver_context_future=True`, but no resolver context was requested and none was
+  routed. **The executor planned the run and generated none of the content** — the plan was written
+  from the prompt contract and the intake brief by hand, as intake was.
+- [x] **A scoped assessment plan and interview plan were produced.** Objective, scope boundaries,
+  six operational domains, five question sets, walk-around observations, a six-role interview plan
+  with sequencing, a nine-item evidence request list, and a consultant handoff. Every risk theme is
+  held explicitly as a **hypothesis to validate**, never as a finding.
+- [x] **The prompt's grounding rules did real work.** The first-billing-tranche objective was
+  deliberately **left unsharpened** — intake stated none, so there was nothing to restate, and
+  inventing one was the obvious failure mode. The plan says what three answers would define it
+  instead.
+- [x] **A real format seam was found at the intake → discovery hand-off.** Discovery's declared input
+  is an `EngagementPacket` JSON containing a `client_intake`; intake's useful human output is a prose
+  brief. **Nothing converts one to the other.** Not blocking — the prompt's grounding rules are about
+  substance and the substance was all present — but it is a gap at exactly the hand-off these
+  workflows exist to make routine. `tools/packet_runner.py` is the natural bridge and reads a packet
+  file, but nothing currently produces one.
+- [x] **Smaller finding:** `interview_structuring_assistant` is registered as a discovery agent with
+  `prompt_contract_path = None`, so the registry promises a capability with no contract behind it.
+  The planning prompt's own interview table covers the need today.
+- [ ] **Two prompt notes now outstanding, neither made.** (1) Intake: add a consultant-readable brief
+  as a second output option, and note that question-heavy output is expected from thin notes.
+  (2) Discovery: note that a consultant intake brief is acceptable input where no packet exists yet.
+  Both are one- or two-line prompt edits with no behaviour change; they should be taken together as
+  one small deliberate decision.
+- [ ] **Next — evidence normalization, the same way.** Take what discovery would collect and exercise
+  the evidence prompt contract DB-free, producing structured evidence references each tied to a named
+  source and an as-of time. Continue practical workflow delivery; do not return to guardrail work by
+  default.
+
+Full record: [`PHASE102_DB_FREE_DISCOVERY_WORKFLOW_EXERCISE.md`](PHASE102_DB_FREE_DISCOVERY_WORKFLOW_EXERCISE.md).
 
 
 **Still to do:**
