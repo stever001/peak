@@ -3150,16 +3150,48 @@ database contact, no env read, no schema change, no new harness):**
   92–98 added none. Name the habit, stop it, and do not build a mechanism to enforce stopping it.
 - [x] **One stale sentence corrected** in the planning boundary: a blocked finding is now described
   in post-Phase-96 review-support terms (`review_bundle_records` or `review_records`).
-- [ ] **Phase 100 — a consultant-usable internal memo.** Refine Phase 98 into human-readable prose a
-  Peak consultant could actually use: what was measured, what it means, what it does not mean, what
-  to do next, carrying the one finding and the presence-vs-sufficiency caveat in plain language.
-  DB-free and record-free; no migration `015`, no new harness, no DB write, no new gate. **Do not add
-  breadth unless the memo cannot be useful without it.**
+- [x] **Phase 100 — a consultant-usable internal memo. Done.** Refined Phase 98 into human-readable
+  prose a Peak consultant could actually use: what was measured, what it means, what it does not
+  mean, what to do next, carrying the one finding and the presence-vs-sufficiency caveat in plain
+  language. DB-free and record-free; no migration `015`, no new harness, no DB write, no new gate; no
+  breadth added, because the memo did not need it. See the Phase 100 entry below.
 - [ ] **After Phase 100 — exercise one real consulting workflow.** Intake or discovery, through the
   existing prompts and mock executor, to produce a consulting artifact. That is the product; the
   governance layer has been ready for it for some time.
 
 Full record: [`PHASE99_PEAK_COURSE_CORRECTION.md`](PHASE99_PEAK_COURSE_CORRECTION.md).
+
+
+**The internal consultant memo (Phase 100 — docs-only, DB-free, record-free; no writer, no record,
+no database contact, no env read, no schema change, no new harness, no new gate):**
+
+- [x] **A memo a consultant can actually read.** The Phase 98 outline was written out in plain
+  consulting language: what was measured, what the chain proves, what it does not, how to use it
+  internally, and what to do next. No new breadth was added — the memo did not need it.
+- [x] **The one honest finding, stated as such.** Peak can preserve a controlled, non-authoritative
+  claim boundary from measured lab input through source ingestion, evidence reference, and review
+  support into planner recognition and memo drafting. The finding is about *Peak*, not about
+  inventory: what held is that a hedged observation did not harden into a confident conclusion as it
+  moved between systems.
+- [x] **The presence-vs-sufficiency catch carried in plain language.** Seven "ready" planner sections
+  rest on **three** references — four on the same evidence reference, two on the same source record,
+  every one with a support count of one. Four sections sharing one piece of evidence are one finding
+  wearing four hats. Check support count and evidence trace before drafting.
+- [x] **Two measurement results generalize beyond the lab, and are the memo's useful content for a
+  consultant.** *Coverage is not accuracy* — attribute-at-a-time readiness numbers flatter the data.
+  *Presence is not usability* — a fully-populated but internally contradictory item is still
+  unusable, so a readiness rule must read the completeness classification, not just field presence.
+- [x] **Bounded.** Internal-only, non-authoritative, not client-facing, not production evidence, not
+  publication-ready. Establishes no inventory accuracy, source-system truth, client evidence,
+  production evidence, capsule readiness, publication readiness, or AgentNet readiness. `peak_lab`
+  remains at four application rows **by documented state only**.
+- [ ] **Next — exercise one real consulting workflow end to end.** Intake or discovery, using the
+  existing prompts, agent registry entries, and mock executor, producing a **consultant-usable
+  artifact** (a structured intake summary, a discovery plan) rather than another safety proof. Keep
+  it DB-free unless the workflow genuinely needs persistence. Stop conditions from the memo apply: no
+  harness, gate, migration, or record without a specific workflow that needs it.
+
+Full record: [`PHASE100_INTERNAL_MEMO_CONTROLLED_LAB_CHAIN_VIABILITY.md`](PHASE100_INTERNAL_MEMO_CONTROLLED_LAB_CHAIN_VIABILITY.md).
 
 
 **Still to do:**
