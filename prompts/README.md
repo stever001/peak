@@ -14,8 +14,8 @@ and require the model to cite packet `evid_` ids.
 
 | Folder / file | Workflow | Operates on |
 | --- | --- | --- |
-| `intake/normalize-client-intake.prompt.md` | New client intake | Raw notes → `ClientIntake` draft |
-| `discovery/generate-discovery-plan.prompt.md` | Assessment planning | `EngagementPacket` |
+| `intake/normalize-client-intake.prompt.md` | New client intake | Raw notes → `ClientIntake` draft (+ optional consultant brief) |
+| `discovery/generate-discovery-plan.prompt.md` | Assessment planning | `EngagementPacket`, or an intake brief where none exists yet |
 | `evidence/extract-evidence-findings.prompt.md` | Evidence normalization | `EngagementPacket` |
 | `reporting/draft-initial-assessment-report.prompt.md` | Initial report | `EngagementPacket` (+ findings) |
 | `proposal/generate-next-phase-proposal.prompt.md` | Next-phase proposal | `EngagementPacket` (+ report) |

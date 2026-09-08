@@ -255,8 +255,14 @@ def baseline_checks() -> None:
         # Phase 56 legitimately owns migration 014, the engagement classification model
         # columns, and the repo-side head pin in the parity tool. The substantive
         # invariants each harness cares about are asserted directly elsewhere.
-        check("schemas/, prompts/, agents/ untouched",
-              not git("diff", "--name-only", "HEAD", "--", "schemas", "prompts", "agents"))
+        # Authoring-time claim about *this* phase's own working tree, not a permanent freeze on
+        # prompts/, schemas/, or agents/: later phases may legitimately edit a prompt contract
+        # (Phase 103 closed the intake -> discovery handoff seam). The substantive invariants —
+        # writers, models, the allowlist, the gates, and the migrations — are asserted
+        # unconditionally elsewhere in this harness.
+        if phase_never_committed(HARNESS_REL):
+            check("schemas/, prompts/, agents/ untouched",
+                  not git("diff", "--name-only", "HEAD", "--", "schemas", "prompts", "agents"))
         check("docs/Peak_Investor_Overview_AI.docx has no pending diff",
               not git("diff", "--name-only", "HEAD", "--",
                       "docs/Peak_Investor_Overview_AI.docx"))

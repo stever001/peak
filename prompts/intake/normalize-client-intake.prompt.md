@@ -22,6 +22,15 @@ prompt**, not a client-facing tool. A human reviews and owns the output.
   question to ask to fill them.
 - **Confidence notes**: where the draft is inferred vs. directly stated.
 
+Optionally, and in addition to the draft: a **consultant intake brief** — a short
+readable summary a consultant can carry into a first site visit, when the operator
+needs a handoff before an `EngagementPacket` exists. The brief never replaces the
+`ClientIntake` draft; it restates the same grounded material in prose.
+
+**Thin notes make a question-heavy brief, and that is the correct result.** A first
+call often supports few conclusions. Return the questions rather than filling the gaps
+with plausible warehouse facts.
+
 ## 5. Grounding rules
 - Ground every field in the supplied notes. Do not draw on outside knowledge of the
   client, their industry, or "typical" companies.
@@ -49,6 +58,9 @@ Return two parts:
 2. A markdown section:
    - **Missing information** — bulleted `field → question to ask`.
    - **Confidence notes** — bulleted `field → stated | inferred | uncertain`.
+3. *Optional, when a consultant handoff is wanted:* a **Consultant intake brief** —
+   framing, what to ask next, what evidence to request, and what not to conclude yet.
+   Same grounding rules; no field may appear here that is not supported above.
 
 ## 9. Quality checks
 Before returning, confirm:
@@ -97,6 +109,10 @@ OUTPUT
 1) A ```json block with the ClientIntake draft.
 2) "Missing information": bullet list of `field -> question to ask`.
 3) "Confidence notes": bullet list of `field -> stated | inferred | uncertain`.
+4) OPTIONAL, if a consultant handoff is requested: "Consultant intake brief" - a short
+   readable brief (framing, what to ask next, what evidence to request, what not to
+   conclude yet). It restates only what is above; it adds nothing. If the notes are
+   thin, the brief is mostly questions - that is the expected result, not a failure.
 
 RAW INTAKE NOTES:
 <<<paste raw notes here>>>

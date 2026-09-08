@@ -3256,17 +3256,53 @@ prompt or source change**):**
 - [x] **Smaller finding:** `interview_structuring_assistant` is registered as a discovery agent with
   `prompt_contract_path = None`, so the registry promises a capability with no contract behind it.
   The planning prompt's own interview table covers the need today.
-- [ ] **Two prompt notes now outstanding, neither made.** (1) Intake: add a consultant-readable brief
-  as a second output option, and note that question-heavy output is expected from thin notes.
-  (2) Discovery: note that a consultant intake brief is acceptable input where no packet exists yet.
-  Both are one- or two-line prompt edits with no behaviour change; they should be taken together as
-  one small deliberate decision.
+- [x] **Two prompt notes — both made together in Phase 103.** Intake gained the consultant-brief
+  output option and the thin-notes rule; discovery gained the brief as accepted input where no packet
+  exists. Taken as one decision, as recommended. See the Phase 103 entry below.
 - [ ] **Next — evidence normalization, the same way.** Take what discovery would collect and exercise
   the evidence prompt contract DB-free, producing structured evidence references each tied to a named
   source and an as-of time. Continue practical workflow delivery; do not return to guardrail work by
   default.
 
 Full record: [`PHASE102_DB_FREE_DISCOVERY_WORKFLOW_EXERCISE.md`](PHASE102_DB_FREE_DISCOVERY_WORKFLOW_EXERCISE.md).
+
+
+**Closing the intake → discovery seam (Phase 103 — two prompt contracts, wording only, plus a narrow
+repair to nine stale harness freezes it exposed; no DB contact, no env read, no writer, no record, no
+migration `015`, no schema, executor, registry, or gate change, and no new harness):**
+
+- [x] **The seam is closed at the contract level.** Intake's contract now names a **consultant
+  intake brief** as an allowed output *in addition to* the `ClientIntake` draft, and discovery's now
+  **accepts that brief** where no `EngagementPacket` exists yet. The chain is runnable end to end as
+  consultants actually work it.
+- [x] **Nothing was weakened.** `ClientIntake` and `EngagementPacket` are untouched — no schema
+  change — and the packet remains discovery's *preferred* input because it is structured and its ids
+  are referenceable. The brief is a handoff option, not a replacement.
+- [x] **The discipline travelled with the change.** Intake now states that **thin first-call notes
+  producing a question-heavy brief is the correct result**, not a failure. Discovery now states that
+  **a brief's unknowns stay unknown** — no system, SKU count, volume, headcount, site size, or
+  financial context may appear that the brief did not state — and that a first-tranche objective must
+  not be sharpened without a basis. Both rules were written from what Phases 101–102 actually did.
+- [x] **No code change was needed, and none was made.** The executor plans runs without reading
+  prompt text, so a prompt-level contract change does not reach it. Both agents were re-run through
+  the mock executor after the edits and returned `planned_mock_no_execution` at `draft` /
+  `needs_review` with every side-effect flag false; every registry prompt path still resolves on
+  disk. `prompts/README.md` was corrected in two table cells so its input summary matches.
+- [x] **Nine stale harness freezes repaired — the cost of the first prompt edit since Phase 96.**
+  Phases 44, 49, 50, 51, 53, 54, 55, 56 and 57 each asserted `schemas/, prompts/, agents/ untouched`
+  **unconditionally** — an authoring-time claim about that phase's own working tree, frozen into a
+  repo-wide prohibition on editing any prompt, schema, or agent file. Two files of wording failed all
+  nine, none on anything substantive. The repair applies the guard already used beside these checks,
+  `if phase_never_committed(HARNESS_REL):`, and nothing else: each file has the same `check()` count
+  before and after, and writer, model, allowlist, gate, migration, table-count, collation, no-secrets
+  and no-client-data invariants stay unconditional. **This is Phase 96's repair again, and Phase 99's
+  named liability — 17 instances now closed one phase at a time. The class deserves a deliberate
+  sweep rather than another per-phase repair.**
+- [ ] **Next — evidence normalization, DB-free, over the improved handoff.** Produce structured
+  evidence references each tied to a named source and an as-of time, with the claim boundary set at
+  what the evidence supports and no wider. Continue practical workflow delivery.
+
+Full record: [`PHASE103_INTAKE_DISCOVERY_PROMPT_SEAM.md`](PHASE103_INTAKE_DISCOVERY_PROMPT_SEAM.md).
 
 
 **Still to do:**

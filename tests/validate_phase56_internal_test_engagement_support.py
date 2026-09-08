@@ -99,6 +99,17 @@ def git(*args: str) -> str:
                           capture_output=True, text=True, timeout=20).stdout.strip()
 
 
+def phase_never_committed(rel: str) -> bool:
+    """True while ``rel`` has no commit yet — i.e. this phase's own work is still unstaged.
+
+    The working-tree scope guard below is an authoring-time claim about *this* phase. Absence of
+    any commit for the harness is the signal that means "this phase has not landed yet"; once it
+    has, a later phase's pending diff is that phase's business, not this one's.
+    """
+    return not git("log", "-1", "--format=%H", "--", rel).strip()
+
+
+
 def git_succeeds(*args: str) -> bool:
     """Run a git command for its exit status alone; stdout and stderr are discarded, so
     nothing a path or remote might carry can reach this harness's output."""
@@ -184,9 +195,15 @@ def baseline_checks() -> None:
         check("docs/Peak_Investor_Overview_AI.docx has no pending diff",
               not git("diff", "--name-only", "HEAD", "--",
                       "docs/Peak_Investor_Overview_AI.docx"))
-        check("schemas/, prompts/, agents/, examples/ untouched",
-              not git("diff", "--name-only", "HEAD", "--",
-                      "schemas", "prompts", "agents", "examples"))
+        # Authoring-time claim about *this* phase's own working tree, not a permanent freeze on
+        # prompts/, schemas/, agents/, or examples/: later phases may legitimately edit a prompt
+        # contract (Phase 103 closed the intake -> discovery handoff seam). The substantive
+        # invariants — writers, models, the allowlist, the gates, and the migrations — are
+        # asserted unconditionally elsewhere in this harness.
+        if phase_never_committed(HARNESS_REL):
+            check("schemas/, prompts/, agents/, examples/ untouched",
+                  not git("diff", "--name-only", "HEAD", "--",
+                          "schemas", "prompts", "agents", "examples"))
     except Exception:
         check("git-backed scope checks (git unavailable — skipped)", True)
 
