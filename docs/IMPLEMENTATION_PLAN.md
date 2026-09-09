@@ -3332,16 +3332,54 @@ prompt or source change**):**
   hand-off — but because discovery could consume the intake brief, its evidence request list carried
   forward in usable prose, and that list is what this plan normalizes. The chain held across three
   workflows.
-- [ ] **Next — reporting / initial assessment draft, DB-free, over this plan.** Expect it to surface
-  the same shape: the reporting contract wants findings that do not exist yet. **If it does, the
-  honest read is that the chain is blocked on evidence rather than on contracts**, and the next real
-  decision is about producing evidence — not another prompt edit and not another docs-only exercise.
+- [x] **Next — reporting / initial assessment draft, DB-free, over this plan. Done in Phase 105, and
+  it surfaced exactly that shape.** The chain is contract-complete and evidence-empty; the blockage
+  is not in the contracts. See the Phase 105 entry below.
 - [ ] **A third prompt note is now outstanding** (a "before evidence arrives" preparation section in
   the evidence contract), plus the registry description for `evidence_normalization_worker`, which
   describes the pre-collection job while its contract does post-collection extraction. **Do not make
   these piecemeal** — collect and decide once, as Phase 103 did with two.
 
 Full record: [`PHASE104_DB_FREE_EVIDENCE_NORMALIZATION_WORKFLOW_EXERCISE.md`](PHASE104_DB_FREE_EVIDENCE_NORMALIZATION_WORKFLOW_EXERCISE.md).
+
+
+**Fourth consulting-workflow exercise (Phase 105 — docs-only, DB-free, record-free; no writer, no
+record, no database contact, no env read, no schema change, no new harness, no new gate, and **no
+prompt or source change**):**
+
+- [x] **Reporting ran on the existing surface, unchanged.** The mock executor resolved
+  `initial_report_generation_agent`, confirmed its prompt contract exists, permitted the run, and
+  returned `planned_mock_no_execution` at `draft` / `needs_review` with every side-effect flag false.
+  **The executor planned the run and generated none of the content.** This agent is the only one in
+  the chain flagged `client_facing_requires_human_approval=True` — the registry knows a report is
+  where output starts pointing at a client.
+- [x] **The question is settled: the chain is contract-complete and evidence-empty.** Four workflows
+  — intake, discovery, evidence normalization, reporting — each have a working contract, a resolving
+  registry entry, and a governed executor path, and every hand-off carried. The reporting contract
+  requires inline `evid_` citations for findings, risks, and quick wins, and requires recommendations
+  to connect back to findings; with nothing collected, **all four are blocked, recommendations
+  transitively**. The inputs support a report shell and a readiness memo, not an assessment. **That
+  is the contract working** — a generator that produced findings from an empty packet would be the
+  failure.
+- [x] **The report shell scores 4 ready / 2 limited / 3 blocked.** Ready: scope and basis, evidence
+  received (correctly empty), source authority questions, next evidence requests. Limited: risks and
+  unknowns — unknowns are stateable, ratings are not. Blocked: executive summary, findings,
+  recommendations. **The blocked three are the ones a client would care about**, which is the
+  accurate summary of where the engagement stands.
+- [x] **Four contracts have now run needing no change.** Phase 103 was the only prompt work required
+  across the whole sequence. The blockage is not in the contracts, and no further prompt edit is the
+  bottleneck.
+- [ ] **Next — a decision, not another exercise.** **(A)** Produce collected evidence for the
+  synthetic lab chain through approved durable records — the step that actually unblocks findings and
+  lets reporting run for real; it creates records, so it needs its own phase approval, writer
+  enablement decision, and cleanup posture decided in advance, as Phases 92–94 did. **(B)** Stay
+  DB-free and build the missing `EngagementPacket` bridge — nothing currently produces the packet
+  every downstream contract names, so a small bridge would smooth every hand-off at once, with no
+  record risk. **A is recommended:** the plumbing has been demonstrated four times; what has not been
+  demonstrated is that the chain does anything useful with real material. A fifth docs-only exercise
+  over the same empty condition would restate this record.
+
+Full record: [`PHASE105_DB_FREE_REPORTING_WORKFLOW_EXERCISE.md`](PHASE105_DB_FREE_REPORTING_WORKFLOW_EXERCISE.md).
 
 
 **Still to do:**
