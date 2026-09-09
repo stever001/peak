@@ -3298,11 +3298,50 @@ migration `015`, no schema, executor, registry, or gate change, and no new harne
   and no-client-data invariants stay unconditional. **This is Phase 96's repair again, and Phase 99's
   named liability — 17 instances now closed one phase at a time. The class deserves a deliberate
   sweep rather than another per-phase repair.**
-- [ ] **Next — evidence normalization, DB-free, over the improved handoff.** Produce structured
-  evidence references each tied to a named source and an as-of time, with the claim boundary set at
-  what the evidence supports and no wider. Continue practical workflow delivery.
+- [x] **Next — evidence normalization, DB-free, over the improved handoff. Done in Phase 104.**
+  Produced a per-item normalization plan fixing source and as-of requirements and the claim boundary
+  for each requested item. See the Phase 104 entry below.
 
 Full record: [`PHASE103_INTAKE_DISCOVERY_PROMPT_SEAM.md`](PHASE103_INTAKE_DISCOVERY_PROMPT_SEAM.md).
+
+
+**Third consulting-workflow exercise (Phase 104 — docs-only, DB-free, record-free; no writer, no
+record, no database contact, no env read, no schema change, no new harness, no new gate, and **no
+prompt or source change**):**
+
+- [x] **Evidence normalization ran on the existing surface, unchanged.** The mock executor resolved
+  `evidence_normalization_worker`, confirmed its prompt contract exists, permitted the run, and
+  returned `planned_mock_no_execution` at `draft` / `needs_review` with every side-effect flag false.
+  **The executor planned the run and generated none of the content.**
+- [x] **A stage gap was found, and it is the phase's real result.** The evidence contract is a
+  **post-collection** step: every finding must cite an `evid_` id present in the packet, and anything
+  uncited becomes an *Unsupported item*. **This chain has collected no evidence** — discovery
+  produced a request list. Run as written it would correctly return **zero findings and a long
+  Unsupported list**. That is the contract working, on an engagement not yet ready for it.
+- [x] **The artifact does the step that actually comes next.** For each of the nine requested items:
+  why it matters, the source and as-of metadata required before it is usable at all, what to inspect,
+  **the claim it can support**, what it cannot support alone, how to normalize it, and the follow-up
+  question. Deciding this *before* anything arrives is what stops a spreadsheet becoming a finding
+  two days later.
+- [x] **Seven claim-boundary rules**, the transferable part: evidence carries only its own claim;
+  field presence is not usability; coverage is not accuracy; a source name is not authority; late or
+  missing process records are process-risk evidence, not proof of inventory error; conflicting
+  sources raise an authority question before a finding; freshness is part of the evidence, and a
+  claim inherits the age of its weakest input.
+- [x] **Phase 103's seam closure held indirectly.** That seam was intake → discovery, not this
+  hand-off — but because discovery could consume the intake brief, its evidence request list carried
+  forward in usable prose, and that list is what this plan normalizes. The chain held across three
+  workflows.
+- [ ] **Next — reporting / initial assessment draft, DB-free, over this plan.** Expect it to surface
+  the same shape: the reporting contract wants findings that do not exist yet. **If it does, the
+  honest read is that the chain is blocked on evidence rather than on contracts**, and the next real
+  decision is about producing evidence — not another prompt edit and not another docs-only exercise.
+- [ ] **A third prompt note is now outstanding** (a "before evidence arrives" preparation section in
+  the evidence contract), plus the registry description for `evidence_normalization_worker`, which
+  describes the pre-collection job while its contract does post-collection extraction. **Do not make
+  these piecemeal** — collect and decide once, as Phase 103 did with two.
+
+Full record: [`PHASE104_DB_FREE_EVIDENCE_NORMALIZATION_WORKFLOW_EXERCISE.md`](PHASE104_DB_FREE_EVIDENCE_NORMALIZATION_WORKFLOW_EXERCISE.md).
 
 
 **Still to do:**
