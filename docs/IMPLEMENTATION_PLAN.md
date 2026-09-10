@@ -3382,6 +3382,53 @@ prompt or source change**):**
 Full record: [`PHASE105_DB_FREE_REPORTING_WORKFLOW_EXERCISE.md`](PHASE105_DB_FREE_REPORTING_WORKFLOW_EXERCISE.md).
 
 
+**Evidence production decision (Phase 106 — a decision phase; docs-only, DB-free, record-free; no
+writer, no record, no database contact, no env read, no schema change, no new harness, no new gate,
+and **no write performed**):**
+
+- [x] **Option A chosen — produce collected evidence through approved durable lab records — but with
+  a corrected evidence set.** Every mechanism Option A needs already exists and none needs changing:
+  `evidence_references/create_draft` is already inside the Phase 89 lab gate's enableable set, the
+  Phase 21 evidence writer applies as-is, and there is **no migration `015`, no new writer, and no
+  schema, model, enum, allowlist, gate, or harness change**.
+- [x] **The Phase 105 three-item minimum is not producible, and that is this phase's main finding.**
+  The on-hand extract is fully reachable (Phase 88 §4.4) and the system-of-record explanation only
+  partially — 4 of 10 domains resolved, R8 precedence still unconfirmed. **Cycle-count results do not
+  exist**: the lab scenario has eight tables and no cycle-count or accuracy-variance population.
+  Reaching them would mean seeding scenario content or inventing evidence, so **inventory accuracy
+  stays unanswered** and no later phase may answer it from this evidence.
+- [x] **Phase 107's write is exactly one `evidence_references` row.** No new source-ingestion row —
+  Phase 92's row already ingests the Phase 88 measurement in full, and a second scoped to R1 would be
+  a record created for breadth, which Phase 99 §4 names directly. No review record — Phase 94
+  established a review is INSERT-only and does not propagate, and reporting is blocked on evidence
+  *existence*, not approval. The row carries a **substantive** claim — on-hand rows attributable to
+  both a resolvable item and a resolvable location in **14 of 32 cases**, with named blockers — rather
+  than the record-existence claim Phase 93's row carries. **Coverage is not accuracy**, and the claim
+  boundary says so.
+- [x] **Cleanup posture, decided before the write.** Durable internal lab records, **no cleanup after
+  creation** — and none is available, since the lab runtime role holds `SELECT` and `INSERT` only and
+  **no `DELETE`**. A correction means a superseding record. `client_id` `99999`, scope
+  `internal_peak_only`: not real client data, not client accessible, not client-facing, not production
+  evidence, not authoritative, no capsule or AgentNet publication.
+- [x] **Option B deferred, not rejected; Option C rejected.** The `EngagementPacket` bridge is a real
+  gap — nothing produces the packet every downstream contract names — but a bridge over empty
+  artifacts produces an empty packet, so it is better after evidence exists, and unlike Option A it
+  needs source changes. Stopping is rejected because one question stays open and one record settles
+  it.
+- [x] **The automated packet path stays blocked either way.** `peak/ingestion/packet_mapper.py` maps
+  *packet → drafts*, one direction only; nothing produces an `EngagementPacket` and nothing reads DB
+  rows into one. A Phase 108 report citing this evidence would be **hand-drafted**, as Phases 101–105
+  were, citing a real durable record id — honest and worth doing, but not an automated chain.
+- [ ] **Phase 107 requires explicit approval before any write** — to source the lab writer env, to
+  enable `evidence_references/create_draft` for that phase only, to invoke the writer once, to the
+  exact record count and type, to the durable no-cleanup posture, to the `evidence_type`/`source_type`
+  choice (`measurement`/`system` proposed, `other`/`other` per Phase 93 acceptable), and to
+  **acceptance of the reduced evidence set**. The pair being *enableable* is reachability, not
+  approval; there is no standing authority.
+
+Full record: [`PHASE106_EVIDENCE_PRODUCTION_DECISION.md`](PHASE106_EVIDENCE_PRODUCTION_DECISION.md).
+
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing
