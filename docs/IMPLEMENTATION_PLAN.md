@@ -3477,6 +3477,39 @@ change):**
 Full record: [`PHASE107_LAB_EVIDENCE_REFERENCE_R1_COVERAGE.md`](PHASE107_LAB_EVIDENCE_REFERENCE_R1_COVERAGE.md).
 
 
+**Narrow reporting re-exercise (Phase 108 — docs-only, DB-free, record-free; no writer, no record,
+no migration, no schema/model/enum/writer/allowlist/gate/harness/prompt/test/tool/Makefile change):**
+
+- [x] **Reporting re-exercised DB-free against the Phase 107 evidence reference.** The existing
+  reporting prompt contract, `initial_report_generation_agent`, and the mock executor were used
+  unchanged. The executor returned `planned_mock_no_execution` at `draft`/`needs_review` with every
+  side-effect flag false; **it planned only and generated no content.** The draft was hand-assembled
+  from the Phase 101–107 documents — **the automated `EngagementPacket` path remains absent.**
+- [x] **The report moves from a shell to one narrow internal finding candidate**: R1 on-hand
+  attribution coverage is incomplete in the synthetic lab scenario — 14 of 32 rows attributable to
+  both a resolvable item and location (`evid_8151dad609974ea0`), with the named blockers carried
+  beside it, reliability low, `needs_review`/`draft`. **Coverage is not accuracy; inventory accuracy
+  remains unanswered.**
+- [x] **Recommendations and client-facing conclusions are still refused.** No operational
+  recommendation, quick win, risk severity, root cause, ROI, capsule readiness, or publication
+  readiness. The only forward-looking content is an evidence-gathering step, labelled as such.
+- [x] **Unreviewed status does not block the internal draft; it blocks anything client-facing.**
+  Product gap noted and not fixed: the reporting contract says nothing about the review status of
+  the evidence it cites, and Phase 94 established that a review does not propagate to its target.
+- [x] **No record created, no database contacted, no env read, no writer invoked**; no source,
+  review, or evidence row; no migration `015`. `peak_lab` remains at **5 application rows by
+  documented state only**, and `evid_8151dad609974ea0` **remains unreviewed**. The artifact is
+  internal-only, non-authoritative, not client-facing, and not publication-ready.
+- [ ] **Next — review `evid_8151dad609974ea0` with the existing review writer**
+  (`review_records/create_review_record`, already enableable and exercised in Phase 94), in its own
+  approved phase naming the single record, the expected count (5 → 6), scope, idempotency key,
+  receipts, verification, and the durable no-cleanup posture. It would clarify how reporting treats
+  reviewed versus unreviewed evidence; it would not unblock recommendations or accuracy. **Not
+  approved by Phase 108.**
+
+Full record: [`PHASE108_DB_FREE_NARROW_REPORTING_REEXERCISE.md`](PHASE108_DB_FREE_NARROW_REPORTING_REEXERCISE.md).
+
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing
