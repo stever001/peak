@@ -1834,3 +1834,45 @@ back as the credential itself: `SELECT` and `INSERT` only, and no visibility int
 **No secret, DSN, host, port, certificate path, environment value, local secret path, or row body
 appears in any output or in this repository.** See
 [`PHASE94_FIRST_LAB_REVIEW_RECORD.md`](PHASE94_FIRST_LAB_REVIEW_RECORD.md).
+
+## Phase 107 — one approved lab write, one target, enabled for that phase only
+
+The Phase 89 gate was used **unmodified** and evaluated **before any connection existed**:
+`outcome=lab_write_authorized`, `reason=lab_target_confirmed_and_scoped`, granting exactly
+`evidence_references/create_draft` — one requested pair, one authorized pair — with
+`anchor_bootstrap_authorized=false`, `target_user_class=lab_marked_user`,
+`target_schema_class=expected_lab_schema`, and `production_write_authorized`,
+`safe_to_write_production_now`, and `production_writer_enablement_authorized` all false. The gate
+itself reported `database_contacted`, `sql_issued`, `writer_invoked`, `credential_file_read`, and
+`secrets_printed` all false.
+
+**Enablement was for this phase only.** Phases 92–94 exhausted the enableable pairs once each;
+Phase 107 re-exercised one of them under a fresh approval. There is still **no standing authority**,
+and the next write needs its own phase approval.
+
+**One writer, one invocation, one row.** The unchanged Phase 21 evidence writer created
+`evid_8151dad609974ea0` — receipt `outcome=created`, `transaction_committed=true`,
+`existing_record_returned=false`, `outcome_uncertain=false`. No `source_ingestion_records` row and no
+`review_records` row were created, and neither of those writers was invoked. The write used the
+existing source reference `ing_d67b76327aba4add` rather than registering a new source.
+
+**Credential posture unchanged.** Structural checks only, no value printed: file present, mode `600`,
+outside the repository, exactly one variable line and that variable `PEAK_RUNTIME_DATABASE_URL`,
+expected scheme, lab runtime role, database `peak_lab`, not the scenario schema, no production
+marker, presence-only check on the CA. Env files were sourced **inside a subshell only**; no `set -x`,
+no `cat`/`grep` of an env file, no env value echoed. The Phase 90 two-variable caveat still holds —
+the gate reads `PEAK_LAB_WRITER_TARGET_URL` and the writer connects via
+`PEAK_RUNTIME_DATABASE_URL` — and both were derived from the same single-variable lab runtime file,
+with post-write verification confirming the row landed in `peak_lab` under the lab runtime role.
+
+**Verification was bounded and value-free**: counts, ids, statuses, and posture flags only — exactly
+one row on the Phase 107 idempotency key, `evidence_references` 1 → 2, `engagements`,
+`source_ingestion_records`, and `review_records` unchanged at one each, every other controlled table
+0, head unchanged at `014_engagement_classification`. Idempotency was verified structurally on
+`uq_evidence_references_idem`, not by a second invocation.
+
+**No production credential was read and no production connection was made. `peak_lab_scenario` was
+never opened, read, or written, and no scenario row body was read or printed.** No secret, DSN, host,
+port, certificate path, environment value, local secret path, SQL statement, raw payload, stack
+trace, or row body appears in any output or in this repository. See
+[`PHASE107_LAB_EVIDENCE_REFERENCE_R1_COVERAGE.md`](PHASE107_LAB_EVIDENCE_REFERENCE_R1_COVERAGE.md).

@@ -3419,14 +3419,62 @@ and **no write performed**):**
   *packet → drafts*, one direction only; nothing produces an `EngagementPacket` and nothing reads DB
   rows into one. A Phase 108 report citing this evidence would be **hand-drafted**, as Phases 101–105
   were, citing a real durable record id — honest and worth doing, but not an automated chain.
-- [ ] **Phase 107 requires explicit approval before any write** — to source the lab writer env, to
-  enable `evidence_references/create_draft` for that phase only, to invoke the writer once, to the
-  exact record count and type, to the durable no-cleanup posture, to the `evidence_type`/`source_type`
-  choice (`measurement`/`system` proposed, `other`/`other` per Phase 93 acceptable), and to
-  **acceptance of the reduced evidence set**. The pair being *enableable* is reachability, not
-  approval; there is no standing authority.
+- [x] **Phase 107 required explicit approval before any write, and received it** — to source the lab
+  writer env, to enable `evidence_references/create_draft` for that phase only, to invoke the writer
+  once, to the exact record count and type, to the durable no-cleanup posture, to the conservative
+  `other`/`other` type pair, and to **acceptance of the reduced evidence set**. The pair being
+  *enableable* was reachability, not approval; there is still no standing authority, and the next
+  write needs its own phase approval.
 
 Full record: [`PHASE106_EVIDENCE_PRODUCTION_DECISION.md`](PHASE106_EVIDENCE_PRODUCTION_DECISION.md).
+
+
+**First substantive lab evidence reference (Phase 107 — one durable lab record; one writer
+invocation; no migration, no new writer, no schema/model/enum/allowlist/gate/harness/prompt/test/tool
+change):**
+
+- [x] **Exactly one `evidence_references` row was created in `peak_lab`** — `evid_8151dad609974ea0`,
+  through the unchanged Phase 21 evidence writer via `evidence_references/create_draft`, under the
+  existing Phase 89 lab writer-enablement gate enabled **for this phase only** (one target requested
+  and authorized; production denied on every gate field). Idempotency key
+  `phase107_lab_evidence_reference_phase88_r1_coverage_001`. Receipt: `outcome=created`,
+  `transaction_committed=true`, `existing_record_returned=false`, `outcome_uncertain=false`.
+- [x] **No `source_ingestion_records` row and no `review_records` row were created**, and neither
+  writer was invoked. The row cites the existing Phase 92 source row `ing_d67b76327aba4add`, as
+  Phase 106 decided. **No migration `015`.**
+- [x] **Conservative `other`/`other`** for `evidence_type`/`source_type`, per Phase 106 §5.2 —
+  `measurement`/`system` was declined because `source_type=system` reads as an implicit authority
+  claim. `reliability=low`, `review_status=needs_review`, `output_status=draft`, `lifecycle_status=
+  active`, `sensitive_data_flag=false`.
+- [x] **The stored claim is bounded and substantive**: in the synthetic lab scenario, on-hand rows
+  are attributable to both a resolvable item and a resolvable location in **14 of 32 cases (43.8%)**,
+  with named blockers — 7 unresolvable locations, 11 item-master gaps, 3 absent quantities — and
+  source-of-record precedence unconfirmed. Unlike Phase 93's row, this is a claim about inventory
+  data rather than about a record existing.
+- [x] **The record states its own non-claim.** **Coverage is not accuracy.** Inventory accuracy
+  remains unanswered and **no cycle-count evidence was created, seeded, inferred, or invented**; R8
+  authority precedence remains unresolved; no source-system truth, no real client, warehouse, or
+  source system, and no benchmark or rate for use outside the lab. Recommendation support, capsule
+  candidacy, publication readiness, client-facing output, and AgentNet publication are all recorded
+  as unauthorized.
+- [x] **Durable, no cleanup**, as decided before the write. The lab runtime role holds `SELECT` and
+  `INSERT` only, so removal is impossible on this path by construction. A correction means a
+  superseding record. Internal lab only, `client_id` `99999`, `internal_peak_only`: not real client
+  data, not pseudo-client data, not client accessible, not client-facing, not production evidence,
+  not authoritative.
+- [x] **Bounded value-free verification** (counts, ids, statuses, posture flags only): exactly one
+  row matches the Phase 107 idempotency key; `evidence_references` 1 → 2; `engagements`,
+  `source_ingestion_records`, and `review_records` unchanged at 1 each; every other controlled table
+  0; `peak_lab` head unchanged at `014_engagement_classification`; **`peak_lab` now holds 5
+  application rows**. No production connection or write, and no `peak_lab_scenario` connection — no
+  scenario row body was read or printed. No env value, DSN, host, port, path, or row body printed.
+- [x] **Reporting may now be re-exercised against one evidence-backed finding candidate** — what
+  Phase 105 could not do. Any such report must stay **narrow**: cite `evid_8151dad609974ea0` for R1
+  on-hand attribution coverage only, repeat that coverage is not accuracy, and not present the row as
+  reviewed or authoritative. It is not approved by this phase, and the Phase 106 finding stands that
+  the automated packet path is still blocked, so such a report would be hand-drafted.
+
+Full record: [`PHASE107_LAB_EVIDENCE_REFERENCE_R1_COVERAGE.md`](PHASE107_LAB_EVIDENCE_REFERENCE_R1_COVERAGE.md).
 
 
 **Still to do:**

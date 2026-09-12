@@ -162,6 +162,8 @@ Phase 44**; this table is the entry point for everything after it.
 
 | 106 | Evidence production decision for the synthetic lab chain — **Option A chosen, with a corrected evidence set** | [`PHASE106_EVIDENCE_PRODUCTION_DECISION.md`](PHASE106_EVIDENCE_PRODUCTION_DECISION.md) | **Docs-only, DB-free, record-free**; decision phase, no write performed; **the Phase 105 three-item minimum is not producible** — the lab scenario has eight tables and **no cycle-count or accuracy-variance population**, so inventory accuracy cannot be evidenced without seeding scenario content or inventing evidence, and stays unanswered; on-hand is fully reachable (Phase 88 §4.4) and system-of-record only partially (4 of 10 domains; R8 precedence still unconfirmed); **every mechanism Option A needs already exists** — `evidence_references/create_draft` is already in the Phase 89 gate's enableable set and the Phase 21 evidence writer applies as-is, so **no migration 015, no new writer, no schema/model/enum/allowlist/gate/harness change**; proposed Phase 107 write is **exactly one `evidence_references` row** carrying a substantive R1 on-hand attribution claim (14 of 32 rows attributable) rather than a record-existence claim, citing the existing Phase 92 source row — **no new source row and no review record**, since the source is already ingested and Phase 94 established review does not propagate; **coverage is not accuracy** and the claim boundary says so; records would be **durable internal lab records with no cleanup** — the runtime role holds no `DELETE`; **Phase 107 requires explicit approval** for env sourcing, target enablement, writer invocation, record count/type, no-cleanup posture, and acceptance of the reduced evidence set; Option B (the `EngagementPacket` bridge) **deferred, not rejected** — a bridge over empty artifacts produces an empty packet, so it is better after evidence exists; **the automated packet path stays blocked either way** — `packet_mapper.py` runs packet → drafts only and nothing produces a packet, so a Phase 108 report would be hand-drafted citing a real record id; no record created, no writer invoked, no database contacted, no env read, no migration 015, no new harness or gate; `peak_lab` unchanged at 4 application rows by documented state |
 
+| 107 | One durable lab evidence reference carrying the bounded **R1 on-hand attribution coverage** claim | [`PHASE107_LAB_EVIDENCE_REFERENCE_R1_COVERAGE.md`](PHASE107_LAB_EVIDENCE_REFERENCE_R1_COVERAGE.md) | **One durable lab record; no migration**; created **exactly one** `evidence_references` row in `peak_lab` (`evid_8151dad609974ea0`) through the unchanged Phase 21 evidence writer via `evidence_references/create_draft`, under the existing Phase 89 lab writer-enablement gate enabled **for this phase only** (`lab_write_authorized`, one target, production denied on every field); idempotency key `phase107_lab_evidence_reference_phase88_r1_coverage_001`; `evidence_type`/`source_type` conservative `other`/`other` per the Phase 106 §5.2 decision — `measurement`/`system` declined because `system` reads as an implicit authority claim; cites the existing Phase 92 source row `ing_d67b76327aba4add` — **no `source_ingestion_records` row and no `review_records` row were created** and neither writer was invoked; the stored claim is that on-hand rows are attributable to both a resolvable item and a resolvable location in **14 of 32 cases (43.8%)** in the synthetic lab scenario, with named blockers (7 unresolvable locations, 11 item-master gaps, 3 absent quantities) and source-of-record precedence unconfirmed; the record states its own non-claim — **coverage is not accuracy**, inventory accuracy remains unanswered and **no cycle-count evidence was created, seeded, or invented**, R8 authority precedence remains unresolved; **durable, no cleanup** — the lab runtime role holds `SELECT`+`INSERT` only; internal lab only, not real client data, not pseudo-client data, not client accessible, not client-facing, not production evidence, not authoritative, no capsule readiness, no AgentNet publication; bounded value-free verification confirmed exactly one matching row, `evidence_references` 1→2 and every other table unchanged; no production connection or write, no `peak_lab_scenario` connection, no scenario row body read or printed, no env value/DSN/host/path printed, no migration 015, no schema/model/enum/writer/allowlist/gate/prompt/test/tool/harness change; `peak_lab` now **5 application rows**; **reporting may now be re-exercised against one evidence-backed finding candidate, but any report must stay narrow** |
+
 ### Phases without a dedicated phase doc
 
 - **Phases 0–10** — recorded by commit message and, from Phase 6 on, by the policy document each
@@ -172,9 +174,10 @@ Phase 44**; this table is the entry point for everything after it.
 
 ## Current baseline
 
-As of Phase 106, whose baseline is the committed Phase 105 commit `8e14070` — *Exercise Phase 105
-reporting workflow*. Phase 106 is docs-only, DB-free, and record-free, and changed none of these
-values:
+As of Phase 107, whose baseline is the committed Phase 106 commit `1e2da39` — *Decide Phase 106
+evidence production*. Phase 107 wrote **one durable lab record** and changed no schema, model, enum,
+writer, allowlist, gate, or migration; it changed the `peak_lab` row count and the lab write
+enablement line below, and nothing else:
 
 | Property | Value |
 |---|---|
@@ -184,15 +187,16 @@ values:
 | Controlled writers | 12 |
 | Migration 015 | Does not exist |
 | Production write enablement | None standing |
-| Lab write enablement | Anchor bootstrap enabled (Phase 90); all three enableable pairs now exercised once each — source ingestion (92), evidence reference (93), review record (94); **no standing authority; each future write needs its own phase approval** |
-| `peak_lab` controlled tables | 18, head `014_engagement_classification`, **4 application rows** (the Phase 90 `engagements` anchor, the Phase 92 `source_ingestion_records` row, the Phase 93 `evidence_references` row, and the Phase 94 `review_records` row) |
+| Lab write enablement | Anchor bootstrap enabled (Phase 90); all three enableable pairs exercised — source ingestion (92), evidence reference (93, and again in 107), review record (94); Phase 107 enabled `evidence_references/create_draft` **for that phase only**; **no standing authority; each future write needs its own phase approval** |
+| `peak_lab` controlled tables | 18, head `014_engagement_classification`, **5 application rows** (the Phase 90 `engagements` anchor, the Phase 92 `source_ingestion_records` row, the Phase 93 `evidence_references` row, the Phase 94 `review_records` row, and the Phase 107 `evidence_references` row) |
 | `peak_lab_scenario` | seeded, 120 rows, content hash re-verified in Phase 88 |
 
-Phases 87–106 changed no migration, table, or writer, so the first six values are unchanged since
+Phases 87–107 changed no migration, table, or writer, so the first six values are unchanged since
 Phase 86. Phase 96 added a reference *category* to the Phase 36 planning boundary
 (`review_record_ids → review_records`); that is a planner contract addition, not a schema, model,
 enum, writer, allowlist, or gate change, and it names a table that already existed. **Phase 90 changed the `peak_lab` row count**: it is no longer empty, and "0 application
-rows" is no longer a valid safety assertion against the lab. **Any later phase that changes the schema, writer count, or baseline commit must
+rows" is no longer a valid safety assertion against the lab. **Phase 107 moved that count from four
+to five**, so "4 application rows" is likewise no longer current. **Any later phase that changes the schema, writer count, or baseline commit must
 refresh this block.**
 
 A note on how this block is written. Its first version was authored *during* Phase 88 and named

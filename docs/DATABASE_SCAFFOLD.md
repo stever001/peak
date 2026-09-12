@@ -1480,3 +1480,33 @@ future readers: `approved_internal` lives on the review record, so anything read
 **No schema change.** No migration `015`, no live Alembic migration, no model, enum, allowlist,
 writer, or gate edit; still 18 controlled tables and 12 writers, and no new test harness. See
 [`PHASE94_FIRST_LAB_REVIEW_RECORD.md`](PHASE94_FIRST_LAB_REVIEW_RECORD.md).
+
+## Phase 107 — a second evidence reference, carrying a substantive claim
+
+`peak_lab` now contains **exactly five** application rows: the Phase 90 `engagements` anchor, the
+Phase 92 `source_ingestion_records` row, the Phase 93 `evidence_references` row, the Phase 94
+`review_records` row, and a second `evidence_references` row, `evid_8151dad609974ea0` — the bounded
+R1 on-hand attribution coverage claim, `other`/`other`, `reliability=low`, `needs_review` / `draft` /
+`active`, citing source reference `ing_d67b76327aba4add`. Created through the existing Phase 21
+controlled evidence writer on the ordinary Phase 89 lab data-record path, with
+`evidence_references/create_draft` enabled for that phase only.
+
+Before the write: `alembic_version` 1 row at `014_engagement_classification`, **4 application rows**.
+After: the same schema, the same head, and **5 application rows — `evidence_references` now holds
+two**, with `engagements`, `source_ingestion_records`, and `review_records` unchanged at one each and
+every other controlled table still holding none.
+
+**The standing assertion moves again.** Verifiers must now expect **two** rows in
+`evidence_references` and exactly one in each of `engagements`, `source_ingestion_records`, and
+`review_records`, and must not read the second evidence row as drift.
+
+**Two evidence rows, two different claims.** The Phase 93 row supports a record-*existence*
+statement; this one supports a bounded statement about inventory data (14 of 32 on-hand rows
+attributable to both a resolvable item and a resolvable location). The row itself records that
+**coverage is not accuracy**. There is still no typed join between an evidence row and a review
+record, and the Phase 94 review targets `evid_f094cbe4b47d4048` only — **this row is unreviewed**.
+
+**No schema change.** No migration `015`, no live Alembic migration, no model, enum, allowlist,
+writer, or gate edit; still 18 controlled tables and 12 writers, and no new test harness.
+Idempotency was verified structurally on `uq_evidence_references_idem`, not by a second invocation.
+See [`PHASE107_LAB_EVIDENCE_REFERENCE_R1_COVERAGE.md`](PHASE107_LAB_EVIDENCE_REFERENCE_R1_COVERAGE.md).
