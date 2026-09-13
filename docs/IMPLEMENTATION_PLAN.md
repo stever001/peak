@@ -3509,6 +3509,47 @@ no migration, no schema/model/enum/writer/allowlist/gate/harness/prompt/test/too
 
 Full record: [`PHASE108_DB_FREE_NARROW_REPORTING_REEXERCISE.md`](PHASE108_DB_FREE_NARROW_REPORTING_REEXERCISE.md).
 
+**Read-only lab packet assembly (Phase 109 — read-only, record-free; no writer, no record, no
+migration, no schema/model/enum/writer/allowlist/gate/harness/prompt/test/tool/Makefile/source
+change):**
+
+- [x] **Packet assembly pursued instead of the Phase 108 review row — Phase 108's review-first
+  recommendation is superseded by Phase 109.** Another review record would
+  be one more isolated record: it does not update its evidence row, and the existing read path cannot
+  tell which evidence a review is about.
+- [x] **`peak_lab` read read-only**, as the `SELECT`-only lab verifier role in a read-only
+  transaction. The env was sourced in a subshell, and the production-named variable seam was closed by
+  asserting user `peak_lab_verify_ro` and database `peak_lab` before connecting. Only value-safe
+  projections were read: no summary, `details_json` body, SQL, or env value. **5 application rows
+  verified live**; head `014_engagement_classification`; `peak_lab_scenario` not visible to the role
+  and not connected.
+- [x] **Relationships resolve, and `evid_8151dad609974ea0` has no review.** Both evidence rows cite
+  `ing_d67b76327aba4add`; `rev_70b5da9f14d54488` targets `evid_f094cbe4b47d4048` only.
+- [x] **Packet section map produced** (DB / derived / docs-only / missing / unsafe). Identity,
+  classification, visibility (Phase 57 predicates), reliability, stored statuses, source links, and
+  review association come from the DB. Claim wording and figures stay doc-derived.
+- [x] **A schema-valid `EngagementPacket` cannot be assembled from `peak_lab`.** `client_intake` is
+  required and absent, and neither the packet root nor its evidence items can carry review status.
+  The workable target is a **packet view**: schema-shaped evidence items plus sidecar sections.
+- [x] **Review association defined per target.** Stored `review_status` and effective review posture
+  are separate fields; `unreviewed` is the default; the Phase 94 review is joined, never copied onto
+  its target.
+- [x] **Existing-path findings, offline.** The Phase 36 planner, run with the five ids, attaches
+  `rev_70b5da9f14d54488` as review support to the finding citing the **unreviewed**
+  `evid_8151dad609974ea0`, because its review support is category-level. `packet_mapper` runs the
+  inbound direction and would plan a duplicate source-ingestion write. Neither was changed.
+- [x] **No source prototype.** The output shape and the review semantics were the design this phase
+  had to define; the proposed assembler is specified in the phase doc.
+- [ ] **Next: implement a small, pure, read-only packet-view assembler** over value-safe fetched
+  summaries, with one behavioural test, then re-run reporting through it. Review of
+  `evid_8151dad609974ea0` and new evidence both wait for it. A per-target fix to planner review
+  support is a follow-on. **Not approved by Phase 109.**
+- [ ] **Warnings carried forward:** planner review support must be target-specific; the read-only
+  lab env file still uses a production-named variable; the prompt-note batch carried since Phases
+  101, 102, 104, and 108 remains open.
+
+Full record: [`PHASE109_READ_ONLY_LAB_PACKET_ASSEMBLY.md`](PHASE109_READ_ONLY_LAB_PACKET_ASSEMBLY.md).
+
 
 **Still to do:**
 

@@ -1876,3 +1876,41 @@ never opened, read, or written, and no scenario row body was read or printed.** 
 port, certificate path, environment value, local secret path, SQL statement, raw payload, stack
 trace, or row body appears in any output or in this repository. See
 [`PHASE107_LAB_EVIDENCE_REFERENCE_R1_COVERAGE.md`](PHASE107_LAB_EVIDENCE_REFERENCE_R1_COVERAGE.md).
+
+## Phase 109 — read-only lab access for packet assembly; no write, no writer
+
+Phase 109 opened **one read-only connection to `peak_lab`** to test whether stored lab records can be
+assembled into a workflow-consumable packet. **It issued no write, invoked no writer, and created no
+record.**
+
+| credential | what it did in Phase 109 | wrote? |
+| --- | --- | --- |
+| read-only | lab verifier role `peak_lab_verify_ro`; value-safe projections of the five application rows, counts, grants, head | no |
+| runtime | **not used** | — |
+| migration | **not used** | — |
+
+**The naming seam was encountered again and closed before connecting.** The lab read-only env file
+sets the production-named read-only variable (Phases 82 and 88). The probe parsed it in memory and
+refused to connect unless the driver, user (`peak_lab_verify_ro`), and database (`peak_lab`) matched,
+with no production or scenario marker. It also confirmed no runtime, migration, scenario, or
+writer-target variable was set. The env was sourced **inside a subshell only**; no value was echoed,
+and no `set -x`, `env`, or `printenv` was used.
+
+**Read-only by grant and by session.** Read back as the connection itself: current database
+`peak_lab`, current user the lab verifier role, `SELECT` and `USAGE` only, no `GRANT OPTION`, and
+`peak_lab_scenario` not visible. The session ran as a read-only transaction and was rolled back.
+
+**Value-safe by construction.** Queries projected only ids, statuses, posture flags, JSON key names,
+and counts, computed server-side. **No `summary`, `details_json` body, or reasons text was
+retrieved.** Output passed through a filter that dropped URL-shaped lines, and exceptions would have
+been reported by type only; none occurred.
+
+**Result.** `alembic_version` one row at `014_engagement_classification`; 18 controlled tables, no
+extras; **5 application rows**, as documented — `engagements` 1, `source_ingestion_records` 1,
+`evidence_references` 2, `review_records` 1, every other table 0. All relationships resolve, and
+**no review targets `evid_8151dad609974ea0`**.
+
+**No production credential was read and no production connection was made. `peak_lab_scenario` was
+not connected.** No secret, DSN, host, port, certificate path, environment value, local secret path,
+SQL statement, raw payload, stack trace, or row body appears in any output or in this repository. See
+[`PHASE109_READ_ONLY_LAB_PACKET_ASSEMBLY.md`](PHASE109_READ_ONLY_LAB_PACKET_ASSEMBLY.md).
