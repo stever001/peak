@@ -3579,6 +3579,38 @@ change):**
 
 Full record: [`PHASE110_PACKET_VIEW_ASSEMBLER.md`](PHASE110_PACKET_VIEW_ASSEMBLER.md).
 
+**Packet-view reporting bridge (Phase 111 — functionality, not more tests; one pure module, one
+route test, a two-target `make validate` wiring; no DB, no env, no writer, no record, no migration,
+no schema/model/enum/writer/allowlist/gate/prompt change):**
+
+- [x] **`peak/reports/packet_view_report.py` added — the Phase 110 packet view now feeds
+  reporting.** `build_report_inputs_from_packet_view` turns a `PacketView` into finding inputs that
+  carry stored and effective review status, **review support only from reviews linked to the cited
+  evidence**, reliability, claim scope, internal-draft readiness, and client-facing and recommendation
+  eligibility both false with reasons. It also emits exclusions with reasons, an evidence trace,
+  recommendations always blocked, carried-through strict `EngagementPacket` insufficiency, and an
+  `AgentTaskRequest` for the existing `initial_report_generation_agent` scoped to finding-backed
+  records only.
+- [x] **Planner bypassed, not changed.** Its review references carry ids only; the bridge does not
+  import it or use its category-level review support. The planner bug stays unfixed on the planner
+  path.
+- [x] **Functional proof** — `tests/validate_phase111_packet_view_reporting_bridge.py` (29 checks,
+  passing) runs assembler → bridge → existing mock executor. **The Phase 94 review supports no
+  finding.** `evid_8151dad609974ea0` yields one unreviewed, low-reliability, internal-draft finding;
+  `evid_f094cbe4b47d4048` is excluded as source availability only; recommendations and client-facing
+  output stay blocked. The reporting agent receives only `evid_8151dad609974ea0` and
+  `ing_d67b76327aba4add`, and a retargeted review moves support with it.
+- [x] **Now in standard validation** — Makefile change, reported: `validate-phase110` and
+  `validate-phase111` were added to `.PHONY`, the `validate:` line, and two two-line targets;
+  `make validate` 76 PASS, 0 FAIL. This resolves the Phase 110 wiring warning. `tests/README.md` is
+  still stale.
+- [ ] **Next — Phase 112: a narrow read-only fetch of the five lab records into the packet-view
+  route**, in its own approved phase with read-only lab access, then exercise reporting from stored
+  records end to end. Review of `evid_8151dad609974ea0` and new evidence still wait. **Not approved by
+  Phase 111.**
+
+Full record: [`PHASE111_PACKET_VIEW_REPORTING_BRIDGE.md`](PHASE111_PACKET_VIEW_REPORTING_BRIDGE.md).
+
 
 **Still to do:**
 
