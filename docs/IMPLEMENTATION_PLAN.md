@@ -3550,6 +3550,35 @@ change):**
 
 Full record: [`PHASE109_READ_ONLY_LAB_PACKET_ASSEMBLY.md`](PHASE109_READ_ONLY_LAB_PACKET_ASSEMBLY.md).
 
+**Pure packet-view assembler (Phase 110 — one pure source module and one focused test; no DB, no
+env, no writer, no record, no migration, no schema/model/enum/writer/allowlist/gate/prompt/Makefile
+change):**
+
+- [x] **`peak/reports/packet_view.py` added.** `assemble_packet_view` turns already-fetched
+  value-safe summaries of engagement, source, evidence, and review records into a packet view:
+  stored and effective review status as separate fields, **reviews linked only to the evidence they
+  target**, `unreviewed` by default, finding eligibility separate from review status (explicit
+  `claim_scope` marking), recommendations always blocked, client-facing always disallowed, and strict
+  `EngagementPacket` validity always reported false with reasons. Pure — no database, SQLAlchemy,
+  `peak.db`, env, file, network, or writer access.
+- [x] **`tests/validate_phase110_packet_view.py` proves target-specific review association** (21
+  checks, passing): `rev_70b5da9f14d54488` links to `evid_f094cbe4b47d4048` only;
+  `evid_8151dad609974ea0` stays `unreviewed` with stored `needs_review`, yet remains a
+  low-reliability internal-draft finding candidate; the source-availability row is not a finding;
+  retargeting the review moves the link, so support is not global.
+- [x] **Planner bug avoided, not fixed.** The Phase 36 planner is unchanged and still applies
+  category-level review support; its input carries ids only, so a target-aware fix changes its
+  contract. Nothing routes through the packet view yet.
+- [ ] **Warning — the new test is not in `make validate`.** The target is an explicit list and the
+  Makefile was out of scope; the test was run directly. Wiring it in is a one-line later decision.
+- [ ] **Next — Phase 111: a narrow read-only fetch of the lab records into `assemble_packet_view`**,
+  in its own approved phase, then **re-run reporting from the packet view**. A smaller preliminary
+  option is wiring the Phase 110 test into `make validate`, but not if it turns into harness cleanup.
+  Review of `evid_8151dad609974ea0` and new evidence still wait until the packet-view path carries
+  review status and evidence posture end to end. **Not approved by Phase 110.**
+
+Full record: [`PHASE110_PACKET_VIEW_ASSEMBLER.md`](PHASE110_PACKET_VIEW_ASSEMBLER.md).
+
 
 **Still to do:**
 
