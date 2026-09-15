@@ -3611,6 +3611,37 @@ no schema/model/enum/writer/allowlist/gate/prompt change):**
 
 Full record: [`PHASE111_PACKET_VIEW_REPORTING_BRIDGE.md`](PHASE111_PACKET_VIEW_REPORTING_BRIDGE.md).
 
+**Planner target-specific review support (Phase 112 — small correctness phase; `peak/reports`
+source, one focused test, narrow Phase 36/37 harness corrections, a one-target `make validate`
+wiring; no DB, no env, no writer, no record, no migration, no schema/model/enum/writer/allowlist/
+DB-gate/prompt change):**
+
+- [x] **The planner global-review bug is fixed.** `GovernedRecordReference` gains optional
+  `target_record_ids` and `claim_scope`. A review supports a finding only if it names that finding's
+  evidence as a target. A recommendation reaches internal draft only if every operational evidence item
+  it cites is so reviewed. Plain or untargeted review references support nothing, and
+  `source_availability_only` evidence gets no finding slot. Report-planning governance validates the
+  new fields, and targets and claim scopes join the plan fingerprint only when present.
+- [x] **Proof** — `tests/validate_phase112_planner_target_specific_review_support.py` (27 checks,
+  passing): on the Phase 109 chain the Phase 94 review supports no finding, the one finding citing
+  `evid_8151dad609974ea0` stays blocked for want of a targeted review, `evid_f094cbe4b47d4048` gets no
+  finding slot, recommendations are absent or blocked, retargeting moves support, and the planner
+  agrees with the packet-view bridge.
+- [x] **Behavioural correction, not a weakening.** Six Phase 36 checks and the Phase 37 plan
+  builder encoded category-level support; they now assert that untargeted references support nothing
+  and that targeted references still do. Phases 38–40, 110, and 111 needed no change; `make validate`
+  77 PASS, 0 FAIL.
+- [x] **Posture unchanged.** Recommendations and client-facing output are not made safe; the planner
+  still reads no decision or reliability, so the packet-view route stays the preferred reporting path.
+- [ ] **Warnings** — plain review ids now yield no support (intentional); unmarked evidence still gets
+  finding slots; `INTERNAL_ASSESSMENT_REPORT_PLANNING_BOUNDARY.md`, the Phase 96 doc, and the
+  `packet_view_report.py` docstring still describe category-level support; `tests/README.md` stale.
+- [ ] **Next — Phase 113: a narrow read-only fetch of the five lab records** into value-safe summaries
+  feeding the packet-view route, and typed targeted planner references, in its own approved phase with
+  read-only lab access. **Not approved by Phase 112.**
+
+Full record: [`PHASE112_PLANNER_TARGET_SPECIFIC_REVIEW_SUPPORT.md`](PHASE112_PLANNER_TARGET_SPECIFIC_REVIEW_SUPPORT.md).
+
 
 **Still to do:**
 

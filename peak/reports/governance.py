@@ -47,6 +47,8 @@ from .contracts import (
     BLOCKED_UNSUPPORTED_SECTION,
     REF_CATEGORIES,
     SUPPORTED_SECTION_IDS,
+    ALLOWED_CLAIM_SCOPES,
+    REVIEW_SUPPORT_CATEGORIES,
     GovernedRecordReference,
     InternalAssessmentReportPlanRequest,
     InternalReportPlanningValidationResult,
@@ -232,6 +234,9 @@ def _iter_reference_values(request):
         for index, item in enumerate(list(getattr(request, category, None) or [])):
             if isinstance(item, GovernedRecordReference):
                 entries.append((index, item.record_id))
+                # Phase 112: named review targets are references too, and are validated as such.
+                for target in list(getattr(item, "target_record_ids", None) or []):
+                    entries.append((index, target))
             else:
                 entries.append((index, item))
         yield category, entries
@@ -262,6 +267,19 @@ def reference_identity_mismatches(request) -> List[str]:
             record_type = getattr(item, "record_type", None)
             if record_type is not None and not SAFE_REF_RE.match(str(record_type)):
                 mismatches.append(f"{category}[{index}].record_type is not a safe short label")
+            targets = getattr(item, "target_record_ids", None)
+            if targets is not None and not isinstance(targets, (list, tuple)):
+                mismatches.append(f"{category}[{index}].target_record_ids must be a list of record ids")
+            elif targets and category not in REVIEW_SUPPORT_CATEGORIES:
+                mismatches.append(
+                    f"{category}[{index}].target_record_ids is only valid on review references")
+            claim_scope = getattr(item, "claim_scope", None)
+            if claim_scope is not None:
+                if category != "evidence_reference_ids":
+                    mismatches.append(
+                        f"{category}[{index}].claim_scope is only valid on evidence references")
+                elif not isinstance(claim_scope, str) or claim_scope not in ALLOWED_CLAIM_SCOPES:
+                    mismatches.append(f"{category}[{index}].claim_scope is not a recognized claim scope")
     return mismatches
 
 

@@ -408,14 +408,18 @@ def _hygiene_checks() -> None:
 def _make_plan(**over):
     """Build a real Phase 36 plan (never a hand-rolled stub)."""
     from peak.reports import (
+        GovernedRecordReference,
         InternalAssessmentReportPlanRequest as PReq,
         prepare_internal_assessment_report_plan as plan_it,
     )
+    # Phase 112: review support is target-specific, so the bundle names the evidence it reviews.
+    rvb = GovernedRecordReference(record_id="rvb_1", record_type="review_bundle_records",
+                                  target_record_ids=["evid_1", "evid_2"])
     base = dict(**_ID, authorization_scope=_SCOPE, requested_by="consultant_a",
                 requester_role="consultant", report_plan_id="rpt_plan_1",
                 intake_note_refs=["intn_1"], source_ingestion_refs=["ing_1", "ing_2"],
                 evidence_reference_ids=["evid_1", "evid_2"],
-                agent_task_queue_record_ids=["atq_1"], review_bundle_record_ids=["rvb_1"],
+                agent_task_queue_record_ids=["atq_1"], review_bundle_record_ids=[rvb],
                 internal_reviewer_decision_record_ids=["ird_1"], workflow_id="wf_1",
                 managed_record_workflow_ref="wf35_run_1",
                 report_purpose="internal readiness assessment")

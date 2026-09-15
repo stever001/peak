@@ -15,10 +15,14 @@ canonical order (never the caller's order), references are normalized and de-dup
 order, candidate ids are positional, and ``plan_fingerprint`` is a SHA-256 over the safe request
 fields and references. There are **no random ids and no timestamps**.
 
-Review support (Phase 96): both ``review_bundle_record_ids`` and ``review_record_ids`` count as
-review support, at the **category** level — a review reference was named. The boundary reads no
-stored decision, review_status, subject_record_type, or authoritative flag, treats no review as
-approving or mutating its reviewed target, and infers no authoritative, client-facing, production,
+Review support (Phase 96, made target-specific in Phase 112): both ``review_bundle_record_ids`` and
+``review_record_ids`` can support candidate slots, but **only for the evidence a review names as its
+target** — a typed ``GovernedRecordReference`` with ``target_record_ids``. A plain id, or a typed
+reference naming no target, supports no finding or recommendation slot; the ``review_status``
+section still reports that review references were supplied. Evidence declared
+``source_availability_only`` gets no finding slot and supports no recommendation slot. The boundary
+reads no stored decision, review_status, subject_record_type, or authoritative flag, treats no review
+as approving or mutating its reviewed target, and infers no authoritative, client-facing, production,
 capsule, or publication posture from one.
 
 See docs/INTERNAL_ASSESSMENT_REPORT_PLANNING_BOUNDARY.md,
@@ -30,7 +34,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from typing import Dict, List
+from typing import Dict, List, Set
 
 from .contracts import (
     AUDIENCE_INTERNAL,
@@ -57,6 +61,7 @@ from .contracts import (
     SECTION_SYNTHESIS_ONLY,
     SECTION_TITLES,
     SUPPORTED_SECTIONS,
+    CLAIM_SCOPE_SOURCE_AVAILABILITY,
     GovernedRecordReference,
     InternalAssessmentReportPlan,
     InternalAssessmentReportPlanningResult,
@@ -115,10 +120,14 @@ def prepare_internal_assessment_report_plan(
         if plan.readiness_state == SECTION_BLOCKED_NO_REFS:
             blocked_items.append(section_id)
 
-    findings, finding_warnings = _finding_candidates(refs, sections)
+    review_targets = _review_targets(request)
+    source_only = _source_availability_evidence(request)
+
+    findings, finding_warnings = _finding_candidates(refs, sections, review_targets, source_only)
     warnings.extend(finding_warnings)
 
-    recommendations, rec_warnings = _recommendation_candidates(refs, sections)
+    recommendations, rec_warnings = _recommendation_candidates(refs, sections, review_targets,
+                                                               source_only)
     warnings.extend(rec_warnings)
     blocked_items.extend(
         r.recommendation_candidate_id for r in recommendations if r.blocked_reason)
@@ -139,9 +148,20 @@ def prepare_internal_assessment_report_plan(
             f"{len(future_capsule)} source ingestion reference(s) are noted as possible future "
             "capsule candidates; capsule_candidate_ready and publication_allowed remain false and "
             "no capsule candidate was created or published")
+    excluded = [e for e in refs["evidence_reference_ids"] if e in source_only]
+    if excluded:
+        reasons.append(
+            f"{len(excluded)} evidence reference(s) declared source_availability_only were given no "
+            "finding slot and support no recommendation slot")
+    untargeted = [r for category in REVIEW_SUPPORT_CATEGORIES for r in refs[category]
+                  if not review_targets.get(r)]
+    if untargeted:
+        reasons.append(
+            f"{len(untargeted)} review reference(s) name no target record, so they support no "
+            "finding or recommendation slot")
     if refs["review_record_ids"]:
         # The caveat travels with the plan, not only with the docs: a downstream consumer sees
-        # exactly what this category-level support does and does not establish.
+        # exactly what this target-specific support does and does not establish.
         reasons.append(REVIEW_RECORD_SUPPORT_CAVEAT)
     reasons.append(
         "internal assessment report plan assembled: structure, traceability, and readiness only "
@@ -321,27 +341,55 @@ def _plan_section(section_id: str, order: int, refs: Dict[str, List[str]]):
 # --------------------------------------------------------------------------- candidates
 
 
-def _review_support(refs: Dict[str, List[str]]) -> List[str]:
-    """Every reference the boundary accepts as review support, in canonical category order.
+def _review_targets(request) -> Dict[str, Set[str]]:
+    """Map each review reference id to the record ids it explicitly names as targets.
 
-    Support is **category-level**: a named review_bundle_records or review_records reference. The
-    boundary never reads the reviewed row's decision, review_status, subject_record_type, or
-    authoritative flag, never treats a review as approving or mutating its target, and never
-    infers authoritative evidence, client-facing, production, capsule, or publication posture
-    from it.
+    Only a typed :class:`GovernedRecordReference` in a review category can name targets. A plain
+    string id, or a typed reference with no targets, maps to nothing and therefore supports no slot.
     """
-    return [record_id for category in REVIEW_SUPPORT_CATEGORIES
-            for record_id in refs.get(category, [])]
+    targets: Dict[str, Set[str]] = {}
+    for category in REVIEW_SUPPORT_CATEGORIES:
+        for item in list(getattr(request, category, None) or []):
+            if not isinstance(item, GovernedRecordReference) or not isinstance(item.record_id, str):
+                continue
+            named = {t for t in list(item.target_record_ids or [])
+                     if isinstance(t, str) and t.strip()}
+            targets.setdefault(item.record_id, set()).update(named)
+    return targets
 
 
-def _finding_candidates(refs: Dict[str, List[str]], sections: List[str]):
-    """One structured finding slot per evidence reference — references only, never narrative."""
+def _source_availability_evidence(request) -> Set[str]:
+    """Evidence reference ids a typed reference declares ``source_availability_only``."""
+    return {item.record_id for item in list(getattr(request, "evidence_reference_ids", None) or [])
+            if isinstance(item, GovernedRecordReference) and isinstance(item.record_id, str)
+            and item.claim_scope == CLAIM_SCOPE_SOURCE_AVAILABILITY}
+
+
+def _review_support_for(evidence_ref: str, refs: Dict[str, List[str]],
+                        targets: Dict[str, Set[str]]) -> List[str]:
+    """The review references that name ``evidence_ref`` as a target, in canonical category order.
+
+    Support is **target-specific**: a review never supports evidence it does not name. The boundary
+    never reads the reviewed row's decision, review_status, subject_record_type, or authoritative
+    flag, never treats a review as approving or mutating its target, and never infers authoritative
+    evidence, client-facing, production, capsule, or publication posture from it.
+    """
+    support: List[str] = []
+    for category in REVIEW_SUPPORT_CATEGORIES:
+        for record_id in refs.get(category, []):
+            if evidence_ref in targets.get(record_id, ()) and record_id not in support:
+                support.append(record_id)
+    return support
+
+
+def _finding_candidates(refs: Dict[str, List[str]], sections: List[str],
+                        targets: Dict[str, Set[str]], source_only: Set[str]):
+    """One structured finding slot per operational evidence reference — references only."""
     warnings: List[str] = []
     if SECTION_OPERATIONAL_FINDINGS not in sections:
         return [], warnings
 
-    evidence = refs["evidence_reference_ids"]
-    review = _review_support(refs)
+    evidence = [e for e in refs["evidence_reference_ids"] if e not in source_only]
     if len(evidence) > MAX_CANDIDATES_PER_FAMILY:
         warnings.append(
             f"finding candidates truncated to the first {MAX_CANDIDATES_PER_FAMILY} of "
@@ -350,14 +398,15 @@ def _finding_candidates(refs: Dict[str, List[str]], sections: List[str]):
 
     candidates: List[InternalReportFindingCandidate] = []
     for index, evidence_ref in enumerate(evidence):
+        review = _review_support_for(evidence_ref, refs, targets)
         blocked = (None if review else
                    "no review support reference (review_bundle_records or review_records) "
-                   "supports this finding slot")
+                   "targets this finding's evidence")
         candidates.append(InternalReportFindingCandidate(
             finding_candidate_id=f"fnd_{index:03d}",
             section_id=SECTION_OPERATIONAL_FINDINGS,
             evidence_support_refs=[evidence_ref],
-            review_support_refs=list(review),
+            review_support_refs=review,
             readiness_state=(RECOMMENDATION_INTERNAL_DRAFT if review
                              else RECOMMENDATION_BLOCKED_NO_REVIEW),
             blocked_reason=blocked,
@@ -365,19 +414,25 @@ def _finding_candidates(refs: Dict[str, List[str]], sections: List[str]):
     return candidates, warnings
 
 
-def _recommendation_candidates(refs: Dict[str, List[str]], sections: List[str]):
+def _recommendation_candidates(refs: Dict[str, List[str]], sections: List[str],
+                               targets: Dict[str, Set[str]], source_only: Set[str]):
     """One internal-only recommendation slot per reviewer decision reference.
 
-    Every slot stays internal: not final, not client-facing, not approved, not financially
-    verified, not a capsule candidate, not publishable, not executable.
+    A slot reaches internal draft only when every operational evidence reference it cites is named
+    by a review. Every slot stays internal: not final, not client-facing, not approved, not
+    financially verified, not a capsule candidate, not publishable, not executable.
     """
     warnings: List[str] = []
     if SECTION_INTERNAL_RECOMMENDATIONS not in sections:
         return [], warnings
 
     decisions = refs["internal_reviewer_decision_record_ids"]
-    evidence = refs["evidence_reference_ids"]
-    review = _review_support(refs)
+    evidence = [e for e in refs["evidence_reference_ids"] if e not in source_only]
+    support_by_evidence = {e: _review_support_for(e, refs, targets) for e in evidence}
+    review: List[str] = []
+    for evidence_ref in evidence:
+        review.extend(r for r in support_by_evidence[evidence_ref] if r not in review)
+    unreviewed = [e for e in evidence if not support_by_evidence[e]]
     if len(decisions) > MAX_CANDIDATES_PER_FAMILY:
         warnings.append(
             f"recommendation candidates truncated to the first {MAX_CANDIDATES_PER_FAMILY} of "
@@ -390,10 +445,10 @@ def _recommendation_candidates(refs: Dict[str, List[str]], sections: List[str]):
         if not evidence:
             readiness = RECOMMENDATION_BLOCKED_NO_EVIDENCE
             blocked = "no evidence reference supports this recommendation slot"
-        elif not review:
+        elif unreviewed:
             readiness = RECOMMENDATION_BLOCKED_NO_REVIEW
-            blocked = ("no review support reference (review_bundle_records or review_records) "
-                       "supports this recommendation slot")
+            blocked = (f"{len(unreviewed)} of {len(evidence)} supporting evidence reference(s) have "
+                       "no review support reference that targets them")
         else:
             readiness = RECOMMENDATION_INTERNAL_DRAFT
             blocked = None
@@ -437,5 +492,14 @@ def _plan_fingerprint(request, refs: Dict[str, List[str]], sections: List[str]) 
         "sections": list(sections),
         "references": {category: list(refs[category]) for category in REF_CATEGORIES},
     }
+    # Phase 112: targets and claim scopes change the candidates, so they join the fingerprint — only
+    # when present, so a request that names none keeps its pre-Phase 112 fingerprint.
+    targets = {record_id: sorted(named) for record_id, named in _review_targets(request).items()
+               if named}
+    if targets:
+        material["review_targets"] = targets
+    source_only = sorted(_source_availability_evidence(request))
+    if source_only:
+        material["source_availability_evidence"] = source_only
     blob = json.dumps(material, sort_keys=True, separators=(",", ":"), default=str)
     return hashlib.sha256(blob.encode("utf-8")).hexdigest()

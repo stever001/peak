@@ -564,9 +564,17 @@ def planning_checks() -> None:
     check("recommendations carry evidence support refs",
           all(c.evidence_support_refs == ["evid_1", "evid_2"]
               for c in p.recommendation_candidates))
-    check("supported recommendations reach internal draft readiness",
-          all(c.readiness_state == RECOMMENDATION_INTERNAL_DRAFT and c.blocked_reason is None
+    from peak.reports import GovernedRecordReference as _Ref, RECOMMENDATION_BLOCKED_NO_REVIEW as _NO_REVIEW
+    check("Phase 112: an untargeted review reference leaves recommendations blocked",
+          all(c.readiness_state == _NO_REVIEW and c.review_support_refs == []
               for c in p.recommendation_candidates))
+    targeted = plan_it(_request(review_bundle_record_ids=[
+        _Ref(record_id="rvb_1", record_type="review_bundle_records",
+             target_record_ids=["evid_1", "evid_2"])])).report_plan
+    check("supported recommendations reach internal draft readiness when reviews target their evidence",
+          targeted.recommendation_candidates
+          and all(c.readiness_state == RECOMMENDATION_INTERNAL_DRAFT and c.blocked_reason is None
+                  and c.review_support_refs == ["rvb_1"] for c in targeted.recommendation_candidates))
 
     print("\n16. Gaps, blocked items, and the skeletal plan")
     check("no gaps when every category is supplied", p.open_gaps == [] and r.open_gap_count == 0)
@@ -604,8 +612,10 @@ def planning_checks() -> None:
           subset.finding_candidate_count == 0 and subset.recommendation_candidate_count == 0)
 
     print("\n18. Financial verification posture (identify only, never verify)")
-    check("future financial verification items identified",
-          p.future_financial_verification_items == ["rec_000", "rec_001"])
+    check("Phase 112: blocked (untargeted) recommendations name no future financial gate",
+          p.future_financial_verification_items == [])
+    check("future financial verification items identified for review-supported recommendations",
+          targeted.future_financial_verification_items == ["rec_000", "rec_001"])
     check("financial_verified stays false everywhere",
           p.financial_verified is False
           and all(c.financial_verified is False for c in p.recommendation_candidates))
@@ -739,9 +749,18 @@ def planning_checks() -> None:
     bundle_only = plan_it(_request(review_record_ids=[]))
     check("review_bundle_records still satisfies the review_status section",
           _state(bundle_only, "review_status") == SECTION_READY)
-    check("review_bundle_records still clears the finding review block",
-          all(f.blocked_reason is None and f.readiness_state == RECOMMENDATION_INTERNAL_DRAFT
+    from peak.reports import GovernedRecordReference
+    check("Phase 112: an untargeted review bundle clears no finding review block",
+          all(f.readiness_state == RECOMMENDATION_BLOCKED_NO_REVIEW and f.review_support_refs == []
               for f in bundle_only.report_plan.finding_candidates))
+    targeted_bundle = plan_it(_request(review_record_ids=[], review_bundle_record_ids=[
+        GovernedRecordReference(record_id="rvb_1", record_type="review_bundle_records",
+                                target_record_ids=["evid_1", "evid_2"])]))
+    check("a review bundle that targets the evidence still clears the finding review block",
+          targeted_bundle.report_plan.finding_candidates
+          and all(f.blocked_reason is None and f.readiness_state == RECOMMENDATION_INTERNAL_DRAFT
+                  and f.review_support_refs == ["rvb_1"]
+                  for f in targeted_bundle.report_plan.finding_candidates))
     check("internal_reviewer_decision_records still drives recommendation slots",
           bundle_only.recommendation_candidate_count == 2)
     check("a bundle-only plan carries no review_records caveat",
@@ -761,13 +780,19 @@ def planning_checks() -> None:
 
     check("a review_records reference satisfies the review_status section",
           _state(with_rev, "review_status") == SECTION_READY)
-    check("a review_records reference clears the finding review block",
+    check("Phase 112: an untargeted review_records reference clears no finding review block",
           with_rev.report_plan.finding_candidates
-          and all(f.readiness_state == RECOMMENDATION_INTERNAL_DRAFT and f.blocked_reason is None
+          and all(f.readiness_state == RECOMMENDATION_BLOCKED_NO_REVIEW and f.review_support_refs == []
                   for f in with_rev.report_plan.finding_candidates))
-    check("the finding slot cites the review_records id as review support",
-          all(f.review_support_refs == ["rev_1"]
-              for f in with_rev.report_plan.finding_candidates))
+    with_targeted_rev = plan_it(_request(**chain, review_record_ids=[
+        GovernedRecordReference(record_id="rev_1", record_type="review_records",
+                                target_record_ids=["evid_1"])]))
+    tf = {f.evidence_support_refs[0]: f for f in with_targeted_rev.report_plan.finding_candidates}
+    check("a review_records reference clears the review block only for the evidence it targets",
+          tf["evid_1"].readiness_state == RECOMMENDATION_INTERNAL_DRAFT and tf["evid_1"].blocked_reason is None
+          and tf["evid_2"].readiness_state == RECOMMENDATION_BLOCKED_NO_REVIEW)
+    check("the finding slot cites the review_records id only for its target",
+          tf["evid_1"].review_support_refs == ["rev_1"] and tf["evid_2"].review_support_refs == [])
     check("review support strictly increases the sections that are not blocked",
           len(with_rev.report_plan.blocked_items) < len(without.report_plan.blocked_items))
     check("the evidence trace attributes the support to review_record_ids, not to bundles",
@@ -829,14 +854,14 @@ def planning_checks() -> None:
     check("a review_records plan produces no controlled write request",
           with_rev.controlled_write_request_count == 0)
 
-    # (e) The category-level nature of the support travels with the plan, not only with the docs.
+    # (e) The target-specific nature of the support travels with the plan, not only with the docs.
     check("the plan records the review_records support caveat",
           REVIEW_RECORD_SUPPORT_CAVEAT in wp.reasons)
     check("the supported section records the caveat as a note",
           any(REVIEW_RECORD_SUPPORT_CAVEAT in s.notes for s in wp.sections
               if s.section_id == "review_status"))
-    check("the caveat states the support is category-level and reads no stored field",
-          "category-level" in REVIEW_RECORD_SUPPORT_CAVEAT
+    check("the caveat states the support is target-specific and reads no stored field",
+          "target-specific" in REVIEW_RECORD_SUPPORT_CAVEAT
           and "review_status" in REVIEW_RECORD_SUPPORT_CAVEAT
           and "does not approve or mutate the reviewed target"
           in REVIEW_RECORD_SUPPORT_CAVEAT)

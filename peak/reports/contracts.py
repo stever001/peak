@@ -56,12 +56,12 @@ REF_CATEGORY_RECORD_TYPES = {
 REF_CATEGORIES = tuple(REF_CATEGORY_RECORD_TYPES)
 
 #: Interchangeable reference categories. A section that requires the key category is equally
-#: satisfied by any category listed here, and a candidate slot that needs review support accepts
-#: any of them. This is **category-level** support: the boundary sees record ids, not the reviewed
-#: decision, review_status, subject_record_type, or authoritative flag stored on the row. A
-#: consumer that needs a higher assurance than "a review record was named" must correlate those
-#: stored fields deliberately, outside this boundary. Adding an alternative never removes an
-#: existing path.
+#: satisfied by any category listed here. **Candidate review support is target-specific (Phase 112):**
+#: a review reference supports a finding or recommendation slot only when it is a typed
+#: ``GovernedRecordReference`` whose ``target_record_ids`` name that slot's evidence id. A plain id,
+#: or a typed reference naming no target, supports no slot. The boundary still reads no stored
+#: decision, review_status, subject_record_type, or authoritative flag. Adding an alternative never
+#: removes an existing path.
 REF_CATEGORY_ALTERNATIVES = {
     "review_bundle_record_ids": ("review_record_ids",),
 }
@@ -70,11 +70,19 @@ REF_CATEGORY_ALTERNATIVES = {
 REVIEW_SUPPORT_CATEGORIES = ("review_bundle_record_ids",) + \
     REF_CATEGORY_ALTERNATIVES["review_bundle_record_ids"]
 
+#: Claim scopes a typed evidence reference may declare (Phase 112). Only
+#: ``source_availability_only`` changes planning: that evidence gets no finding slot and supports no
+#: recommendation slot.
+CLAIM_SCOPE_OPERATIONAL_FINDING = "operational_finding"
+CLAIM_SCOPE_SOURCE_AVAILABILITY = "source_availability_only"
+ALLOWED_CLAIM_SCOPES = frozenset({CLAIM_SCOPE_OPERATIONAL_FINDING, CLAIM_SCOPE_SOURCE_AVAILABILITY})
+
 #: Recorded on any plan whose review support came from a `review_records` reference, so the
-#: category-level nature of that support travels with the plan instead of living only in docs.
+#: target-specific nature of that support travels with the plan instead of living only in docs.
 REVIEW_RECORD_SUPPORT_CAVEAT = (
-    "review support was supplied by a review_records reference; support is category-level "
-    "(a review record was named), it does not read the stored decision, review_status, "
+    "review support was supplied by a review_records reference; support is target-specific "
+    "(a review supports only candidate slots whose evidence it names as a target), it does not "
+    "read the stored decision, review_status, "
     "subject_record_type, or authoritative flag, it does not approve or mutate the reviewed "
     "target, and it establishes no authoritative, client-facing, production, capsule, or "
     "publication posture")
@@ -191,6 +199,10 @@ class GovernedRecordReference:
     engagement_id: Optional[str] = None
     authorization_scope: Optional[str] = None
     label: Optional[str] = None  # short safe routing label; never content
+    # Phase 112: a review reference names the record ids it reviews; support is target-specific.
+    target_record_ids: List[str] = field(default_factory=list)
+    # Phase 112: an evidence reference may declare its claim scope (one of ALLOWED_CLAIM_SCOPES).
+    claim_scope: Optional[str] = None
 
 
 @dataclass
