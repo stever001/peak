@@ -17,6 +17,7 @@ Asserts that:
 * ``claim_scope`` is caller-supplied, is refused when unrecognised, and is refused for a row whose
   persisted areas are unspecified;
 * recommendations, client-facing output, and a strict ``EngagementPacket`` stay blocked;
+* Phase 117 recommendation eligibility needs a targeted approving review and adequate reliability;
 * the read module selects whitelisted columns only, never a narrative body, and issues no write;
 * the adapter loads no SQLAlchemy and no ``peak.db``.
 
@@ -43,6 +44,14 @@ from peak.reports import (  # noqa: E402
 from peak.reports.internal_assessment import (  # noqa: E402
     build_internal_assessment,
     render_internal_assessment_markdown,
+)
+from peak.reports.packet_view_report import (  # noqa: E402
+    REC_BLOCK_NO_STATEMENT,
+    REC_BLOCK_NO_TARGETED_REVIEW,
+    REC_BLOCK_RELIABILITY_LOW,
+    REC_BLOCK_REVIEW_NOT_APPROVING,
+    REC_BLOCK_STATEMENT_NOT_PERSISTED,
+    recommendation_block_reasons,
 )
 from peak.reports.persisted_packet_view import (  # noqa: E402
     ClaimScopePolicy,
@@ -76,7 +85,8 @@ def read(rel):
 
 
 def fetched(review_target=EV_SOURCE_AVAILABILITY, areas=True, persisted_scopes=None,
-            persisted_summaries=None):
+            persisted_summaries=None, reliability="low", decision="approve_internal",
+            review_status="approved_internal"):
     """Summaries shaped exactly as the whitelisted SELECTs return them — no row bodies.
 
     ``persisted_scopes`` maps an evidence id to the Phase 114 governed ``claim_scope`` the fetch
@@ -89,7 +99,7 @@ def fetched(review_target=EV_SOURCE_AVAILABILITY, areas=True, persisted_scopes=N
 
     def evidence(evidence_id, operational_area, process_area):
         return {**IDENTITY, "evidence_id": evidence_id, "evidence_type": "other",
-                "source_type": "other", "reliability": "low", "evidence_status": "collected",
+                "source_type": "other", "reliability": reliability, "evidence_status": "collected",
                 "review_status": "needs_review", "output_status": "draft",
                 "lifecycle_status": "active", "sensitive_data_flag": False,
                 "source_reference_id": SRC, "operational_area": operational_area,
@@ -113,8 +123,8 @@ def fetched(review_target=EV_SOURCE_AVAILABILITY, areas=True, persisted_scopes=N
                               "on_hand_attribution" if areas else "unspecified"),
                      evidence(EV_SOURCE_AVAILABILITY, "unspecified", "unspecified")],
         "reviews": [{**IDENTITY, "review_id": REVIEW, "target_id": review_target,
-                     "subject_record_type": "evidence_reference", "decision": "approve_internal",
-                     "review_status": "approved_internal", "new_status": "approved_internal",
+                     "subject_record_type": "evidence_reference", "decision": decision,
+                     "review_status": review_status, "new_status": review_status,
                      "authoritative": False, "output_status": "draft",
                      "lifecycle_status": "active"}],
     }
@@ -361,6 +371,58 @@ def main() -> int:
               build_persisted_report_inputs(
                   fetched(persisted_scopes=PERSISTED,
                           persisted_summaries={EV_R1_COVERAGE: STATEMENT}), None))))
+
+    print("\n5e. Phase 117 — recommendation eligibility")
+    blocked = a_inputs.finding_inputs[0]
+    check("the Phase 107 finding stays recommendation-ineligible",
+          blocked.recommendation_eligible is False)
+    check("its blockers name the missing targeted review and low reliability",
+          REC_BLOCK_NO_TARGETED_REVIEW in blocked.recommendation_blocked_reasons
+          and REC_BLOCK_RELIABILITY_LOW in blocked.recommendation_blocked_reasons)
+    check("the Phase 94 review still cannot support the Phase 107 finding",
+          blocked.review_support_refs == [] and REVIEW not in blocked.review_support_refs)
+    check("the assessment shows the finding as blocked, with reasons",
+          assessment.findings[0].recommendation_eligible is False
+          and "Recommendation eligibility: blocked" in doc and REC_BLOCK_RELIABILITY_LOW in doc)
+    strong = dict(review_target=EV_R1_COVERAGE, reliability="medium", persisted_scopes=PERSISTED,
+                  persisted_summaries={EV_R1_COVERAGE: STATEMENT})
+    eligible_inputs = build_persisted_report_inputs(fetched(**strong), None)
+    ok = eligible_inputs.finding_inputs[0]
+    check("a targeted approving review, medium reliability, scope and statement make it eligible",
+          ok.recommendation_eligible is True and ok.recommendation_blocked_reasons == []
+          and ok.review_support_refs == [REVIEW] and ok.finding_statement_persisted is True)
+    fallback_strong = dict(strong, persisted_summaries={})
+    fallback = build_persisted_report_inputs(
+        fetched(**fallback_strong),
+        ClaimScopePolicy(claim_scopes=PERSISTED, summaries={EV_R1_COVERAGE: "legacy text"}))
+    fb = fallback.finding_inputs[0]
+    check("a caller-fallback statement stays readable but blocks eligibility",
+          fb.finding_statement == "legacy text" and fb.finding_statement_persisted is False
+          and fb.recommendation_eligible is False
+          and fb.recommendation_blocked_reasons == [REC_BLOCK_STATEMENT_NOT_PERSISTED])
+    unstated = build_persisted_report_inputs(fetched(**fallback_strong), None)
+    un = unstated.finding_inputs[0]
+    check("a missing statement blocks eligibility",
+          un.recommendation_eligible is False
+          and un.recommendation_blocked_reasons == [REC_BLOCK_NO_STATEMENT])
+    check("fallback and missing cases generate no recommendation and stay internal",
+          fallback.recommendations == [] and unstated.recommendations == []
+          and not fallback.client_facing_allowed and not unstated.client_facing_allowed
+          and not fb.client_facing_allowed and not un.client_facing_allowed)
+    eligible_doc = render_internal_assessment_markdown(build_internal_assessment(eligible_inputs))
+    check("eligibility generates no recommendation and nothing becomes client-facing",
+          eligible_inputs.recommendations == [] and eligible_inputs.recommendations_blocked
+          and not eligible_inputs.client_facing_allowed and not ok.client_facing_allowed
+          and "Recommendation eligibility: eligible" in eligible_doc
+          and "none was drafted" in eligible_doc and "Client-facing: no" in eligible_doc)
+    held_summaries = fetched(**strong, decision="keep_needs_review", review_status="needs_review")
+    held = build_persisted_report_inputs(held_summaries, None)
+    held_evidence = build_persisted_packet_view(held_summaries, None).evidence_by_id(EV_R1_COVERAGE)
+    check("a targeted but non-approving review does not qualify",
+          not any(f.recommendation_eligible for f in held.finding_inputs)
+          and EV_R1_COVERAGE in [x.evidence_id for x in held.excluded_evidence]
+          and held_evidence.linked_review_ids == [REVIEW]
+          and recommendation_block_reasons(held_evidence) == [REC_BLOCK_REVIEW_NOT_APPROVING])
 
     print("\n6. Posture stays blocked")
     check("recommendations are empty and blocked",

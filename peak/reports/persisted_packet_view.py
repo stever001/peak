@@ -134,6 +134,8 @@ def apply_claim_scope_policy(evidence_summaries, policy: Optional[ClaimScopePoli
     and **removed when nothing resolved**, so a persisted value that was refused cannot survive into
     the view. The persisted ``summary`` is kept as-is; the caller's statement is used only for a row
     that carries none, and a row with neither keeps none rather than being given invented prose.
+    ``finding_statement_persisted`` is true only when the statement came from the fetched row (Phase
+    117), so a caller fallback stays readable but never counts as persisted.
     """
     adapted, notes = [], []
     for evidence in evidence_summaries:
@@ -145,6 +147,7 @@ def apply_claim_scope_policy(evidence_summaries, policy: Optional[ClaimScopePoli
             item.pop("claim_scope", None)
         if note:
             notes.append(note)
+        item["finding_statement_persisted"] = item.get("summary") is not None
         if item.get("summary") is None:
             supplied = (policy.summaries if policy else {}).get(item.get("evidence_id"))
             if supplied is not None:

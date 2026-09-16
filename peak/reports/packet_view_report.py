@@ -15,8 +15,16 @@ statement of the evidence it cites (Phase 115) exactly as stored; when the evide
 field stays ``None`` and a warning names it. Nothing here generates, paraphrases, or infers prose.
 
 **Nothing is upgraded.** Unreviewed evidence may back an internal-draft finding and nothing more.
-No finding input is client-facing or recommendation-eligible; recommendations are always empty and
-blocked here, with reasons. Strict ``EngagementPacket`` insufficiency is carried through unchanged.
+No finding input is client-facing. Strict ``EngagementPacket`` insufficiency is carried through
+unchanged.
+
+**Recommendation eligibility is decided, not produced (Phase 117).** A finding input is
+recommendation-eligible only when a review targets its cited evidence and every such review is an
+internal approval (``approve_internal`` / ``approved_internal``), the evidence reliability is
+``medium`` or ``high``, the claim scope is ``operational_finding``, a statement that came from
+persisted evidence state is present (a legacy caller fallback stays readable but does not count), and
+the source resolves. Review presence alone is not enough. Otherwise it carries stable blocker
+reasons. Eligibility drafts nothing: ``recommendations`` stay empty and blocked here.
 
 Side-effect boundary: pure functions over an in-memory ``PacketView``. No database connection, no
 SQLAlchemy / Alembic / ``peak.db`` import, no environment read, no file or network access, no
@@ -43,7 +51,20 @@ from .packet_view import (
 
 REPORTING_AGENT = "initial_report_generation_agent"
 REPORTING_ACTION = "draft_internal_assessment_report"
-NO_RECOMMENDATION_INPUT = "the packet view carries no reviewed, finding-backed recommendation input"
+
+#: Evidence reliability values (evidence-reference schema enum) strong enough for recommendation use.
+RECOMMENDATION_RELIABILITY = ("medium", "high")
+
+#: Stable recommendation blocker reasons (Phase 117). Each names one unmet eligibility requirement.
+REC_BLOCK_NO_TARGETED_REVIEW = "cited evidence is not internally approved: no review targets it"
+REC_BLOCK_REVIEW_NOT_APPROVING = (
+    "cited evidence is not internally approved: a review targeting it is not an internal approval")
+REC_BLOCK_RELIABILITY_LOW = "cited evidence reliability is low"
+REC_BLOCK_RELIABILITY_UNSPECIFIED = "cited evidence reliability is unspecified or unrecognised"
+REC_BLOCK_CLAIM_SCOPE = "cited evidence is not scoped as an operational finding"
+REC_BLOCK_NO_STATEMENT = "cited evidence carries no persisted finding statement"
+REC_BLOCK_STATEMENT_NOT_PERSISTED = "finding statement is not persisted"
+REC_BLOCK_SOURCE_UNRESOLVED = "cited evidence source does not resolve to a source record"
 
 
 @dataclass
@@ -62,6 +83,7 @@ class ReportFindingInput:
     # Phase 115: the persisted, consultant-readable statement of the cited evidence. None means the
     # evidence carries none — never a generated or paraphrased substitute.
     finding_statement: Optional[str] = None
+    finding_statement_persisted: bool = False  # Phase 117: false for a caller fallback or no statement
     readiness_state: str = RECOMMENDATION_INTERNAL_DRAFT
     internal_draft_only: bool = True
     requires_human_review: bool = True
@@ -108,13 +130,28 @@ def _exclusion_reason(evidence) -> str:
     return f"lifecycle status '{evidence.lifecycle_status}' is not active"
 
 
-def _recommendation_blocked_reasons(evidence) -> List[str]:
+def recommendation_block_reasons(evidence) -> List[str]:
+    """Stable reasons an ``EvidenceView`` cannot back a recommendation; empty means eligible.
+
+    Uses only the view's target-specific review links, so a review of other evidence never counts.
+    """
     reasons = []
-    if evidence.effective_review_status != EFFECTIVE_APPROVED_INTERNAL:
-        reasons.append(f"cited evidence is not internally approved ({evidence.effective_review_status})")
-    if evidence.reliability in (None, "low"):
-        reasons.append(f"cited evidence reliability is {evidence.reliability or 'unspecified'}")
-    reasons.append(NO_RECOMMENDATION_INPUT)
+    if not evidence.linked_review_ids:
+        reasons.append(REC_BLOCK_NO_TARGETED_REVIEW)
+    elif evidence.effective_review_status != EFFECTIVE_APPROVED_INTERNAL:
+        reasons.append(REC_BLOCK_REVIEW_NOT_APPROVING)
+    if evidence.reliability == "low":
+        reasons.append(REC_BLOCK_RELIABILITY_LOW)
+    elif evidence.reliability not in RECOMMENDATION_RELIABILITY:
+        reasons.append(REC_BLOCK_RELIABILITY_UNSPECIFIED)
+    if evidence.claim_scope != CLAIM_SCOPE_OPERATIONAL_FINDING:
+        reasons.append(REC_BLOCK_CLAIM_SCOPE)
+    if not evidence.schema_item.get("summary"):
+        reasons.append(REC_BLOCK_NO_STATEMENT)
+    elif not evidence.finding_statement_persisted:
+        reasons.append(REC_BLOCK_STATEMENT_NOT_PERSISTED)
+    if not evidence.source_resolved:
+        reasons.append(REC_BLOCK_SOURCE_UNRESOLVED)
     return reasons
 
 
@@ -125,8 +162,7 @@ def build_report_inputs_from_packet_view(view: PacketView) -> PacketViewReportIn
         strict_engagement_packet_valid=False,
         strict_engagement_packet_reasons=list(view.strict_engagement_packet_reasons),
         missing_sections=list(view.missing_sections),
-        recommendations_blocked_reasons=[view.recommendations_blocked_reason,
-                                         "no finding input is recommendation-eligible"],
+        recommendations_blocked_reasons=[view.recommendations_blocked_reason],
         warnings=list(view.warnings),
     )
 
@@ -137,6 +173,7 @@ def build_report_inputs_from_packet_view(view: PacketView) -> PacketViewReportIn
             inputs.excluded_evidence.append(ExcludedEvidence(e.evidence_id, _exclusion_reason(e)))
 
     for index, e in enumerate(cited):
+        blockers = recommendation_block_reasons(e)
         inputs.finding_inputs.append(ReportFindingInput(
             finding_candidate_id=f"fnd_{index:03d}",
             cited_evidence_id=e.evidence_id,
@@ -147,7 +184,9 @@ def build_report_inputs_from_packet_view(view: PacketView) -> PacketViewReportIn
             reliability=e.reliability,
             claim_scope=e.claim_scope,
             finding_statement=e.schema_item.get("summary"),
-            recommendation_blocked_reasons=_recommendation_blocked_reasons(e),
+            finding_statement_persisted=e.finding_statement_persisted,
+            recommendation_eligible=not blockers,
+            recommendation_blocked_reasons=blockers,
         ))
         if e.schema_item.get("summary") is None:
             inputs.warnings.append(
@@ -157,6 +196,13 @@ def build_report_inputs_from_packet_view(view: PacketView) -> PacketViewReportIn
             "source_resolved": e.source_resolved,
             "review_support_refs": list(e.linked_review_ids),
         }
+
+    # Eligibility is a decision only: no recommendation is generated here, so they stay blocked.
+    if any(f.recommendation_eligible for f in inputs.finding_inputs):
+        inputs.recommendations_blocked_reasons.append(
+            "recommendation-eligible findings exist, but no recommendation is generated on this path")
+    else:
+        inputs.recommendations_blocked_reasons.append("no finding input is recommendation-eligible")
 
     if not inputs.finding_inputs:
         inputs.warnings.append("no finding input: no report task request was built")

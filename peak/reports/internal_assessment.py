@@ -14,8 +14,9 @@ no source-of-record claim, and no operational prescription** — none of those a
 current evidence posture, so none appear.
 
 **Recommendations are reported, not produced.** The assessment carries the blocked recommendation
-status and the reasons the reporting bridge already computed. It never drafts recommendation
-language.
+status and the reasons the reporting bridge already computed, plus each finding's Phase 117
+recommendation eligibility (eligible / blocked, with the bridge's blocker reasons). It never drafts
+recommendation language.
 
 **Internal only.** ``audience`` is internal, ``status`` is internal draft, ``client_facing`` is
 always false, and human review is always required.
@@ -65,6 +66,8 @@ class AssessmentFinding:
     supporting_review_ids: List[str] = field(default_factory=list)
     reliability: Optional[str] = None
     claim_scope: Optional[str] = None
+    recommendation_eligible: bool = False  # Phase 117: decided by the bridge, never here
+    recommendation_blocked_reasons: List[str] = field(default_factory=list)
 
 
 @dataclass
@@ -139,6 +142,8 @@ def build_internal_assessment(report_inputs) -> InternalAssessment:
             supporting_review_ids=list(item.review_support_refs),
             reliability=item.reliability,
             claim_scope=item.claim_scope,
+            recommendation_eligible=bool(item.recommendation_eligible),
+            recommendation_blocked_reasons=list(item.recommendation_blocked_reasons),
         ))
 
     assessment.confidence_notes = _confidence_notes(assessment.findings)
@@ -202,6 +207,9 @@ def render_internal_assessment_markdown(assessment: InternalAssessment) -> str:
         lines.append(f"- Supporting reviews: {supporting}")
         lines.append(f"- Reliability: {finding.reliability}")
         lines.append(f"- Claim scope: {finding.claim_scope}")
+        lines.append(f"- Recommendation eligibility: "
+                     f"{'eligible' if finding.recommendation_eligible else 'blocked'}")
+        lines += [f"  - {reason}" for reason in finding.recommendation_blocked_reasons]
         lines.append("")
 
     lines += ["## Evidence and confidence", ""]
@@ -212,10 +220,12 @@ def render_internal_assessment_markdown(assessment: InternalAssessment) -> str:
     lines += [f"- {item}" for item in assessment.limitations] or ["- None recorded."]
     lines.append("")
 
+    eligible = sum(1 for f in assessment.findings if f.recommendation_eligible)
+    availability = (f"{eligible} finding(s) are recommendation-eligible" if eligible else
+                    "No recommendation is available from the current evidence posture")
     lines += ["## Recommendations", "",
               f"**{assessment.recommendation_status.capitalize()}.** "
-              f"No recommendation is available from the current evidence posture, and none was "
-              f"drafted.", ""]
+              f"{availability}, and none was drafted.", ""]
     lines += [f"- {reason}" for reason in assessment.recommendation_blocked_reasons]
     lines.append("")
     return "\n".join(lines)

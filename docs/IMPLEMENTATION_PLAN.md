@@ -3773,11 +3773,36 @@ Baseline `315cd57`. Peak now produces something a consultant can actually read f
 - **Current posture, stated plainly:** the Phase 107 finding is **usable for internal assessment but
   not recommendation-grade** — readable and traceable, but unreviewed and low-reliability, with the
   Phase 94 review supporting nothing.
-- [ ] **Next — define what evidence and review state is required to earn a recommendation:** what a
-  reviewer must confirm, and what raises reliability above `low`, so a finding can move from readable
-  to actionable. **Not approved by Phase 116.**
+- [x] **Done in Phase 117** — recommendation eligibility is now a deterministic per-finding decision.
 
 Full record: [`PHASE116_CONSULTANT_INTERNAL_ASSESSMENT.md`](PHASE116_CONSULTANT_INTERNAL_ASSESSMENT.md).
+
+### Phase 117 — recommendation eligibility (functionality; no DB, no persistence, no recommendation prose)
+
+Baseline `1057da6`. Each finding now carries `recommendation_eligible` and stable blocker reasons.
+
+- [x] `recommendation_block_reasons` in `peak/reports/packet_view_report.py` drives the existing
+  `ReportFindingInput.recommendation_eligible` / `recommendation_blocked_reasons` fields. Every input
+  already reached the bridge; **nothing was persisted**.
+- [x] Eligible only when a review **targets** the cited evidence and every such review is an internal
+  approval (`approve_internal` → `approved_internal`), reliability is `medium` or `high`, claim scope is
+  `operational_finding`, a **persisted** statement is present, and the source resolves. **Review presence alone is
+  insufficient; the decision and reliability both matter.** No new enum value.
+- [x] The Phase 107 finding **stays blocked** (no targeted review, reliability `low`); the Phase 94
+  review still supports nothing. A synthetic targeted-approval, medium-reliability case is eligible; a
+  targeted non-approving review is not.
+- [x] The Phase 116 assessment shows `Recommendation eligibility: eligible | blocked` per finding with
+  reasons. **No recommendation prose is generated**; recommendations stay empty and blocked, and
+  nothing is client-facing.
+- [x] Statement provenance: `finding_statement_persisted` is set by the persisted-state adapter and
+  carried through `EvidenceView` / `ReportFindingInput`. A legacy `ClaimScopePolicy.summaries`
+  fallback stays readable internally but blocks eligibility (`finding statement is not persisted`).
+- [x] Proof by extending the Phase 113 harness again, 78 → **88 checks, passing**. No new test file
+  and no Makefile change.
+- [ ] **Next — bounded internal recommendation generation for eligible findings only.** Internal,
+  reviewable, never client-facing. **Not approved by Phase 117.**
+
+Full record: [`PHASE117_RECOMMENDATION_ELIGIBILITY.md`](PHASE117_RECOMMENDATION_ELIGIBILITY.md).
 
 
 **Still to do:**

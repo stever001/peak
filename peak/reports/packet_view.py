@@ -70,6 +70,8 @@ class EvidenceView:
     source_reference_id: Optional[str] = None
     source_resolved: bool = False
     claim_scope: Optional[str] = None
+    # Phase 117: true only when the persisted-state adapter marks the summary as the stored statement.
+    finding_statement_persisted: bool = False
     linked_review_ids: List[str] = field(default_factory=list)
     effective_review_status: str = EFFECTIVE_UNREVIEWED
     finding_candidate_allowed: bool = False
@@ -225,6 +227,8 @@ def assemble_packet_view(engagement, sources: Iterable = (), evidence: Iterable 
             source_reference_id=source_ref,
             source_resolved=source_ref in source_ids,
             claim_scope=_get(e, "claim_scope"),
+            finding_statement_persisted=(bool(_get(e, "finding_statement_persisted", False))
+                                         and _get(e, "summary") is not None),
             linked_review_ids=[r.review_id for r in linked],
             effective_review_status=_effective_review_status(linked),
         )
