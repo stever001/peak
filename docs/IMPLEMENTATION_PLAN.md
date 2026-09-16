@@ -3744,13 +3744,40 @@ reporting path needs**.
 - **Still true:** the Phase 107 row `evid_8151dad609974ea0` remains legacy and was **not
   retrofitted** — no update writer, no duplicate evidence, no `peak_lab` contact. Recommendations and
   client-facing output remain blocked; every writer stays create-only.
-- [ ] **Next — produce a useful internal assessment, not more persistence plumbing.** The MVP
-  persistence path is complete; the open questions are what a consultant actually receives from a
-  finding-backed engagement, and what must be true before evidence can be reviewed and a
-  recommendation earned. A governed `evidence_references/update_claim_scope` writer remains available
-  as a smaller side step if post-capture classification is needed first. **Not approved by Phase 115.**
+- [x] **Done in Phase 116** — the persisted route now ends in a consultant-readable internal
+  assessment.
 
 Full record: [`PHASE115_PERSISTED_FINDING_STATEMENT.md`](PHASE115_PERSISTED_FINDING_STATEMENT.md).
+
+### Phase 116 — consultant-usable internal assessment (functionality; no DB, no persistence, no LLM)
+
+Baseline `315cd57`. Peak now produces something a consultant can actually read from stored state.
+
+- [x] One pure module, `peak/reports/internal_assessment.py`: `build_internal_assessment` turns
+  Phase 111 reporting inputs into an `InternalAssessment`, and
+  `render_internal_assessment_markdown` renders deterministic Markdown. The Phase 36
+  `InternalAssessmentReportPlan` was **not reused** — it is a plan carrying no prose, reachable only
+  through the planner boundary Phase 111 set aside — and no renderer existed in the repo, so one
+  small composer was added rather than refactoring two boundaries together.
+- [x] Sections: operational findings (persisted statement, evidence id, source id(s), **effective
+  and stored review status separately**, supporting review ids, reliability, claim scope); evidence
+  and confidence; open limitations and unresolved questions; recommendations.
+- [x] **Every line is a fixed label or a stored value.** No LLM call, no paraphrase, no severity,
+  priority, ranking, root cause, ROI, inventory-accuracy figure, source-of-record claim, or
+  operational prescription. A finding with no persisted statement **says so** and stays in the
+  document.
+- [x] Recommendations render as **blocked** with the reasons the bridge already computed; nothing is
+  drafted. `client_facing` is false and human review is always required.
+- [x] Proof by extending the existing Phase 113 harness again, 67 → **78 checks, passing**. No new
+  test file and no Makefile change. The whole document is not snapshot-tested.
+- **Current posture, stated plainly:** the Phase 107 finding is **usable for internal assessment but
+  not recommendation-grade** — readable and traceable, but unreviewed and low-reliability, with the
+  Phase 94 review supporting nothing.
+- [ ] **Next — define what evidence and review state is required to earn a recommendation:** what a
+  reviewer must confirm, and what raises reliability above `low`, so a finding can move from readable
+  to actionable. **Not approved by Phase 116.**
+
+Full record: [`PHASE116_CONSULTANT_INTERNAL_ASSESSMENT.md`](PHASE116_CONSULTANT_INTERNAL_ASSESSMENT.md).
 
 
 **Still to do:**

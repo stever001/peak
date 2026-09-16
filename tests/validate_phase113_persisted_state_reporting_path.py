@@ -40,6 +40,10 @@ from peak.reports import (  # noqa: E402
     InternalAssessmentReportPlanRequest as Req,
     prepare_internal_assessment_report_plan as plan_it,
 )
+from peak.reports.internal_assessment import (  # noqa: E402
+    build_internal_assessment,
+    render_internal_assessment_markdown,
+)
 from peak.reports.persisted_packet_view import (  # noqa: E402
     ClaimScopePolicy,
     build_persisted_packet_view,
@@ -314,6 +318,49 @@ def main() -> int:
           stated.recommendations == [] and stated.recommendations_blocked
           and not stated.client_facing_allowed
           and not stated.finding_inputs[0].recommendation_eligible)
+
+    print("\n5d. Phase 116 — a consultant-readable internal assessment")
+    a_inputs = build_persisted_report_inputs(
+        fetched(persisted_scopes=PERSISTED, persisted_summaries={EV_R1_COVERAGE: STATEMENT}), None)
+    assessment = build_internal_assessment(a_inputs)
+    doc = render_internal_assessment_markdown(assessment)
+    check("one persisted finding appears in the assessment",
+          len(assessment.findings) == 1
+          and assessment.findings[0].evidence_id == EV_R1_COVERAGE)
+    check("the persisted statement appears verbatim in the rendered document",
+          assessment.findings[0].statement == STATEMENT and STATEMENT in doc)
+    check("the evidence and source ids are present",
+          assessment.findings[0].source_reference_ids == [SRC]
+          and EV_R1_COVERAGE in doc and SRC in doc)
+    check("review status is unreviewed, with the stored status shown separately",
+          assessment.findings[0].review_status == "unreviewed"
+          and assessment.findings[0].stored_review_status == "needs_review"
+          and "Review status: unreviewed" in doc)
+    check("reliability is low",
+          assessment.findings[0].reliability == "low" and "Reliability: low" in doc)
+    check("the Phase 94 review supports nothing in the assessment",
+          assessment.findings[0].supporting_review_ids == []
+          and "Supporting reviews: none" in doc)
+    check("the recommendation section reports blocked and drafts nothing",
+          assessment.recommendation_status == "blocked"
+          and "**Blocked.**" in doc and "none was drafted" in doc
+          and assessment.recommendation_blocked_reasons)
+    check("no unsupported recommendation or analysis language appears",
+          not any(term in doc.lower() for term in
+                  ("we recommend", "should implement", "root cause", "roi", "severity",
+                   "priority", "inventory accuracy", "system of record", "cycle count")))
+    check("client-facing posture stays false",
+          assessment.client_facing is False and "Client-facing: no" in doc
+          and assessment.requires_human_review is True)
+    check("a finding with no persisted statement says so rather than inventing one",
+          "_" + "No persisted finding statement is available" in
+          render_internal_assessment_markdown(build_internal_assessment(
+              build_persisted_report_inputs(fetched(persisted_scopes=PERSISTED), None))))
+    check("the rendered document is deterministic",
+          doc == render_internal_assessment_markdown(build_internal_assessment(
+              build_persisted_report_inputs(
+                  fetched(persisted_scopes=PERSISTED,
+                          persisted_summaries={EV_R1_COVERAGE: STATEMENT}), None))))
 
     print("\n6. Posture stays blocked")
     check("recommendations are empty and blocked",
