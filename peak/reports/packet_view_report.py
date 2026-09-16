@@ -10,6 +10,10 @@ scoped to finding-backed records only.
 engagement. This path does not use the Phase 36 planner's category-level review support, which
 counts any review as support for every finding.
 
+**The finding statement is carried, never written.** Each finding input carries the persisted
+statement of the evidence it cites (Phase 115) exactly as stored; when the evidence carries none the
+field stays ``None`` and a warning names it. Nothing here generates, paraphrases, or infers prose.
+
 **Nothing is upgraded.** Unreviewed evidence may back an internal-draft finding and nothing more.
 No finding input is client-facing or recommendation-eligible; recommendations are always empty and
 blocked here, with reasons. Strict ``EngagementPacket`` insufficiency is carried through unchanged.
@@ -55,6 +59,9 @@ class ReportFindingInput:
     review_support_refs: List[str] = field(default_factory=list)  # reviews of the cited evidence only
     reliability: Optional[str] = None
     claim_scope: Optional[str] = None
+    # Phase 115: the persisted, consultant-readable statement of the cited evidence. None means the
+    # evidence carries none — never a generated or paraphrased substitute.
+    finding_statement: Optional[str] = None
     readiness_state: str = RECOMMENDATION_INTERNAL_DRAFT
     internal_draft_only: bool = True
     requires_human_review: bool = True
@@ -139,8 +146,12 @@ def build_report_inputs_from_packet_view(view: PacketView) -> PacketViewReportIn
             review_support_refs=list(e.linked_review_ids),
             reliability=e.reliability,
             claim_scope=e.claim_scope,
+            finding_statement=e.schema_item.get("summary"),
             recommendation_blocked_reasons=_recommendation_blocked_reasons(e),
         ))
+        if e.schema_item.get("summary") is None:
+            inputs.warnings.append(
+                f"{e.evidence_id}: no finding statement is available; none was generated")
         inputs.evidence_trace[e.evidence_id] = {
             "source_reference_id": e.source_reference_id,
             "source_resolved": e.source_resolved,

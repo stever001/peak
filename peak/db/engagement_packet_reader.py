@@ -13,8 +13,12 @@ establishes and owns the connection, so the credential (and therefore the privil
 this code.
 
 **Whitelisted columns only, never row bodies.** Ids, identity fields, governance/posture statuses,
-and relationship keys are selected by name. ``evidence_references.summary``, ``review_records.reason``,
-and every other narrative column are **never selected**. From ``details_json`` only three keys are
+and relationship keys are selected by name. ``review_records.reason``, ``engagements.engagement_label``,
+``source_system_references.location_descriptor``, and every other narrative column are **never
+selected**. The one text column that is selected is ``evidence_references.summary`` (Phase 115) —
+the schema-required, consultant-readable, explicitly non-sensitive **finding statement**, not a body —
+and even that is withheld server-side for any row whose ``sensitive_data_flag`` is set, so its text
+never leaves the database. From ``details_json`` only four keys are
 extracted, server-side and one key at a time — ``source_reference_id`` (the evidence → source link,
 which has no column of its own), ``operational_area``, and ``inventory_process_area`` — so the JSON
 body never leaves the database.
@@ -37,7 +41,7 @@ from __future__ import annotations
 
 from typing import Dict, List
 
-from sqlalchemy import select
+from sqlalchemy import case, select
 
 from .engagement_read_isolation import DEFAULT_READ_MODE, is_visible_in_mode
 from .models import Engagement, EvidenceReference, ReviewRecord, SourceIngestionRecord
@@ -126,7 +130,10 @@ def fetch_source_summaries(connection, engagement_id: str) -> List[Dict[str, obj
 def fetch_evidence_summaries(connection, engagement_id: str) -> List[Dict[str, object]]:
     """Fetch the engagement's ``evidence_references`` summaries, sorted by id.
 
-    ``summary`` is never selected. The :data:`EVIDENCE_DETAIL_KEYS` are extracted from
+    ``summary`` is the Phase 115 finding statement: schema-required, consultant-readable, and
+    non-sensitive by contract. It is withheld **server-side** whenever ``sensitive_data_flag`` is
+    set, so a row flagged sensitive transfers no text at all. The :data:`EVIDENCE_DETAIL_KEYS` are
+    extracted from
     ``details_json`` server-side, one key at a time, so no JSON body is transferred. ``claim_scope``
     is the governed classification the Phase 21 writer persists; the areas remain posture metadata
     that can refuse an operational-finding claim scope but never grant one — see
@@ -147,6 +154,9 @@ def fetch_evidence_summaries(connection, engagement_id: str) -> List[Dict[str, o
         EvidenceReference.output_status,
         EvidenceReference.lifecycle_status,
         EvidenceReference.sensitive_data_flag,
+        # Phase 115: the finding statement, withheld server-side for a sensitive-flagged row.
+        case((EvidenceReference.sensitive_data_flag.is_(True), None),
+             else_=EvidenceReference.summary).label("summary"),
         details["source_reference_id"].as_string().label("source_reference_id"),
         details["operational_area"].as_string().label("operational_area"),
         details["inventory_process_area"].as_string().label("inventory_process_area"),

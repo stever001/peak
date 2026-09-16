@@ -3711,10 +3711,46 @@ evidence.
   recorded after capture and the Phase 107 row can stop depending on the legacy fallback. Every
   controlled writer is create-only today and the allowlist's `update_*` / `mark_superseded` actions
   have no implementation. **Not approved by Phase 114.**
-- [ ] **Also still open — finding summary text has no governed persisted home**, so a report still
-  cannot carry claim text from persisted state. **Not approved by Phase 114.**
+- [x] **Finding statement done in Phase 115** — by reusing the existing
+  `evidence_references.summary` column, with no new field and no migration.
 
 Full record: [`PHASE114_PERSISTED_EVIDENCE_CLAIM_SCOPE.md`](PHASE114_PERSISTED_EVIDENCE_CLAIM_SCOPE.md).
+
+### Phase 115 — persisted finding statement (functionality; no DB access, no migration, no new field)
+
+Baseline `726dbb3`. The reporting path now reads its human-readable finding statement from stored
+state. With Phase 114's `claim_scope`, **evidence created from here on carries everything the
+reporting path needs**.
+
+- [x] **An existing field was reused, not added:** `evidence_references.summary`, which the Phase 21
+  writer already populates and which the model and `schemas/evidence-reference.schema.json` already
+  define as a required, consultant-readable, **non-sensitive** statement. **No migration `015`**, no
+  schema change, no writer change, and no new write-time validation — nothing new is written.
+- [x] Phase 113's blanket "no narrative column" refusal is narrowed to this one field, justified by
+  Phase 114 governing the claim and by a **server-side `CASE` that withholds the text whenever
+  `sensitive_data_flag` is set**. `review_records.reason`, `engagements.engagement_label`,
+  `location_descriptor`, `details_json` bodies, and packet bodies stay **never selected**.
+- [x] **The persisted statement is authoritative.** `ClaimScopePolicy.summaries` is now a
+  **legacy fallback only** and cannot override it; a missing statement **stays missing** with a
+  warning rather than being fabricated; `source_availability_only` evidence produces no operational
+  finding even when it carries a statement. This mirrors the Phase 114 precedence rule deliberately.
+- [x] `ReportFindingInput` gains `finding_statement`; the `AgentTaskRequest` is unchanged and still
+  carries only finding-backed record ids. **No LLM call, no paraphrase, no generated prose.**
+- [x] Proof by extending the existing Phase 113 harness again, 58 → **67 checks, passing**. No new
+  test file and no Makefile change.
+- **Transient, expected:** two historical `peak/db` working-tree freeze checks (Phases 89/90) fail
+  only while the reader edit is uncommitted and self-resolve on commit. Their label says "writer" but
+  they diff the whole `peak/db` directory; **no writer was edited**. Left unmodified.
+- **Still true:** the Phase 107 row `evid_8151dad609974ea0` remains legacy and was **not
+  retrofitted** — no update writer, no duplicate evidence, no `peak_lab` contact. Recommendations and
+  client-facing output remain blocked; every writer stays create-only.
+- [ ] **Next — produce a useful internal assessment, not more persistence plumbing.** The MVP
+  persistence path is complete; the open questions are what a consultant actually receives from a
+  finding-backed engagement, and what must be true before evidence can be reviewed and a
+  recommendation earned. A governed `evidence_references/update_claim_scope` writer remains available
+  as a smaller side step if post-capture classification is needed first. **Not approved by Phase 115.**
+
+Full record: [`PHASE115_PERSISTED_FINDING_STATEMENT.md`](PHASE115_PERSISTED_FINDING_STATEMENT.md).
 
 
 **Still to do:**

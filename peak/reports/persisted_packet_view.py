@@ -21,10 +21,13 @@ are not stored as data a report can use:
   unspecified **cannot** be an ``operational_finding``, so the scope is refused for it. Naming an
   area never grants the scope — an evidence row may name an area and still attest only that a record
   exists. This is a guard, not an evidence classifier.
-* **Finding summary text is not read.** The fetch never selects ``evidence_references.summary`` or
-  any other narrative column, so a caller that wants summary text in the schema-shaped evidence item
-  supplies it explicitly, through the same policy. Nothing here reads, generates, or paraphrases a
-  row body.
+* **The finding statement is now persisted, and the persisted statement wins (Phase 115).** The
+  Phase 21 controlled writer already stores ``evidence_references.summary`` — the schema-required,
+  consultant-readable, explicitly non-sensitive statement — and the fetch now reads it, withheld
+  server-side for any sensitive-flagged row. :class:`ClaimScopePolicy` ``summaries`` remains only as
+  the **fallback for legacy rows** that carry none, and can never override a persisted statement. A
+  row with no statement from either source keeps none and is reported as missing: nothing here reads
+  a row body, and nothing generates, paraphrases, or invents prose.
 
 Side-effect boundary: pure functions over in-memory summaries. No database connection, no
 SQLAlchemy / Alembic / ``peak.db`` import, no environment read, no file or network access, no
@@ -53,8 +56,8 @@ CLAIM_SCOPE_PROVENANCE = (
     "otherwise from the caller as controlled workflow semantics; it is never derived from stored "
     "narrative text")
 SUMMARY_PROVENANCE = (
-    "finding summary text is not a stored field this path reads; any summary was supplied by the "
-    "caller")
+    "the finding statement comes from the governed persisted evidence summary where the row carries "
+    "one, and otherwise from the caller; it is never generated, paraphrased, or invented")
 
 RECORD_TYPE_SOURCE = "source_ingestion_records"
 RECORD_TYPE_EVIDENCE = "evidence_references"
@@ -70,8 +73,9 @@ class ClaimScopePolicy:
     ``claim_scopes`` maps an evidence id to one of
     :data:`~peak.reports.contracts.ALLOWED_CLAIM_SCOPES`. Since Phase 114 it is a **fallback for
     legacy rows only**: a row with a persisted ``claim_scope`` ignores this map entirely.
-    ``summaries`` maps an evidence id to short controlled summary text, which is still not persisted
-    at all. An evidence id absent from a map simply gets nothing — it is never guessed.
+    ``summaries`` maps an evidence id to a short controlled finding statement; since Phase 115 it is
+    likewise a **fallback for legacy rows only**, because a row that carries a persisted statement
+    ignores this map too. An evidence id absent from a map simply gets nothing — it is never guessed.
     """
 
     claim_scopes: Dict[str, str] = field(default_factory=dict)
@@ -128,7 +132,8 @@ def apply_claim_scope_policy(evidence_summaries, policy: Optional[ClaimScopePoli
 
     The fetched dicts are copied, never mutated. ``claim_scope`` is replaced by the resolved value
     and **removed when nothing resolved**, so a persisted value that was refused cannot survive into
-    the view; ``summary``, which is not persisted, is added only when the caller supplied it.
+    the view. The persisted ``summary`` is kept as-is; the caller's statement is used only for a row
+    that carries none, and a row with neither keeps none rather than being given invented prose.
     """
     adapted, notes = [], []
     for evidence in evidence_summaries:
@@ -140,9 +145,12 @@ def apply_claim_scope_policy(evidence_summaries, policy: Optional[ClaimScopePoli
             item.pop("claim_scope", None)
         if note:
             notes.append(note)
-        summary = (policy.summaries if policy else {}).get(item.get("evidence_id"))
-        if summary is not None:
-            item["summary"] = summary
+        if item.get("summary") is None:
+            supplied = (policy.summaries if policy else {}).get(item.get("evidence_id"))
+            if supplied is not None:
+                item["summary"] = supplied
+            else:
+                item.pop("summary", None)
         adapted.append(item)
     return adapted, notes
 
@@ -151,9 +159,10 @@ def build_persisted_packet_view(summaries: Dict[str, object],
                                 policy: Optional[ClaimScopePolicy] = None) -> PacketView:
     """Assemble a :class:`~peak.reports.packet_view.PacketView` from fetched record summaries.
 
-    Identity, statuses, source links, and review targets come from the fetched rows; only
-    ``claim_scope`` and optional summary text come from ``policy``. Provenance of both is recorded in
-    the view's warnings, so a reader of the view can see which parts persisted state did not supply.
+    Identity, statuses, source links, review targets, the governed claim scope, and the finding
+    statement all come from the fetched rows; ``policy`` supplies only what a legacy row is missing.
+    Provenance of both is recorded in the view's warnings, so a reader of the view can see which
+    parts persisted state did not supply.
     """
     evidence, notes = apply_claim_scope_policy(summaries.get("evidence") or [], policy)
     view = assemble_packet_view(

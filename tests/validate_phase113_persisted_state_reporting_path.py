@@ -71,13 +71,17 @@ def read(rel):
         return handle.read()
 
 
-def fetched(review_target=EV_SOURCE_AVAILABILITY, areas=True, persisted_scopes=None):
+def fetched(review_target=EV_SOURCE_AVAILABILITY, areas=True, persisted_scopes=None,
+            persisted_summaries=None):
     """Summaries shaped exactly as the whitelisted SELECTs return them — no row bodies.
 
     ``persisted_scopes`` maps an evidence id to the Phase 114 governed ``claim_scope`` the fetch
-    returns from ``details_json``; an id left out models a legacy row written before that field.
+    returns from ``details_json``; ``persisted_summaries`` maps an evidence id to the Phase 115
+    finding statement the fetch returns from ``evidence_references.summary``. An id left out of
+    either map models a legacy row written before that field existed.
     """
     persisted_scopes = persisted_scopes or {}
+    persisted_summaries = persisted_summaries or {}
 
     def evidence(evidence_id, operational_area, process_area):
         return {**IDENTITY, "evidence_id": evidence_id, "evidence_type": "other",
@@ -86,7 +90,8 @@ def fetched(review_target=EV_SOURCE_AVAILABILITY, areas=True, persisted_scopes=N
                 "lifecycle_status": "active", "sensitive_data_flag": False,
                 "source_reference_id": SRC, "operational_area": operational_area,
                 "inventory_process_area": process_area,
-                "claim_scope": persisted_scopes.get(evidence_id)}
+                "claim_scope": persisted_scopes.get(evidence_id),
+                "summary": persisted_summaries.get(evidence_id)}
 
     return {
         "engagement": {"engagement_id": ENG, "client_id": "99999",
@@ -207,8 +212,9 @@ def main() -> int:
     check("the view records where claim_scope came from",
           any("claim_scope comes from the governed persisted field" in w
               for w in none_supplied.warnings))
-    check("the view records that summary text was not read",
-          any("summary text is not a stored field" in w for w in none_supplied.warnings))
+    check("the view records where the finding statement came from",
+          any("the finding statement comes from the governed persisted evidence summary" in w
+              for w in none_supplied.warnings))
     guarded = build_persisted_packet_view(
         summaries, ClaimScopePolicy(claim_scopes={EV_SOURCE_AVAILABILITY: "operational_finding"}))
     check("operational_finding is refused when both persisted areas are unspecified",
@@ -268,6 +274,47 @@ def main() -> int:
           persisted.recommendations == [] and persisted.recommendations_blocked
           and not persisted.client_facing_allowed)
 
+    print("\n5c. Phase 115 — the persisted finding statement is authoritative")
+    STATEMENT = "R1 on-hand attribution coverage is incomplete in the lab scenario"
+    stated = build_persisted_report_inputs(
+        fetched(persisted_scopes=PERSISTED,
+                persisted_summaries={EV_R1_COVERAGE: STATEMENT}), None)
+    check("the persisted statement reaches the reporting input with no caller policy",
+          stated.finding_inputs[0].finding_statement == STATEMENT)
+    check("the packet view carries it as the schema-shaped summary",
+          build_persisted_packet_view(
+              fetched(persisted_scopes=PERSISTED,
+                      persisted_summaries={EV_R1_COVERAGE: STATEMENT}),
+              None).evidence_by_id(EV_R1_COVERAGE).schema_item["summary"] == STATEMENT)
+    overridden_text = build_persisted_report_inputs(
+        fetched(persisted_scopes=PERSISTED, persisted_summaries={EV_R1_COVERAGE: STATEMENT}),
+        ClaimScopePolicy(claim_scopes=PERSISTED, summaries={EV_R1_COVERAGE: "caller text"}))
+    check("a caller statement cannot override the persisted one",
+          overridden_text.finding_inputs[0].finding_statement == STATEMENT)
+    missing_text = build_persisted_report_inputs(fetched(persisted_scopes=PERSISTED), None)
+    check("a missing statement stays missing and is never fabricated",
+          missing_text.finding_inputs[0].finding_statement is None
+          and any("no finding statement is available" in w for w in missing_text.warnings))
+    legacy_text = build_persisted_report_inputs(
+        fetched(persisted_scopes=PERSISTED),
+        ClaimScopePolicy(claim_scopes=PERSISTED, summaries={EV_R1_COVERAGE: "legacy text"}))
+    check("a legacy row with no persisted statement still accepts the caller fallback",
+          legacy_text.finding_inputs[0].finding_statement == "legacy text")
+    both_stated = build_persisted_report_inputs(
+        fetched(persisted_scopes=PERSISTED,
+                persisted_summaries={EV_R1_COVERAGE: STATEMENT,
+                                     EV_SOURCE_AVAILABILITY: "a record exists"}), None)
+    check("source-availability evidence produces no operational finding even with a statement",
+          [f.cited_evidence_id for f in both_stated.finding_inputs] == [EV_R1_COVERAGE]
+          and [x.evidence_id for x in both_stated.excluded_evidence] == [EV_SOURCE_AVAILABILITY])
+    check("the Phase 94 review still supports no statement-backed finding",
+          stated.finding_inputs[0].review_support_refs == []
+          and stated.finding_inputs[0].effective_review_status == "unreviewed")
+    check("recommendations and client-facing stay blocked with a statement present",
+          stated.recommendations == [] and stated.recommendations_blocked
+          and not stated.client_facing_allowed
+          and not stated.finding_inputs[0].recommendation_eligible)
+
     print("\n6. Posture stays blocked")
     check("recommendations are empty and blocked",
           inputs.recommendations == [] and inputs.recommendations_blocked
@@ -291,9 +338,12 @@ def main() -> int:
                         reader))
     check("it reads no environment variable and holds no URL",
           "os.environ" not in reader and "getenv" not in reader and "://" not in reader)
-    check("it selects no narrative column",
-          not re.search(r"\b(EvidenceReference|ReviewRecord|Engagement|SourceIngestionRecord)\."
+    check("it selects no narrative column other than the governed finding statement",
+          not re.search(r"\b(ReviewRecord|Engagement|SourceIngestionRecord)\."
                         r"(summary|reason|engagement_label|location_descriptor)\b", reader))
+    check("the finding statement is withheld server-side for a sensitive-flagged row",
+          re.search(r"case\(\(EvidenceReference\.sensitive_data_flag\.is_\(True\), None\),\s*"
+                    r"else_=EvidenceReference\.summary\)", reader) is not None)
     check("it extracts only the four whitelisted details_json keys",
           re.findall(r'details\["([a-z_]+)"\]', reader)
           == ["source_reference_id", "operational_area", "inventory_process_area", "claim_scope"])
