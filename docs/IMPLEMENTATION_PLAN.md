@@ -3671,11 +3671,50 @@ than from ids transcribed out of phase documents.
   workflow semantics. Persisted `operational_area` / `inventory_process_area` can only *refuse* an
   `operational_finding` (both unspecified ⇒ refused), never grant one. Finding summary text is not
   read. **This is not an autonomous evidence-classification path.**
-- [ ] **Next — give `claim_scope` and finding summary text a governed persisted home**, either a
-  governed column or a controlled workflow step that records them. That is a schema and/or writer
-  change and needs its own approved phase. **Not approved by Phase 113.**
+- [x] **`claim_scope` done in Phase 114** — a governed persisted home in
+  `evidence_references.details_json`, with no migration. Finding summary text remains deferred.
 
 Full record: [`PHASE113_READ_ONLY_PERSISTED_STATE_REPORTING_PATH.md`](PHASE113_READ_ONLY_PERSISTED_STATE_REPORTING_PATH.md).
+
+### Phase 114 — persisted evidence claim scope (functionality; no DB access, no migration)
+
+Baseline `1ab7122`. `claim_scope` no longer has to be supplied by the caller for newly written
+evidence.
+
+- [x] The Phase 21 controlled evidence writer persists a governed `claim_scope` in
+  `evidence_references.details_json`, validated against a **closed vocabulary** —
+  `operational_finding` / `source_availability_only`, or absent. Any other value is denied at write
+  time (`invalid_claim_scope`) rather than stored. The scope joins the payload fingerprint **only
+  when present**, so scope-less payloads fingerprint exactly as before.
+- [x] **No migration `015`**, and `schemas/evidence-reference.schema.json` unchanged — the writer
+  already owns `details_json`, and `claim_scope` belongs to the packet-view sidecar, not the strict
+  schema-shaped evidence item.
+- [x] The Phase 113 reader extracts it server-side as a fourth explicitly whitelisted
+  `details_json` key. No body is read; `summary` is still never selected.
+- [x] `persisted_packet_view`: the **persisted scope is authoritative**. `ClaimScopePolicy` is now a
+  **legacy-row fallback only** and can never override a persisted value; an unrecognised persisted
+  value is refused and stripped; a missing scope never silently becomes an `operational_finding`;
+  `operational_area` / `inventory_process_area` stay **refusal guards, not classifiers**.
+- [x] Proof by extending the existing Phase 113 harness, 49 → **58 checks, passing**. No new test
+  file and no Makefile change.
+- **Every writer remains create-only.** One validated field was added to the row the evidence writer
+  already creates — no `UPDATE`, `DELETE`, or merge — and the unconditional create-only regression
+  check passes for all 12 writers.
+- **Transient, expected:** four historical working-tree freeze checks (Phases 54/57/67/68) fail only
+  while the writer edit is uncommitted and self-resolve on commit. They were deliberately **not
+  modified**.
+- **Still true:** the Phase 107 row `evid_8151dad609974ea0` remains legacy with **no persisted
+  scope** — not mutated, no duplicate row created, no database contacted. Recommendations and
+  client-facing output remain blocked; the strict `EngagementPacket` remains insufficient.
+- [ ] **Next — a narrow governed `evidence_references/update_claim_scope` writer** (one field,
+  closed vocabulary, review-gated, idempotent, refusing every other column), so classification can be
+  recorded after capture and the Phase 107 row can stop depending on the legacy fallback. Every
+  controlled writer is create-only today and the allowlist's `update_*` / `mark_superseded` actions
+  have no implementation. **Not approved by Phase 114.**
+- [ ] **Also still open — finding summary text has no governed persisted home**, so a report still
+  cannot carry claim text from persisted state. **Not approved by Phase 114.**
+
+Full record: [`PHASE114_PERSISTED_EVIDENCE_CLAIM_SCOPE.md`](PHASE114_PERSISTED_EVIDENCE_CLAIM_SCOPE.md).
 
 
 **Still to do:**

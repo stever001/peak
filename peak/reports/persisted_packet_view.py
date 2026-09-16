@@ -11,14 +11,16 @@ links, and review targets, instead of those being transcribed from phase documen
 read: the evidence → source link, the review → evidence target, every governance status. Two things
 are not stored as data a report can use:
 
-* **``claim_scope`` has no column.** What an evidence item is entitled to claim is controlled
-  workflow semantics, and the database holds no field for it. It is therefore **supplied by the
-  caller** through :class:`ClaimScopePolicy`. It is never inferred from an evidence id, a phase
-  label, or narrative text. Persisted ``operational_area`` / ``inventory_process_area`` are used in
-  one direction only: an item whose areas are both unspecified **cannot** be an
-  ``operational_finding``, so the policy is refused for it. Naming an area never grants the scope —
-  an evidence row may name an area and still attest only that a record exists. This is a guard, not
-  an evidence classifier.
+* **``claim_scope`` is now persisted, and the persisted value wins (Phase 114).** The Phase 21
+  controlled writer records a governed ``claim_scope`` from a closed vocabulary, so an evidence row
+  written since then carries its own classification and needs no caller input. :class:`ClaimScopePolicy`
+  remains only as the **fallback for legacy rows** that predate the field; it can never override a
+  persisted scope. Either way the value must be recognised, and it is never inferred from an evidence
+  id, a phase label, or narrative text. Persisted ``operational_area`` /
+  ``inventory_process_area`` remain a guard used in one direction only: an item whose areas are both
+  unspecified **cannot** be an ``operational_finding``, so the scope is refused for it. Naming an
+  area never grants the scope — an evidence row may name an area and still attest only that a record
+  exists. This is a guard, not an evidence classifier.
 * **Finding summary text is not read.** The fetch never selects ``evidence_references.summary`` or
   any other narrative column, so a caller that wants summary text in the schema-shaped evidence item
   supplies it explicitly, through the same policy. Nothing here reads, generates, or paraphrases a
@@ -47,8 +49,9 @@ UNSPECIFIED_AREA_VALUES = frozenset({None, "", "unspecified"})
 AREA_FIELDS = ("operational_area", "inventory_process_area")
 
 CLAIM_SCOPE_PROVENANCE = (
-    "claim_scope is not a stored field; it was supplied by the caller as controlled workflow "
-    "semantics and was not derived from stored narrative text")
+    "claim_scope comes from the governed persisted field where the evidence row carries one, and "
+    "otherwise from the caller as controlled workflow semantics; it is never derived from stored "
+    "narrative text")
 SUMMARY_PROVENANCE = (
     "finding summary text is not a stored field this path reads; any summary was supplied by the "
     "caller")
@@ -62,12 +65,13 @@ IDENTITY_FIELDS = ("owner_id", "client_id", "engagement_id", "authorization_scop
 
 @dataclass
 class ClaimScopePolicy:
-    """The classification persisted state cannot supply, named explicitly by the caller.
+    """Caller-supplied semantics for what persisted state does not carry.
 
     ``claim_scopes`` maps an evidence id to one of
-    :data:`~peak.reports.contracts.ALLOWED_CLAIM_SCOPES`; ``summaries`` maps an evidence id to short
-    controlled summary text. Both are workflow semantics, not database content. An evidence id absent
-    from a map simply gets nothing — it is never guessed.
+    :data:`~peak.reports.contracts.ALLOWED_CLAIM_SCOPES`. Since Phase 114 it is a **fallback for
+    legacy rows only**: a row with a persisted ``claim_scope`` ignores this map entirely.
+    ``summaries`` maps an evidence id to short controlled summary text, which is still not persisted
+    at all. An evidence id absent from a map simply gets nothing — it is never guessed.
     """
 
     claim_scopes: Dict[str, str] = field(default_factory=dict)
@@ -92,26 +96,39 @@ def resolve_claim_scope(evidence: Dict[str, object],
                         policy: Optional[ClaimScopePolicy]) -> tuple:
     """Return ``(claim_scope, note)`` for one fetched evidence summary.
 
-    Nothing is granted that the caller did not ask for, an unrecognised scope is refused, and an
-    ``operational_finding`` is refused for a row whose persisted areas are both unspecified. Every
-    refusal returns a note so the reason travels with the view instead of disappearing.
+    **The persisted scope wins.** When the fetched row carries a governed ``claim_scope`` (Phase
+    114), that value is authoritative and the caller policy is not consulted for that row at all.
+    The policy applies only to a legacy row that carries no persisted scope, so a caller can never
+    override what the controlled writer recorded.
+
+    In either case the value must be in :data:`~peak.reports.contracts.ALLOWED_CLAIM_SCOPES`, and
+    an ``operational_finding`` is refused for a row whose persisted areas are both unspecified. A
+    row with no scope from either source gets none — it is never guessed. Every refusal returns a
+    note so the reason travels with the view instead of disappearing.
     """
     evidence_id = evidence.get("evidence_id")
-    requested = (policy.claim_scopes if policy else {}).get(evidence_id)
+    persisted = evidence.get("claim_scope")
+    if persisted is not None:
+        requested, origin = persisted, "persisted"
+    else:
+        requested, origin = (policy.claim_scopes if policy else {}).get(evidence_id), "supplied"
     if requested is None:
         return None, None
     if requested not in ALLOWED_CLAIM_SCOPES:
-        return None, f"{evidence_id}: claim scope {requested!r} is not a recognised scope; refused"
+        return None, (f"{evidence_id}: {origin} claim scope {requested!r} is not a recognised "
+                      f"scope; refused")
     if requested == CLAIM_SCOPE_OPERATIONAL_FINDING and _areas_unspecified(evidence):
-        return None, (f"{evidence_id}: operational_finding refused; the stored operational and "
-                      f"inventory process areas are both unspecified")
+        return None, (f"{evidence_id}: {origin} operational_finding refused; the stored operational "
+                      f"and inventory process areas are both unspecified")
     return requested, None
 
 
 def apply_claim_scope_policy(evidence_summaries, policy: Optional[ClaimScopePolicy]):
-    """Return ``(adapted_summaries, notes)`` — fetched summaries plus caller-supplied semantics.
+    """Return ``(adapted_summaries, notes)`` — fetched summaries with their resolved claim scope.
 
-    The fetched dicts are copied, never mutated, and only ``claim_scope`` and ``summary`` are added.
+    The fetched dicts are copied, never mutated. ``claim_scope`` is replaced by the resolved value
+    and **removed when nothing resolved**, so a persisted value that was refused cannot survive into
+    the view; ``summary``, which is not persisted, is added only when the caller supplied it.
     """
     adapted, notes = [], []
     for evidence in evidence_summaries:
@@ -119,6 +136,8 @@ def apply_claim_scope_policy(evidence_summaries, policy: Optional[ClaimScopePoli
         scope, note = resolve_claim_scope(item, policy)
         if scope is not None:
             item["claim_scope"] = scope
+        else:
+            item.pop("claim_scope", None)
         if note:
             notes.append(note)
         summary = (policy.summaries if policy else {}).get(item.get("evidence_id"))

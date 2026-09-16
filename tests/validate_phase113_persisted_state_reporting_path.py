@@ -71,15 +71,22 @@ def read(rel):
         return handle.read()
 
 
-def fetched(review_target=EV_SOURCE_AVAILABILITY, areas=True):
-    """Summaries shaped exactly as the whitelisted SELECTs return them — no row bodies."""
+def fetched(review_target=EV_SOURCE_AVAILABILITY, areas=True, persisted_scopes=None):
+    """Summaries shaped exactly as the whitelisted SELECTs return them — no row bodies.
+
+    ``persisted_scopes`` maps an evidence id to the Phase 114 governed ``claim_scope`` the fetch
+    returns from ``details_json``; an id left out models a legacy row written before that field.
+    """
+    persisted_scopes = persisted_scopes or {}
+
     def evidence(evidence_id, operational_area, process_area):
         return {**IDENTITY, "evidence_id": evidence_id, "evidence_type": "other",
                 "source_type": "other", "reliability": "low", "evidence_status": "collected",
                 "review_status": "needs_review", "output_status": "draft",
                 "lifecycle_status": "active", "sensitive_data_flag": False,
                 "source_reference_id": SRC, "operational_area": operational_area,
-                "inventory_process_area": process_area}
+                "inventory_process_area": process_area,
+                "claim_scope": persisted_scopes.get(evidence_id)}
 
     return {
         "engagement": {"engagement_id": ENG, "client_id": "99999",
@@ -197,8 +204,9 @@ def main() -> int:
     print("\n5. claim_scope is caller-supplied, and the persisted areas can only refuse")
     none_supplied = build_persisted_packet_view(summaries, None)
     check("no policy means no finding candidate", none_supplied.finding_candidates == [])
-    check("the view records that claim_scope is not a stored field",
-          any("claim_scope is not a stored field" in w for w in none_supplied.warnings))
+    check("the view records where claim_scope came from",
+          any("claim_scope comes from the governed persisted field" in w
+              for w in none_supplied.warnings))
     check("the view records that summary text was not read",
           any("summary text is not a stored field" in w for w in none_supplied.warnings))
     guarded = build_persisted_packet_view(
@@ -221,6 +229,44 @@ def main() -> int:
     check("a caller-supplied summary is passed through, never invented",
           summarised.evidence_by_id(EV_R1_COVERAGE).schema_item["summary"] == "internal coverage note"
           and not any("summary text (not supplied)" in s for s in summarised.missing_sections))
+
+    print("\n5b. Phase 114 — the persisted claim scope is authoritative")
+    PERSISTED = {EV_R1_COVERAGE: "operational_finding",
+                 EV_SOURCE_AVAILABILITY: "source_availability_only"}
+    persisted = build_persisted_report_inputs(fetched(persisted_scopes=PERSISTED), None)
+    check("persisted operational_finding becomes the finding candidate with no caller policy",
+          len(persisted.finding_inputs) == 1
+          and persisted.finding_inputs[0].cited_evidence_id == EV_R1_COVERAGE
+          and persisted.finding_inputs[0].claim_scope == "operational_finding")
+    check("persisted source_availability_only backs no finding",
+          [x.evidence_id for x in persisted.excluded_evidence] == [EV_SOURCE_AVAILABILITY])
+    check("the persisted route matches the caller-supplied route",
+          dataclasses.asdict(persisted) == dataclasses.asdict(inputs))
+    unknown_persisted = build_persisted_packet_view(
+        fetched(persisted_scopes={EV_R1_COVERAGE: "financially_verified"}), None)
+    check("an unrecognised persisted claim scope is refused",
+          unknown_persisted.finding_candidates == []
+          and unknown_persisted.evidence_by_id(EV_R1_COVERAGE).claim_scope is None
+          and any("is not a recognised scope" in w for w in unknown_persisted.warnings))
+    missing = build_persisted_packet_view(fetched(persisted_scopes={}), None)
+    check("a row with no persisted scope and no policy is not an operational finding",
+          missing.finding_candidates == []
+          and missing.evidence_by_id(EV_R1_COVERAGE).claim_scope is None)
+    legacy = build_persisted_report_inputs(fetched(persisted_scopes={}), POLICY)
+    check("a legacy row with no persisted scope still accepts the caller policy",
+          [f.cited_evidence_id for f in legacy.finding_inputs] == [EV_R1_COVERAGE])
+    overridden = build_persisted_packet_view(
+        fetched(persisted_scopes={EV_R1_COVERAGE: "source_availability_only"}),
+        ClaimScopePolicy(claim_scopes={EV_R1_COVERAGE: "operational_finding"}))
+    check("caller policy cannot override a persisted scope",
+          overridden.evidence_by_id(EV_R1_COVERAGE).claim_scope == "source_availability_only"
+          and overridden.finding_candidates == [])
+    check("the Phase 94 review still supports no finding from persisted scope",
+          persisted.finding_inputs[0].review_support_refs == []
+          and persisted.finding_inputs[0].effective_review_status == "unreviewed")
+    check("recommendations stay blocked on the persisted route",
+          persisted.recommendations == [] and persisted.recommendations_blocked
+          and not persisted.client_facing_allowed)
 
     print("\n6. Posture stays blocked")
     check("recommendations are empty and blocked",
@@ -248,9 +294,9 @@ def main() -> int:
     check("it selects no narrative column",
           not re.search(r"\b(EvidenceReference|ReviewRecord|Engagement|SourceIngestionRecord)\."
                         r"(summary|reason|engagement_label|location_descriptor)\b", reader))
-    check("it extracts only the three whitelisted details_json keys",
+    check("it extracts only the four whitelisted details_json keys",
           re.findall(r'details\["([a-z_]+)"\]', reader)
-          == ["source_reference_id", "operational_area", "inventory_process_area"])
+          == ["source_reference_id", "operational_area", "inventory_process_area", "claim_scope"])
     check("it reuses the Phase 57 read-isolation primitive",
           "engagement_read_isolation" in reader and "is_visible_in_mode" in reader)
     check("it refuses an engagement that is not visible in the requested mode",

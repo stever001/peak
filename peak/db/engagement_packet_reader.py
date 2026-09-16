@@ -42,10 +42,12 @@ from sqlalchemy import select
 from .engagement_read_isolation import DEFAULT_READ_MODE, is_visible_in_mode
 from .models import Engagement, EvidenceReference, ReviewRecord, SourceIngestionRecord
 
-#: The only ``details_json`` keys this module extracts. Each is a relationship or posture key, never
-#: a body. ``source_reference_id`` is the evidence → source link, which the Phase 21 writer stores
-#: here because ``evidence_references`` has no column for it.
-EVIDENCE_DETAIL_KEYS = ("source_reference_id", "operational_area", "inventory_process_area")
+#: The only ``details_json`` keys this module extracts. Each is a relationship, posture, or governed
+#: classification key, never a body. ``source_reference_id`` is the evidence → source link, which the
+#: Phase 21 writer stores here because ``evidence_references`` has no column for it; ``claim_scope``
+#: (Phase 114) is the governed claim classification the same writer stores there.
+EVIDENCE_DETAIL_KEYS = ("source_reference_id", "operational_area", "inventory_process_area",
+                        "claim_scope")
 
 
 class EngagementNotVisible(PermissionError):
@@ -124,9 +126,10 @@ def fetch_source_summaries(connection, engagement_id: str) -> List[Dict[str, obj
 def fetch_evidence_summaries(connection, engagement_id: str) -> List[Dict[str, object]]:
     """Fetch the engagement's ``evidence_references`` summaries, sorted by id.
 
-    ``summary`` is never selected. The three :data:`EVIDENCE_DETAIL_KEYS` are extracted from
-    ``details_json`` server-side, one key at a time, so no JSON body is transferred. The areas are
-    posture metadata: they can refuse an operational-finding claim scope but never grant one — see
+    ``summary`` is never selected. The :data:`EVIDENCE_DETAIL_KEYS` are extracted from
+    ``details_json`` server-side, one key at a time, so no JSON body is transferred. ``claim_scope``
+    is the governed classification the Phase 21 writer persists; the areas remain posture metadata
+    that can refuse an operational-finding claim scope but never grant one — see
     :mod:`peak.reports.persisted_packet_view`.
     """
     details = EvidenceReference.details_json
@@ -147,6 +150,7 @@ def fetch_evidence_summaries(connection, engagement_id: str) -> List[Dict[str, o
         details["source_reference_id"].as_string().label("source_reference_id"),
         details["operational_area"].as_string().label("operational_area"),
         details["inventory_process_area"].as_string().label("inventory_process_area"),
+        details["claim_scope"].as_string().label("claim_scope"),
     ).where(EvidenceReference.engagement_id == engagement_id).order_by(EvidenceReference.id)
     return _rows(connection, statement)
 

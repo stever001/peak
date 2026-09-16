@@ -67,6 +67,7 @@ def build_evidence_persistence_draft(
         observed_condition=getattr(record, "observed_condition", None),
         operational_area=getattr(record, "operational_area", None),
         inventory_process_area=getattr(record, "inventory_process_area", None),
+        claim_scope=getattr(record, "claim_scope", None),  # Phase 114; validated by the writer
         source_type=getattr(record, "source_type", None),
         source_location=getattr(record, "source_location", None),
         confidence_level=getattr(record, "confidence_level", "low"),

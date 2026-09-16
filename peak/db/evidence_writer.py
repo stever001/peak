@@ -33,6 +33,7 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 # Concrete input contracts (isinstance-checked, not duck-typed).
 from peak.evidence.persistence_contracts import (
+    ALLOWED_CLAIM_SCOPES,
     EvidencePersistenceDraft,
     EvidencePersistenceRequest,
 )
@@ -87,6 +88,11 @@ def _payload_fingerprint(request: ControlledWriteRequest, draft: EvidencePersist
         "source_location": draft.source_location,
         "confidence_level": draft.confidence_level,
     }
+    # Phase 114: the claim scope joins the fingerprint **only when present**, so a payload that
+    # carries no scope fingerprints exactly as it did before this field existed and an existing
+    # row's stored fingerprint stays comparable.
+    if draft.claim_scope is not None:
+        payload["claim_scope"] = draft.claim_scope
     blob = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
     return hashlib.sha256(blob.encode("utf-8")).hexdigest()
 
@@ -201,6 +207,14 @@ def _pre_db_validate(
             return _deny("prohibited_side_effect_state",
                          f"draft.{flag} must be false"), None
 
+    # 5b. Phase 114: the claim scope, if supplied, must be in the closed vocabulary. Absent is
+    #     allowed and grants nothing; a free-form value is denied rather than stored.
+    claim_scope = getattr(draft, "claim_scope", None)
+    if claim_scope is not None and claim_scope not in ALLOWED_CLAIM_SCOPES:
+        return _deny("invalid_claim_scope",
+                     "draft.claim_scope must be one of "
+                     f"{sorted(ALLOWED_CLAIM_SCOPES)} or None"), None
+
     # 6. No caller-supplied server-controlled fields.
     if getattr(draft, "evidence_record_id", None) is not None:
         return _deny("caller_supplied_id",
@@ -266,6 +280,7 @@ def _build_record(request: ControlledWriteRequest, draft: EvidencePersistenceDra
             "observed_condition": draft.observed_condition,
             "operational_area": draft.operational_area,
             "inventory_process_area": draft.inventory_process_area,
+            "claim_scope": draft.claim_scope,  # Phase 114; closed vocabulary or None
             "source_location": draft.source_location,
             "confidence_level": draft.confidence_level,
             "source_reference_id": draft.source_reference_id,

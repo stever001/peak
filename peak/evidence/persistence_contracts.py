@@ -28,6 +28,14 @@ ALLOWED_PERSISTENCE_ACTION = "prepare_evidence_reference_write_plan"
 TARGET_TABLE = "evidence_references"
 TARGET_ACTION = "create_draft"
 
+#: The governed claim scope an evidence item may carry (Phase 114) — what the item is entitled to
+#: support in a report, recorded as controlled workflow semantics rather than inferred from text.
+#: This is a **closed vocabulary**: the controlled writer denies any other value, and an evidence
+#: row may also carry no scope at all, which grants nothing.
+CLAIM_SCOPE_OPERATIONAL_FINDING = "operational_finding"
+CLAIM_SCOPE_SOURCE_AVAILABILITY = "source_availability_only"
+ALLOWED_CLAIM_SCOPES = frozenset({CLAIM_SCOPE_OPERATIONAL_FINDING, CLAIM_SCOPE_SOURCE_AVAILABILITY})
+
 # Review-gated posture defaults carried onto every evidence persistence draft.
 DEFAULT_OUTPUT_STATUS = "draft"
 DEFAULT_REVIEW_STATUS = "needs_review"
@@ -96,6 +104,9 @@ class EvidencePersistenceDraft:
     observed_condition: Optional[str] = None
     operational_area: Optional[str] = None
     inventory_process_area: Optional[str] = None
+    # Phase 114: the governed claim scope, one of ALLOWED_CLAIM_SCOPES or None. None grants
+    # nothing; the controlled writer denies any value outside the closed vocabulary.
+    claim_scope: Optional[str] = None
     source_type: Optional[str] = None
     source_location: Optional[str] = None
     confidence_level: str = "low"
