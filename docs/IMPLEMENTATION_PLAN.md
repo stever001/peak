@@ -3636,11 +3636,46 @@ DB-gate/prompt change):**
 - [ ] **Warnings** — plain review ids now yield no support (intentional); unmarked evidence still gets
   finding slots; `INTERNAL_ASSESSMENT_REPORT_PLANNING_BOUNDARY.md`, the Phase 96 doc, and the
   `packet_view_report.py` docstring still describe category-level support; `tests/README.md` stale.
-- [ ] **Next — Phase 113: a narrow read-only fetch of the five lab records** into value-safe summaries
-  feeding the packet-view route, and typed targeted planner references, in its own approved phase with
-  read-only lab access. **Not approved by Phase 112.**
+- [x] **Done in Phase 113** — a narrow read-only fetch of the five lab records into value-safe
+  summaries feeding the packet-view route, with typed targeted planner references, under read-only
+  lab access approved for that phase.
 
 Full record: [`PHASE112_PLANNER_TARGET_SPECIFIC_REVIEW_SUPPORT.md`](PHASE112_PLANNER_TARGET_SPECIFIC_REVIEW_SUPPORT.md).
+
+### Phase 113 — read-only persisted-state reporting path (functionality; no write)
+
+Baseline `2fd729e`. The packet-view reporting route now starts from **stored Peak state** rather
+than from ids transcribed out of phase documents.
+
+- [x] `peak/db/engagement_packet_reader.py` — a small read-only fetch layer: explicit `select()`
+  over a whitelisted column list for `engagements`, `source_ingestion_records`,
+  `evidence_references`, and `review_records`, plus three `details_json` keys extracted server-side
+  (`source_reference_id`, `operational_area`, `inventory_process_area`). **No narrative column is
+  ever selected.** The caller owns the connection; the module creates no engine or session, reads no
+  environment variable, and holds no credential. Visibility is the existing Phase 57 predicate, so a
+  client-facing read of the internal test engagement is refused.
+- [x] `peak/reports/persisted_packet_view.py` — a pure adapter composing fetched summaries →
+  `assemble_packet_view` → `build_report_inputs_from_packet_view`, plus the matching Phase 112
+  planner references. `peak/reports` stays free of SQLAlchemy and `peak.db`. **No repository
+  framework, data-access layer, CLI, or workflow framework was added.**
+- [x] `tests/validate_phase113_persisted_state_reporting_path.py` — 49 checks, passing, DB-free;
+  `validate-phase113` wired into `make validate` (78 PASS, 0 failures).
+- [x] Live read-only `peak_lab` exercise under explicit approval: `SELECT`/`USAGE` only,
+  `peak_lab_scenario` not visible, head `014_engagement_classification`, **5 application rows before
+  and after, unchanged**. Proved live that both evidence rows reference `ing_d67b76327aba4add`, that
+  `rev_70b5da9f14d54488` targets `evid_f094cbe4b47d4048` only, that **no review targets
+  `evid_8151dad609974ea0`** (stored `needs_review`, effective `unreviewed`), that one internal
+  finding cites it with no Phase 94 support, that the source-availability row is excluded, that the
+  mock executor plans only, and that planner and packet view agree. 40 live checks, 0 failures.
+- **Honest limits.** `claim_scope` is **not a stored field**: it is caller-supplied controlled
+  workflow semantics. Persisted `operational_area` / `inventory_process_area` can only *refuse* an
+  `operational_finding` (both unspecified ⇒ refused), never grant one. Finding summary text is not
+  read. **This is not an autonomous evidence-classification path.**
+- [ ] **Next — give `claim_scope` and finding summary text a governed persisted home**, either a
+  governed column or a controlled workflow step that records them. That is a schema and/or writer
+  change and needs its own approved phase. **Not approved by Phase 113.**
+
+Full record: [`PHASE113_READ_ONLY_PERSISTED_STATE_REPORTING_PATH.md`](PHASE113_READ_ONLY_PERSISTED_STATE_REPORTING_PATH.md).
 
 
 **Still to do:**

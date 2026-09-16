@@ -1914,3 +1914,52 @@ extras; **5 application rows**, as documented — `engagements` 1, `source_inges
 not connected.** No secret, DSN, host, port, certificate path, environment value, local secret path,
 SQL statement, raw payload, stack trace, or row body appears in any output or in this repository. See
 [`PHASE109_READ_ONLY_LAB_PACKET_ASSEMBLY.md`](PHASE109_READ_ONLY_LAB_PACKET_ASSEMBLY.md).
+
+## Phase 113 — read-only lab access for the persisted-state reporting path; no write, no writer
+
+Phase 113 opened **one read-only connection to `peak_lab`**, under explicit user approval for this
+phase, to exercise the new read-only fetch layer that feeds the packet-view reporting route. **It
+issued no write, invoked no writer, enabled no writer, and created, updated, or deleted no record.**
+
+| credential | what it did in Phase 113 | wrote? |
+| --- | --- | --- |
+| read-only | lab verifier role; value-safe projections of whitelisted columns from the five application rows, plus counts, grants, schema list, and head | no |
+| runtime | **not used** | — |
+| migration | **not used** | — |
+
+**The naming seam was closed before connecting, as in Phases 88 and 109.** The lab read-only env
+file sets the production-named read-only variable while pointing at the lab. The file was checked
+value-safely first — present, mode `600`, owned by the operator, outside the repository — and its
+variable **names** only were listed. The destination was then parsed in memory inside a subshell and
+the connection refused unless the driver, the user (the lab read-only verifier role), and the
+database (`peak_lab`) all matched, with no production marker and no `peak_lab_scenario` marker. The
+same guard confirmed that no runtime, migration, scenario, or writer-target variable was set in that
+shell. The env was sourced **inside a subshell only**; no value was echoed, and no `set -x`, `env`,
+or `printenv` was used.
+
+**Read-only by grant and by session.** Read back from the connection itself: current database
+`peak_lab`, current role the lab read-only verifier role, `SELECT` and `USAGE` only, no
+`GRANT OPTION`, no grant naming `peak_lab_scenario`, and `peak_lab_scenario` not visible in the
+schema list. The session ran as a **read-only transaction** and was rolled back.
+
+**Value-safe by construction.** The fetch layer selects a whitelisted column list by name and
+extracts exactly three `details_json` keys server-side (`source_reference_id`, `operational_area`,
+`inventory_process_area`). **No `summary`, `reason`, `engagement_label`, `details_json` body, packet
+body, or other row body was retrieved**, and the persisted area values were reported as booleans
+only. Verification queries returned ids, statuses, posture flags, and counts. Output passed through a
+filter dropping URL-shaped lines.
+
+**Result.** `alembic_version` one row at `014_engagement_classification`; 18 controlled tables;
+**5 application rows counted before and after the read and unchanged** — `engagements` 1,
+`source_ingestion_records` 1, `evidence_references` 2, `review_records` 1, every other table 0. A
+client-facing read of the internal test engagement was **refused** by the Phase 57 predicate; the
+internal-admin read returned the documented five records. Both evidence rows reference
+`ing_d67b76327aba4add`; `rev_70b5da9f14d54488` targets `evid_f094cbe4b47d4048` only; **no review
+targets `evid_8151dad609974ea0`**, whose stored `review_status` remains `needs_review` and whose
+effective review status is `unreviewed`.
+
+**No production credential was read and no production connection was made. `peak_lab_scenario` was
+not connected.** No secret, DSN, host, port, certificate path, environment value, local credential
+path, SQL statement, raw payload, stack trace, row body, or model transcript appears in any output or
+in this repository. See
+[`PHASE113_READ_ONLY_PERSISTED_STATE_REPORTING_PATH.md`](PHASE113_READ_ONLY_PERSISTED_STATE_REPORTING_PATH.md).
