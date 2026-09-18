@@ -126,6 +126,12 @@ EXACT_CLASS = {
     # publication eligibility, so a case-insensitive match would change authorization
     # behavior, not just presentation. Deterministic collation is required, not preferred.
     "engagement_category": GOVERNED_SCOPE,
+    # Phase 201 consultant accounts. ``email`` is the login identity and a uniqueness boundary;
+    # ``role`` gates consultant administration, so a case-insensitive match would change
+    # authorization. ``password_hash`` is already GOVERNED_SECRET by pattern.
+    "name": ORDINARY_TEXT,
+    "email": GOVERNED_IDENTIFIER,
+    "role": GOVERNED_SCOPE,
 }
 
 #: Suffix/substring patterns, applied in order when no exact name matches.

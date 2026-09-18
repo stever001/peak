@@ -13,9 +13,9 @@ from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import (
-    JSON, Boolean, DateTime, Index, Numeric, String, Text, UniqueConstraint,
+    JSON, Boolean, CheckConstraint, DateTime, Index, Numeric, String, Text, UniqueConstraint,
 )
-from sqlalchemy import false as sa_false, true as sa_true
+from sqlalchemy import false as sa_false, func, true as sa_true
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .base import MYSQL_TABLE_ARGS, AuditMixin, Base, GovernanceMixin, GovernedString
@@ -656,6 +656,31 @@ class InternalReportReviewPacketDecisionRecord(Base, GovernanceMixin, AuditMixin
     payload_fingerprint: Mapped[Optional[str]] = mapped_column(GovernedString(64))
 
 
+
+class Consultant(Base):
+    """A consultant account for the Peak web application (Phase 201).
+
+    Deliberately **not** a governed record: no governance/audit mixins, no client relation, and no
+    assignment ACL. Every consultant can reach every client and engagement; ``role`` only gates
+    consultant-account administration. ``email`` is stored normalized (trimmed, lower-cased) by
+    ``peak.accounts`` and compared byte-exactly. ``password_hash`` is an Argon2id hash — never a
+    plaintext password. See docs/PHASE201_CONSULTANT_WEB_SHELL_AUTH.md.
+    """
+
+    __tablename__ = "consultants"
+    __table_args__ = (
+        UniqueConstraint("email", name="uq_consultants_email"),
+        CheckConstraint("role IN ('admin', 'consultant')", name="ck_consultants_role"),
+        MYSQL_TABLE_ARGS,
+    )
+    # id convention: cons_<hex>
+    id: Mapped[str] = mapped_column(GovernedString(64), primary_key=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    email: Mapped[str] = mapped_column(GovernedString(254), nullable=False)
+    password_hash: Mapped[str] = mapped_column(GovernedString(255), nullable=False)
+    role: Mapped[str] = mapped_column(GovernedString(16), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+
 # Convenience list of all model classes (used by tooling/validation).
 ALL_MODELS = [
     Client,
@@ -676,4 +701,5 @@ ALL_MODELS = [
     InternalAssessmentReportDraftRecord,
     InternalReportReviewPacketRecord,
     InternalReportReviewPacketDecisionRecord,
+    Consultant,
 ]

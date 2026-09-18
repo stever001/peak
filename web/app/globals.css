@@ -1,0 +1,45 @@
+@import "tailwindcss";
+@import "./tokens.css";
+
+/* Expose the semantic tokens as Tailwind utilities (bg-brand, text-ink, border-line, ...). */
+@theme inline {
+  --color-brand: var(--peak-color-brand);
+  --color-brand-strong: var(--peak-color-brand-strong);
+  --color-on-brand: var(--peak-color-on-brand);
+  --color-accent: var(--peak-color-accent);
+  --color-highlight: var(--peak-color-highlight);
+  --color-attention: var(--peak-color-attention);
+  --color-canvas: var(--peak-color-canvas);
+  --color-surface: var(--peak-color-surface);
+  --color-line: var(--peak-color-line);
+  --color-ink: var(--peak-color-ink);
+  --color-ink-muted: var(--peak-color-ink-muted);
+  --radius-peak: var(--peak-radius);
+  --spacing-touch: var(--peak-touch-target);
+  --spacing-sidebar: var(--peak-sidebar-width);
+  --font-sans: var(--peak-font-sans);
+}
+
+@layer base {
+  body {
+    @apply bg-canvas font-sans text-ink antialiased;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-accent;
+  }
+}
+
+@layer components {
+  .peak-input {
+    @apply min-h-touch w-full rounded-peak border border-line bg-surface px-4 text-base text-ink;
+  }
+  .peak-label {
+    @apply mb-1.5 block text-sm font-medium text-ink;
+  }
+  .peak-button {
+    @apply inline-flex min-h-touch items-center justify-center rounded-peak bg-brand px-6 text-base font-semibold text-on-brand hover:bg-brand-strong disabled:opacity-60;
+  }
+  .peak-card {
+    @apply rounded-peak border border-line bg-surface p-5 md:p-6;
+  }
+}

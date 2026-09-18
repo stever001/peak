@@ -47,8 +47,12 @@ EXPECTED_TABLES = [
     "source_ingestion_records", "agent_task_queue_records", "review_bundle_records",
     "internal_reviewer_decision_records", "intake_note_records",
     "internal_assessment_report_drafts", "internal_report_review_packets",
-    "internal_report_review_packet_decisions",
+    "internal_report_review_packet_decisions", "consultants",
 ]
+
+# Tables that are deliberately NOT governed engagement records and so carry no governance/audit
+# mixin columns. Phase 201: consultant accounts (login identity + role only; no client relation).
+NON_GOVERNED_TABLES = {"consultants"}
 
 # Phase 9 schemas are the source of truth for governance enum values.
 ENUM_SOURCES = {
@@ -81,7 +85,8 @@ DB_FILE_EXTS = (".db", ".sqlite", ".sqlite3", ".sql")
 
 # Local environment/build dirs are not part of the source tree; skip them when walking so
 # a dependency shipped into a local .venv can't trip the artifact/credential scans.
-SKIP_DIRS = {".git", ".venv", "venv", "__pycache__", ".mypy_cache", ".pytest_cache"}
+SKIP_DIRS = {".git", ".venv", "venv", "__pycache__", ".mypy_cache", ".pytest_cache",
+             "node_modules", ".next"}
 
 PASS, FAIL = "PASS", "FAIL"
 
@@ -310,8 +315,8 @@ def main() -> int:
         col_failures = []
         for tname in EXPECTED_TABLES:
             table = Base.metadata.tables.get(tname)
-            if table is None:
-                continue  # already reported as missing above
+            if table is None or tname in NON_GOVERNED_TABLES:
+                continue  # missing tables are reported above; account tables are not governed
             absent = [c for c in required_cols if c not in table.columns]
             if absent:
                 col_failures.append(f"{tname}: missing {absent}")

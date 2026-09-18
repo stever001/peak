@@ -24,6 +24,10 @@ Two navigation traps are worth knowing before reading the plan:
 
 ## Phase documentation convention
 
+- **Numbering series (from Phase 201).** `1xx` phases are backend, core, data, AgentNet and
+  internal-workflow work; `2xx` phases are the consultant-facing web application. Historical phases
+  are not renumbered.
+
 - Every phase gets **one durable purpose entry in this index**.
 - Major implementation or operational phases should **also** get a dedicated
   `docs/PHASE##_*.md` record.
@@ -177,6 +181,8 @@ Phase 44**; this table is the entry point for everything after it.
 | 119 | One-call consultant assessment workflow — **one operation from engagement to internal assessment** | [`PHASE119_ONE_CALL_CONSULTANT_WORKFLOW.md`](PHASE119_ONE_CALL_CONSULTANT_WORKFLOW.md) | **Small orchestration phase; no database access, no persistence, no writer, no migration, no schema change, no new business logic**; `build_consultant_internal_assessment(connection, engagement_id, ...)` in `peak/workflows/consultant_assessment_workflow.py` composes the Phase 113 read-only fetch → persisted packet view → report inputs → internal assessment → Markdown and returns the assessment and Markdown; claim scope, statement, target-specific review support, eligibility, and bounded recommendations are inherited unchanged; the caller owns the connection and the reader is imported lazily; the Phase 107 blocked case still gets no recommendation and the synthetic eligible case exactly one; Phase 113 harness 97 → **101 checks, passing**, no new test file, no Makefile change; next step: one realistic internal product-acceptance run |
 | 120 | Internal product acceptance run — **the internal MVP passed product acceptance** | (no phase doc; recorded in [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md)) | **Acceptance run only; no code, test, writer, migration, or persistence change**; `build_consultant_internal_assessment` run **read-only** against `peak_lab` for `lab_internal_test_001` (lab read-only verifier role, `SELECT`/`USAGE` only, `peak_lab_scenario` not visible, read-only transaction rolled back, **application rows 5 before and after**); only legacy fallback: `claim_scope=operational_finding` for the Phase 107 row, whose persisted statement was read as stored; the rendered Markdown shows one understandable finding with evidence and source ids, unreviewed and low reliability stated plainly, recommendation blocked with per-finding reasons, no recommendation, the Phase 94 review supporting nothing, `client_facing` false, human review required, no LLM or AgentNet action; **classified A — acceptable internal MVP**; non-blocking polish only (see the plan) |
 
+| 201 | Consultant web shell and authentication — **first consultant-facing web application; starts the 200-series frontend numbering** | [`PHASE201_CONSULTANT_WEB_SHELL_AUTH.md`](PHASE201_CONSULTANT_WEB_SHELL_AUTH.md) | **Product functionality; migration 015 added (local only); no `peak_lab`, `peak_lab_scenario`, or production contact**; `web/` Next.js 16 App Router + React + TypeScript + Tailwind CSS v4 with centralized design tokens (`web/app/tokens.css`); thin FastAPI transport `peak/consultant_api` over `peak/accounts` (Argon2id passwords, `itsdangerous` signed 8-hour HttpOnly `peak_session` cookie keyed by `PEAK_WEB_SECRET_KEY`); new non-governed `consultants` table (`015_consultants`: id, name, unique normalized email, password_hash, role admin|consultant, created_at); Admin/Consultant roles, Admin-only Add Consultant enforced by the Python API; `tools/bootstrap_admin.py` creates Steve Rouse as initial Admin (dry-run default, no-echo password, refuses a second Admin, local SQLite or `peak_lab` only); responsive shell (tablet sidebar, phone bottom tabs), Dashboard, placeholder Clients/Engagements; `tests/validate_phase201_consultant_web_auth.py` wired into `make validate`; production write enablement unchanged; next step: Phase 202 Client + Engagement CRUD |
+
 ### Phases without a dedicated phase doc
 
 - **Phases 0–10** — recorded by commit message and, from Phase 6 on, by the policy document each
@@ -187,7 +193,10 @@ Phase 44**; this table is the entry point for everything after it.
 
 ## Current baseline
 
-As of Phase 120, whose baseline is the committed Phase 119 commit `178fea9` — *Add Phase 119
+As of Phase 201, whose baseline is the committed Phase 120 commit `d430d4f` — *Record Phase 120
+internal MVP acceptance*; Phase 201 added migration `015_consultants` and the `consultants` table
+**in the repository only**. It was verified on temporary SQLite and applied to no managed database,
+so the `peak_lab` row below is unchanged. The preceding entry stood as of Phase 120, whose baseline is the committed Phase 119 commit `178fea9` — *Add Phase 119
 one-call consultant workflow*; Phase 120 ran the one-call workflow read-only against `peak_lab`,
 writing nothing and changing nothing in the table below. The preceding entry stood as of
 Phase 119, whose baseline is the committed Phase 118 commit `45eb914` — *Add Phase 118
@@ -227,17 +236,17 @@ nothing else:
 
 | Property | Value |
 |---|---|
-| Alembic head | `014_engagement_classification` |
-| Migrations | 14 |
-| Controlled Peak tables | 18 |
-| Controlled writers | 12 |
-| Migration 015 | Does not exist |
+| Alembic head (repository) | `015_consultants` (Phase 201) |
+| Migrations | 15 |
+| Controlled Peak tables | 18 governed + 1 non-governed account table (`consultants`) = 19 |
+| Controlled writers | 12 (consultant accounts are written by `peak/accounts`, not a controlled writer) |
+| Migration 015 | `015_consultants` — in the repository; **not applied to `peak_lab` or production** |
 | Production write enablement | None standing |
 | Lab write enablement | Anchor bootstrap enabled (Phase 90); all three enableable pairs exercised — source ingestion (92), evidence reference (93, and again in 107), review record (94); Phase 107 enabled `evidence_references/create_draft` **for that phase only**; **no standing authority; each future write needs its own phase approval** |
 | `peak_lab` controlled tables | 18, head `014_engagement_classification`, **5 application rows** (the Phase 90 `engagements` anchor, the Phase 92 `source_ingestion_records` row, the Phase 93 `evidence_references` row, the Phase 94 `review_records` row, and the Phase 107 `evidence_references` row) |
 | `peak_lab_scenario` | seeded, 120 rows, content hash re-verified in Phase 88 |
 
-Phases 87–120 changed no migration or table. Phase 114 is the only one since Phase 86 to change a
+Phase 201 added migration `015_consultants` and the non-governed `consultants` table (repository only). Phases 87–120 changed no migration or table. Phase 114 is the only one since Phase 86 to change a
 **writer** — it adds one validated `claim_scope` field to the row the Phase 21 evidence writer
 already creates, leaving the writer create-only and the writer count at 12 — so the first six values
 below are still unchanged since Phase 86. Phase 96 added a reference *category* to the Phase 36 planning boundary

@@ -1,0 +1,42 @@
+/*
+ * Peak design tokens — the single place to change the site's look.
+ *
+ * Layer 1: brand palette (raw values). Layer 2: semantic roles the UI uses.
+ * Components reference only the Tailwind utilities generated from the semantic roles in
+ * globals.css (bg-brand, text-ink, border-line, ...), never raw hex values.
+ */
+:root {
+  /* Brand palette */
+  --peak-yale-blue: #094074;
+  --peak-baltic-blue: #3c6997;
+  --peak-sky-aqua: #5adbff;
+  --peak-mustard: #ffdd4a;
+  --peak-deep-saffron: #fe9000;
+
+  /* Neutrals */
+  --peak-white: #ffffff;
+  --peak-mist: #f3f6fa;
+  --peak-cloud: #d9e2ec;
+  --peak-slate: #4b5d73;
+  --peak-ink: #0d1e33;
+
+  /* Semantic roles */
+  --peak-color-brand: var(--peak-yale-blue);
+  --peak-color-brand-strong: var(--peak-baltic-blue);
+  --peak-color-on-brand: var(--peak-white);
+  --peak-color-accent: var(--peak-sky-aqua);
+  --peak-color-highlight: var(--peak-mustard);
+  --peak-color-attention: var(--peak-deep-saffron);
+  --peak-color-canvas: var(--peak-mist);
+  --peak-color-surface: var(--peak-white);
+  --peak-color-line: var(--peak-cloud);
+  --peak-color-ink: var(--peak-ink);
+  --peak-color-ink-muted: var(--peak-slate);
+
+  /* Shape and sizing */
+  --peak-radius: 0.75rem;
+  --peak-touch-target: 3rem; /* 48px minimum for tablet/phone taps */
+  --peak-sidebar-width: 15rem;
+  --peak-font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+}

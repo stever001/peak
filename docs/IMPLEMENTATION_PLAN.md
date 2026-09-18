@@ -3874,6 +3874,30 @@ Baseline `178fea9`. **Result: A — the internal MVP passed product acceptance.*
   finding is one long paragraph. That is stored content, not a renderer defect.
 - Legacy rows without a persisted `claim_scope` still need a caller-supplied fallback.
 
+### Phase 201 — consultant web shell and authentication (200 series: consultant-facing web app)
+
+Baseline `d430d4f`. Record: [`PHASE201_CONSULTANT_WEB_SHELL_AUTH.md`](PHASE201_CONSULTANT_WEB_SHELL_AUTH.md).
+**Numbering:** `1xx` = backend/core/internal workflow; `2xx` = consultant-facing web application.
+
+- [x] `web/`: Next.js 16 App Router, React, TypeScript, Tailwind CSS v4 (npm); centralized design
+  tokens in `web/app/tokens.css`, exposed as Tailwind utilities in `web/app/globals.css`.
+- [x] `peak/consultant_api`: thin FastAPI transport (login, logout, me, list/create consultants);
+  Admin enforced in Python. `peak/accounts`: Argon2id hashing, `itsdangerous` signed 8-hour
+  HttpOnly `SameSite=Lax` `Secure` session cookie keyed by `PEAK_WEB_SECRET_KEY`.
+- [x] Migration `015_consultants`: `consultants` (id, name, unique normalized email, password_hash,
+  role admin|consultant, created_at). Not a governed record; no client relation or assignment ACL.
+- [x] `tools/bootstrap_admin.py`: initial Admin (Steve Rouse by default), no-echo password, dry-run
+  default, refuses a second Admin, local SQLite or `peak_lab` only.
+- [x] Responsive shell (tablet/desktop sidebar, phone bottom tabs), Dashboard, Admin-only
+  Consultants, placeholder Clients and Engagements.
+- [x] `tests/validate_phase201_consultant_web_auth.py` in `make validate`; `npm run build` and
+  `npm run lint` clean.
+- Local only: 015 not applied to `peak_lab` or production; no deployment; no production account.
+
+**Next — Phase 202:** Client + Engagement CRUD (multiple engagements per client; all consultants;
+assignment as metadata). It needs an approved edit (`UPDATE`) path first, because the governed
+client and engagement writers are create-only and the runtime grant is `SELECT` + `INSERT`.
+
 
 **Still to do:**
 
@@ -3892,7 +3916,8 @@ governed, auditable output.
 
 Deferred until the internal core is proven:
 
-- **Client-facing frontend / portal.**
+- **Client-facing frontend / portal.** (The *consultant-facing* web application began in Phase 201;
+  there is still no client login or client-facing surface.)
 - **Database / persistence layer** (Phase 5 prerequisite before real client data).
 - **Automated client deliverables** without consultant review.
 - **Vendor-specific lock-in** — keep schemas, prompts, and interfaces portable.
