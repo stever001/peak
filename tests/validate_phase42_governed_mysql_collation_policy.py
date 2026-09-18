@@ -265,8 +265,11 @@ def audit_behavior_checks() -> None:
     # now reports the satisfied-but-unverified state, which is the stronger claim.
     check("model tier: status is MODEL_POLICY_SATISFIED_PRODUCTION_UNVERIFIED",
           "MODEL_POLICY_SATISFIED_PRODUCTION_UNVERIFIED" in full.stdout)
-    check("model tier: audits all 18 tables",
-          re.search(r"tables inspected\s*:\s*18", full.stdout) is not None)
+    inspected = re.search(r"tables inspected\s*:\s*(\d+)", full.stdout)
+    model_tables = schema_history.declared_tables(read("peak/db/models.py"))
+    check(f"model tier: audits every model table ({len(model_tables)})",
+          inspected is not None and int(inspected.group(1)) == len(model_tables)
+          and not schema_history.missing_tables(model_tables))
     check("model tier: reports a deterministic total column count",
           re.search(r"string/text columns audited\s*:\s*(\d+)", full.stdout) is not None)
     check("model tier: every string column matched a policy class",
