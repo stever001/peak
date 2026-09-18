@@ -13,10 +13,11 @@ LLM call, no severity, no priority, no ranking, no root cause, no ROI, no invent
 no source-of-record claim, and no operational prescription** — none of those are supported by the
 current evidence posture, so none appear.
 
-**Recommendations are reported, not produced.** The assessment carries the blocked recommendation
-status and the reasons the reporting bridge already computed, plus each finding's Phase 117
-recommendation eligibility (eligible / blocked, with the bridge's blocker reasons). It never drafts
-recommendation language.
+**Recommendations are bounded (Phase 118).** Each finding carries its Phase 117 eligibility (eligible
+/ blocked, with the bridge's blocker reasons). Only an eligible finding receives one
+:class:`InternalRecommendation`, built from the fixed :data:`RECOMMENDATION_TEMPLATE` around its
+persisted statement, quoted verbatim — no root cause, no prescribed fix, no LLM. A blocked finding
+receives none. Recommendations are internal-only and always require human review.
 
 **Internal only.** ``audience`` is internal, ``status`` is internal draft, ``client_facing`` is
 always false, and human review is always required.
@@ -38,8 +39,13 @@ from .contracts import AUDIENCE_INTERNAL, SECTION_OPERATIONAL_FINDINGS, SECTION_
 #: The only status this document can carry. It is a working document, not a deliverable.
 STATUS_INTERNAL_DRAFT = "internal_draft"
 
-#: Recommendation statuses. Nothing here can reach "available" — that needs reviewed evidence.
+#: Recommendation statuses. "internal_draft" only when an eligible finding produced a recommendation.
 RECOMMENDATIONS_BLOCKED = "blocked"
+RECOMMENDATIONS_INTERNAL_DRAFT = "internal_draft"
+
+#: The only recommendation wording this module produces (Phase 118). It asks for investigation and
+#: validation of the finding as stated, and names no cause, fix, cost, or priority.
+RECOMMENDATION_TEMPLATE = 'Investigate and validate corrective action for the finding: "{statement}"'
 
 #: The packet view already spells a missing section as "... (not supplied)"; strip that so the
 #: limitation line does not say it twice.
@@ -68,6 +74,21 @@ class AssessmentFinding:
     claim_scope: Optional[str] = None
     recommendation_eligible: bool = False  # Phase 117: decided by the bridge, never here
     recommendation_blocked_reasons: List[str] = field(default_factory=list)
+    recommendation_id: Optional[str] = None  # Phase 118: set only for an eligible finding
+
+
+@dataclass
+class InternalRecommendation:
+    """One bounded internal recommendation for one eligible finding (Phase 118). Never client-facing."""
+
+    recommendation_id: str
+    finding_id: str
+    text: str
+    supporting_evidence_ids: List[str] = field(default_factory=list)
+    supporting_source_ids: List[str] = field(default_factory=list)
+    supporting_review_ids: List[str] = field(default_factory=list)
+    internal_only: bool = True
+    requires_human_review: bool = True
 
 
 @dataclass
@@ -88,6 +109,21 @@ class InternalAssessment:
     limitations: List[str] = field(default_factory=list)
     recommendation_status: str = RECOMMENDATIONS_BLOCKED
     recommendation_blocked_reasons: List[str] = field(default_factory=list)
+    recommendations: List[InternalRecommendation] = field(default_factory=list)
+
+
+def _recommendation_for(finding: AssessmentFinding) -> Optional[InternalRecommendation]:
+    """The bounded recommendation for an eligible finding with a statement; otherwise ``None``."""
+    if not finding.recommendation_eligible or not finding.statement_available:
+        return None
+    return InternalRecommendation(
+        recommendation_id=f"rec_{finding.finding_id}",
+        finding_id=finding.finding_id,
+        text=RECOMMENDATION_TEMPLATE.format(statement=finding.statement),
+        supporting_evidence_ids=[finding.evidence_id],
+        supporting_source_ids=list(finding.source_reference_ids),
+        supporting_review_ids=list(finding.supporting_review_ids),
+    )
 
 
 def _confidence_notes(findings: List[AssessmentFinding]) -> List[str]:
@@ -124,8 +160,7 @@ def build_internal_assessment(report_inputs) -> InternalAssessment:
         authorization_scope=engagement.get("authorization_scope"),
         audience=report_inputs.audience,
         client_facing=bool(report_inputs.client_facing_allowed),
-        # The Phase 111 bridge blocks recommendations unconditionally; this carries that status
-        # through rather than deciding anything about it.
+        # Blocked unless an eligible finding produces a recommendation below.
         recommendation_status=RECOMMENDATIONS_BLOCKED,
         recommendation_blocked_reasons=list(report_inputs.recommendations_blocked_reasons),
     )
@@ -145,6 +180,14 @@ def build_internal_assessment(report_inputs) -> InternalAssessment:
             recommendation_eligible=bool(item.recommendation_eligible),
             recommendation_blocked_reasons=list(item.recommendation_blocked_reasons),
         ))
+
+    for finding in assessment.findings:
+        recommendation = _recommendation_for(finding)
+        if recommendation is not None:
+            finding.recommendation_id = recommendation.recommendation_id
+            assessment.recommendations.append(recommendation)
+    if assessment.recommendations:
+        assessment.recommendation_status = RECOMMENDATIONS_INTERNAL_DRAFT
 
     assessment.confidence_notes = _confidence_notes(assessment.findings)
     assessment.excluded_evidence = [{"evidence_id": x.evidence_id, "reason": x.reason}
@@ -210,22 +253,35 @@ def render_internal_assessment_markdown(assessment: InternalAssessment) -> str:
         lines.append(f"- Recommendation eligibility: "
                      f"{'eligible' if finding.recommendation_eligible else 'blocked'}")
         lines += [f"  - {reason}" for reason in finding.recommendation_blocked_reasons]
+        if finding.recommendation_id:
+            lines.append(f"- Internal recommendation: {finding.recommendation_id}")
         lines.append("")
 
     lines += ["## Evidence and confidence", ""]
-    lines += [f"- {note}" for note in assessment.confidence_notes] or ["- No findings to assess."]
+    lines += [f"- {note}" for note in assessment.confidence_notes] or (
+        ["- No additional evidence-confidence caveats."] if assessment.findings
+        else ["- No findings to assess."])
     lines.append("")
 
     lines += ["## Open limitations and unresolved questions", ""]
     lines += [f"- {item}" for item in assessment.limitations] or ["- None recorded."]
     lines.append("")
 
-    eligible = sum(1 for f in assessment.findings if f.recommendation_eligible)
-    availability = (f"{eligible} finding(s) are recommendation-eligible" if eligible else
-                    "No recommendation is available from the current evidence posture")
-    lines += ["## Recommendations", "",
-              f"**{assessment.recommendation_status.capitalize()}.** "
-              f"{availability}, and none was drafted.", ""]
-    lines += [f"- {reason}" for reason in assessment.recommendation_blocked_reasons]
-    lines.append("")
+    lines += ["## Recommendations", ""]
+    if not assessment.recommendations:
+        lines += [f"**{assessment.recommendation_status.capitalize()}.** No recommendation is "
+                  f"available from the current evidence posture, and none was drafted.", ""]
+        lines += [f"- {reason}" for reason in assessment.recommendation_blocked_reasons]
+        lines.append("")
+    else:
+        lines += [f"**Internal draft.** {len(assessment.recommendations)} bounded internal "
+                  f"recommendation(s), only for recommendation-eligible findings. Internal only; each "
+                  f"requires human review.", ""]
+    for rec in assessment.recommendations:
+        lines += [f"### {rec.recommendation_id} — for {rec.finding_id}", "", rec.text, "",
+                  f"- Evidence: {', '.join(rec.supporting_evidence_ids)}",
+                  f"- Source: {', '.join(rec.supporting_source_ids) or 'none recorded'}",
+                  f"- Supporting reviews: {', '.join(rec.supporting_review_ids) or 'none'}",
+                  f"- Internal only: {'yes' if rec.internal_only else 'no'}",
+                  f"- Requires human review: {'yes' if rec.requires_human_review else 'no'}", ""]
     return "\n".join(lines)

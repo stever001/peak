@@ -18,6 +18,7 @@ Asserts that:
   persisted areas are unspecified;
 * recommendations, client-facing output, and a strict ``EngagementPacket`` stay blocked;
 * Phase 117 recommendation eligibility needs a targeted approving review and adequate reliability;
+* Phase 118 bounded internal recommendations appear only for eligible findings;
 * the read module selects whitelisted columns only, never a narrative body, and issues no write;
 * the adapter loads no SQLAlchemy and no ``peak.db``.
 
@@ -410,11 +411,11 @@ def main() -> int:
           and not fallback.client_facing_allowed and not unstated.client_facing_allowed
           and not fb.client_facing_allowed and not un.client_facing_allowed)
     eligible_doc = render_internal_assessment_markdown(build_internal_assessment(eligible_inputs))
-    check("eligibility generates no recommendation and nothing becomes client-facing",
+    check("the bridge itself generates no recommendation and nothing becomes client-facing",
           eligible_inputs.recommendations == [] and eligible_inputs.recommendations_blocked
           and not eligible_inputs.client_facing_allowed and not ok.client_facing_allowed
           and "Recommendation eligibility: eligible" in eligible_doc
-          and "none was drafted" in eligible_doc and "Client-facing: no" in eligible_doc)
+          and "Client-facing: no" in eligible_doc)
     held_summaries = fetched(**strong, decision="keep_needs_review", review_status="needs_review")
     held = build_persisted_report_inputs(held_summaries, None)
     held_evidence = build_persisted_packet_view(held_summaries, None).evidence_by_id(EV_R1_COVERAGE)
@@ -423,6 +424,37 @@ def main() -> int:
           and EV_R1_COVERAGE in [x.evidence_id for x in held.excluded_evidence]
           and held_evidence.linked_review_ids == [REVIEW]
           and recommendation_block_reasons(held_evidence) == [REC_BLOCK_REVIEW_NOT_APPROVING])
+
+    print("\n5f. Phase 118 — bounded internal recommendation")
+    check("the Phase 107 finding produces no recommendation",
+          assessment.recommendations == [] and assessment.findings[0].recommendation_id is None
+          and "Internal recommendation" not in doc and assessment.recommendation_status == "blocked")
+    eligible_assessment = build_internal_assessment(eligible_inputs)
+    recs = eligible_assessment.recommendations
+    check("the eligible finding produces exactly one recommendation",
+          len(recs) == 1 and eligible_assessment.findings[0].recommendation_id == recs[0].recommendation_id)
+    rec = recs[0]
+    check("it cites the correct finding, evidence, and source",
+          rec.finding_id == ok.finding_candidate_id and rec.supporting_evidence_ids == [EV_R1_COVERAGE]
+          and rec.supporting_source_ids == [SRC] and rec.supporting_review_ids == [REVIEW])
+    check("it is internal-only and requires human review",
+          rec.internal_only is True and rec.requires_human_review is True
+          and eligible_assessment.requires_human_review is True)
+    check("its text is the fixed bounded template around the verbatim statement",
+          rec.text == f'Investigate and validate corrective action for the finding: "{STATEMENT}"'
+          and rec.text != STATEMENT and rec.text in eligible_doc)
+    check("blocked findings never receive a recommendation",
+          all(build_internal_assessment(x).recommendations == []
+              for x in (a_inputs, fallback, unstated, held)))
+    check("an eligible document with a finding does not say there are no findings to assess",
+          eligible_assessment.findings and "No findings to assess." not in eligible_doc)
+    check("client-facing stays false with a recommendation present",
+          eligible_assessment.client_facing is False and "Client-facing: no" in eligible_doc)
+    check("repeat build and render are identical",
+          dataclasses.asdict(build_internal_assessment(eligible_inputs))
+          == dataclasses.asdict(eligible_assessment)
+          and render_internal_assessment_markdown(build_internal_assessment(
+              build_persisted_report_inputs(fetched(**strong), None))) == eligible_doc)
 
     print("\n6. Posture stays blocked")
     check("recommendations are empty and blocked",

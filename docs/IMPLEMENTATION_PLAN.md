@@ -3799,10 +3799,31 @@ Baseline `1057da6`. Each finding now carries `recommendation_eligible` and stabl
   fallback stays readable internally but blocks eligibility (`finding statement is not persisted`).
 - [x] Proof by extending the Phase 113 harness again, 78 → **88 checks, passing**. No new test file
   and no Makefile change.
-- [ ] **Next — bounded internal recommendation generation for eligible findings only.** Internal,
-  reviewable, never client-facing. **Not approved by Phase 117.**
+- [x] **Done in Phase 118** — bounded internal recommendations for eligible findings only.
 
 Full record: [`PHASE117_RECOMMENDATION_ELIGIBILITY.md`](PHASE117_RECOMMENDATION_ELIGIBILITY.md).
+
+### Phase 118 — bounded internal recommendation (functionality; no DB, no persistence, no LLM)
+
+Baseline `e604b90`. Eligible findings now receive one deterministic internal recommendation.
+
+- [x] `InternalRecommendation` in `peak/reports/internal_assessment.py`: id, finding id, text,
+  supporting evidence / source / review ids, `internal_only=True`, `requires_human_review=True`. The
+  Phase 36 `InternalReportRecommendationCandidate` was not reused — it is a text-free planner slot.
+- [x] **Only `recommendation_eligible` findings** receive one, from the fixed template *Investigate and
+  validate corrective action for the finding: "<persisted statement>"*. **Deterministic, not
+  LLM-based**; no root cause, prescribed fix, ROI, severity, priority, cost, or timeline.
+- [x] **Blocked findings receive none** and keep their reasons. The assessment lists only generated
+  recommendations; `client_facing` stays false and human review is required. Eligibility rules,
+  persistence, review mechanics, claim scope, and statement provenance are unchanged.
+- [x] The Phase 107 finding stays blocked with no recommendation; a synthetic eligible finding gets
+  exactly one, citing its evidence, source, and review.
+- [x] Proof by extending the Phase 113 harness again, 88 → **97 checks, passing**. No new test file
+  and no Makefile change.
+- [ ] **Next — an end-to-end internal engagement exercise**, not more recommendation infrastructure.
+  **Not approved by Phase 118.**
+
+Full record: [`PHASE118_BOUNDED_INTERNAL_RECOMMENDATION.md`](PHASE118_BOUNDED_INTERNAL_RECOMMENDATION.md).
 
 
 **Still to do:**
