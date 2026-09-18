@@ -456,6 +456,25 @@ def main() -> int:
           and render_internal_assessment_markdown(build_internal_assessment(
               build_persisted_report_inputs(fetched(**strong), None))) == eligible_doc)
 
+    print("\n5g. Phase 119 — one-call consultant assessment workflow")
+    import peak.db.engagement_packet_reader as reader_module
+    from peak.workflows.consultant_assessment_workflow import build_consultant_internal_assessment
+    real_fetch = reader_module.fetch_engagement_packet_summaries
+    try:
+        for label, state, lower in (("blocked", fetched(persisted_scopes=PERSISTED,
+                                     persisted_summaries={EV_R1_COVERAGE: STATEMENT}), assessment),
+                                    ("eligible", fetched(**strong), eligible_assessment)):
+            reader_module.fetch_engagement_packet_summaries = (
+                lambda connection, engagement_id, _state=state, **_: _state)
+            one_call = build_consultant_internal_assessment(object(), ENG, include_internal_test=True)
+            check(f"the {label} case returns an assessment and Markdown matching the lower-level route",
+                  dataclasses.asdict(one_call.assessment) == dataclasses.asdict(lower)
+                  and one_call.markdown == render_internal_assessment_markdown(lower))
+            check(f"the {label} case yields {'no' if label == 'blocked' else 'exactly one'} recommendation",
+                  len(one_call.assessment.recommendations) == (0 if label == "blocked" else 1))
+    finally:
+        reader_module.fetch_engagement_packet_summaries = real_fetch
+
     print("\n6. Posture stays blocked")
     check("recommendations are empty and blocked",
           inputs.recommendations == [] and inputs.recommendations_blocked

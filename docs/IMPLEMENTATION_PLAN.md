@@ -3820,10 +3820,29 @@ Baseline `e604b90`. Eligible findings now receive one deterministic internal rec
   exactly one, citing its evidence, source, and review.
 - [x] Proof by extending the Phase 113 harness again, 88 → **97 checks, passing**. No new test file
   and no Makefile change.
-- [ ] **Next — an end-to-end internal engagement exercise**, not more recommendation infrastructure.
-  **Not approved by Phase 118.**
+- [x] **Phase 119** packages the route as one callable workflow; the end-to-end internal exercise
+  itself remains next.
 
 Full record: [`PHASE118_BOUNDED_INTERNAL_RECOMMENDATION.md`](PHASE118_BOUNDED_INTERNAL_RECOMMENDATION.md).
+
+### Phase 119 — one-call consultant assessment workflow (orchestration; no DB, no persistence)
+
+Baseline `45eb914`. One operation now produces an internal consultant assessment from an engagement.
+
+- [x] `build_consultant_internal_assessment(connection, engagement_id, mode=None,
+  include_internal_test=False, policy=None)` in `peak/workflows/consultant_assessment_workflow.py`
+  returns `ConsultantInternalAssessmentResult(assessment, markdown)`.
+- [x] Composes the existing Phase 113 read-only fetch → persisted packet view → report inputs →
+  internal assessment → Markdown. **Orchestration only**: no new business rule; claim scope,
+  statement, review support, eligibility, and recommendations are inherited unchanged.
+- [x] Caller-owned connection; reader imported lazily; no writer, persistence, migration, or schema
+  change. `client_facing` false, human review required.
+- [x] Proof by extending the Phase 113 harness, 97 → **101 checks, passing**: the one-call result
+  matches the lower-level composition for the blocked and eligible cases. No new test file and no
+  Makefile change.
+- [ ] **Next — one realistic internal product-acceptance run.** **Not approved by Phase 119.**
+
+Full record: [`PHASE119_ONE_CALL_CONSULTANT_WORKFLOW.md`](PHASE119_ONE_CALL_CONSULTANT_WORKFLOW.md).
 
 
 **Still to do:**
