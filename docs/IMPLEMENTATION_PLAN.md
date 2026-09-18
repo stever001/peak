@@ -3840,9 +3840,39 @@ Baseline `45eb914`. One operation now produces an internal consultant assessment
 - [x] Proof by extending the Phase 113 harness, 97 → **101 checks, passing**: the one-call result
   matches the lower-level composition for the blocked and eligible cases. No new test file and no
   Makefile change.
-- [ ] **Next — one realistic internal product-acceptance run.** **Not approved by Phase 119.**
+- [x] **Done in Phase 120** — the internal product-acceptance run.
 
 Full record: [`PHASE119_ONE_CALL_CONSULTANT_WORKFLOW.md`](PHASE119_ONE_CALL_CONSULTANT_WORKFLOW.md).
+
+### Phase 120 — internal product acceptance run (read-only `peak_lab`; no code change)
+
+Baseline `178fea9`. **Result: A — the internal MVP passed product acceptance.**
+
+- [x] `build_consultant_internal_assessment` run read-only against `peak_lab` for
+  `lab_internal_test_001`: lab read-only verifier role, `SELECT`/`USAGE` only, `peak_lab_scenario`
+  not visible, read-only transaction rolled back, application rows **5 before and after**. Only
+  legacy fallback: `claim_scope=operational_finding` for the Phase 107 row; its statement was read
+  as persisted.
+- [x] The rendered document states one understandable finding with its evidence and source ids,
+  shows it plainly as unreviewed and low reliability, and explains per finding why no
+  recommendation exists. The Phase 107 finding gets no recommendation, the Phase 94 review supports
+  nothing, `client_facing` is false, human review is required, and no LLM, AgentNet, or write occurs.
+- [x] No production connection and no `peak_lab_scenario` connection.
+- [x] Usable today as an internal working assessment. **No product blocker prevents internal use;
+  remaining phases to internal MVP: 0.** No code, test, or doc change beyond this note.
+
+**Non-blocking follow-ups (not approved):**
+
+- The Recommendations section's first blocker line ("the packet view accepts no recommendation
+  input… separate, approved path") predates Phase 118 and reads as stale next to the accurate
+  "no finding input is recommendation-eligible".
+- Open limitations repeat strict-`EngagementPacket` schema notes (three lines) and duplicate
+  `client_intake`; unreviewed status is stated three times across sections.
+- Internal identifiers leak into the document (`fnd_000`, `internal_draft`, `operational_finding`,
+  "packet view").
+- The Phase 107 persisted statement embeds its own chain/posture/non-claim boilerplate, so the
+  finding is one long paragraph. That is stored content, not a renderer defect.
+- Legacy rows without a persisted `claim_scope` still need a caller-supplied fallback.
 
 
 **Still to do:**
