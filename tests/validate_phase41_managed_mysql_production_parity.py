@@ -39,6 +39,11 @@ import tempfile
 import tokenize
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Phase 121: durable schema-history checks (see tests/_schema_history.py).
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import _schema_history as schema_history  # noqa: E402
+THIS_HARNESS = os.path.relpath(os.path.abspath(__file__), REPO_ROOT)
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
@@ -239,7 +244,8 @@ def static_parity_checks() -> None:
           "no DB, no SQL, no connection" in proc.stdout)
     # On a bare interpreter the simulation tier cannot run; it must then say so explicitly rather
     # than quietly reporting success it did not achieve.
-    simulated = re.search(rf"across {EXPECTED_MIGRATIONS} migrations", proc.stdout) is not None
+    migration_total = len(schema_history.migration_chain(REPO_ROOT) or [])
+    simulated = re.search(rf"across {migration_total} migrations", proc.stdout) is not None
     declared_skip = "not simulated" in proc.stdout
     check("the simulation covers every migration, or explicitly declares itself skipped",
           simulated or declared_skip)
@@ -397,11 +403,13 @@ def regression_checks() -> None:
     print("\n8. Baseline regression: no schema, writer, or allowlist surface added")
     versions = sorted(f for f in os.listdir(os.path.join(REPO_ROOT, "alembic", "versions"))
                       if f.endswith(".py"))
-    check(f"exactly {EXPECTED_MIGRATIONS} migrations", len(versions) == EXPECTED_MIGRATIONS)
-    check("no migration 015 or later",
-          not any(re.match(r"^0*(?:1[5-9]|[2-9]\d)_", f) for f in versions))
-    check(f"{ALEMBIC_HEAD} is still the newest migration",
-          versions[-1].startswith(ALEMBIC_HEAD))
+    check(f"the first {EXPECTED_MIGRATIONS} migrations still end at {ALEMBIC_HEAD} in one linear history",
+          schema_history.history_intact(REPO_ROOT, ALEMBIC_HEAD, EXPECTED_MIGRATIONS))
+    if schema_history.phase_never_committed(REPO_ROOT, THIS_HARNESS):
+        check("no migration 015 or later",
+              not any(re.match(r"^0*(?:1[5-9]|[2-9]\d)_", f) for f in versions))
+    check(f"{ALEMBIC_HEAD} is in history and the current head descends from it",
+          schema_history.head_descends_from(REPO_ROOT, ALEMBIC_HEAD))
 
     from peak.persistence.allowlist import ALLOWED_ACTIONS, ALLOWED_TABLES
     check("allowlist still has exactly 13 tables", len(ALLOWED_TABLES) == 13)
@@ -414,11 +422,11 @@ def regression_checks() -> None:
     import importlib
     p11 = importlib.import_module("tests.validate_phase11_db_scaffold")
     expected = list(getattr(p11, "EXPECTED_TABLES", []))
-    check(f"db-check still expects exactly {EXPECTED_TABLE_COUNT} tables",
-          len(expected) == EXPECTED_TABLE_COUNT)
+    check("db-check still expects every table that existed at 014",
+          not schema_history.missing_tables(expected))
     models_src = read("peak/db/models.py")
-    check(f"models.py still declares exactly {EXPECTED_TABLE_COUNT} tables",
-          models_src.count("__tablename__ = ") == EXPECTED_TABLE_COUNT)
+    check("models.py still declares every table that existed at 014",
+          not schema_history.missing_tables(schema_history.declared_tables(models_src)))
     check("models.py declares no parity/validation table",
           not re.search(r'__tablename__\s*=\s*"[^"]*(?:parity|validation)[^"]*"', models_src))
 

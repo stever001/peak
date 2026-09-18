@@ -50,6 +50,11 @@ import tempfile
 import tokenize
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Phase 121: durable schema-history checks (see tests/_schema_history.py).
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import _schema_history as schema_history  # noqa: E402
+THIS_HARNESS = os.path.relpath(os.path.abspath(__file__), REPO_ROOT)
 TOOLS_DIR = os.path.join(REPO_ROOT, "tools")
 for _p in (REPO_ROOT, TOOLS_DIR):
     if _p not in sys.path:
@@ -191,11 +196,13 @@ def baseline_checks() -> None:
     print("\n1. Baseline: head is 014, 14 migrations, 18 tables, nothing new added")
     versions_dir = os.path.join(REPO_ROOT, VERSIONS_REL)
     versions = sorted(f for f in os.listdir(versions_dir) if f.endswith(".py"))
-    check(f"exactly {EXPECTED_MIGRATIONS} migrations", len(versions) == EXPECTED_MIGRATIONS)
-    check("no migration 015 or later",
-          not any(re.match(r"^0*(?:1[5-9]|[2-9]\d)_", f) for f in versions))
-    check(f"{HEAD_REVISION} is still the newest migration",
-          versions[-1] == f"{HEAD_REVISION}.py")
+    check(f"the first {EXPECTED_MIGRATIONS} migrations still end at {HEAD_REVISION} in one linear history",
+          schema_history.history_intact(REPO_ROOT, HEAD_REVISION, EXPECTED_MIGRATIONS))
+    if schema_history.phase_never_committed(REPO_ROOT, THIS_HARNESS):
+        check("no migration 015 or later",
+              not any(re.match(r"^0*(?:1[5-9]|[2-9]\d)_", f) for f in versions))
+    check(f"{HEAD_REVISION} is in history and the current head descends from it",
+          schema_history.head_descends_from(REPO_ROOT, HEAD_REVISION))
 
     for rel in (HARDENING_REL, ENV_REL, HARNESS_REL):
         try:
@@ -206,10 +213,10 @@ def baseline_checks() -> None:
 
     import importlib as _il
     p11 = _il.import_module("tests.validate_phase11_db_scaffold")
-    check(f"db-check still expects exactly {EXPECTED_TABLE_COUNT} tables",
-          len(list(getattr(p11, "EXPECTED_TABLES", []))) == EXPECTED_TABLE_COUNT)
-    check(f"models.py still declares exactly {EXPECTED_TABLE_COUNT} tables",
-          read(MODELS).count("__tablename__ = ") == EXPECTED_TABLE_COUNT)
+    check("db-check still expects every table that existed at 014",
+          not schema_history.missing_tables(getattr(p11, "EXPECTED_TABLES", [])))
+    check("models.py still declares every table that existed at 014",
+          not schema_history.missing_tables(schema_history.declared_tables(read(MODELS))))
 
     from peak.persistence.allowlist import ALLOWED_ACTIONS, ALLOWED_TABLES
     check(f"allowlist still has exactly {EXPECTED_ALLOWLIST_TABLES} tables",
@@ -263,10 +270,14 @@ def baseline_checks() -> None:
               and "engagements" in PROHIBITED_TABLES and "clients" in PROHIBITED_TABLES
               and "engagements" not in ALLOWED_TABLES)
         # The model file was frozen here until Phase 56, which legitimately owns the engagement
-        # classification columns and migration 014. The substantive invariant — the table count is
-        # unchanged, so no table was added — is asserted directly instead.
-        check("no DB table was added (model table count unchanged)",
-              read("peak/db/models.py").count("__tablename__ = ") == EXPECTED_TABLE_COUNT)
+        # classification columns and migration 014. Phase 121: "no table was added" is a claim
+        # about this phase, so it is authoring-time gated; every historical table must remain.
+        check("models.py still declares every table that existed at 014",
+              not schema_history.missing_tables(schema_history.declared_tables(
+                  read("peak/db/models.py"))))
+        if schema_history.phase_never_committed(REPO_ROOT, THIS_HARNESS):
+            check("no DB table was added (model table count unchanged)",
+                  read("peak/db/models.py").count("__tablename__ = ") == EXPECTED_TABLE_COUNT)
         migrations_changed = git("diff", "--name-only", "HEAD", "--", VERSIONS_REL)
         check("no existing migration file was edited or rewritten", not migrations_changed)
         docx = git("diff", "--name-only", "HEAD", "--", "docs/Peak_Investor_Overview_AI.docx")
@@ -285,8 +296,9 @@ def revision_width_checks() -> None:
     ids = h.revision_ids(versions_dir)
     by_rev = {rev: len(rev) for rev in ids.values()}
 
-    check(f"scanner recovers all {EXPECTED_MIGRATIONS} revision identifiers",
-          len(ids) == EXPECTED_MIGRATIONS)
+    chain = schema_history.migration_chain(REPO_ROOT) or []
+    check(f"scanner recovers every revision identifier ({len(ids)} of {len(chain)})",
+          len(chain) >= EXPECTED_MIGRATIONS and sorted(ids.values()) == sorted(chain))
 
     for rev, expected_len in sorted(KNOWN_LONG_REVISIONS.items()):
         check(f"{rev} detected at length {expected_len}", by_rev.get(rev) == expected_len)
@@ -395,8 +407,8 @@ def scope_checks() -> None:
     import importlib as _il
     p11 = _il.import_module("tests.validate_phase11_db_scaffold")
     app_tables = [t for t in getattr(p11, "EXPECTED_TABLES", [])]
-    check(f"{len(app_tables)} application tables are known to this check",
-          len(app_tables) == EXPECTED_TABLE_COUNT)
+    check(f"{len(app_tables)} application tables are known to this check, including every "
+          "table that existed at 014", not schema_history.missing_tables(app_tables))
     leaked = sorted(t for t in app_tables if t in code)
     check("no application table name appears anywhere in the helper's code", not leaked)
     if leaked:
@@ -579,15 +591,16 @@ def regression_checks() -> None:
             command.upgrade(cfg, "head")
             insp = inspect(create_engine(url))
             tables = [t for t in insp.get_table_names() if t != "alembic_version"]
-            check(f"SQLite upgrade head still builds {EXPECTED_TABLE_COUNT} tables",
-                  len(tables) == EXPECTED_TABLE_COUNT)
+            model_tables = set(schema_history.declared_tables(read("peak/db/models.py")))
+            check(f"SQLite upgrade head still builds every model table ({len(tables)})",
+                  set(tables) == model_tables)
             check("SQLite run still creates alembic_version",
                   insp.has_table("alembic_version"))
             command.downgrade(cfg, "012_internal_report_review_packet_decisions")
             command.upgrade(cfg, "head")
             check("SQLite downgrade + re-upgrade still succeeds",
-                  len([t for t in inspect(create_engine(url)).get_table_names()
-                       if t != "alembic_version"]) == EXPECTED_TABLE_COUNT)
+                  {t for t in inspect(create_engine(url)).get_table_names()
+                   if t != "alembic_version"} == model_tables)
         except Exception as exc:  # noqa: BLE001
             check(f"SQLite migration run ({type(exc).__name__})", False)
         finally:

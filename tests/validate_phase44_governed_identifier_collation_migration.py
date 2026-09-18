@@ -45,6 +45,11 @@ import tempfile
 import tokenize
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Phase 121: durable schema-history checks (see tests/_schema_history.py).
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import _schema_history as schema_history  # noqa: E402
+THIS_HARNESS = os.path.relpath(os.path.abspath(__file__), REPO_ROOT)
 TOOLS_DIR = os.path.join(REPO_ROOT, "tools")
 for _p in (REPO_ROOT, TOOLS_DIR):
     if _p not in sys.path:
@@ -75,8 +80,9 @@ EXPECTED_TABLE_COUNT = 18
 #: the *model* now carries 212 — see EXPECTED_MODEL_GOVERNED_COLUMNS.
 EXPECTED_GOVERNED_COLUMNS = 211
 EXPECTED_MODEL_GOVERNED_COLUMNS = 212
-#: Governed columns created already-pinned by a migration later than 013.
-LATER_PINNED = {("engagements", "engagement_category")}
+#: Governed columns created already-pinned by a migration later than 013. Phase 121: derived by
+#: ``later_pinned_columns`` rather than listed, so a later migration that pins its own governed
+#: columns at creation (as 014 and 015 do) is accounted for without editing this harness.
 EXPECTED_BOUNDARY_TABLES = 11
 GOVERNED_COLLATION = "utf8mb4_bin"
 MYSQL_IDENTIFIER_LIMIT = 64
@@ -145,6 +151,25 @@ def _no_canary(text: str) -> bool:
     return not any(frag in text for frag in _CANARY_FRAGMENTS)
 
 
+def later_pinned_columns(candidates):
+    """The (table, column) pairs in ``candidates`` that a migration after 013 creates pinned.
+
+    A pair qualifies when a later migration in the linear chain names both the table and the
+    column as literals and applies ``GOVERNED_COLLATION``. Anything not found stays unaccounted
+    for and fails the coverage check below.
+    """
+    chain = schema_history.migration_chain(REPO_ROOT) or []
+    later = chain[chain.index(MIGRATION_NAME) + 1:] if MIGRATION_NAME in chain else []
+    sources = []
+    for name in sorted(os.listdir(os.path.join(REPO_ROOT, "alembic", "versions"))):
+        if name.endswith(".py"):
+            text = read(f"alembic/versions/{name}")
+            if any(f'revision = "{rev}"' in text for rev in later) and "GOVERNED_COLLATION" in text:
+                sources.append(text)
+    return {(t, c) for t, c in candidates
+            if any((f'"{t}"' in s or f"TABLE = \"{t}\"" in s) and f'"{c}"' in s for s in sources)}
+
+
 def migration_mapping():
     """Extract ``GOVERNED_COLUMNS`` from the migration **statically**, without importing it.
 
@@ -169,14 +194,16 @@ def baseline_checks() -> None:
     print("\n1. Baseline: head moved 012 -> 013, 13 migrations, 18 tables")
     versions_dir = os.path.join(REPO_ROOT, "alembic", "versions")
     versions = sorted(f for f in os.listdir(versions_dir) if f.endswith(".py"))
-    check(f"exactly {EXPECTED_MIGRATIONS} migrations", len(versions) == EXPECTED_MIGRATIONS)
+    check(f"the first {EXPECTED_MIGRATIONS} migrations still end at {PRODUCTION_EXPECTED_HEAD} in one linear history",
+          schema_history.history_intact(REPO_ROOT, PRODUCTION_EXPECTED_HEAD, EXPECTED_MIGRATIONS))
     check(f"{MIGRATION_REL} exists", os.path.isfile(os.path.join(REPO_ROOT, MIGRATION_REL)))
     # Phase 44 owns 013; the invariant is that it still exists in the chain, not that it stays
     # newest — Phase 56 legitimately appended 014 after it.
     check(f"{MIGRATION_NAME} is still present in the chain",
           f"{MIGRATION_NAME}.py" in versions)
-    check("no migration 015 or later",
-          not any(re.match(r"^0*(?:1[5-9]|[2-9]\d)_", f) for f in versions))
+    if schema_history.phase_never_committed(REPO_ROOT, THIS_HARNESS):
+        check("no migration 015 or later",
+              not any(re.match(r"^0*(?:1[5-9]|[2-9]\d)_", f) for f in versions))
     try:
         py_compile.compile(os.path.join(REPO_ROOT, MIGRATION_REL), doraise=True)
         check(f"{MIGRATION_REL} compiles", True)
@@ -185,11 +212,11 @@ def baseline_checks() -> None:
 
     import importlib
     p11 = importlib.import_module("tests.validate_phase11_db_scaffold")
-    check(f"db-check still expects exactly {EXPECTED_TABLE_COUNT} tables",
-          len(list(getattr(p11, "EXPECTED_TABLES", []))) == EXPECTED_TABLE_COUNT)
+    check("db-check still expects every table that existed at 014",
+          not schema_history.missing_tables(getattr(p11, "EXPECTED_TABLES", [])))
     models_src = read(MODELS)
-    check(f"models.py still declares exactly {EXPECTED_TABLE_COUNT} tables",
-          models_src.count("__tablename__ = ") == EXPECTED_TABLE_COUNT)
+    check("models.py still declares every table that existed at 014",
+          not schema_history.missing_tables(schema_history.declared_tables(models_src)))
 
     from peak.persistence.allowlist import ALLOWED_ACTIONS, ALLOWED_TABLES
     check("allowlist still has exactly 13 tables", len(ALLOWED_TABLES) == 13)
@@ -342,23 +369,23 @@ def coverage_checks() -> None:
             else:
                 excluded[(table.name, column.name)] = policy
 
-    missing = sorted(set(model_governed) - set(mapped) - LATER_PINNED)
+    later_pinned = later_pinned_columns(set(model_governed) - set(mapped))
+    missing = sorted(set(model_governed) - set(mapped) - later_pinned)
     extra = sorted(set(mapped) - set(model_governed))
     check(f"every governed model column is pinned by 013 or a later migration "
           f"({len(model_governed)} governed columns in the model)",
           not missing)
     if missing:
         print(f"        missing: {missing[:6]}")
-    check("every later-pinned column is created with the governed collation in its migration",
-          all(f'"{col}"' in read("alembic/versions/014_engagement_classification.py")
-              and "GOVERNED_COLLATION" in read(
-                  "alembic/versions/014_engagement_classification.py")
-              for _tbl, col in LATER_PINNED))
+    check("the historically later-pinned engagements.engagement_category is still found pinned",
+          ("engagements", "engagement_category") in later_pinned)
     check("every migration-mapped column exists in the model as governed", not extra)
     if extra:
         print(f"        extra: {extra[:6]}")
-    check(f"model governed count is exactly {EXPECTED_MODEL_GOVERNED_COLUMNS}",
-          len(model_governed) == EXPECTED_MODEL_GOVERNED_COLUMNS)
+    check(f"model governed count ({len(model_governed)}) is 013's mapping plus later-pinned "
+          f"columns, and at least the historical {EXPECTED_MODEL_GOVERNED_COLUMNS}",
+          len(model_governed) == len(mapped) + len(later_pinned)
+          and len(model_governed) >= EXPECTED_MODEL_GOVERNED_COLUMNS)
 
     mismatched = [k for k in mapped if k in model_governed and mapped[k] != model_governed[k]]
     check("length and nullability match the model for every mapped column", not mismatched)
@@ -436,8 +463,9 @@ def model_policy_checks() -> None:
             elif collation:
                 wrongly += 1
 
-    check(f"exactly {EXPECTED_MODEL_GOVERNED_COLUMNS} governed columns pin {GOVERNED_COLLATION}",
-          pinned == EXPECTED_MODEL_GOVERNED_COLUMNS)
+    check(f"every governed column pins {GOVERNED_COLLATION} ({pinned}, at least the historical "
+          f"{EXPECTED_MODEL_GOVERNED_COLUMNS})",
+          unpinned == 0 and pinned >= EXPECTED_MODEL_GOVERNED_COLUMNS)
     check("no governed column is left unpinned", unpinned == 0)
     check("no non-governed column was forced into a binary collation", wrongly == 0)
     check(f"all {EXPECTED_BOUNDARY_TABLES} idempotency-boundary tables are covered",
@@ -467,8 +495,8 @@ def model_policy_checks() -> None:
         Base.metadata.create_all(engine)
         with engine.connect() as conn:
             count = len(sa.inspect(engine).get_table_names())
-        check(f"SQLite create_all builds all {EXPECTED_TABLE_COUNT} tables",
-              count == EXPECTED_TABLE_COUNT)
+        check(f"SQLite create_all builds every model table ({count})",
+              count == len(Base.metadata.tables) and count >= EXPECTED_TABLE_COUNT)
     except Exception as exc:  # noqa: BLE001
         check(f"SQLite create_all succeeds ({type(exc).__name__})", False)
 
@@ -495,8 +523,9 @@ def migration_run_checks() -> None:
         command.upgrade(cfg, "head")
         tables = [t for t in inspect(create_engine(url)).get_table_names()
                   if t != "alembic_version"]
-        check(f"upgrade head builds {EXPECTED_TABLE_COUNT} tables",
-              len(tables) == EXPECTED_TABLE_COUNT)
+        model_tables = set(schema_history.declared_tables(read("peak/db/models.py")))
+        check(f"upgrade head builds exactly the tables models.py declares ({len(tables)})",
+              set(tables) == model_tables)
         command.downgrade(cfg, PRIOR_HEAD)
         tables_after = [t for t in inspect(create_engine(url)).get_table_names()
                         if t != "alembic_version"]
@@ -504,8 +533,8 @@ def migration_run_checks() -> None:
               len(tables_after) == EXPECTED_TABLE_COUNT)
         command.upgrade(cfg, "head")
         check("re-upgrade succeeds",
-              len([t for t in inspect(create_engine(url)).get_table_names()
-                   if t != "alembic_version"]) == EXPECTED_TABLE_COUNT)
+              {t for t in inspect(create_engine(url)).get_table_names()
+               if t != "alembic_version"} == model_tables)
     except Exception as exc:  # noqa: BLE001
         check(f"migration run on SQLite ({type(exc).__name__})", False)
     finally:
@@ -538,10 +567,11 @@ def tooling_checks() -> None:
               "must still be executed against production" in audit.stdout)
         check("audit points at the read-only production verifier",
               "production-mysql-collation-verify" in audit.stdout)
-        check(f"audit reports 0 unpinned of {EXPECTED_MODEL_GOVERNED_COLUMNS} governed",
+        governed = re.search(r"governed\s*:\s*(\d+)", audit.stdout)
+        check(f"audit reports 0 unpinned of at least {EXPECTED_MODEL_GOVERNED_COLUMNS} governed",
               re.search(r"unpinned\s*:\s*0", audit.stdout) is not None
-              and re.search(rf"governed\s*:\s*{EXPECTED_MODEL_GOVERNED_COLUMNS}", audit.stdout)
-              is not None)
+              and governed is not None
+              and int(governed.group(1)) >= EXPECTED_MODEL_GOVERNED_COLUMNS)
         again = subprocess.run([venv, os.path.join(REPO_ROOT, AUDIT)],
                                capture_output=True, text=True, cwd=REPO_ROOT, env=env, timeout=180)
         check("audit output is deterministic across runs", again.stdout == audit.stdout)

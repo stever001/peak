@@ -48,6 +48,11 @@ import sys
 import tempfile
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Phase 121: durable schema-history checks (see tests/_schema_history.py).
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import _schema_history as schema_history  # noqa: E402
+THIS_HARNESS = os.path.relpath(os.path.abspath(__file__), REPO_ROOT)
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
@@ -110,13 +115,15 @@ def baseline_checks() -> None:
     print("\n1. Baseline: head 014, 14 migrations, 18 tables, 12 writers, no 015")
     versions_dir = os.path.join(REPO_ROOT, "alembic", "versions")
     versions = sorted(f for f in os.listdir(versions_dir) if f.endswith(".py"))
-    check(f"exactly {EXPECTED_MIGRATIONS} migrations", len(versions) == EXPECTED_MIGRATIONS)
-    check("no migration 015 or later",
-          not any(re.match(r"^0*(?:1[5-9]|[2-9]\d)_", f) for f in versions))
-    check(f"{HEAD_REVISION} is still the newest migration",
-          versions[-1] == f"{HEAD_REVISION}.py")
-    check(f"models.py still declares exactly {EXPECTED_TABLE_COUNT} tables",
-          read("peak/db/models.py").count("__tablename__ = ") == EXPECTED_TABLE_COUNT)
+    check(f"the first {EXPECTED_MIGRATIONS} migrations still end at {HEAD_REVISION} in one linear history",
+          schema_history.history_intact(REPO_ROOT, HEAD_REVISION, EXPECTED_MIGRATIONS))
+    if schema_history.phase_never_committed(REPO_ROOT, THIS_HARNESS):
+        check("no migration 015 or later",
+              not any(re.match(r"^0*(?:1[5-9]|[2-9]\d)_", f) for f in versions))
+    check(f"{HEAD_REVISION} is in history and the current head descends from it",
+          schema_history.head_descends_from(REPO_ROOT, HEAD_REVISION))
+    check("models.py still declares every table that existed at 014",
+          not schema_history.missing_tables(schema_history.declared_tables(read("peak/db/models.py"))))
     writers = sorted(f for f in os.listdir(os.path.join(REPO_ROOT, "peak", "db"))
                      if f.endswith("_writer.py"))
     check(f"still exactly the {EXPECTED_WRITERS} narrow controlled writers",
@@ -140,9 +147,10 @@ def baseline_checks() -> None:
         check("no writer file was added or edited",
               not [c for c in git("diff", "--name-only", "HEAD", "--", "peak").splitlines()
                    if c.endswith("_writer.py")])
-        check("peak/db/models.py and the controlled allowlist were not edited",
-              not git("diff", "--name-only", "HEAD", "--", "peak/db/models.py",
-                      "peak/persistence/allowlist.py").strip())
+        if schema_history.phase_never_committed(REPO_ROOT, THIS_HARNESS):
+            check("peak/db/models.py and the controlled allowlist were not edited",
+                  not git("diff", "--name-only", "HEAD", "--", "peak/db/models.py",
+                          "peak/persistence/allowlist.py").strip())
         check("docs/Peak_Investor_Overview_AI.docx has no pending diff",
               not git("diff", "--name-only", "HEAD", "--",
                       "docs/Peak_Investor_Overview_AI.docx").strip())
@@ -390,8 +398,8 @@ def regression_checks() -> None:
         command.upgrade(cfg, "head")
         tables = [t for t in inspect(create_engine(url)).get_table_names()
                   if t != "alembic_version"]
-        check(f"SQLite upgrade head still builds {EXPECTED_TABLE_COUNT} tables "
-              "with no target declared", len(tables) == EXPECTED_TABLE_COUNT)
+        check("SQLite upgrade head still builds every model table with no target declared",
+              set(tables) == set(schema_history.declared_tables(read("peak/db/models.py"))))
     except Exception as exc:  # noqa: BLE001
         check(f"SQLite migration run ({type(exc).__name__})", False)
     finally:

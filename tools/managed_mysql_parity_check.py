@@ -57,12 +57,11 @@ if REPO_ROOT not in sys.path:
 #: MySQL's hard limit on table / index / constraint / column identifiers.
 MYSQL_IDENTIFIER_LIMIT = 64
 
-#: The pinned Alembic head for this baseline. A new migration must update this deliberately.
-# Pins the **repository's** migration chain (not production's applied head — the
-# production verifier tracks that separately and still expects 013, because migration
-# 014 has not been applied to production).
-EXPECTED_HEAD = "014_engagement_classification"
-EXPECTED_MIGRATION_COUNT = 14
+#: A historical revision the **repository's** chain must still contain (not production's applied
+#: head — the production verifier tracks that separately). Phase 121 replaced the pinned head and
+#: migration count: later migrations may follow this one, and what stays invariant is the chain
+#: shape checked below — linear, one base, one head, every parent known, head descending from here.
+BASELINE_REVISION = "014_engagement_classification"
 
 #: Required MySQL table options on every created table.
 REQUIRED_TABLE_ARGS = {"mysql_engine": "InnoDB", "mysql_charset": "utf8mb4"}
@@ -250,13 +249,8 @@ def _is_literal(token: str) -> bool:
 
 
 def check_migration_chain(report: Report) -> None:
-    emit("\n2. Migration chain: linear, single head, pinned, no unplanned migration")
+    emit("\n2. Migration chain: linear, single head, descending from the historical baseline")
     files = migration_files()
-    report.check(f"exactly {EXPECTED_MIGRATION_COUNT} migrations present",
-                 len(files) == EXPECTED_MIGRATION_COUNT,
-                 f"found {len(files)}")
-    report.check("no migration 015 or later added",
-                 not any(re.match(r"^0*(?:1[5-9]|[2-9]\d)_", f) for f in files))
 
     revisions, downs = {}, {}
     for name in files:
@@ -276,10 +270,15 @@ def check_migration_chain(report: Report) -> None:
     children = set(parents)
     heads = [r for r in revisions.values() if r not in children]
     report.check("exactly one head", len(heads) == 1, f"found {len(heads)}")
-    report.check(f"head is pinned at {EXPECTED_HEAD}", heads == [EXPECTED_HEAD],
-                 "head moved; update EXPECTED_HEAD deliberately if a migration was added")
     unknown = [d for d in parents if d not in set(revisions.values())]
     report.check("every down_revision names a known revision", not unknown)
+    parent_of = {revisions[n]: downs[n] for n in revisions}
+    lineage, cursor = [], heads[0] if len(heads) == 1 else None
+    while cursor is not None and cursor not in lineage:
+        lineage.append(cursor)
+        cursor = parent_of.get(cursor)
+    report.check(f"head descends from {BASELINE_REVISION}", BASELINE_REVISION in lineage,
+                 f"{BASELINE_REVISION} is not an ancestor of the head")
 
 
 def check_migration_sources(report: Report) -> None:

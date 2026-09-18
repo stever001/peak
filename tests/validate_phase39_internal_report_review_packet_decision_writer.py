@@ -43,6 +43,10 @@ import sys
 import tempfile
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Phase 121: durable schema-history checks (see tests/_schema_history.py).
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import _schema_history as schema_history  # noqa: E402
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
@@ -281,8 +285,8 @@ def structural_checks() -> None:
     p11 = importlib.import_module("tests.validate_phase11_db_scaffold")
     expected = list(getattr(p11, "EXPECTED_TABLES", []))
     check("db-check EXPECTED_TABLES includes the new table", TABLE in expected)
-    check("db-check now expects exactly 18 tables (17 prior + the decision table)",
-          len(expected) == 18)
+    check("db-check still expects the 17 prior tables plus the decision table",
+          not schema_history.missing_tables(expected))
     models_src = read("peak/db/models.py")
     check("model source declares the new table", f'__tablename__ = "{TABLE}"' in models_src)
     check("model source registers the new class in ALL_MODELS",
@@ -308,7 +312,8 @@ def _model_checks(Rec, all_models) -> None:
     if Rec is None:
         return
     check("InternalReportReviewPacketDecisionRecord in ALL_MODELS", Rec in all_models)
-    check("eighteen models registered", len(all_models) == 18)
+    check("the eighteen historical models are still registered",
+          not schema_history.missing_tables([m.__tablename__ for m in all_models]))
     check(f"__tablename__ == {TABLE}", Rec.__tablename__ == TABLE)
     cols = set(Rec.__table__.columns.keys())
     required = {

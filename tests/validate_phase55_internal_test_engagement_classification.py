@@ -43,6 +43,11 @@ import subprocess
 import sys
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Phase 121: durable schema-history checks (see tests/_schema_history.py).
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import _schema_history as schema_history  # noqa: E402
+THIS_HARNESS = os.path.relpath(os.path.abspath(__file__), REPO_ROOT)
 TOOLS_DIR = os.path.join(REPO_ROOT, "tools")
 for _p in (REPO_ROOT, TOOLS_DIR):
     if _p not in sys.path:
@@ -177,11 +182,13 @@ def baseline_checks() -> None:
     print("\n1. Baseline: 013 / 13 migrations / 18 tables / 12 writers, nothing added")
     versions_dir = os.path.join(REPO_ROOT, "alembic", "versions")
     versions = sorted(f for f in os.listdir(versions_dir) if f.endswith(".py"))
-    check(f"exactly {EXPECTED_MIGRATIONS} migrations", len(versions) == EXPECTED_MIGRATIONS)
-    check("no migration 015 or later",
-          not any(re.match(r"^0*(?:1[5-9]|[2-9]\d)_", f) for f in versions))
-    check(f"{HEAD_REVISION} is still the newest migration",
-          versions[-1] == f"{HEAD_REVISION}.py")
+    check(f"the first {EXPECTED_MIGRATIONS} migrations still end at {HEAD_REVISION} in one linear history",
+          schema_history.history_intact(REPO_ROOT, HEAD_REVISION, EXPECTED_MIGRATIONS))
+    if schema_history.phase_never_committed(REPO_ROOT, THIS_HARNESS):
+        check("no migration 015 or later",
+              not any(re.match(r"^0*(?:1[5-9]|[2-9]\d)_", f) for f in versions))
+    check(f"{HEAD_REVISION} is in history and the current head descends from it",
+          schema_history.head_descends_from(REPO_ROOT, HEAD_REVISION))
 
     try:
         py_compile.compile(os.path.join(REPO_ROOT, HARNESS_REL), doraise=True)
@@ -191,10 +198,13 @@ def baseline_checks() -> None:
 
     import importlib as _il
     p11 = _il.import_module("tests.validate_phase11_db_scaffold")
-    check(f"db-check still expects exactly {EXPECTED_TABLE_COUNT} tables",
-          len(list(getattr(p11, "EXPECTED_TABLES", []))) == EXPECTED_TABLE_COUNT)
-    check(f"models.py still declares exactly {EXPECTED_TABLE_COUNT} tables — no table added",
-          read(MODELS_REL).count("__tablename__ = ") == EXPECTED_TABLE_COUNT)
+    check("db-check still expects every table that existed at 014",
+          not schema_history.missing_tables(getattr(p11, "EXPECTED_TABLES", [])))
+    check("models.py still declares every table that existed at 014",
+          not schema_history.missing_tables(schema_history.declared_tables(read(MODELS_REL))))
+    if schema_history.phase_never_committed(REPO_ROOT, THIS_HARNESS):
+        check(f"models.py still declares exactly {EXPECTED_TABLE_COUNT} tables — no table added",
+              read(MODELS_REL).count("__tablename__ = ") == EXPECTED_TABLE_COUNT)
 
     writers = sorted(f for f in os.listdir(os.path.join(REPO_ROOT, "peak", "db"))
                      if f.endswith("_writer.py"))

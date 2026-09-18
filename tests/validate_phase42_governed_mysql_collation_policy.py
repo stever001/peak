@@ -45,6 +45,11 @@ import tempfile
 import tokenize
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Phase 121: durable schema-history checks (see tests/_schema_history.py).
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import _schema_history as schema_history  # noqa: E402
+THIS_HARNESS = os.path.relpath(os.path.abspath(__file__), REPO_ROOT)
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
@@ -407,16 +412,18 @@ def scope_checks() -> None:
     print("\n6. Scope: Phase 42 is planning, not remediation")
     versions_dir = os.path.join(REPO_ROOT, "alembic", "versions")
     versions = sorted(f for f in os.listdir(versions_dir) if f.endswith(".py"))
-    check(f"exactly {EXPECTED_MIGRATIONS} migrations", len(versions) == EXPECTED_MIGRATIONS)
+    check(f"the first {EXPECTED_MIGRATIONS} migrations still end at {ALEMBIC_HEAD} in one linear history",
+          schema_history.history_intact(REPO_ROOT, ALEMBIC_HEAD, EXPECTED_MIGRATIONS))
     # Phase 42 itself created no migration; Phase 44 implemented the 013 it specified. The
     # guarantee preserved here is that nothing beyond that plan was added.
     check("migration 013 is exactly the one Phase 42 specified",
           [f for f in versions if f.startswith("013")]
           == ["013_governed_identifier_collation_policy.py"])
-    check("no migration 015 or later of any name",
-          not any(re.match(r"^0*(?:1[5-9]|[2-9]\d)_", f) for f in versions))
-    check(f"{ALEMBIC_HEAD} is still the newest migration",
-          versions[-1].startswith(ALEMBIC_HEAD))
+    if schema_history.phase_never_committed(REPO_ROOT, THIS_HARNESS):
+        check("no migration 015 or later of any name",
+              not any(re.match(r"^0*(?:1[5-9]|[2-9]\d)_", f) for f in versions))
+    check(f"{ALEMBIC_HEAD} is in history and the current head descends from it",
+          schema_history.head_descends_from(REPO_ROOT, ALEMBIC_HEAD))
 
     try:
         changed = subprocess.run(
@@ -440,11 +447,11 @@ def scope_checks() -> None:
     import importlib
     p11 = importlib.import_module("tests.validate_phase11_db_scaffold")
     expected = list(getattr(p11, "EXPECTED_TABLES", []))
-    check(f"db-check still expects exactly {EXPECTED_TABLE_COUNT} tables",
-          len(expected) == EXPECTED_TABLE_COUNT)
+    check("db-check still expects every table that existed at 014",
+          not schema_history.missing_tables(expected))
     models_src = read("peak/db/models.py")
-    check(f"models.py still declares exactly {EXPECTED_TABLE_COUNT} tables",
-          models_src.count("__tablename__ = ") == EXPECTED_TABLE_COUNT)
+    check("models.py still declares every table that existed at 014",
+          not schema_history.missing_tables(schema_history.declared_tables(models_src)))
     check("models.py still pins no collation (Phase 42 changed no schema)",
           not re.search(r"mysql_collate|COLLATE", models_src))
 

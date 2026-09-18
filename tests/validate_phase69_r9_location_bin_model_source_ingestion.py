@@ -41,6 +41,11 @@ import sys
 import tempfile
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Phase 121: durable schema-history checks (see tests/_schema_history.py).
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import _schema_history as schema_history  # noqa: E402
+THIS_HARNESS = os.path.relpath(os.path.abspath(__file__), REPO_ROOT)
 for _p in (REPO_ROOT, os.path.join(REPO_ROOT, "tools")):
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -223,11 +228,13 @@ def baseline_checks() -> None:
 
     versions = sorted(f for f in os.listdir(os.path.join(REPO_ROOT, "alembic", "versions"))
                       if f.endswith(".py"))
-    check(f"exactly {EXPECTED_MIGRATIONS} migrations", len(versions) == EXPECTED_MIGRATIONS)
-    check(f"{HEAD_REVISION} is still the newest migration",
-          versions[-1] == f"{HEAD_REVISION}.py")
-    check("no migration 015 or later - Phase 69 adds no migration",
-          not any(re.match(r"^0*(?:1[5-9]|[2-9]\d)_", f) for f in versions))
+    check(f"the first {EXPECTED_MIGRATIONS} migrations still end at {HEAD_REVISION} in one linear history",
+          schema_history.history_intact(REPO_ROOT, HEAD_REVISION, EXPECTED_MIGRATIONS))
+    check(f"{HEAD_REVISION} is in history and the current head descends from it",
+          schema_history.head_descends_from(REPO_ROOT, HEAD_REVISION))
+    if schema_history.phase_never_committed(REPO_ROOT, THIS_HARNESS):
+        check("no migration 015 or later - Phase 69 adds no migration",
+              not any(re.match(r"^0*(?:1[5-9]|[2-9]\d)_", f) for f in versions))
     # Pathspec narrowed to match the label: it read "alembic", which also covered
     # alembic/env.py and froze that file against every later phase.
     check("no migration file was added or modified by this phase",
@@ -240,10 +247,11 @@ def baseline_checks() -> None:
         except py_compile.PyCompileError:
             check(f"{rel} compiles", False)
 
-    check(f"models.py still declares exactly {EXPECTED_TABLE_COUNT} tables",
-          read(MODELS_REL).count("__tablename__ = ") == EXPECTED_TABLE_COUNT)
-    check("peak/db/models.py was not modified by this phase - no model added",
-          not git("diff", "--name-only", "HEAD", "--", MODELS_REL))
+    check("models.py still declares every table that existed at 014",
+          not schema_history.missing_tables(schema_history.declared_tables(read(MODELS_REL))))
+    if schema_history.phase_never_committed(REPO_ROOT, THIS_HARNESS):
+        check("peak/db/models.py was not modified by this phase - no model added",
+              not git("diff", "--name-only", "HEAD", "--", MODELS_REL))
 
     writers = sorted(f for f in os.listdir(os.path.join(REPO_ROOT, "peak", "db"))
                      if f.endswith("_writer.py"))
@@ -760,11 +768,12 @@ def isolation_checks() -> None:
     check("no sample or fixture packet file is tracked",
           not [t for t in tracked
                if re.search(r"(?i)(fixture|sample|example)[^/]*\.(json|ya?ml|csv|txt)$", t)])
-    check("no .json/.csv/.txt artifact was added by this phase",
-          not [c for c in git("diff", "--name-only", "HEAD").splitlines()
-               if c.endswith((".json", ".csv", ".txt"))]
-          and not [c for c in git("ls-files", "--others", "--exclude-standard").splitlines()
-                   if c.endswith((".json", ".csv", ".txt"))])
+    if schema_history.phase_never_committed(REPO_ROOT, THIS_HARNESS):
+        check("no .json/.csv/.txt artifact was added by this phase",
+              not [c for c in git("diff", "--name-only", "HEAD").splitlines()
+                   if c.endswith((".json", ".csv", ".txt"))]
+              and not [c for c in git("ls-files", "--others", "--exclude-standard").splitlines()
+                       if c.endswith((".json", ".csv", ".txt"))])
 
     # Phase 69 must add nothing beyond its own operator, harness, and docs.
     scope = git("diff", "--name-only", f"{BASELINE_COMMIT}..{PHASE_COMMIT}").splitlines()

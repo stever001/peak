@@ -46,6 +46,11 @@ import tempfile
 import tokenize
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Phase 121: durable schema-history checks (see tests/_schema_history.py).
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import _schema_history as schema_history  # noqa: E402
+THIS_HARNESS = os.path.relpath(os.path.abspath(__file__), REPO_ROOT)
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
@@ -417,11 +422,13 @@ def _baseline_regressions() -> None:
     print("\n7. Baseline regressions: no new table / model / migration / allowlist pair / writer")
     versions_dir = os.path.join(REPO_ROOT, "alembic", "versions")
     versions = sorted(f for f in os.listdir(versions_dir) if f.endswith(".py"))
-    check("no migration 015 (or later) added",
-          not any(re.match(r"^0*1[5-9]_|^0*[2-9]\d_", f) for f in versions))
-    check(f"{CURRENT_HEAD} is the newest migration",
-          versions[-1].startswith("014_engagement_classification"))
-    check("exactly 14 migrations", len(versions) == 14)
+    if schema_history.phase_never_committed(REPO_ROOT, THIS_HARNESS):
+        check("no migration 015 (or later) added",
+              not any(re.match(r"^0*1[5-9]_|^0*[2-9]\d_", f) for f in versions))
+    check(f"{CURRENT_HEAD} is in history and the current head descends from it",
+          schema_history.head_descends_from(REPO_ROOT, CURRENT_HEAD))
+    check(f"the first 14 migrations still end at {CURRENT_HEAD} in one linear history",
+          schema_history.history_intact(REPO_ROOT, CURRENT_HEAD, 14))
 
     from peak.persistence.allowlist import ALLOWED_ACTIONS, ALLOWED_TABLES
     check("allowlist still has exactly 13 tables", len(ALLOWED_TABLES) == 13)
@@ -443,13 +450,14 @@ def _baseline_regressions() -> None:
     import importlib
     p11 = importlib.import_module("tests.validate_phase11_db_scaffold")
     expected = list(getattr(p11, "EXPECTED_TABLES", []))
-    check("db-check still expects exactly 18 tables", len(expected) == 18)
+    check("db-check still expects every table that existed at 014",
+          not schema_history.missing_tables(expected))
     check("db-check table set is unchanged (no Phase 40 table)",
           DECISION_TABLE in expected
           and not any("workflow" in t for t in expected))
     models_src = read("peak/db/models.py")
-    check("models.py still declares exactly 18 tables",
-          models_src.count("__tablename__ = ") == 18)
+    check("models.py still declares every table that existed at 014",
+          not schema_history.missing_tables(schema_history.declared_tables(models_src)))
     check("models.py declares no Phase 40 workflow table",
           not re.search(r'__tablename__\s*=\s*"[^"]*workflow[^"]*"', models_src))
 
