@@ -108,12 +108,22 @@ _SAFE_IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9_]{1,64}$")
 
 # --------------------------------------------------------------------------- expectations
 
-#: The head expected **in production**. Moved to 014 in Phase 58, when migration
-#: ``014_engagement_classification`` was actually applied to production by the migration
-#: credential. It tracks the live production head, not the repository head: move it only when a
-#: later migration has genuinely been applied to production, never merely written.
-EXPECTED_ALEMBIC_HEAD = "014_engagement_classification"
-EXPECTED_TABLE_COUNT = 18
+#: The head expected **in production**. Moved to 014 in Phase 58, and to 016 in Phase 203, each
+#: time only after the migration was actually applied to production by the migration credential.
+#: It tracks the live production head, not the repository head: move it only when a later
+#: migration has genuinely been applied to production, never merely written.
+EXPECTED_ALEMBIC_HEAD = "016_client_engagement_workspace_fields"
+#: Tables that existed at 014 and must still exist. The *current* expected table set is derived
+#: from the declared models (``_expected_tables``) rather than frozen as a count (Phase 203).
+HISTORICAL_REQUIRED_TABLES = (
+    "clients", "engagements", "engagement_records", "evidence_references",
+    "source_system_references", "financial_impact_estimates", "resolver_capsule_records",
+    "review_records", "agent_run_records", "capsule_publication_candidates",
+    "source_ingestion_records", "agent_task_queue_records", "review_bundle_records",
+    "internal_reviewer_decision_records", "intake_note_records",
+    "internal_assessment_report_drafts", "internal_report_review_packets",
+    "internal_report_review_packet_decisions",
+)
 REQUIRED_CHARSET = "utf8mb4"
 
 #: Collation-name suffixes that denote deterministic (case-sensitive) comparison.
@@ -364,6 +374,10 @@ def verify_with_cursor(cursor, result: VerificationResult, *, run_collision_prob
     except Exception as exc:  # noqa: BLE001
         result.warnings.append(f"table collations unreadable ({safe_error(exc)})")
 
+    historical_missing = sorted(set(HISTORICAL_REQUIRED_TABLES) - set(table_collations))
+    if table_collations and historical_missing:
+        result.warnings.append(f"{len(historical_missing)} historically required table(s) absent "
+                               "from production: " + ", ".join(historical_missing))
     if expected_tables:
         missing = sorted(set(expected_tables) - set(table_collations))
         extra = sorted(set(table_collations) - set(expected_tables) - {"alembic_version"})
@@ -620,8 +634,9 @@ def render(result: VerificationResult, *, verbose: bool = False) -> None:
         if result.database_collation:
             emit(f"  database collation    : {result.database_collation}")
         if result.tables_found is not None:
+            expected = _expected_tables()
             emit(f"  base tables found     : {result.tables_found} "
-                 f"(expected {EXPECTED_TABLE_COUNT} + alembic_version)")
+                 f"(expected {len(expected) if expected else 'model-derived'} + alembic_version)")
         if result.alembic_head_matches is not None:
             emit(f"  alembic head matches  : {result.alembic_head_matches}")
         emit(f"  governed columns      : {result.governed_columns_checked} checked, "

@@ -475,9 +475,9 @@ def regression_checks() -> None:
           re.search(r"^validate:.*(?:runtime-connectivity|writer-enablement|"
                     r"production-mysql-collation-verify)", mk_file, re.MULTILINE) is None)
 
-    check("the production verifier expects production at 014 (applied there in Phase 58)",
-          'EXPECTED_ALEMBIC_HEAD = "014_engagement_classification"'
-          in read(VERIFIER_REL))
+    check("the production verifier expects production at 014 or a later applied head",
+          schema_history.verifier_head_at_or_after(REPO_ROOT, read(VERIFIER_REL),
+                                                   "014_engagement_classification"))
     check("production verifier still gates on the read-only affirmation",
           "PEAK_PRODUCTION_DB_READONLY_CONFIRM" in read(VERIFIER_REL))
 

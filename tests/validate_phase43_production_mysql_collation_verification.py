@@ -389,7 +389,9 @@ class _FakeCursor:
         elif "SCHEMATA" in sql:
             self._rows = [("utf8mb4", self.collation)]
         elif "alembic_version" in sql:
-            self._rows = [(PRODUCTION_ALEMBIC_HEAD,)]
+            # Phase 203: simulate production at whatever head the verifier expects, so moving the
+            # verifier's pin after a real production migration does not break this fake.
+            self._rows = [(v.EXPECTED_ALEMBIC_HEAD,)]
         elif "INFORMATION_SCHEMA.TABLES" in sql:
             self._rows = [(m.__tablename__, self.collation) for m in self.models]
         elif "INFORMATION_SCHEMA.COLUMNS" in sql:

@@ -87,6 +87,19 @@ def head_descends_from(repo_root: str, revision: str) -> bool:
     return chain is not None and revision in chain
 
 
+def verifier_head_at_or_after(repo_root: str, verifier_src: str, revision: str) -> bool:
+    """The production verifier's pinned head is ``revision`` or a later revision in the history.
+
+    The verifier's pin moves only after a migration is really applied to production (Phases 58
+    and 203), so harnesses assert the durable fact — it never points before ``revision`` or off
+    the chain — rather than one literal value.
+    """
+    m = re.search(r'^EXPECTED_ALEMBIC_HEAD = "([^"]+)"', verifier_src, re.MULTILINE)
+    chain = migration_chain(repo_root) or []
+    return (m is not None and revision in chain and m.group(1) in chain
+            and chain.index(m.group(1)) >= chain.index(revision))
+
+
 def declared_tables(models_src: str) -> List[str]:
     return _TABLENAME_RE.findall(models_src)
 

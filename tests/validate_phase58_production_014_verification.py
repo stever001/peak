@@ -202,8 +202,11 @@ def migration_checks() -> None:
 def verifier_checks() -> None:
     print("\n3. The production verifier now expects production at 014")
     tool = read(VERIFIER_REL)
-    check('EXPECTED_ALEMBIC_HEAD is "014_engagement_classification"',
-          f'EXPECTED_ALEMBIC_HEAD = "{HEAD_REVISION}"' in tool)
+    check(f"the verifier expects {HEAD_REVISION} or a later applied head in the migration history",
+          schema_history.verifier_head_at_or_after(REPO_ROOT, tool, HEAD_REVISION))
+    if schema_history.phase_never_committed(REPO_ROOT, THIS_HARNESS):
+        check('EXPECTED_ALEMBIC_HEAD is "014_engagement_classification"',
+              f'EXPECTED_ALEMBIC_HEAD = "{HEAD_REVISION}"' in tool)
     check("the verifier no longer pins production at 013",
           f'EXPECTED_ALEMBIC_HEAD = "{PRIOR_REVISION}"' not in tool)
     check("the head pin is documented as tracking the live production head, not the repo head",
@@ -239,7 +242,8 @@ def verifier_checks() -> None:
         check(f"{name} pins no production head at 013",
               f'PRODUCTION_ALEMBIC_HEAD = "{PRIOR_REVISION}"' not in src
               and f'EXPECTED_ALEMBIC_HEAD = "{PRIOR_REVISION}"' not in src)
-        check(f"{name} agrees production is at {HEAD_REVISION}", HEAD_REVISION in src)
+        if schema_history.phase_never_committed(REPO_ROOT, THIS_HARNESS):
+            check(f"{name} agrees production is at {HEAD_REVISION}", HEAD_REVISION in src)
 
 
 # --------------------------------------------------------------------------- 4. decision gate

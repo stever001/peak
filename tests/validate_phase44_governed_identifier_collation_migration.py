@@ -592,8 +592,8 @@ def tooling_checks() -> None:
           verifier.returncode == 0 and "skipped_not_configured" in verifier.stdout)
     check("production verifier attempted no connection",
           re.search(r"production_connection_attempted:\s*False", verifier.stdout) is not None)
-    check("production verifier expects the live production head (014, applied in Phase 58)",
-          f'EXPECTED_ALEMBIC_HEAD = "{PRODUCTION_EXPECTED_HEAD}"' in read(VERIFIER))
+    check("production verifier expects 014 or a later applied head in the migration history",
+          schema_history.verifier_head_at_or_after(REPO_ROOT, read(VERIFIER), PRODUCTION_EXPECTED_HEAD))
     check("no tool output echoes a canary",
           _no_canary(parity.stdout + verifier.stdout))
     check("no tool output prints a DSN",
