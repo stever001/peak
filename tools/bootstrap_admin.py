@@ -9,15 +9,23 @@ as an argument; only its Argon2id hash is written. No credential is hard-coded.
 by an Admin). It is dry-run unless ``--execute`` is passed.
 
 **Targets.** The session comes from the normal runtime path
-(:func:`peak.db.session.create_session_factory`, i.e. ``PEAK_RUNTIME_DATABASE_URL``). Phase 201
-authorizes local SQLite and ``peak_lab`` only: a MySQL/MariaDB URL whose schema is not exactly
-``peak_lab`` is refused before any connection is opened, and every other dialect is refused. No
-production consultant-account write is authorized. Output never includes a URL or credential.
+(:func:`peak.db.session.create_session_factory`, i.e. ``PEAK_RUNTIME_DATABASE_URL``, the
+least-privilege runtime credential). Without ``--production`` only local SQLite and the ``peak_lab``
+schema are accepted; any other MySQL/MariaDB URL and every other dialect is refused before any
+connection is opened.
 
-Usage (with ``PEAK_RUNTIME_DATABASE_URL`` pointing at a local SQLite file or ``peak_lab``)::
+**Production (Phase 203)** is a separate, explicit mode. It requires all of: the ``--production``
+flag, ``PEAK_PRODUCTION_ADMIN_BOOTSTRAP_CONFIRM=1`` (the exact string), and a MySQL/MariaDB URL whose
+user is production-marked (contains ``prod``) and neither user nor schema lab-marked. A lab or local
+URL with ``--production`` is refused too, so the flag must match the target. Output never includes a
+URL or credential.
+
+Usage (with ``PEAK_RUNTIME_DATABASE_URL`` set for the target)::
 
     python3 tools/bootstrap_admin.py --email steve@example.com            # dry run
     python3 tools/bootstrap_admin.py --email steve@example.com --execute  # prompts for password
+    PEAK_PRODUCTION_ADMIN_BOOTSTRAP_CONFIRM=1 \\
+        python3 tools/bootstrap_admin.py --production --email <email> --execute
 
 Exit status: 0 dry-run OK or Admin created; 1 refused or failed; 2 usage/configuration error.
 """
@@ -36,16 +44,33 @@ if REPO_ROOT not in sys.path:
 
 DEFAULT_NAME = "Steve Rouse"
 LAB_SCHEMA = "peak_lab"
+LAB_MARKER = "peak_lab"
+PRODUCTION_CONFIRM_ENV = "PEAK_PRODUCTION_ADMIN_BOOTSTRAP_CONFIRM"
 
 
-def target_label(url: str):
-    """Classify the runtime URL as ``local`` / ``lab``, or return ``None`` (refused)."""
-    scheme = urlsplit(url).scheme.split("+", 1)[0]
-    if scheme == "sqlite":
-        return "local"
-    if scheme in ("mysql", "mariadb"):
-        return "lab" if urlsplit(url).path.lstrip("/") == LAB_SCHEMA else None
-    return None
+def target_label(url: str, production: bool = False, confirm: str = ""):
+    """Classify the runtime URL as ``local`` / ``lab`` / ``production``, or ``None`` (refused).
+
+    Only the username and schema are inspected; host, port, password and query are discarded.
+    """
+    parts = urlsplit(url)
+    scheme = parts.scheme.split("+", 1)[0]
+    try:
+        user = (parts.username or "").lower()
+    except ValueError:
+        user = ""
+    schema = parts.path.lstrip("/").split("/", 1)[0].lower()
+    if not production:
+        if scheme == "sqlite":
+            return "local"
+        if scheme in ("mysql", "mariadb"):
+            return "lab" if schema == LAB_SCHEMA else None
+        return None
+    if confirm != "1" or scheme not in ("mysql", "mariadb"):
+        return None
+    if "prod" not in user or LAB_MARKER in user or LAB_MARKER in schema:
+        return None
+    return "production"
 
 
 def read_password(prompt=getpass.getpass) -> str:
@@ -61,6 +86,8 @@ def main(argv=None, session_factory=None, prompt=getpass.getpass) -> int:
     parser.add_argument("--email", required=True)
     parser.add_argument("--execute", action="store_true",
                         help="write the account (default is a dry run)")
+    parser.add_argument("--production", action="store_true",
+                        help=f"target production (also requires {PRODUCTION_CONFIRM_ENV}=1)")
     args = parser.parse_args(argv)
 
     from peak import accounts
@@ -75,13 +102,18 @@ def main(argv=None, session_factory=None, prompt=getpass.getpass) -> int:
         from peak.db.session import create_session_factory, get_runtime_database_url
 
         try:
-            label = target_label(get_runtime_database_url())
+            label = target_label(get_runtime_database_url(), production=args.production,
+                                 confirm=os.environ.get(PRODUCTION_CONFIRM_ENV, ""))
         except RuntimeError as exc:
             print(f"REFUSED: {exc}")
             return 2
         if label is None:
-            print(f"REFUSED: Phase 201 permits local SQLite or the {LAB_SCHEMA} schema only; "
-                  "no production consultant-account write is authorized.")
+            if args.production:
+                print(f"REFUSED: --production needs {PRODUCTION_CONFIRM_ENV}=1 and a production "
+                      "MySQL runtime URL (production-marked user, no lab marker).")
+            else:
+                print(f"REFUSED: without --production only local SQLite or the {LAB_SCHEMA} "
+                      "schema is accepted.")
             return 1
         session_factory = create_session_factory()
     else:

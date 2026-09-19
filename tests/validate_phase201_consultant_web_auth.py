@@ -88,6 +88,9 @@ def api_checks(session_factory):
 
     print("\n[1] unauthenticated access")
     anon = client()
+    health = anon.get("/healthz")
+    check("GET /healthz -> 200 {status: ok} with no session (no config or secrets)",
+          health.status_code == 200 and health.json() == {"status": "ok"})
     check("GET /auth/me without a session -> 401", anon.get("/auth/me").status_code == 401)
     check("GET /consultants without a session -> 401", anon.get("/consultants").status_code == 401)
     check("POST /consultants without a session -> 401",
@@ -135,6 +138,26 @@ def api_checks(session_factory):
     check("Consultant POST /consultants -> 403",
           cons.post("/consultants", json={**CONS, "email": "x@example.com"}).status_code == 403)
 
+    print("\n[rate limit] failed sign-ins (Phase 203)")
+    from peak.consultant_api.app import LoginThrottle
+
+    now = [1000.0]
+    limited = TestClient(create_app(session_factory=session_factory, secret_key=SECRET,
+                                    secure_cookie=True,
+                                    login_throttle=LoginThrottle(max_failures=3, window_seconds=60,
+                                                                 clock=lambda: now[0])),
+                         base_url="https://testserver")
+    codes = [login(limited, CONS["email"], "wrong-password!!").status_code for _ in range(3)]
+    check("failures below the limit stay 401", codes == [401, 401, 401])
+    check("at the limit even the right password gets 429",
+          login(limited, CONS["email"], CONS["password"]).status_code == 429)
+    check("another email is unaffected",
+          login(limited, ADMIN["email"], ADMIN["password"]).status_code == 200)
+    now[0] += 61
+    check("after the window the right password signs in (and clears the count)",
+          login(limited, CONS["email"], CONS["password"]).status_code == 200
+          and login(limited, CONS["email"], "wrong-password!!").status_code == 401)
+
     print("\n[5] shell identity + logout")
     me = cons.get("/auth/me")
     check("/auth/me returns name and role for the shell",
@@ -160,6 +183,17 @@ def bootstrap_checks(session_factory, empty_factory):
     check("peak_lab and SQLite are the only permitted targets",
           tool.target_label("mysql+pymysql://u:p@h:3306/peak_lab") == "lab"
           and tool.target_label("sqlite:///x.sqlite3") == "local")
+    prod_url = "mysql+pymysql://peak_prod_runtime:p@h:3306/defaultdb"
+    check("production needs --production AND the confirmation AND a production-marked user",
+          tool.target_label(prod_url, production=True, confirm="1") == "production"
+          and tool.target_label(prod_url, production=True, confirm="") is None
+          and tool.target_label(prod_url, production=True, confirm="true") is None
+          and tool.target_label("mysql+pymysql://someone:p@h:3306/defaultdb",
+                                production=True, confirm="1") is None)
+    check("--production refuses lab and local targets",
+          tool.target_label("mysql+pymysql://peak_lab_runtime:p@h:3306/peak_lab",
+                            production=True, confirm="1") is None
+          and tool.target_label("sqlite:///x.sqlite3", production=True, confirm="1") is None)
 
     def run(factory, argv):
         buf = io.StringIO()

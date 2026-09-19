@@ -18,7 +18,9 @@ Configuration (environment, read once in :func:`create_app`):
 from __future__ import annotations
 
 import os
-from typing import List, Literal, Optional
+import threading
+import time
+from typing import Dict, List, Literal, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field
@@ -100,8 +102,52 @@ def _body(model: BaseModel) -> dict:
     return data
 
 
+class LoginThrottle:
+    """Failed sign-in limiter (Phase 203): per email, in memory, per process.
+
+    After ``max_failures`` failed attempts for one email within ``window_seconds``, further attempts
+    for that email are refused (HTTP 429) until the window passes, even with the right password. A
+    successful sign-in clears the count. It is keyed on the submitted email rather than the client
+    address: behind the Next.js server every browser shares one upstream address, and a
+    client-supplied forwarding header can be forged. State resets when the process restarts.
+    """
+
+    MAX_TRACKED = 10_000
+
+    def __init__(self, max_failures: int = 5, window_seconds: int = 900, clock=time.monotonic):
+        self.max_failures = max_failures
+        self.window = window_seconds
+        self.clock = clock
+        self._failures: Dict[str, List[float]] = {}
+        self._lock = threading.Lock()
+
+    def _recent(self, key: str) -> List[float]:
+        cutoff = self.clock() - self.window
+        recent = [t for t in self._failures.get(key, []) if t > cutoff]
+        if recent:
+            self._failures[key] = recent
+        else:
+            self._failures.pop(key, None)
+        return recent
+
+    def blocked(self, key: str) -> bool:
+        with self._lock:
+            return len(self._recent(key)) >= self.max_failures
+
+    def failure(self, key: str) -> None:
+        with self._lock:
+            if len(self._failures) >= self.MAX_TRACKED and key not in self._failures:
+                self._failures.pop(next(iter(self._failures)))  # bounded memory: drop the oldest
+            self._failures[key] = self._recent(key) + [self.clock()]
+
+    def reset(self, key: str) -> None:
+        with self._lock:
+            self._failures.pop(key, None)
+
+
 def create_app(
-    session_factory=None, secret_key: Optional[str] = None, secure_cookie: Optional[bool] = None
+    session_factory=None, secret_key: Optional[str] = None, secure_cookie: Optional[bool] = None,
+    login_throttle: Optional[LoginThrottle] = None,
 ) -> FastAPI:
     """Build the app. Arguments override environment configuration (used by tests)."""
     if session_factory is None:
@@ -112,6 +158,7 @@ def create_app(
         secret_key = accounts.get_secret_key()
     if secure_cookie is None:
         secure_cookie = os.environ.get(INSECURE_COOKIE_ENV) != "1"
+    throttle = login_throttle or LoginThrottle()
 
     app = FastAPI(title="Peak web API", docs_url=None, redoc_url=None, openapi_url=None)
 
@@ -127,11 +174,21 @@ def create_app(
             raise HTTPException(status.HTTP_403_FORBIDDEN, "admin_required")
         return consultant
 
+    @app.get("/healthz")
+    def healthz():
+        """Liveness only (Phase 203): no database access, no configuration, no secrets."""
+        return {"status": "ok"}
+
     @app.post("/auth/login")
     def login(body: LoginIn, response: Response):
+        key = body.email.strip().lower()
+        if throttle.blocked(key):
+            raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "too_many_attempts")
         consultant = accounts.authenticate(session_factory, body.email, body.password)
         if consultant is None:
+            throttle.failure(key)
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid_credentials")
+        throttle.reset(key)
         token = accounts.issue_session_token(consultant["id"], secret_key)
         response.set_cookie(
             SESSION_COOKIE, token, max_age=accounts.SESSION_MAX_AGE_SECONDS,

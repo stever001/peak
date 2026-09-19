@@ -21,6 +21,9 @@ export async function login(_prev: FormState, formData: FormData): Promise<FormS
     return { error: "Peak is unavailable. Try again shortly." };
   }
   if (res.status === 401 || res.status === 422) return { error: "Incorrect email or password." };
+  if (res.status === 429) {
+    return { error: "Too many sign-in attempts for this email. Try again in 15 minutes." };
+  }
   if (!res.ok) return { error: "Sign-in failed. Try again shortly." };
 
   const { token, max_age } = await res.json();
