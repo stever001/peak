@@ -283,6 +283,33 @@ def behaviour_checks() -> None:
     exc = _raises(g, mysql_url("peak_app_migrate", "defaultdb"), prod_env)
     check("production target aimed at defaultdb fails",
           exc is not None and exc.reason == "production_schema_is_provider_default")
+    # Phase 203: defaultdb only with the exact schema declaration; nothing else counts.
+    prod_default = mysql_url("peak_prod_migrate", "defaultdb")
+    declared = {**prod_env, g.PRODUCTION_SCHEMA_CONFIRM_ENV: "defaultdb"}
+    bad_values = ("1", "true", "yes", "*", "default", "DefaultDB", " defaultdb", "peak_app", "")
+    check("production defaultdb with a non-exact declaration fails (1/true/yes/*/default/…)",
+          all(getattr(_raises(g, prod_default, {**prod_env, g.PRODUCTION_SCHEMA_CONFIRM_ENV: v}),
+                      "reason", None) == "production_schema_is_provider_default"
+              for v in bad_values))
+    out = g.assert_migration_target(prod_default, env=declared)
+    check("production defaultdb with the exact declaration passes the guard",
+          out["outcome"] == g.OUTCOME_PRODUCTION_OK)
+    exc = _raises(g, prod_default, {g.TARGET_ENV: "production",
+                                    g.PRODUCTION_SCHEMA_CONFIRM_ENV: "defaultdb"})
+    check("the schema declaration does not replace the production confirmation",
+          exc is not None and exc.reason == "production_not_confirmed")
+    exc = _raises(g, mysql_url("peak_lab_migrate", "defaultdb"), declared)
+    check("the schema declaration does not admit a lab-marked user",
+          exc is not None and exc.reason == "lab_marker_under_production_target")
+    check("the declaration admits defaultdb only, never the MySQL system schemas",
+          all(getattr(_raises(g, mysql_url("peak_prod_migrate", s),
+                              {**prod_env, g.PRODUCTION_SCHEMA_CONFIRM_ENV: s}), "reason", None)
+              == "production_schema_is_provider_default"
+              for s in ("mysql", "sys", "information_schema", "performance_schema")))
+    exc = _raises(g, mysql_url("peak_lab_migrate", "defaultdb"),
+                  {**lab_env, g.PRODUCTION_SCHEMA_CONFIRM_ENV: "defaultdb"})
+    check("the lab branch ignores the declaration (lab defaultdb still fails)",
+          exc is not None and exc.reason == "lab_schema_is_provider_default")
     exc = _raises(g, mysql_url("peak_app_migrate", ""), prod_env)
     check("production target with no schema segment fails",
           exc is not None and exc.reason == "production_schema_absent")

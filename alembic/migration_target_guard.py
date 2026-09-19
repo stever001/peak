@@ -50,6 +50,15 @@ from urllib.parse import urlsplit
 TARGET_ENV = "PEAK_ALEMBIC_TARGET"
 LAB_CONFIRM_ENV = "PEAK_LAB_MIGRATION_CONFIRM"
 PRODUCTION_CONFIRM_ENV = "PEAK_PRODUCTION_MIGRATION_CONFIRM"
+#: Phase 203. Production genuinely lives in the provider's ``defaultdb`` (migration 014 was applied
+#: there in Phase 58, before this guard existed), so an unconditional refusal made every production
+#: migration impossible. The operator may now declare that exact schema — and only that schema —
+#: by setting this variable to the schema name itself. It is not a generic bypass: ``1``, ``true``,
+#: ``*`` or any other value is refused, every other production requirement still applies, the MySQL
+#: system schemas stay refused unconditionally, and the lab branch never reads it.
+PRODUCTION_SCHEMA_CONFIRM_ENV = "PEAK_PRODUCTION_SCHEMA_CONFIRM"
+#: The only provider-default schema a production migration may be declared into.
+CONFIRMABLE_PRODUCTION_DEFAULT_SCHEMA = "defaultdb"
 
 TARGET_LAB = "lab"
 TARGET_PRODUCTION = "production"
@@ -254,9 +263,14 @@ def assert_migration_target(url: str, env: Optional[Mapping[str, str]] = None) -
               f"production",
               target, user_class, schema_class)
     if schema_class == SCHEMA_CLASS_PROVIDER_DEFAULT:
-        _fail("production_schema_is_provider_default",
-              "the URL names a provider default database rather than the controlled schema",
-              target, user_class, schema_class)
+        declared = env.get(PRODUCTION_SCHEMA_CONFIRM_ENV)
+        if not (identity["database"] == CONFIRMABLE_PRODUCTION_DEFAULT_SCHEMA
+                and declared == CONFIRMABLE_PRODUCTION_DEFAULT_SCHEMA):
+            _fail("production_schema_is_provider_default",
+                  f"the URL names a provider default database rather than the controlled schema; "
+                  f"only {CONFIRMABLE_PRODUCTION_DEFAULT_SCHEMA} may be used, and only when "
+                  f"{PRODUCTION_SCHEMA_CONFIRM_ENV} names it exactly",
+                  target, user_class, schema_class)
     if schema_class == SCHEMA_CLASS_ABSENT:
         _fail("production_schema_absent",
               "the URL names no database/schema at all",
