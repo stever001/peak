@@ -74,11 +74,16 @@ def allowlist_checks():
     print("\n[workspace allowlist]")
     from peak.persistence import allowlist as a
 
-    check("exactly four workspace (table, action) pairs, none of them a delete",
-          set(a.WORKSPACE_WRITE_COLUMNS) == {
-              ("clients", "create_client_profile"), ("clients", "update_client_profile"),
-              ("engagements", "create_workspace_engagement"),
-              ("engagements", "update_engagement_workspace_fields")})
+    phase202_pairs = {("clients", "create_client_profile"), ("clients", "update_client_profile"),
+                      ("engagements", "create_workspace_engagement"),
+                      ("engagements", "update_engagement_workspace_fields")}
+    check("the four Phase 202 workspace pairs keep their exact columns; no pair is a delete",
+          phase202_pairs <= set(a.WORKSPACE_WRITE_COLUMNS)
+          and a.WORKSPACE_WRITE_COLUMNS[("clients", "update_client_profile")]
+          == a.CLIENT_PROFILE_COLUMNS
+          and a.WORKSPACE_WRITE_COLUMNS[("engagements", "update_engagement_workspace_fields")]
+          == a.ENGAGEMENT_WORKSPACE_COLUMNS
+          and not any("delete" in action for _, action in a.WORKSPACE_WRITE_COLUMNS))
     check("no workspace column set touches a governance/classification/audit column",
           not any(c & a.WORKSPACE_FORBIDDEN_COLUMNS for c in a.WORKSPACE_WRITE_COLUMNS.values()))
     check("engagement update may not change client_id or any governance column",

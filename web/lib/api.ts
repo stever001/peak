@@ -92,3 +92,67 @@ export async function apiGet<T>(path: string): Promise<T> {
   if (!res.ok) throw new Error(`Peak API ${path} failed (${res.status})`);
   return (await res.json()) as T;
 }
+
+// --- Phase 204: discovery / interview workflow ------------------------------------------------
+
+export type AnswerType = "short_text" | "long_text" | "yes_no" | "single_choice";
+export type Level = "low" | "medium" | "high";
+
+export type Question = {
+  id: string;
+  prompt: string;
+  category: string;
+  answer_type: AnswerType;
+  choices: string[];
+  display_order: number;
+  active: boolean;
+  branch: { question_id: string; operator: "equals" | "not_equals"; value: string } | null;
+};
+
+export type SessionSummary = {
+  id: string;
+  interviewee_name: string;
+  interviewee_title: string | null;
+  status: "in_progress" | "completed";
+  conducted_by: string | null;
+  started_at: string;
+  answered_count: number;
+};
+
+export type Observation = {
+  id: string;
+  engagement_id: string;
+  category: string | null;
+  observation_text: string;
+  low_hanging_fruit: boolean;
+  estimated_effort: Level | null;
+  estimated_value: Level | null;
+  session: { id: string; interviewee_name: string } | null;
+  recorded_by: string | null;
+  created_at: string | null;
+};
+
+export type Discovery = {
+  engagement_id: string;
+  discovery_enabled: boolean;
+  north_star: string | null;
+  north_star_context: string | null;
+  key_personnel: KeyPerson[];
+  sessions: SessionSummary[];
+  observations: Observation[];
+};
+
+export type InterviewSession = {
+  id: string;
+  status: "in_progress" | "completed";
+  interviewee_name: string;
+  interviewee_title: string | null;
+  notes: string | null;
+  conducted_by: string | null;
+  started_at: string;
+  completed_at: string | null;
+  engagement: { id: string; name: string | null };
+  client: { id: string; name: string | null };
+  questions: (Question & { answer: string | null })[];
+  history: { question_id: string; prompt: string; answer: string | null }[];
+};

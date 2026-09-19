@@ -145,6 +145,17 @@ EXACT_CLASS = {
     "contact_email": ORDINARY_TEXT,
     "contact_phone": ORDINARY_TEXT,
     "current_phase": ORDINARY_TEXT,
+    # Phase 204 discovery workflow: interview prose, and closed display vocabularies that decide
+    # no identity, uniqueness, or authorization.
+    "prompt": ORDINARY_TEXT,
+    "category": ORDINARY_TEXT,
+    "branch_value": ORDINARY_TEXT,
+    "interviewee_name": ORDINARY_TEXT,
+    "interviewee_title": ORDINARY_TEXT,
+    "question_prompt_snapshot": ORDINARY_TEXT,
+    "branch_operator": GOVERNED_ENUM,
+    "estimated_effort": GOVERNED_ENUM,
+    "estimated_value": GOVERNED_ENUM,
 }
 
 #: Suffix/substring patterns, applied in order when no exact name matches.

@@ -125,6 +125,16 @@ ENGAGEMENT_WORKSPACE_COLUMNS = frozenset(
     {"engagement_label", "objective", "assigned_consultant_id", "status", "current_phase"}
 )
 
+#: Phase 204 discovery columns, by table.
+DISCOVERY_QUESTION_COLUMNS = frozenset(
+    {"prompt", "category", "answer_type", "choices", "display_order", "active",
+     "branch_question_id", "branch_operator", "branch_value"}
+)
+DISCOVERY_SESSION_DETAIL_COLUMNS = frozenset({"interviewee_name", "interviewee_title", "notes"})
+DISCOVERY_OBSERVATION_COLUMNS = frozenset(
+    {"category", "observation_text", "low_hanging_fruit", "estimated_effort", "estimated_value"}
+)
+
 #: The complete set of workspace (table, action) pairs and the columns each may write.
 WORKSPACE_WRITE_COLUMNS = {
     ("clients", "create_client_profile"): frozenset({"id"}) | CLIENT_PROFILE_COLUMNS,
@@ -132,6 +142,24 @@ WORKSPACE_WRITE_COLUMNS = {
     ("engagements", "create_workspace_engagement"):
         frozenset({"id", "client_id"}) | ENGAGEMENT_WORKSPACE_COLUMNS,
     ("engagements", "update_engagement_workspace_fields"): ENGAGEMENT_WORKSPACE_COLUMNS,
+    # Phase 204 — discovery / interview workflow. No delete: questions are deactivated.
+    ("engagements", "set_engagement_north_star"): frozenset({"north_star", "north_star_context"}),
+    ("discovery_questions", "create_discovery_question"):
+        frozenset({"id", "seed_key"}) | DISCOVERY_QUESTION_COLUMNS,
+    ("discovery_questions", "update_discovery_question"): DISCOVERY_QUESTION_COLUMNS,
+    ("discovery_sessions", "start_discovery_session"):
+        frozenset({"id", "client_id", "engagement_id", "status", "conducted_by_consultant_id",
+                   "started_at"}) | DISCOVERY_SESSION_DETAIL_COLUMNS,
+    ("discovery_sessions", "update_discovery_session"): DISCOVERY_SESSION_DETAIL_COLUMNS,
+    ("discovery_sessions", "complete_discovery_session"): frozenset({"status", "completed_at"}),
+    ("discovery_answers", "create_discovery_answer"):
+        frozenset({"id", "client_id", "engagement_id", "session_id", "question_id",
+                   "question_prompt_snapshot", "answer_text"}),
+    ("discovery_answers", "update_discovery_answer"): frozenset({"answer_text"}),
+    ("discovery_observations", "create_discovery_observation"):
+        frozenset({"id", "client_id", "engagement_id", "session_id",
+                   "recorded_by_consultant_id"}) | DISCOVERY_OBSERVATION_COLUMNS,
+    ("discovery_observations", "update_discovery_observation"): DISCOVERY_OBSERVATION_COLUMNS,
 }
 
 #: Columns the workspace path may never write: governance, classification, review/audit, and
@@ -166,6 +194,13 @@ WORKSPACE_ENGAGEMENT_CREATION_STAMP = {
 
 assert not any(cols & WORKSPACE_FORBIDDEN_COLUMNS for cols in WORKSPACE_WRITE_COLUMNS.values())
 assert set(WORKSPACE_ENGAGEMENT_CREATION_STAMP) <= WORKSPACE_FORBIDDEN_COLUMNS
+
+#: Phase 204: discovery sessions, answers and observations are engagement work records. They are
+#: created with the same server-set stamp, and only under an engagement that carries it, so a
+#: discovery record can never sit under an internal-test anchor or a differently owned engagement.
+DISCOVERY_RECORD_TABLES = frozenset(
+    {"discovery_sessions", "discovery_answers", "discovery_observations"}
+)
 
 # Any action whose name contains one of these substrings is prohibited outright, regardless
 # of the allowlist — publication, client-facing approval, financial verification, deletes,

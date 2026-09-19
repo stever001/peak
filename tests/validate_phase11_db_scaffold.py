@@ -48,11 +48,13 @@ EXPECTED_TABLES = [
     "internal_reviewer_decision_records", "intake_note_records",
     "internal_assessment_report_drafts", "internal_report_review_packets",
     "internal_report_review_packet_decisions", "consultants",
+    "discovery_questions", "discovery_sessions", "discovery_answers", "discovery_observations",
 ]
 
 # Tables that are deliberately NOT governed engagement records and so carry no governance/audit
 # mixin columns. Phase 201: consultant accounts (login identity + role only; no client relation).
-NON_GOVERNED_TABLES = {"consultants"}
+# Phase 204: the discovery question pool (application configuration, not client data).
+NON_GOVERNED_TABLES = {"consultants", "discovery_questions"}
 
 # Phase 9 schemas are the source of truth for governance enum values.
 ENUM_SOURCES = {

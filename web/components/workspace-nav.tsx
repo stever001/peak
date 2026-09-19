@@ -9,6 +9,7 @@ const ICONS: Record<string, string> = {
   dashboard: "M4 13h6V4H4v9Zm0 7h6v-5H4v5Zm10 0h6v-9h-6v9Zm0-16v5h6V4h-6Z",
   clients: "M4 21V5l8-2v18M12 7h8v14M7 8h2M7 12h2M7 16h2M15 11h2M15 15h2",
   engagements: "M4 7h16v12H4zM9 7V4h6v3M4 12h16",
+  questions: "M9 9a3 3 0 1 1 4 2.8c-.6.3-1 .9-1 1.6V14M12 17.5v.01M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z",
   consultants:
     "M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM2 21v-1a6 6 0 0 1 12 0v1M17 11a3 3 0 1 0 0-6M22 21v-1a5 5 0 0 0-4-4.9",
 };
@@ -27,6 +28,7 @@ export function navItems(isAdmin: boolean): Item[] {
     { href: "/dashboard", label: "Dashboard", icon: "dashboard" },
     { href: "/clients", label: "Clients", icon: "clients" },
     { href: "/engagements", label: "Engagements", icon: "engagements" },
+    { href: "/questions", label: "Questions", icon: "questions" },
   ];
   if (isAdmin) items.push({ href: "/consultants", label: "Consultants", icon: "consultants" });
   return items;

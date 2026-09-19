@@ -3943,6 +3943,30 @@ Baseline `9db696f`. Record: [`PHASE203_FIRST_LIVE_DEPLOYMENT.md`](PHASE203_FIRST
 - Live client/engagement CRUD acceptance needs an internal-test classification for workspace
   clients first.
 
+### Phase 204 — consultant interview and discovery workflow (local only)
+
+Baseline `5cb8ca9`. Record: [`PHASE204_DISCOVERY_INTERVIEW_WORKFLOW.md`](PHASE204_DISCOVERY_INTERVIEW_WORKFLOW.md).
+
+> **Open Phase 203 item:** production Admin acceptance is pending provisioning of
+> `admin@peakinventorysolutions.com`. Infrastructure is live, but authenticated production
+> acceptance is deferred. Keep this item until the Admin is bootstrapped and the authenticated
+> smoke test passes.
+
+- [x] Migration `017_discovery_workflow`: North Star columns on `engagements`; `discovery_questions`
+  (configuration, deactivate not delete), `discovery_sessions`, `discovery_answers` (prompt
+  snapshot), `discovery_observations` (low-hanging fruit, effort, value).
+- [x] Ten explicit workspace write actions, no delete. Discovery records are stamped
+  `peak_consultants` / `engagement_authorized`, only under stamped engagements; the consultant
+  identity comes from the session.
+- [x] Simple deterministic branching (one earlier question, `equals` / `not_equals`, one value);
+  `/questions` pool screen; one-question-at-a-time interviews with resume and complete.
+- [x] 29-question initial pool, loaded only by the idempotent `tools/init_discovery_questions.py`.
+- [x] `tests/validate_phase204_discovery_workflow.py` (31 checks); build and lint clean.
+- [ ] Production: review migration 017, the production migration, question-pool initialization,
+  and runtime `UPDATE` grants on the four discovery tables. Not done in this phase.
+
+**Next:** internal assessment/report consumption of structured discovery data.
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

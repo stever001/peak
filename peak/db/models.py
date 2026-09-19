@@ -13,7 +13,8 @@ from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import (
-    JSON, Boolean, CheckConstraint, DateTime, Index, Numeric, String, Text, UniqueConstraint,
+    JSON, Boolean, CheckConstraint, DateTime, Index, Integer, Numeric, String, Text,
+    UniqueConstraint,
 )
 from sqlalchemy import false as sa_false, func, true as sa_true
 from sqlalchemy.orm import Mapped, mapped_column
@@ -69,6 +70,9 @@ class Engagement(Base, GovernanceMixin, AuditMixin):
     objective: Mapped[Optional[str]] = mapped_column(Text)
     assigned_consultant_id: Mapped[Optional[str]] = mapped_column(GovernedString(64), index=True)
     current_phase: Mapped[Optional[str]] = mapped_column(String(128))
+    # Phase 204 discovery: the consultant-defined North Star for the current discovery effort.
+    north_star: Mapped[Optional[str]] = mapped_column(Text)
+    north_star_context: Mapped[Optional[str]] = mapped_column(Text)
 
 
 class EngagementRecord(Base, GovernanceMixin, AuditMixin):
@@ -701,6 +705,112 @@ class Consultant(Base):
     role: Mapped[str] = mapped_column(GovernedString(16), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
 
+
+# --- Phase 204: consultant discovery / interview workflow ----------------------------------------
+# Written only by the consultant workspace service (peak.persistence.allowlist.
+# WORKSPACE_WRITE_COLUMNS). Question definitions are application configuration; sessions, answers
+# and observations are internal engagement work records, stamped peak_consultants /
+# engagement_authorized at creation. Nothing here is client-facing and there is no delete.
+
+
+class DiscoveryQuestion(Base):
+    """One interview question in the editable question pool (configuration, not client data).
+
+    Deactivated rather than deleted, so historical answers keep their question. An optional branch
+    shows this question only when one earlier question's answer ``equals`` / ``not_equals`` a value.
+    """
+
+    __tablename__ = "discovery_questions"
+    __table_args__ = (
+        UniqueConstraint("seed_key", name="uq_discovery_questions_seed_key"),
+        CheckConstraint("answer_type IN ('short_text', 'long_text', 'yes_no', 'single_choice')",
+                        name="ck_discovery_questions_answer_type"),
+        CheckConstraint("branch_operator IS NULL OR branch_operator IN ('equals', 'not_equals')",
+                        name="ck_discovery_questions_branch_operator"),
+        MYSQL_TABLE_ARGS,
+    )
+    # id convention: dq_<hex>
+    id: Mapped[str] = mapped_column(GovernedString(64), primary_key=True)
+    prompt: Mapped[str] = mapped_column(String(1000), nullable=False)
+    category: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    answer_type: Mapped[str] = mapped_column(String(16), nullable=False)
+    choices: Mapped[Optional[list]] = mapped_column(JSON)  # single_choice options only
+    display_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True,
+                                         server_default=sa_true())
+    branch_question_id: Mapped[Optional[str]] = mapped_column(GovernedString(64))
+    branch_operator: Mapped[Optional[str]] = mapped_column(String(16))
+    branch_value: Mapped[Optional[str]] = mapped_column(String(255))
+    # Set only by tools/init_discovery_questions.py, so initialization is idempotent.
+    seed_key: Mapped[Optional[str]] = mapped_column(GovernedString(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(),
+                                                 onupdate=func.now(), nullable=False)
+
+
+class DiscoverySession(Base, GovernanceMixin, AuditMixin):
+    """One interview during an engagement. The interviewee is a name/title snapshot."""
+
+    __tablename__ = "discovery_sessions"
+    __table_args__ = (
+        CheckConstraint("status IN ('in_progress', 'completed')", name="ck_discovery_sessions_status"),
+        MYSQL_TABLE_ARGS,
+    )
+    # id convention: dsess_<hex>
+    id: Mapped[str] = mapped_column(GovernedString(64), primary_key=True)
+    client_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    engagement_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    interviewee_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    interviewee_title: Mapped[Optional[str]] = mapped_column(String(255))
+    notes: Mapped[Optional[str]] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="in_progress")
+    conducted_by_consultant_id: Mapped[str] = mapped_column(GovernedString(64), nullable=False)
+    started_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+
+
+class DiscoveryAnswer(Base, GovernanceMixin, AuditMixin):
+    """One answer in a session. The prompt is snapshotted so later question edits keep history."""
+
+    __tablename__ = "discovery_answers"
+    __table_args__ = (
+        UniqueConstraint("session_id", "question_id", name="uq_discovery_answers_session_question"),
+        MYSQL_TABLE_ARGS,
+    )
+    # id convention: dans_<hex>
+    id: Mapped[str] = mapped_column(GovernedString(64), primary_key=True)
+    client_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    engagement_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    session_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    question_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    question_prompt_snapshot: Mapped[str] = mapped_column(String(1000), nullable=False)
+    answer_text: Mapped[Optional[str]] = mapped_column(Text)
+
+
+class DiscoveryObservation(Base, GovernanceMixin, AuditMixin):
+    """A consultant observation, optionally tied to an interview. Internal working note only."""
+
+    __tablename__ = "discovery_observations"
+    __table_args__ = (
+        CheckConstraint("estimated_effort IS NULL OR estimated_effort IN ('low', 'medium', 'high')",
+                        name="ck_discovery_observations_effort"),
+        CheckConstraint("estimated_value IS NULL OR estimated_value IN ('low', 'medium', 'high')",
+                        name="ck_discovery_observations_value"),
+        MYSQL_TABLE_ARGS,
+    )
+    # id convention: dobs_<hex>
+    id: Mapped[str] = mapped_column(GovernedString(64), primary_key=True)
+    client_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    engagement_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    session_id: Mapped[Optional[str]] = mapped_column(GovernedString(64), index=True)
+    category: Mapped[Optional[str]] = mapped_column(String(64))
+    observation_text: Mapped[str] = mapped_column(Text, nullable=False)
+    low_hanging_fruit: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False,
+                                                    server_default=sa_false())
+    estimated_effort: Mapped[Optional[str]] = mapped_column(String(8))
+    estimated_value: Mapped[Optional[str]] = mapped_column(String(8))
+    recorded_by_consultant_id: Mapped[str] = mapped_column(GovernedString(64), nullable=False)
+
 # Convenience list of all model classes (used by tooling/validation).
 ALL_MODELS = [
     Client,
@@ -722,4 +832,8 @@ ALL_MODELS = [
     InternalReportReviewPacketRecord,
     InternalReportReviewPacketDecisionRecord,
     Consultant,
+    DiscoveryQuestion,
+    DiscoverySession,
+    DiscoveryAnswer,
+    DiscoveryObservation,
 ]

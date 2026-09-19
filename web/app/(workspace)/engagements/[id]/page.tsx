@@ -1,16 +1,18 @@
 import Link from "next/link";
 
+import { DiscoverySection } from "@/components/discovery-section";
 import { Detail } from "@/components/field";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
-import { apiGet, requireConsultant, type Engagement } from "@/lib/api";
+import { apiGet, requireConsultant, type Discovery, type Engagement } from "@/lib/api";
 
 export default async function EngagementPage(props: PageProps<"/engagements/[id]">) {
   await requireConsultant();
   const { id } = await props.params;
-  const { engagement: e } = await apiGet<{ engagement: Engagement }>(
-    `/engagements/${encodeURIComponent(id)}`,
-  );
+  const [{ engagement: e }, { discovery }] = await Promise.all([
+    apiGet<{ engagement: Engagement }>(`/engagements/${encodeURIComponent(id)}`),
+    apiGet<{ discovery: Discovery }>(`/engagements/${encodeURIComponent(id)}/discovery`),
+  ]);
   return (
     <>
       <Link href="/engagements" className="mb-4 inline-flex min-h-touch items-center text-sm font-medium text-brand">
@@ -36,6 +38,7 @@ export default async function EngagementPage(props: PageProps<"/engagements/[id]
           </div>
         </dl>
       </section>
+      <DiscoverySection engagementId={e.id} d={discovery} />
     </>
   );
 }

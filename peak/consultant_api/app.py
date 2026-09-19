@@ -26,6 +26,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field
 
 from peak import accounts, workspace
+from peak.workspace import discovery
 
 SESSION_COOKIE = "peak_session"
 INSECURE_COOKIE_ENV = "PEAK_WEB_INSECURE_COOKIE"
@@ -81,6 +82,58 @@ class EngagementUpdateIn(BaseModel):
 
 class EngagementCreateIn(EngagementUpdateIn):
     client_id: str
+
+
+class BranchIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    question_id: str
+    operator: Literal["equals", "not_equals"]
+    value: str
+
+
+class QuestionIn(BaseModel):
+    """Question-pool fields only. ``branch: null`` removes a branch."""
+    model_config = ConfigDict(extra="forbid")
+    prompt: Optional[str] = None
+    category: Optional[str] = None
+    answer_type: Optional[Literal["short_text", "long_text", "yes_no", "single_choice"]] = None
+    choices: Optional[List[str]] = None
+    display_order: Optional[int] = None
+    active: Optional[bool] = None
+    branch: Optional[BranchIn] = None
+
+
+class NorthStarIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    north_star: Optional[str] = None
+    north_star_context: Optional[str] = None
+
+
+class SessionIn(BaseModel):
+    """Interview details only; the conducting consultant is the signed-in consultant."""
+    model_config = ConfigDict(extra="forbid")
+    interviewee_name: Optional[str] = None
+    interviewee_title: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class AnswerIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    answer: Optional[str] = None
+
+
+class ObservationUpdateIn(BaseModel):
+    """Observation fields only; the recording consultant is the signed-in consultant."""
+    model_config = ConfigDict(extra="forbid")
+    category: Optional[str] = None
+    observation_text: Optional[str] = None
+    low_hanging_fruit: Optional[bool] = None
+    estimated_effort: Optional[Literal["low", "medium", "high"]] = None
+    estimated_value: Optional[Literal["low", "medium", "high"]] = None
+
+
+class ObservationCreateIn(ObservationUpdateIn):
+    session_id: Optional[str] = None
 
 
 def _workspace_call(fn, *args):
@@ -267,5 +320,81 @@ def create_app(
                            _: dict = Depends(current_consultant)):
         return {"engagement": _workspace_call(workspace.update_engagement, session_factory,
                                               engagement_id, _body(body))}
+
+    # --- Phase 204: discovery / interview workflow (any authenticated consultant) ---------------
+
+    @app.get("/questions")
+    def questions_list(_: dict = Depends(current_consultant)):
+        return {"questions": discovery.list_questions(session_factory)}
+
+    @app.post("/questions", status_code=status.HTTP_201_CREATED)
+    def questions_create(body: QuestionIn, _: dict = Depends(current_consultant)):
+        return {"question": _workspace_call(discovery.create_question, session_factory,
+                                            body.model_dump(exclude_unset=True))}
+
+    @app.get("/questions/{question_id}")
+    def questions_get(question_id: str, _: dict = Depends(current_consultant)):
+        return {"question": _workspace_call(discovery.get_question, session_factory, question_id)}
+
+    @app.patch("/questions/{question_id}")
+    def questions_update(question_id: str, body: QuestionIn, _: dict = Depends(current_consultant)):
+        return {"question": _workspace_call(discovery.update_question, session_factory,
+                                            question_id, body.model_dump(exclude_unset=True))}
+
+    @app.get("/engagements/{engagement_id}/discovery")
+    def discovery_get(engagement_id: str, _: dict = Depends(current_consultant)):
+        return {"discovery": _workspace_call(discovery.get_discovery, session_factory,
+                                             engagement_id)}
+
+    @app.patch("/engagements/{engagement_id}/north-star")
+    def north_star_set(engagement_id: str, body: NorthStarIn,
+                       _: dict = Depends(current_consultant)):
+        return {"discovery": _workspace_call(discovery.set_north_star, session_factory,
+                                             engagement_id, body.model_dump(exclude_unset=True))}
+
+    @app.post("/engagements/{engagement_id}/sessions", status_code=status.HTTP_201_CREATED)
+    def sessions_start(engagement_id: str, body: SessionIn,
+                       me: dict = Depends(current_consultant)):
+        return {"session": _workspace_call(discovery.start_session, session_factory,
+                                           engagement_id, body.model_dump(exclude_unset=True),
+                                           me["id"])}
+
+    @app.get("/sessions/{session_id}")
+    def sessions_get(session_id: str, _: dict = Depends(current_consultant)):
+        return {"session": _workspace_call(discovery.get_session, session_factory, session_id)}
+
+    @app.patch("/sessions/{session_id}")
+    def sessions_update(session_id: str, body: SessionIn, _: dict = Depends(current_consultant)):
+        return {"session": _workspace_call(discovery.update_session, session_factory, session_id,
+                                           body.model_dump(exclude_unset=True))}
+
+    @app.post("/sessions/{session_id}/complete")
+    def sessions_complete(session_id: str, _: dict = Depends(current_consultant)):
+        return {"session": _workspace_call(discovery.complete_session, session_factory,
+                                           session_id)}
+
+    @app.put("/sessions/{session_id}/answers/{question_id}")
+    def answers_save(session_id: str, question_id: str, body: AnswerIn,
+                     _: dict = Depends(current_consultant)):
+        return {"session": _workspace_call(discovery.save_answer, session_factory, session_id,
+                                           question_id, body.answer)}
+
+    @app.post("/engagements/{engagement_id}/observations", status_code=status.HTTP_201_CREATED)
+    def observations_create(engagement_id: str, body: ObservationCreateIn,
+                            me: dict = Depends(current_consultant)):
+        return {"observation": _workspace_call(discovery.create_observation, session_factory,
+                                               engagement_id, body.model_dump(exclude_unset=True),
+                                               me["id"])}
+
+    @app.get("/observations/{observation_id}")
+    def observations_get(observation_id: str, _: dict = Depends(current_consultant)):
+        return {"observation": _workspace_call(discovery.get_observation, session_factory,
+                                               observation_id)}
+
+    @app.patch("/observations/{observation_id}")
+    def observations_update(observation_id: str, body: ObservationUpdateIn,
+                            _: dict = Depends(current_consultant)):
+        return {"observation": _workspace_call(discovery.update_observation, session_factory,
+                                               observation_id, body.model_dump(exclude_unset=True))}
 
     return app

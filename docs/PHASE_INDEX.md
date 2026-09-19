@@ -187,6 +187,8 @@ Phase 44**; this table is the entry point for everything after it.
 
 | 203 | First live deployment — **the consultant app runs live; production Admin pending** | [`PHASE203_FIRST_LIVE_DEPLOYMENT.md`](PHASE203_FIRST_LIVE_DEPLOYMENT.md) | **Production change under one approved cutover**; Vercel frontend https://peak-web-five.vercel.app and Render API https://peak-consultant-api.onrender.com (browser talks only to Next.js; server-only `PEAK_API_BASE_URL`); production migrated 014 → 016 through the Phase 84 guard, now accepting `defaultdb` only with `PEAK_PRODUCTION_SCHEMA_CONFIRM=defaultdb`; runtime grant change limited to `UPDATE` on `clients` and `engagements`; `/healthz`, per-email login rate limiting, `bootstrap_admin.py --production`, `render.yaml`; production verifier moved to 016 with model-derived tables; live non-Admin checks pass (health, 401s, redirects, forged cookie rejected, no API address or secrets in browser JS); **production Admin `admin@peakinventorysolutions.com` and authenticated acceptance pending mailbox provisioning**; live client/engagement CRUD acceptance skipped (no internal-test classification for workspace clients) |
 
+| 204 | Consultant interview and discovery workflow — **North Star, structured interviews with simple branching, observations, low-hanging fruit** | [`PHASE204_DISCOVERY_INTERVIEW_WORKFLOW.md`](PHASE204_DISCOVERY_INTERVIEW_WORKFLOW.md) | **Product functionality; migration 017 local only; no production activity**; `017_discovery_workflow` adds `engagements.north_star`/`north_star_context` and `discovery_questions` (non-governed configuration, deactivate not delete), `discovery_sessions`, `discovery_answers` (prompt snapshot) and `discovery_observations` (low-hanging fruit, effort, value); ten explicit workspace actions in `WORKSPACE_WRITE_COLUMNS`, no delete; sessions, answers and observations stamped `peak_consultants`/`engagement_authorized` and allowed only under stamped engagements; conducting/recording consultant from the session; branching is one earlier question + `equals`/`not_equals` + value; `/questions` pool screen; one-question-at-a-time interviews; 29-question initial pool loaded only by the idempotent `tools/init_discovery_questions.py`; `tests/validate_phase204_discovery_workflow.py` (31 checks) in `make validate`; **Phase 203 production Admin acceptance still pending provisioning of admin@peakinventorysolutions.com**; next step: internal assessment/report consumption of discovery data |
+
 ### Phases without a dedicated phase doc
 
 - **Phases 0–10** — recorded by commit message and, from Phase 6 on, by the policy document each
@@ -195,9 +197,20 @@ Phase 44**; this table is the entry point for everything after it.
 - **Phase 86** — code-only validation maintenance, indexed here under the convention above.
 - **Phase 87** — docs-only navigation work; this file is its record.
 
+## Open items carried forward
+
+- **Phase 203 — production Admin acceptance pending provisioning of
+  `admin@peakinventorysolutions.com`.** Infrastructure is live; authenticated production acceptance
+  (Admin bootstrap, sign in, Dashboard, Consultants, sign out, sign back in) remains deferred. Do not
+  remove this item until the Admin is bootstrapped and the authenticated smoke test passes. No
+  temporary Admin may be created.
+
 ## Current baseline
 
-As of Phase 203, whose baseline is the committed Phase 202 commit `9db696f` — *Add Phase 202
+As of Phase 204, whose baseline is the committed Phase 203 documentation commit `5cb8ca9`; Phase 204
+added migration `017_discovery_workflow` (the repository head, **not applied to `peak_lab` or
+production**) and four tables, and contacted no managed database. The preceding entry stood as of
+Phase 203, whose baseline is the committed Phase 202 commit `9db696f` — *Add Phase 202
 client and engagement workspace*; Phase 203 applied migrations 015 and 016 **to production**
 (head now `016_client_engagement_workspace_fields`, 0 consultant rows) and added `UPDATE` on
 `clients` and `engagements` to the production runtime role. `peak_lab` was not touched. The
@@ -248,7 +261,7 @@ nothing else:
 
 | Property | Value |
 |---|---|
-| Alembic head (repository) | `016_client_engagement_workspace_fields` (Phase 202) |
+| Alembic head (repository) | `017_discovery_workflow` (Phase 204); production is at `016_client_engagement_workspace_fields` |
 | Migrations | 16 |
 | Controlled Peak tables | 18 governed + 1 non-governed account table (`consultants`) = 19 |
 | Controlled writers | 12 (consultant accounts are written by `peak/accounts`; client profiles and engagement workflow fields only by `peak/workspace` — neither is a controlled writer) |
