@@ -53,6 +53,7 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Phase 121: durable schema-history checks (see tests/_schema_history.py).
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import _schema_history as schema_history  # noqa: E402
+from _workspace_write_path import clients_written_only_by_workspace  # noqa: E402
 THIS_HARNESS = os.path.relpath(os.path.abspath(__file__), REPO_ROOT)
 TOOLS_DIR = os.path.join(REPO_ROOT, "tools")
 for _p in (REPO_ROOT, TOOLS_DIR):
@@ -255,9 +256,9 @@ def baseline_checks() -> None:
 def governance_checks() -> None:
     print("\n2. Governance: the exception is one pair, not a hole")
     from peak.persistence.allowlist import (
-        ALLOWED_ACTIONS, ALLOWED_ANCHOR_CREATION_PAIRS, ALLOWED_TABLES, NEVER_WRITABLE_TABLES,
+        ALLOWED_ACTIONS, ALLOWED_ANCHOR_CREATION_PAIRS, ALLOWED_TABLES, WORKSPACE_ONLY_TABLES,
         PROHIBITED_TABLES, is_allowed_action, is_allowed_anchor_creation_pair, is_allowed_table,
-        is_never_writable_table, is_prohibited_table,
+        is_workspace_only_table, is_prohibited_table,
     )
 
     # The generic path is untouched.
@@ -284,8 +285,8 @@ def governance_checks() -> None:
     # It cannot be widened by recombination.
     check("the anchor action against clients is refused",
           not is_allowed_anchor_creation_pair("clients", ANCHOR_ACTION))
-    check("clients may never be written by any path",
-          is_never_writable_table("clients") and "clients" in NEVER_WRITABLE_TABLES)
+    check("clients is written only through the consultant workspace path (narrow; every other path denied)",
+          clients_written_only_by_workspace())
     for bad_action in ("create_draft", "update_lifecycle_status", "delete_engagement",
                        "create_engagement", "publish_engagement", "raw_sql"):
         check(f"engagements + '{bad_action}' is refused",

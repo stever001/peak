@@ -30,6 +30,7 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Phase 121: durable schema-history checks (see tests/_schema_history.py).
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import _schema_history as schema_history  # noqa: E402
+from _workspace_write_path import clients_written_only_by_workspace  # noqa: E402
 THIS_HARNESS = os.path.relpath(os.path.abspath(__file__), REPO_ROOT)
 for _p in (REPO_ROOT, os.path.join(REPO_ROOT, "tools")):
     if _p not in sys.path:
@@ -178,7 +179,7 @@ def baseline_checks() -> None:
 
     from peak.persistence.allowlist import (
         ALLOWED_ACTIONS, ALLOWED_ANCHOR_CREATION_PAIRS, ALLOWED_TABLES, is_allowed_table,
-        is_never_writable_table, is_prohibited_table,
+        is_workspace_only_table, is_prohibited_table,
     )
     check("generic allowlist unchanged — no pair added",
           len(ALLOWED_TABLES) == EXPECTED_ALLOWLIST_TABLES
@@ -186,11 +187,16 @@ def baseline_checks() -> None:
     check("still exactly one anchor-creation pair", len(ALLOWED_ANCHOR_CREATION_PAIRS) == 1)
     check("engagements remains prohibited generically",
           is_prohibited_table("engagements") and not is_allowed_table("engagements"))
-    check("clients remains never writable", is_never_writable_table("clients"))
-    check("Client model was not altered",
-          "class Client(Base, GovernanceMixin, AuditMixin):" in read(MODELS_REL)
-          and read(MODELS_REL).split("class Client(", 1)[1].split("class ", 1)[0]
-          .count("mapped_column") == 2)
+    check("clients is written only through the consultant workspace path (narrow; every other path denied)",
+          clients_written_only_by_workspace())
+    check("Client is still a governed model",
+          "class Client(Base, GovernanceMixin, AuditMixin):" in read(MODELS_REL))
+    # "Phase 56 did not alter Client" is a claim about this phase; Phase 202 legitimately adds the
+    # client profile columns, so it is authoring-time gated (tests/_schema_history.py).
+    if schema_history.phase_never_committed(REPO_ROOT, THIS_HARNESS):
+        check("Client model was not altered",
+              read(MODELS_REL).split("class Client(", 1)[1].split("class ", 1)[0]
+              .count("mapped_column") == 2)
 
     try:
         # Ancestry, not recency. This asserted membership in a bounded `git log ... -40` window,

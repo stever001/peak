@@ -26,7 +26,22 @@ class Client(Base, GovernanceMixin, AuditMixin):
     __table_args__ = MYSQL_TABLE_ARGS
     # id convention: client_<slug>
     id: Mapped[str] = mapped_column(GovernedString(64), primary_key=True)
-    organization_label: Mapped[Optional[str]] = mapped_column(String(255))
+    organization_label: Mapped[Optional[str]] = mapped_column(String(255))  # company name
+    # Phase 202 client profile — written only by the consultant workspace service
+    # (peak.persistence.allowlist.WORKSPACE_WRITE_COLUMNS).
+    description: Mapped[Optional[str]] = mapped_column(Text)
+    address_line1: Mapped[Optional[str]] = mapped_column(String(255))
+    address_line2: Mapped[Optional[str]] = mapped_column(String(255))
+    city: Mapped[Optional[str]] = mapped_column(String(128))
+    region: Mapped[Optional[str]] = mapped_column(String(128))
+    postal_code: Mapped[Optional[str]] = mapped_column(String(32))
+    country: Mapped[Optional[str]] = mapped_column(String(128))
+    contact_name: Mapped[Optional[str]] = mapped_column(String(255))
+    contact_title: Mapped[Optional[str]] = mapped_column(String(255))
+    contact_email: Mapped[Optional[str]] = mapped_column(String(254))
+    contact_phone: Mapped[Optional[str]] = mapped_column(String(64))
+    # List of {name, role, email, phone}; lightweight by design (no personnel table).
+    key_personnel: Mapped[Optional[list]] = mapped_column(JSON)
 
 
 class Engagement(Base, GovernanceMixin, AuditMixin):
@@ -49,6 +64,11 @@ class Engagement(Base, GovernanceMixin, AuditMixin):
         Boolean, nullable=False, default=True, server_default=sa_true())
     capsule_publication_authorized: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=sa_false())
+    # Phase 202 workflow fields — written only by the consultant workspace service. The assigned
+    # consultant is workflow metadata, never an authorization boundary.
+    objective: Mapped[Optional[str]] = mapped_column(Text)
+    assigned_consultant_id: Mapped[Optional[str]] = mapped_column(GovernedString(64), index=True)
+    current_phase: Mapped[Optional[str]] = mapped_column(String(128))
 
 
 class EngagementRecord(Base, GovernanceMixin, AuditMixin):

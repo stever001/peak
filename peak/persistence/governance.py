@@ -29,7 +29,7 @@ from .allowlist import (
     is_allowed_action,
     is_allowed_anchor_creation_pair,
     is_allowed_table,
-    is_never_writable_table,
+    is_workspace_only_table,
     is_prohibited_action,
     is_prohibited_table,
 )
@@ -351,7 +351,7 @@ def evaluate_engagement_anchor_creation_request(
     # 1. Exact anchor pair. Checked pair-wise so neither half alone opens anything.
     if _is_blank(table):
         reasons.append("target_table is required")
-    elif is_never_writable_table(table):
+    elif is_workspace_only_table(table):
         reasons.append(f"target_table '{table}' may never be written through any controlled path")
     if _is_blank(action):
         reasons.append("requested_action is required")

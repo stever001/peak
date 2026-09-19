@@ -51,13 +51,13 @@ def migration_checks(tmp):
         return subprocess.run([sys.executable, "-m", "alembic", *args], cwd=REPO_ROOT, env=env,
                               capture_output=True, text=True)
 
-    up = alembic("upgrade", "head")
-    check("alembic upgrade head succeeds on temporary SQLite", up.returncode == 0)
+    up = alembic("upgrade", "015_consultants")
+    check("alembic upgrade to 015_consultants succeeds on temporary SQLite", up.returncode == 0)
     con = sqlite3.connect(db)
     cols = [r[1] for r in con.execute("PRAGMA table_info(consultants)")]
     head = con.execute("SELECT version_num FROM alembic_version").fetchone()
     con.close()
-    check("head is 015_consultants", head == ("015_consultants",))
+    check("the database is at 015_consultants", head == ("015_consultants",))
     check("consultants has exactly id/name/email/password_hash/role/created_at",
           cols == ["id", "name", "email", "password_hash", "role", "created_at"])
     down = alembic("downgrade", "014_engagement_classification")

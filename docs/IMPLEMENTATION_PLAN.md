@@ -3898,6 +3898,31 @@ Baseline `d430d4f`. Record: [`PHASE201_CONSULTANT_WEB_SHELL_AUTH.md`](PHASE201_C
 assignment as metadata). It needs an approved edit (`UPDATE`) path first, because the governed
 client and engagement writers are create-only and the runtime grant is `SELECT` + `INSERT`.
 
+### Phase 202 — client and engagement CRUD (consultant web app)
+
+Baseline `37d7912`. Record: [`PHASE202_CLIENT_ENGAGEMENT_CRUD.md`](PHASE202_CLIENT_ENGAGEMENT_CRUD.md).
+
+- [x] Governance change, made explicitly: `clients` still reaches no controlled writer; its only
+  write path is `peak/workspace`, limited to four `(table, action)` pairs with exact column sets
+  (`WORKSPACE_WRITE_COLUMNS`). Governance, classification, audit and publication columns are
+  forbidden. No delete, no generic update, and controlled writers are unchanged.
+- [x] Authorization decision: workspace engagements are born with owner `peak_consultants`
+  (organizational) and scope `engagement_authorized` (internal engagement work only). Both are
+  server-set, never caller-supplied or editable, and accepted by the unchanged controlled writers
+  only on an exact match.
+- [x] Migration `016_client_engagement_workspace_fields` (nullable columns only): client
+  description, structured address, main contact, `key_personnel` JSON; engagement `objective`,
+  `assigned_consultant_id`, `current_phase`.
+- [x] Client list/search/detail/create/edit; several engagements per client; engagement
+  list/detail/create/edit with assignment (metadata only), status Active/Paused/Closed
+  (`active`/`on_hold`/`closed`), and a simple current-phase label.
+- [x] `tests/validate_phase202_client_engagement_crud.py` in `make validate`; build and lint clean.
+- Local only: 016 not applied to `peak_lab` or production; no UPDATE grant; no deployment.
+
+**Next:** deploy the consultant shell and the client/engagement workflow to a live URL. That needs a
+hosting target, migrations 015–016 in the target database, and a runtime credential with UPDATE
+on `clients` and `engagements` only.
+
 
 **Still to do:**
 

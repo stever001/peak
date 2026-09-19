@@ -132,6 +132,19 @@ EXACT_CLASS = {
     "name": ORDINARY_TEXT,
     "email": GOVERNED_IDENTIFIER,
     "role": GOVERNED_SCOPE,
+    # Phase 202 client profile and engagement workflow fields: display/contact prose. None decides
+    # identity, uniqueness, or authorization (``assigned_consultant_id`` is governed by pattern).
+    "address_line1": ORDINARY_TEXT,
+    "address_line2": ORDINARY_TEXT,
+    "city": ORDINARY_TEXT,
+    "region": ORDINARY_TEXT,
+    "postal_code": ORDINARY_TEXT,
+    "country": ORDINARY_TEXT,
+    "contact_name": ORDINARY_TEXT,
+    "contact_title": ORDINARY_TEXT,
+    "contact_email": ORDINARY_TEXT,
+    "contact_phone": ORDINARY_TEXT,
+    "current_phase": ORDINARY_TEXT,
 }
 
 #: Suffix/substring patterns, applied in order when no exact name matches.

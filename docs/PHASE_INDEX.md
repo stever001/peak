@@ -183,6 +183,8 @@ Phase 44**; this table is the entry point for everything after it.
 
 | 201 | Consultant web shell and authentication — **first consultant-facing web application; starts the 200-series frontend numbering** | [`PHASE201_CONSULTANT_WEB_SHELL_AUTH.md`](PHASE201_CONSULTANT_WEB_SHELL_AUTH.md) | **Product functionality; migration 015 added (local only); no `peak_lab`, `peak_lab_scenario`, or production contact**; `web/` Next.js 16 App Router + React + TypeScript + Tailwind CSS v4 with centralized design tokens (`web/app/tokens.css`); thin FastAPI transport `peak/consultant_api` over `peak/accounts` (Argon2id passwords, `itsdangerous` signed 8-hour HttpOnly `peak_session` cookie keyed by `PEAK_WEB_SECRET_KEY`); new non-governed `consultants` table (`015_consultants`: id, name, unique normalized email, password_hash, role admin|consultant, created_at); Admin/Consultant roles, Admin-only Add Consultant enforced by the Python API; `tools/bootstrap_admin.py` creates Steve Rouse as initial Admin (dry-run default, no-echo password, refuses a second Admin, local SQLite or `peak_lab` only); responsive shell (tablet sidebar, phone bottom tabs), Dashboard, placeholder Clients/Engagements; `tests/validate_phase201_consultant_web_auth.py` wired into `make validate`; production write enablement unchanged; next step: Phase 202 Client + Engagement CRUD |
 
+| 202 | Client and engagement CRUD — **consultants can set up and track clients and engagements** | [`PHASE202_CLIENT_ENGAGEMENT_CRUD.md`](PHASE202_CLIENT_ENGAGEMENT_CRUD.md) | **Product functionality plus an explicit governance change; migration 016 (local only); no `peak_lab` or production contact**; `NEVER_WRITABLE_TABLES` replaced by `WORKSPACE_ONLY_TABLES`: `clients` still reaches no controlled writer, and its only write path is the new `peak/workspace` service, limited by per-(table, action) column allowlists (`WORKSPACE_WRITE_COLUMNS`: create/update client profile, create engagement, update engagement workflow fields), with governance/classification/audit columns forbidden, no delete, and no generic update; migration `016_client_engagement_workspace_fields` adds nullable client profile columns (description, structured address, main contact, `key_personnel` JSON) and engagement `objective`, `assigned_consultant_id`, `current_phase`; every workspace engagement is born with owner `peak_consultants` and scope `engagement_authorized` (server-set, never caller-supplied or editable; defined in `GOVERNANCE_STATES.md`), so unchanged controlled writers can match it; status stays `active`/`on_hold`/`closed` (Paused = `on_hold`); current phase is a simple label; assignment is metadata only; consultant API and pages for client list/search/detail/create/edit and engagement list/detail/create/edit; 18 harnesses now assert the workspace-only client rule, the Phase 56 Client-unchanged claim is authoring-time gated, and the Phase 201 test no longer pins the head; `tests/validate_phase202_client_engagement_crud.py` in `make validate`; next step: first live deployment |
+
 ### Phases without a dedicated phase doc
 
 - **Phases 0–10** — recorded by commit message and, from Phase 6 on, by the policy document each
@@ -193,7 +195,11 @@ Phase 44**; this table is the entry point for everything after it.
 
 ## Current baseline
 
-As of Phase 201, whose baseline is the committed Phase 120 commit `d430d4f` — *Record Phase 120
+As of Phase 202, whose baseline is the committed Phase 201 commit `37d7912` — *Add Phase 201
+consultant web shell and authentication*; Phase 202 added migration
+`016_client_engagement_workspace_fields` (columns only, repository only) and the consultant
+workspace write path for `clients` and engagement workflow fields. It contacted no managed
+database. The preceding entry stood as of Phase 201, whose baseline is the committed Phase 120 commit `d430d4f` — *Record Phase 120
 internal MVP acceptance*; Phase 201 added migration `015_consultants` and the `consultants` table
 **in the repository only**. It was verified on temporary SQLite and applied to no managed database,
 so the `peak_lab` row below is unchanged. The preceding entry stood as of Phase 120, whose baseline is the committed Phase 119 commit `178fea9` — *Add Phase 119
@@ -236,11 +242,11 @@ nothing else:
 
 | Property | Value |
 |---|---|
-| Alembic head (repository) | `015_consultants` (Phase 201) |
-| Migrations | 15 |
+| Alembic head (repository) | `016_client_engagement_workspace_fields` (Phase 202) |
+| Migrations | 16 |
 | Controlled Peak tables | 18 governed + 1 non-governed account table (`consultants`) = 19 |
-| Controlled writers | 12 (consultant accounts are written by `peak/accounts`, not a controlled writer) |
-| Migration 015 | `015_consultants` — in the repository; **not applied to `peak_lab` or production** |
+| Controlled writers | 12 (consultant accounts are written by `peak/accounts`; client profiles and engagement workflow fields only by `peak/workspace` — neither is a controlled writer) |
+| Migrations 015–016 | `015_consultants`, `016_client_engagement_workspace_fields` — in the repository; **not applied to `peak_lab` or production** |
 | Production write enablement | None standing |
 | Lab write enablement | Anchor bootstrap enabled (Phase 90); all three enableable pairs exercised — source ingestion (92), evidence reference (93, and again in 107), review record (94); Phase 107 enabled `evidence_references/create_draft` **for that phase only**; **no standing authority; each future write needs its own phase approval** |
 | `peak_lab` controlled tables | 18, head `014_engagement_classification`, **5 application rows** (the Phase 90 `engagements` anchor, the Phase 92 `source_ingestion_records` row, the Phase 93 `evidence_references` row, the Phase 94 `review_records` row, and the Phase 107 `evidence_references` row) |

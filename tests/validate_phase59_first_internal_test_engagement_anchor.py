@@ -33,6 +33,7 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Phase 121: durable schema-history checks (see tests/_schema_history.py).
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import _schema_history as schema_history  # noqa: E402
+from _workspace_write_path import clients_written_only_by_workspace  # noqa: E402
 THIS_HARNESS = os.path.relpath(os.path.abspath(__file__), REPO_ROOT)
 for _p in (REPO_ROOT, os.path.join(REPO_ROOT, "tools")):
     if _p not in sys.path:
@@ -162,7 +163,7 @@ def baseline_checks() -> None:
 
     from peak.persistence.allowlist import (
         ALLOWED_ACTIONS, ALLOWED_ANCHOR_CREATION_PAIRS, ALLOWED_TABLES, is_allowed_table,
-        is_never_writable_table, is_prohibited_table,
+        is_workspace_only_table, is_prohibited_table,
     )
     check("generic allowlist unchanged — no pair added",
           len(ALLOWED_TABLES) == EXPECTED_ALLOWLIST_TABLES
@@ -170,8 +171,8 @@ def baseline_checks() -> None:
     check("still exactly one anchor-creation pair", len(ALLOWED_ANCHOR_CREATION_PAIRS) == 1)
     check("engagements remains prohibited generically",
           is_prohibited_table("engagements") and not is_allowed_table("engagements"))
-    check("clients remains never writable by any controlled path",
-          is_never_writable_table("clients") and not is_allowed_table("clients"))
+    check("clients is written only through the consultant workspace path (narrow; every other path denied)",
+          clients_written_only_by_workspace())
 
 
 # --------------------------------------------------------------------------- 2. the packet

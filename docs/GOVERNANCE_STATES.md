@@ -28,6 +28,13 @@ in the repo.** Transitions and gates are in
 - **Agents must respect:** intake/discovery/evidence/reporting/proposal/qa/learning
   agents may only *propose* candidate scopes; they may not set `client_facing_approved`
   or `peak_methodology`.
+- **`engagement_authorized` (defined in Phase 202):** work records belonging to an authorized
+  real-client Peak engagement, usable by Peak consultants for internal engagement work. It does not
+  itself authorize client-facing disclosure, methodology publication, or AgentNet publication.
+  Every engagement created through the consultant workspace carries it, with organizational owner
+  `peak_consultants`. The owner is organizational authority over the engagement; the assigned
+  consultant is workflow assignment only. See
+  [`PHASE202_CLIENT_ENGAGEMENT_CRUD.md`](PHASE202_CLIENT_ENGAGEMENT_CRUD.md).
 
 ## B. ReviewStatus
 
