@@ -185,6 +185,8 @@ Phase 44**; this table is the entry point for everything after it.
 
 | 202 | Client and engagement CRUD — **consultants can set up and track clients and engagements** | [`PHASE202_CLIENT_ENGAGEMENT_CRUD.md`](PHASE202_CLIENT_ENGAGEMENT_CRUD.md) | **Product functionality plus an explicit governance change; migration 016 (local only); no `peak_lab` or production contact**; `NEVER_WRITABLE_TABLES` replaced by `WORKSPACE_ONLY_TABLES`: `clients` still reaches no controlled writer, and its only write path is the new `peak/workspace` service, limited by per-(table, action) column allowlists (`WORKSPACE_WRITE_COLUMNS`: create/update client profile, create engagement, update engagement workflow fields), with governance/classification/audit columns forbidden, no delete, and no generic update; migration `016_client_engagement_workspace_fields` adds nullable client profile columns (description, structured address, main contact, `key_personnel` JSON) and engagement `objective`, `assigned_consultant_id`, `current_phase`; every workspace engagement is born with owner `peak_consultants` and scope `engagement_authorized` (server-set, never caller-supplied or editable; defined in `GOVERNANCE_STATES.md`), so unchanged controlled writers can match it; status stays `active`/`on_hold`/`closed` (Paused = `on_hold`); current phase is a simple label; assignment is metadata only; consultant API and pages for client list/search/detail/create/edit and engagement list/detail/create/edit; 18 harnesses now assert the workspace-only client rule, the Phase 56 Client-unchanged claim is authoring-time gated, and the Phase 201 test no longer pins the head; `tests/validate_phase202_client_engagement_crud.py` in `make validate`; next step: first live deployment |
 
+| 203 | First live deployment — **the consultant app runs live; production Admin pending** | [`PHASE203_FIRST_LIVE_DEPLOYMENT.md`](PHASE203_FIRST_LIVE_DEPLOYMENT.md) | **Production change under one approved cutover**; Vercel frontend https://peak-web-five.vercel.app and Render API https://peak-consultant-api.onrender.com (browser talks only to Next.js; server-only `PEAK_API_BASE_URL`); production migrated 014 → 016 through the Phase 84 guard, now accepting `defaultdb` only with `PEAK_PRODUCTION_SCHEMA_CONFIRM=defaultdb`; runtime grant change limited to `UPDATE` on `clients` and `engagements`; `/healthz`, per-email login rate limiting, `bootstrap_admin.py --production`, `render.yaml`; production verifier moved to 016 with model-derived tables; live non-Admin checks pass (health, 401s, redirects, forged cookie rejected, no API address or secrets in browser JS); **production Admin `admin@peakinventorysolutions.com` and authenticated acceptance pending mailbox provisioning**; live client/engagement CRUD acceptance skipped (no internal-test classification for workspace clients) |
+
 ### Phases without a dedicated phase doc
 
 - **Phases 0–10** — recorded by commit message and, from Phase 6 on, by the policy document each
@@ -195,7 +197,11 @@ Phase 44**; this table is the entry point for everything after it.
 
 ## Current baseline
 
-As of Phase 202, whose baseline is the committed Phase 201 commit `37d7912` — *Add Phase 201
+As of Phase 203, whose baseline is the committed Phase 202 commit `9db696f` — *Add Phase 202
+client and engagement workspace*; Phase 203 applied migrations 015 and 016 **to production**
+(head now `016_client_engagement_workspace_fields`, 0 consultant rows) and added `UPDATE` on
+`clients` and `engagements` to the production runtime role. `peak_lab` was not touched. The
+preceding entry stood as of Phase 202, whose baseline is the committed Phase 201 commit `37d7912` — *Add Phase 201
 consultant web shell and authentication*; Phase 202 added migration
 `016_client_engagement_workspace_fields` (columns only, repository only) and the consultant
 workspace write path for `clients` and engagement workflow fields. It contacted no managed
@@ -246,7 +252,8 @@ nothing else:
 | Migrations | 16 |
 | Controlled Peak tables | 18 governed + 1 non-governed account table (`consultants`) = 19 |
 | Controlled writers | 12 (consultant accounts are written by `peak/accounts`; client profiles and engagement workflow fields only by `peak/workspace` — neither is a controlled writer) |
-| Migrations 015–016 | `015_consultants`, `016_client_engagement_workspace_fields` — in the repository; **not applied to `peak_lab` or production** |
+| Migrations 015–016 | `015_consultants`, `016_client_engagement_workspace_fields` — **applied to production in Phase 203**; not applied to `peak_lab` |
+| Production runtime grants | `SELECT, INSERT ON defaultdb.*`; `UPDATE` on `clients` and `engagements` only (Phase 203); no DELETE |
 | Production write enablement | None standing |
 | Lab write enablement | Anchor bootstrap enabled (Phase 90); all three enableable pairs exercised — source ingestion (92), evidence reference (93, and again in 107), review record (94); Phase 107 enabled `evidence_references/create_draft` **for that phase only**; **no standing authority; each future write needs its own phase approval** |
 | `peak_lab` controlled tables | 18, head `014_engagement_classification`, **5 application rows** (the Phase 90 `engagements` anchor, the Phase 92 `source_ingestion_records` row, the Phase 93 `evidence_references` row, the Phase 94 `review_records` row, and the Phase 107 `evidence_references` row) |

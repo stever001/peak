@@ -3924,6 +3924,25 @@ hosting target, migrations 015–016 in the target database, and a runtime crede
 on `clients` and `engagements` only.
 
 
+### Phase 203 — first live deployment (production; Admin pending)
+
+Baseline `9db696f`. Record: [`PHASE203_FIRST_LIVE_DEPLOYMENT.md`](PHASE203_FIRST_LIVE_DEPLOYMENT.md).
+
+- [x] Frontend on Vercel (https://peak-web-five.vercel.app); consultant API on Render
+  (https://peak-consultant-api.onrender.com); browser → Next.js → API; no CORS.
+- [x] Production migrated 014 → 016 through the Phase 84 guard, which now admits `defaultdb` only
+  with the exact `PEAK_PRODUCTION_SCHEMA_CONFIRM=defaultdb` declaration. Verified read-only; no rows
+  created.
+- [x] Runtime grant change: `UPDATE` on `clients` and `engagements` only. No DELETE and no schema
+  rights.
+- [x] `/healthz`, per-email login rate limiting, `bootstrap_admin.py --production`, `render.yaml`;
+  production verifier moved to 016 with model-derived tables.
+- [x] Live non-Admin checks pass.
+- [ ] Production Admin `admin@peakinventorysolutions.com`: pending mailbox provisioning. Then
+  authenticated live acceptance (sign in, Dashboard, Consultants, sign out and in).
+- Live client/engagement CRUD acceptance needs an internal-test classification for workspace
+  clients first.
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing
