@@ -3962,8 +3962,49 @@ Baseline `5cb8ca9`. Record: [`PHASE204_DISCOVERY_INTERVIEW_WORKFLOW.md`](PHASE20
   `/questions` pool screen; one-question-at-a-time interviews with resume and complete.
 - [x] 29-question initial pool, loaded only by the idempotent `tools/init_discovery_questions.py`.
 - [x] `tests/validate_phase204_discovery_workflow.py` (31 checks); build and lint clean.
-- [ ] Production: review migration 017, the production migration, question-pool initialization,
-  and runtime `UPDATE` grants on the four discovery tables. Not done in this phase.
+- [x] Production: review migration 017, the production migration, question-pool initialization,
+  and runtime `UPDATE` grants on the four discovery tables. **Done in Phase 205**, not here.
+
+**Next:** internal assessment/report consumption of structured discovery data.
+
+---
+
+### Phase 205 — discovery production cutover (production)
+
+Baseline `1a54c14`. Record:
+[`PHASE205_DISCOVERY_PRODUCTION_CUTOVER.md`](PHASE205_DISCOVERY_PRODUCTION_CUTOVER.md).
+
+> **Open Phase 203 item, still open:** production Admin acceptance is pending provisioning of
+> `admin@peakinventorysolutions.com`. Discovery is live but unverified under authentication for the
+> same reason. Keep this item until the Admin is bootstrapped and the authenticated smoke test
+> passes. **No temporary Admin may be created.**
+
+- [x] **Render Auto-Deploy disabled** for `peak-consultant-api`, before any production write.
+  `[skip render]` is no longer load-bearing. **Future API deploys remain manual until a phase
+  explicitly decides otherwise.**
+- [x] Read-only preflight: head 016, migration 017 pending, no discovery tables or columns, grants
+  at their Phase 203 state, 0 consultants, 0 clients, no discovery rows.
+- [x] Migration `017_discovery_workflow` applied to production through the Phase 84 guard with
+  `PEAK_PRODUCTION_SCHEMA_CONFIRM=defaultdb`. Head **017**, 24 base tables, all indexes and
+  constraints present, **0 rows inserted by the migration**.
+- [x] Runtime grants narrowed to what the service actually does: `UPDATE` on the four discovery
+  tables only. `SELECT`/`INSERT` were already schema-wide; `engagements.north_star` and
+  `north_star_context` are covered by the existing `UPDATE ON defaultdb.engagements` — confirmed
+  against the live grants. **No DELETE, ALTER, CREATE, DROP or GRANT OPTION.**
+- [x] 29 discovery questions initialized by the confirmation-gated
+  `tools/init_discovery_questions.py --production --execute`, after a dry run showed exactly the 29
+  intended inserts. 10 categories, 7 branch follow-ups, 29 unique seed keys, skip-if-present. No
+  sample client, interview, answer or observation.
+- [x] Production verifier pin moved 016 → 017 (`d569e77`, `[skip render]`), Phase 121 principles
+  intact. Green against production: 249/249 governed columns deterministic.
+- [x] Render API deployed **manually**; `/questions` moved 404 → 401, `/healthz` 200, no migration
+  at startup, no secrets in logs. Auto-Deploy left off.
+- [x] Vercel frontend deployed from the CLI without reconnecting GitHub; build and lint clean, all
+  discovery routes present, no `PEAK_*` name or database identifier in any browser chunk.
+- [x] Live unauthenticated checks pass: signed-out discovery routes redirect, forged cookies are
+  rejected on both tiers, API discovery endpoints 401.
+- [ ] **Authenticated live acceptance of Discovery** — blocked on the same Admin provisioning as the
+  Phase 203 item. Not done, and not to be worked around with a temporary account.
 
 **Next:** internal assessment/report consumption of structured discovery data.
 
