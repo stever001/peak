@@ -10,8 +10,9 @@ observation is created.
 
 It is dry-run unless ``--execute`` is passed. Targets follow ``tools/bootstrap_admin.py``: local
 SQLite or ``peak_lab`` by default. Production requires ``--production`` plus
-``PEAK_PRODUCTION_DISCOVERY_INIT_CONFIRM=1`` and a production-marked runtime URL, and **is not
-authorized in Phase 204**. The application never runs this at startup.
+``PEAK_PRODUCTION_DISCOVERY_INIT_CONFIRM=1`` and a production-marked runtime URL. It was **not
+authorized in Phase 204**; Phase 205 authorized it and ran it once against production. The
+application never runs this at startup.
 
 Exit status: 0 dry run or success; 1 refused or failed; 2 configuration error.
 """
