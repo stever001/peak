@@ -4008,6 +4008,50 @@ Baseline `1a54c14`. Record:
 
 **Next:** internal assessment/report consumption of structured discovery data.
 
+---
+
+### Phase 206 — discovery-to-assessment integration (local only)
+
+Baseline `9388958`. Record:
+[`PHASE206_DISCOVERY_ASSESSMENT_INTEGRATION.md`](PHASE206_DISCOVERY_ASSESSMENT_INTEGRATION.md).
+
+> **Open items, both still open:** production Admin acceptance is pending provisioning of
+> `admin@peakinventorysolutions.com`, and **authenticated production discovery acceptance is
+> pending with it** — no production user can sign in, so neither Phase 204/205 discovery nor this
+> phase's assessment has been exercised live. **No temporary Admin may be created.**
+
+- [x] Read-only `peak/db/discovery_assessment_reader.py`: whitelisted columns, caller-owned
+  connection, no writer, no credential, no environment read.
+- [x] Pure `peak/reports/discovery_assessment.py` producing `DiscoveryAssessmentContext` — North
+  Star, interview coverage, discovery-derived findings, low-hanging-fruit candidates, traceability.
+  No database import, no network, **no LLM**.
+- [x] `InternalAssessment` gains one optional `discovery` field, attached **after** every evidence
+  decision is final. `discovery=None` reproduces the Phase 116–118 document byte for byte.
+- [x] One discovery finding per consultant observation, **quoted exactly**. Answers are not
+  converted into findings; `direct_structured_answer` is a reserved name that nothing produces yet.
+- [x] **Phase 117/118 eligibility untouched.** A `DiscoveryFinding` has no `review_status`,
+  `reliability`, `claim_scope` or `recommendation_eligible` field at all — no attribute exists for a
+  later change to flip, and the harness asserts it by inspecting the dataclass fields.
+- [x] Coverage reports **counts**, not a pool-wide percentage: branching makes the denominator
+  differ per interview, so the module refuses to compute the misleading figure.
+- [x] Low-hanging fruit is a **labelled display grouping** (high value, then low effort, unstated
+  last), explicitly not a score, ranking, priority order or ROI.
+- [x] `GET /engagements/{id}/assessment` — read-only, derived on every request. **No write
+  endpoint, no assessment table, no cache.**
+- [x] `/engagements/[id]/assessment` UI: every section badged as consultant working material or
+  evidence-backed governed material; responsive cards, touch targets, no horizontal scroll.
+- [x] **No migration 018, no new table, no new workspace write action.** `discovery.py` and
+  `allowlist.py` unchanged by this phase.
+- [x] The Phase 59 internal-test anchor and evidence-only engagements still render; discovery
+  authorization was **not** weakened.
+- [x] `tests/validate_phase206_discovery_assessment_integration.py` in `make validate` (82
+  harnesses); one obsolete shape assumption updated in the Phase 113 harness; build and lint clean.
+- [ ] **Not deployed.** Production stays at Phase 205 and Render Auto-Deploy remains **OFF**; API
+  deploys stay manual until a phase explicitly changes that.
+
+**Next:** consuming this material in an internal report, once authenticated production acceptance
+is possible.
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

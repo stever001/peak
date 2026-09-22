@@ -156,3 +156,137 @@ export type InterviewSession = {
   questions: (Question & { answer: string | null })[];
   history: { question_id: string; prompt: string; answer: string | null }[];
 };
+
+// --- Phase 206: internal assessment (read-only, derived) --------------------------------------
+
+/** Where one piece of discovery material came from. Names first; raw ids for detail only. */
+export type DiscoveryTrace = {
+  session_id: string | null;
+  interviewee_name: string | null;
+  observation_id: string | null;
+  question_id: string | null;
+  answer_id: string | null;
+  question_prompt: string | null;
+  recorded_by: string | null;
+  recorded_by_consultant_id: string | null;
+};
+
+/**
+ * A consultant-recorded discovery finding. Deliberately has no `recommendation_eligible`,
+ * `review_status` or `reliability`: those belong to evidence-backed findings only.
+ */
+export type DiscoveryFinding = {
+  finding_id: string;
+  statement: string;
+  category: string | null;
+  source_type: "discovery_observation" | "direct_structured_answer";
+  source_ids: string[];
+  trace: DiscoveryTrace;
+  low_hanging_fruit: boolean;
+  estimated_effort: Level | null;
+  estimated_value: Level | null;
+  status: string;
+  internal_only: boolean;
+  requires_human_review: boolean;
+};
+
+export type LowHangingFruitCandidate = {
+  finding_id: string;
+  statement: string;
+  category: string | null;
+  estimated_effort: Level | null;
+  estimated_value: Level | null;
+  trace: DiscoveryTrace;
+  internal_only: boolean;
+  requires_human_review: boolean;
+};
+
+export type InterviewCoverage = {
+  total_sessions: number;
+  completed_sessions: number;
+  in_progress_sessions: number;
+  interviewees: string[];
+  interviewee_titles: string[];
+  answered_questions: number;
+  active_questions: number;
+  unbranched_active_questions: number;
+  answered_unbranched_questions: number;
+  /** True when follow-up branching makes a single pool-wide percentage misleading. */
+  branching_makes_percentage_ambiguous: boolean;
+  sessions: {
+    session_id: string;
+    interviewee_name: string;
+    interviewee_title: string | null;
+    status: string;
+    conducted_by: string | null;
+    answered_count: number;
+  }[];
+};
+
+export type DiscoveryAssessmentContext = {
+  engagement_id: string | null;
+  available: boolean;
+  north_star: string | null;
+  north_star_context: string | null;
+  workspace_stamped: boolean;
+  coverage: InterviewCoverage;
+  findings: DiscoveryFinding[];
+  low_hanging_fruit: LowHangingFruitCandidate[];
+  status: string;
+  internal_only: boolean;
+  requires_human_review: boolean;
+};
+
+/** An evidence-backed finding. This is the governed side: it carries review and eligibility. */
+export type AssessmentFinding = {
+  finding_id: string;
+  evidence_id: string;
+  statement: string | null;
+  statement_available: boolean;
+  source_reference_ids: string[];
+  review_status: string;
+  stored_review_status: string | null;
+  supporting_review_ids: string[];
+  reliability: string | null;
+  claim_scope: string | null;
+  recommendation_eligible: boolean;
+  recommendation_blocked_reasons: string[];
+  recommendation_id: string | null;
+};
+
+export type InternalRecommendation = {
+  recommendation_id: string;
+  finding_id: string;
+  text: string;
+  supporting_evidence_ids: string[];
+  supporting_source_ids: string[];
+  supporting_review_ids: string[];
+  internal_only: boolean;
+  requires_human_review: boolean;
+};
+
+export type InternalAssessment = {
+  engagement_id: string | null;
+  client_id: string | null;
+  owner_id: string | null;
+  authorization_scope: string | null;
+  audience: string;
+  status: string;
+  client_facing: boolean;
+  requires_human_review: boolean;
+  findings: AssessmentFinding[];
+  confidence_notes: string[];
+  excluded_evidence: { evidence_id: string; reason: string }[];
+  limitations: string[];
+  recommendation_status: string;
+  recommendation_blocked_reasons: string[];
+  recommendations: InternalRecommendation[];
+  /** Null when the engagement has no discovery material. */
+  discovery: DiscoveryAssessmentContext | null;
+};
+
+export type AssessmentResponse = {
+  engagement: Engagement;
+  assessment: InternalAssessment;
+  markdown: string;
+};

@@ -22,6 +22,15 @@ receives none. Recommendations are internal-only and always require human review
 **Internal only.** ``audience`` is internal, ``status`` is internal draft, ``client_facing`` is
 always false, and human review is always required.
 
+**Discovery material sits beside evidence, never inside it (Phase 206).** An optional
+:class:`~peak.reports.discovery_assessment.DiscoveryAssessmentContext` adds the engagement's North
+Star, interview coverage, consultant-recorded discovery findings, and low-hanging-fruit candidates
+under their own clearly labelled headings. It is additive and inert: discovery never enters
+``findings``, never produces an :class:`InternalRecommendation`, and never changes a review status,
+reliability, claim scope, or the Phase 117 eligibility of any evidence-backed finding. An
+assessment built without it renders exactly as before, minus a short line saying no discovery
+material was recorded.
+
 Side-effect boundary: pure functions over an in-memory ``PacketViewReportInputs``. No database
 connection, no SQLAlchemy / ``peak.db`` import, no environment read, no file or network access, no
 writer, no agent execution, and no LLM. Output is deterministic — fixed section order, records in
@@ -35,6 +44,12 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
 from .contracts import AUDIENCE_INTERNAL, SECTION_OPERATIONAL_FINDINGS, SECTION_TITLES
+from .discovery_assessment import (
+    DISCOVERY_NOT_EVIDENCE_TEXT,
+    LOW_HANGING_FRUIT_GROUPING_TEXT,
+    NO_DISCOVERY_TEXT,
+    DiscoveryAssessmentContext,
+)
 
 #: The only status this document can carry. It is a working document, not a deliverable.
 STATUS_INTERNAL_DRAFT = "internal_draft"
@@ -50,6 +65,17 @@ RECOMMENDATION_TEMPLATE = 'Investigate and validate corrective action for the fi
 #: The packet view already spells a missing section as "... (not supplied)"; strip that so the
 #: limitation line does not say it twice.
 _SUPPLY_SUFFIX = " (not supplied)"
+
+#: Phase 206 headings. Each names which kind of material it holds, so a reader never has to infer
+#: whether a section is governed evidence or consultant working material.
+DISCOVERY_SECTION_TITLE = "Discovery summary (consultant working material)"
+DISCOVERY_FINDINGS_SECTION_TITLE = "Discovery-derived findings (consultant working material)"
+LOW_HANGING_FRUIT_SECTION_TITLE = "Low-hanging-fruit candidates (consultant working material)"
+NORTH_STAR_SECTION_TITLE = "North Star"
+EVIDENCE_MATERIAL_LABEL = "Evidence-backed, governed material."
+NO_NORTH_STAR_TEXT = "No North Star has been recorded for this engagement."
+NO_DISCOVERY_FINDINGS_TEXT = "No consultant observation has been recorded for this engagement."
+NO_LOW_HANGING_FRUIT_TEXT = "The consultant has flagged no low-hanging fruit for this engagement."
 
 NO_STATEMENT_TEXT = "No persisted finding statement is available for this evidence."
 NO_FINDINGS_TEXT = "No evidence currently supports an operational finding for this engagement."
@@ -110,6 +136,9 @@ class InternalAssessment:
     recommendation_status: str = RECOMMENDATIONS_BLOCKED
     recommendation_blocked_reasons: List[str] = field(default_factory=list)
     recommendations: List[InternalRecommendation] = field(default_factory=list)
+    #: Phase 206 consultant discovery material, or ``None`` when the engagement has none. It is
+    #: displayed beside the evidence-backed sections and never merged into them.
+    discovery: Optional[DiscoveryAssessmentContext] = None
 
 
 def _recommendation_for(finding: AssessmentFinding) -> Optional[InternalRecommendation]:
@@ -146,11 +175,18 @@ def _confidence_notes(findings: List[AssessmentFinding]) -> List[str]:
     return notes
 
 
-def build_internal_assessment(report_inputs) -> InternalAssessment:
+def build_internal_assessment(report_inputs,
+                              discovery: Optional[DiscoveryAssessmentContext] = None
+                              ) -> InternalAssessment:
     """Build an :class:`InternalAssessment` from Phase 111 reporting inputs.
 
     Findings keep the order the bridge produced, so the same inputs always yield the same document.
     Nothing is added that the inputs did not already carry.
+
+    ``discovery`` (Phase 206) is attached as-is and takes no part in any decision below: it does not
+    reach ``findings``, ``recommendations``, ``confidence_notes``, or ``limitations``, and the
+    recommendation status is computed before it is attached. Passing ``None`` — or a context with
+    no material — leaves the assessment exactly as Phases 116–118 produced it.
     """
     engagement = report_inputs.engagement or {}
     assessment = InternalAssessment(
@@ -208,7 +244,122 @@ def build_internal_assessment(report_inputs) -> InternalAssessment:
     for excluded in assessment.excluded_evidence:
         limitations.append(f"{excluded['evidence_id']} backs no finding: {excluded['reason']}.")
     assessment.limitations = limitations
+
+    # Attached last, and only after every evidence decision above is final, so there is no order in
+    # which discovery material could influence one.
+    assessment.discovery = discovery
     return assessment
+
+
+def _trace_line(trace) -> str:
+    """One readable provenance line: the person and interview first, identifiers after.
+
+    A consultant reading this should be able to answer "where did this come from?" without knowing
+    what a governance id is, so the interviewee's name leads and the raw ids follow in parentheses.
+    """
+    parts = []
+    if trace.interviewee_name:
+        parts.append(f"interview with {trace.interviewee_name}")
+    elif trace.session_id:
+        parts.append("recorded outside an interview")
+    else:
+        parts.append("recorded outside an interview")
+    if trace.question_prompt:
+        parts.append(f'question "{trace.question_prompt}"')
+    if trace.recorded_by:
+        parts.append(f"recorded by {trace.recorded_by}")
+    ids = [f"observation {trace.observation_id}" if trace.observation_id else "",
+           f"session {trace.session_id}" if trace.session_id else "",
+           f"question {trace.question_id}" if trace.question_id else "",
+           f"answer {trace.answer_id}" if trace.answer_id else ""]
+    ids = [i for i in ids if i]
+    line = "; ".join(parts)
+    return f"{line} ({', '.join(ids)})" if ids else line
+
+
+def _render_north_star(discovery: Optional[DiscoveryAssessmentContext]) -> List[str]:
+    """The North Star, for orientation. It scores nothing and claims no alignment."""
+    lines = [f"## {NORTH_STAR_SECTION_TITLE}", ""]
+    if discovery is None or not discovery.north_star:
+        return lines + [f"_{NO_NORTH_STAR_TEXT}_", ""]
+    lines += [discovery.north_star, ""]
+    if discovery.north_star_context:
+        lines += [discovery.north_star_context, ""]
+    return lines
+
+
+def _render_discovery_summary(discovery: Optional[DiscoveryAssessmentContext]) -> List[str]:
+    """Interview coverage as counts. No completeness percentage over an ambiguous denominator."""
+    lines = [f"## {DISCOVERY_SECTION_TITLE}", "", DISCOVERY_NOT_EVIDENCE_TEXT, ""]
+    if discovery is None or not discovery.available:
+        return lines + [f"_{NO_DISCOVERY_TEXT}_", ""]
+    coverage = discovery.coverage
+    lines += [
+        f"- Interviews: {coverage.total_sessions} "
+        f"({coverage.completed_sessions} completed, {coverage.in_progress_sessions} in progress)",
+        f"- People interviewed: {len(coverage.interviewees)}"
+        + (f" — {', '.join(coverage.interviewees)}" if coverage.interviewees else ""),
+    ]
+    if coverage.interviewee_titles:
+        lines.append(f"- Roles represented: {', '.join(coverage.interviewee_titles)}")
+    lines.append(f"- Distinct questions answered: {coverage.answered_questions} "
+                 f"(of {coverage.active_questions} active question(s) in the pool)")
+    if coverage.branching_makes_percentage_ambiguous:
+        lines.append(
+            f"- Of the {coverage.unbranched_active_questions} question(s) every interview sees, "
+            f"{coverage.answered_unbranched_questions} have been answered. A single percentage "
+            f"across the whole pool is not reported: branching means follow-up questions are shown "
+            f"only to some interviewees, so the denominator would be ambiguous.")
+    lines.append("")
+    for interview in coverage.sessions:
+        title = f" ({interview.interviewee_title})" if interview.interviewee_title else ""
+        conducted = f", conducted by {interview.conducted_by}" if interview.conducted_by else ""
+        lines.append(f"- {interview.interviewee_name}{title} — {interview.status}, "
+                     f"{interview.answered_count} question(s) answered{conducted}")
+    lines.append("")
+    return lines
+
+
+def _render_discovery_findings(discovery: Optional[DiscoveryAssessmentContext]) -> List[str]:
+    """Consultant observations, quoted. Each says plainly that it is not evidence."""
+    lines = [f"## {DISCOVERY_FINDINGS_SECTION_TITLE}", ""]
+    findings = discovery.findings if discovery else []
+    if not findings:
+        return lines + [f"_{NO_DISCOVERY_FINDINGS_TEXT}_", ""]
+    for index, finding in enumerate(findings, start=1):
+        lines += [f"### Discovery finding {index} — {finding.finding_id}", "", finding.statement, ""]
+        lines.append(f"- Category: {finding.category or 'none recorded'}")
+        lines.append(f"- Source: {finding.source_type}")
+        lines.append(f"- Where this came from: {_trace_line(finding.trace)}")
+        if finding.low_hanging_fruit:
+            lines.append(f"- Consultant flagged as low-hanging fruit: effort "
+                         f"{finding.estimated_effort or 'not stated'}, value "
+                         f"{finding.estimated_value or 'not stated'}")
+        lines += [f"- Status: {finding.status}",
+                  "- Evidence status: none. This is not reviewed evidence and supports no formal "
+                  "recommendation.",
+                  f"- Internal only: {'yes' if finding.internal_only else 'no'}",
+                  f"- Requires human review: "
+                  f"{'yes' if finding.requires_human_review else 'no'}", ""]
+    return lines
+
+
+def _render_low_hanging_fruit(discovery: Optional[DiscoveryAssessmentContext]) -> List[str]:
+    """Consultant-flagged candidates, grouped for reading. Explicitly not a ranking."""
+    lines = [f"## {LOW_HANGING_FRUIT_SECTION_TITLE}", ""]
+    candidates = discovery.low_hanging_fruit if discovery else []
+    if not candidates:
+        return lines + [f"_{NO_LOW_HANGING_FRUIT_TEXT}_", ""]
+    lines += [LOW_HANGING_FRUIT_GROUPING_TEXT, ""]
+    for candidate in candidates:
+        lines += [f"### {candidate.finding_id}", "", candidate.statement, ""]
+        lines += [f"- Category: {candidate.category or 'none recorded'}",
+                  f"- Consultant-entered effort: {candidate.estimated_effort or 'not stated'}",
+                  f"- Consultant-entered value: {candidate.estimated_value or 'not stated'}",
+                  f"- Where this came from: {_trace_line(candidate.trace)}",
+                  "- Not an approved recommendation. The consultant's own flag on their own "
+                  "observation; it requires human review before it is used with a client.", ""]
+    return lines
 
 
 def render_internal_assessment_markdown(assessment: InternalAssessment) -> str:
@@ -230,9 +381,17 @@ def render_internal_assessment_markdown(assessment: InternalAssessment) -> str:
         "",
         NOT_CLIENT_FACING_TEXT,
         "",
-        f"## {SECTION_TITLES[SECTION_OPERATIONAL_FINDINGS]}",
-        "",
     ]
+
+    # Phase 206: discovery material first, for orientation, each section labelled as consultant
+    # working material. Everything after this point is the evidence-backed document, unchanged.
+    lines += _render_north_star(assessment.discovery)
+    lines += _render_discovery_summary(assessment.discovery)
+    lines += _render_discovery_findings(assessment.discovery)
+    lines += _render_low_hanging_fruit(assessment.discovery)
+
+    lines += [f"## {SECTION_TITLES[SECTION_OPERATIONAL_FINDINGS]} "
+              f"(evidence-backed, governed material)", "", EVIDENCE_MATERIAL_LABEL, ""]
 
     if not assessment.findings:
         lines += [NO_FINDINGS_TEXT, ""]

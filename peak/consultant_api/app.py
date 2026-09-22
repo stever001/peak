@@ -3,6 +3,11 @@
 Validates input, calls account functions, returns minimal JSON, and enforces the Admin role on
 consultant administration. No business logic lives here.
 
+The Phase 206 assessment route is **read-only and derived**: it composes the existing one-call
+assessment workflow over a caller-owned connection and returns the result. There is no assessment
+writer, no assessment table, and no write endpoint — an assessment is recomputed from persisted
+records on every request, so it can never drift from them.
+
 Run locally (see docs/PHASE201_CONSULTANT_WEB_SHELL_AUTH.md)::
 
     # with PEAK_RUNTIME_DATABASE_URL and PEAK_WEB_SECRET_KEY set in the environment
@@ -396,5 +401,38 @@ def create_app(
                             _: dict = Depends(current_consultant)):
         return {"observation": _workspace_call(discovery.update_observation, session_factory,
                                                observation_id, body.model_dump(exclude_unset=True))}
+
+    # --- Phase 206: internal assessment (read-only, derived; any authenticated consultant) ------
+
+    @app.get("/engagements/{engagement_id}/assessment")
+    def engagement_assessment(engagement_id: str, _: dict = Depends(current_consultant)):
+        """The engagement's internal assessment: evidence-backed material plus discovery context.
+
+        Derived on every request from persisted records. Nothing is written, cached, or persisted,
+        and there is deliberately no companion write endpoint: the assessment is a view of stored
+        state, so the only way to change it is to change that state through the existing paths.
+
+        The engagement is read through the Phase 57 visibility primitive inside the workflow. A
+        missing engagement and one that is not visible to this route both return 404, so the route
+        never reports the existence of an engagement it may not show.
+        """
+        import dataclasses
+
+        from peak.db.engagement_packet_reader import EngagementNotVisible
+        from peak.workflows.consultant_assessment_workflow import (
+            build_consultant_internal_assessment,
+        )
+
+        engagement = _workspace_call(workspace.get_engagement, session_factory, engagement_id)
+        with session_factory() as session:
+            try:
+                result = build_consultant_internal_assessment(session.connection(), engagement_id)
+            except (LookupError, EngagementNotVisible):
+                raise HTTPException(status.HTTP_404_NOT_FOUND, "not_found") from None
+        return {
+            "engagement": engagement,
+            "assessment": dataclasses.asdict(result.assessment),
+            "markdown": result.markdown,
+        }
 
     return app

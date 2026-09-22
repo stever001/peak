@@ -457,9 +457,14 @@ def main() -> int:
               build_persisted_report_inputs(fetched(**strong), None))) == eligible_doc)
 
     print("\n5g. Phase 119 — one-call consultant assessment workflow")
+    import peak.db.discovery_assessment_reader as discovery_reader_module
     import peak.db.engagement_packet_reader as reader_module
     from peak.workflows.consultant_assessment_workflow import build_consultant_internal_assessment
     real_fetch = reader_module.fetch_engagement_packet_summaries
+    # Phase 206 added a second read to the workflow. Stubbing it empty is the no-discovery case,
+    # which must still produce exactly the Phase 116–118 document the lower-level route produces.
+    real_discovery_fetch = discovery_reader_module.fetch_discovery_summaries
+    discovery_reader_module.fetch_discovery_summaries = lambda connection, engagement_id: {}
     try:
         for label, state, lower in (("blocked", fetched(persisted_scopes=PERSISTED,
                                      persisted_summaries={EV_R1_COVERAGE: STATEMENT}), assessment),
@@ -470,10 +475,13 @@ def main() -> int:
             check(f"the {label} case returns an assessment and Markdown matching the lower-level route",
                   dataclasses.asdict(one_call.assessment) == dataclasses.asdict(lower)
                   and one_call.markdown == render_internal_assessment_markdown(lower))
+            check(f"the {label} case carries no discovery context when there is no discovery data",
+                  one_call.assessment.discovery is None)
             check(f"the {label} case yields {'no' if label == 'blocked' else 'exactly one'} recommendation",
                   len(one_call.assessment.recommendations) == (0 if label == "blocked" else 1))
     finally:
         reader_module.fetch_engagement_packet_summaries = real_fetch
+        discovery_reader_module.fetch_discovery_summaries = real_discovery_fetch
 
     print("\n6. Posture stays blocked")
     check("recommendations are empty and blocked",

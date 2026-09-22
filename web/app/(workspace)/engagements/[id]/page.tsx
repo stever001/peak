@@ -20,10 +20,15 @@ export default async function EngagementPage(props: PageProps<"/engagements/[id]
       </Link>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <PageHeader title={e.engagement_label ?? "Untitled engagement"} />
-        <Link href={`/engagements/${e.id}/edit`}
-              className="inline-flex min-h-touch shrink-0 items-center justify-center rounded-peak border border-line bg-surface px-6 font-medium hover:border-brand">
-          Edit engagement
-        </Link>
+        <div className="flex shrink-0 flex-wrap gap-3">
+          <Link href={`/engagements/${e.id}/assessment`} className="peak-button">
+            Internal assessment
+          </Link>
+          <Link href={`/engagements/${e.id}/edit`}
+                className="inline-flex min-h-touch shrink-0 items-center justify-center rounded-peak border border-line bg-surface px-6 font-medium hover:border-brand">
+            Edit engagement
+          </Link>
+        </div>
       </div>
       <section className="peak-card">
         <dl className="grid gap-5 sm:grid-cols-2">
