@@ -4046,8 +4046,44 @@ Baseline `9388958`. Record:
   authorization was **not** weakened.
 - [x] `tests/validate_phase206_discovery_assessment_integration.py` in `make validate` (82
   harnesses); one obsolete shape assumption updated in the Phase 113 harness; build and lint clean.
-- [ ] **Not deployed.** Production stays at Phase 205 and Render Auto-Deploy remains **OFF**; API
-  deploys stay manual until a phase explicitly changes that.
+- [x] **Not deployed in this phase.** Production stayed at Phase 205 until **Phase 207** deployed
+  it by hand; Render Auto-Deploy remains **OFF** and API deploys stay manual until a phase
+  explicitly changes that.
+
+**Next:** deploying this to production — Phase 207.
+
+---
+
+### Phase 207 — assessment production cutover (production)
+
+Baseline `a29e1e0`. Record:
+[`PHASE207_ASSESSMENT_PRODUCTION_CUTOVER.md`](PHASE207_ASSESSMENT_PRODUCTION_CUTOVER.md).
+
+> **Open Phase 203 item, still open:** production Admin acceptance is pending provisioning of
+> `admin@peakinventorysolutions.com`. The assessment is now live but, like discovery, unverified
+> under authentication for the same reason. **No temporary Admin may be created.**
+
+- [x] **Deployment only.** No product work, **no migration, no grant change, no production data
+  write.** Phase 206 added no migration 018, so this cutover has no database step; the production
+  verifier pin stays at `017_discovery_workflow` because no migration was applied.
+- [x] Preflight: clean tree at `a29e1e0`, production head `017_discovery_workflow`, no migration
+  018, **Render Auto-Deploy confirmed Off** before the deploy.
+- [x] Validation limited to the three authorized checks: Phase 206 harness **PASS**, `npm run build`
+  clean with `/engagements/[id]/assessment` in the route table, `npm run lint` clean. No further
+  suite was run because none of the three failed.
+- [x] Render deployed **manually**; `GET /engagements/{id}/assessment` moved **404 → 401**,
+  `/healthz` 200, forged cookie rejected, wrong-password login 401 not 500, no migration at startup.
+  Auto-Deploy left **Off**.
+- [x] Vercel deployed from the CLI without reconnecting GitHub; `READY` in production, `/login` 200
+  with HSTS, signed-out `/engagements/[id]/assessment` 307s to `/login`.
+- [x] Read-only production snapshots before and after are **identical**: head `017`, 24 base tables,
+  29 questions, 0 sessions/answers/observations, 0 clients/consultants, 1 engagement anchor, grants
+  byte-identical. Verifier green, `schema_mutation_made`/`data_write_made`/`migration_executed` all
+  False.
+- [ ] **Authenticated live acceptance of the assessment** — blocked on the same Admin provisioning
+  as the Phase 203 item. The endpoint and page are live and refuse unauthenticated callers, but the
+  derived document has never been produced against production data. Not to be worked around with a
+  temporary account.
 
 **Next:** consuming this material in an internal report, once authenticated production acceptance
 is possible.
