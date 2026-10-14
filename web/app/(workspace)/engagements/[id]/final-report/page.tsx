@@ -23,10 +23,16 @@ export default async function FinalReportPage(props: PageProps<"/engagements/[id
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <PageHeader title="Final report (internal draft)"
                     intro={`${engagement.client.name} · ${engagement.engagement_label ?? "Untitled engagement"}`} />
-        <Link href={`/engagements/${engagement.id}/assessment`}
-              className="inline-flex min-h-touch shrink-0 items-center justify-center rounded-peak border border-line bg-surface px-6 font-medium hover:border-brand">
-          Internal assessment
-        </Link>
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-end">
+          {/* A plain link, not <Link>: the route handler answers with a file attachment. */}
+          <a href={`/engagements/${engagement.id}/final-report/docx`} download className="peak-button shrink-0">
+            Download DOCX
+          </a>
+          <Link href={`/engagements/${engagement.id}/assessment`}
+                className="inline-flex min-h-touch shrink-0 items-center justify-center rounded-peak border border-line bg-surface px-6 font-medium hover:border-brand">
+            Internal assessment
+          </Link>
+        </div>
       </div>
       <FinalReportView r={report} markdown={markdown} engagementId={engagement.id} />
     </>

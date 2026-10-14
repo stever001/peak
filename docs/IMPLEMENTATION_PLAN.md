@@ -4120,6 +4120,35 @@ Baseline `cf1eab9`. Record:
 **Next:** internal review of the report shape. Export and client-facing approval are later,
 separately approved phases; deploying Phase 208 is its own cutover.
 
+---
+
+### Phase 209 — Final Report DOCX export (local only)
+
+Baseline `1018db2`. Record:
+[`PHASE209_FINAL_REPORT_DOCX_EXPORT.md`](PHASE209_FINAL_REPORT_DOCX_EXPORT.md).
+
+> **Open items, still open:** production Admin acceptance is pending provisioning of
+> `admin@peakinventorysolutions.com`, and authenticated production discovery/assessment/report
+> acceptance is pending with it. **No temporary Admin may be created.**
+
+- [x] `peak/reports/final_report_docx.py` renders the **same composed `FinalReport`** as DOCX — no
+  re-query, no second report model, no new composition logic. Standard library only; no new
+  dependency; deterministic bytes; formatting centralized in `styles.xml`.
+- [x] Title page (client, engagement, North Star, status) and the six Phase 208 sections in order,
+  with working-material/governed labels, low-hanging-fruit grouping (not a ranking or ROI), and an
+  internal-draft footer with page numbers.
+- [x] `GET /engagements/{id}/final-report.docx` — read-only DOCX attachment; write methods 405.
+- [x] **Download DOCX** on the Final Report page through a GET-only Next pass-through.
+- [x] Phase 208 status text corrected: "not exported" → "an exported copy is still this internal
+  draft".
+- [x] **No PDF, no LLM, no client-facing approval, no stored export, no migration 018.**
+- [x] `tests/validate_phase209_final_report_docx_export.py` PASS; `npm run build` and `npm run lint`
+  clean.
+- [x] **Not deployed.** Production stays at Phase 207; Render Auto-Deploy remains **OFF**.
+
+**Next:** internal review of the exported document. PDF and client-facing approval are later,
+separately approved phases; deploying Phases 208–209 is its own cutover.
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

@@ -7,7 +7,8 @@ The Phase 206 assessment route is **read-only and derived**: it composes the exi
 assessment workflow over a caller-owned connection and returns the result. There is no assessment
 writer, no assessment table, and no write endpoint — an assessment is recomputed from persisted
 records on every request, so it can never drift from them. The Phase 208 final-report route is the
-same: it composes the same assessment into report sections, and nothing is stored.
+same: it composes the same assessment into report sections, and nothing is stored. The Phase 209
+DOCX route renders that same composed report as a download; it adds no write path either.
 
 Run locally (see docs/PHASE201_CONSULTANT_WEB_SHELL_AUTH.md)::
 
@@ -438,18 +439,11 @@ def create_app(
 
     # --- Phase 208: final report foundation (read-only, derived; any authenticated consultant) --
 
-    @app.get("/engagements/{engagement_id}/final-report")
-    def engagement_final_report(engagement_id: str, _: dict = Depends(current_consultant)):
-        """The engagement's internal Final Report foundation, composed from its assessment.
-
-        Same read path and visibility rules as the assessment route above; the report is then
-        composed from that assessment by a pure function. Nothing is written, cached, or stored,
-        and there is no companion write endpoint.
-        """
-        import dataclasses
-
+    def _final_report(engagement_id: str):
+        """(engagement, FinalReport): same read path and visibility rules as the assessment
+        route above, then the Phase 208 pure composer. Shared by the JSON and DOCX routes."""
         from peak.db.engagement_packet_reader import EngagementNotVisible
-        from peak.reports.final_report import compose_final_report, render_final_report_markdown
+        from peak.reports.final_report import compose_final_report
         from peak.workflows.consultant_assessment_workflow import (
             build_consultant_internal_assessment,
         )
@@ -460,11 +454,46 @@ def create_app(
                 result = build_consultant_internal_assessment(session.connection(), engagement_id)
             except (LookupError, EngagementNotVisible):
                 raise HTTPException(status.HTTP_404_NOT_FOUND, "not_found") from None
-        report = compose_final_report(result.assessment, engagement)
+        return engagement, compose_final_report(result.assessment, engagement)
+
+    @app.get("/engagements/{engagement_id}/final-report")
+    def engagement_final_report(engagement_id: str, _: dict = Depends(current_consultant)):
+        """The engagement's internal Final Report foundation, composed from its assessment.
+
+        Nothing is written, cached, or stored, and there is no companion write endpoint.
+        """
+        import dataclasses
+
+        from peak.reports.final_report import render_final_report_markdown
+
+        engagement, report = _final_report(engagement_id)
         return {
             "engagement": engagement,
             "report": dataclasses.asdict(report),
             "markdown": render_final_report_markdown(report),
         }
+
+    # --- Phase 209: final report DOCX export (read-only, derived; any authenticated consultant) -
+
+    @app.get("/engagements/{engagement_id}/final-report.docx")
+    def engagement_final_report_docx(engagement_id: str, _: dict = Depends(current_consultant)):
+        """The same composed FinalReport, rendered as an editable DOCX attachment.
+
+        Rendered on every request from the report the JSON route composes; nothing is stored.
+        """
+        from peak.reports.final_report_docx import (
+            DOCX_MEDIA_TYPE, final_report_docx_filename, render_final_report_docx,
+        )
+
+        _, report = _final_report(engagement_id)
+        return Response(
+            content=render_final_report_docx(report),
+            media_type=DOCX_MEDIA_TYPE,
+            headers={
+                "Content-Disposition":
+                    f'attachment; filename="{final_report_docx_filename(report)}"',
+                "Cache-Control": "no-store",
+            },
+        )
 
     return app

@@ -29,7 +29,7 @@ order (value, then effort, as the consultant entered them); this module only spl
 labelled groups. No group, candidate, or position carries a rank, score, or priority.
 
 **Internal only.** The report is an internal draft: not client-facing, not approved for client use,
-not exported, and it always requires consultant review. See
+not changed by export (Phase 209), and it always requires consultant review. See
 docs/PHASE208_FINAL_REPORT_FOUNDATION.md.
 """
 
@@ -87,9 +87,9 @@ SECTION_TITLES: Dict[str, str] = {
 }
 
 REPORT_STATUS_TEXT = (
-    "Internal draft report. Not client-facing, not approved for client use, and not exported. "
-    "Composed deterministically from the internal assessment; it requires consultant review "
-    "before any part of it is used with a client.")
+    "Internal draft report. Not client-facing and not approved for client use; an exported copy "
+    "is still this internal draft. Composed deterministically from the internal assessment; it "
+    "requires consultant review before any part of it is used with a client.")
 
 LOW_HANGING_FRUIT_NOT_RANKED_TEXT = (
     "These are the consultant's own flags with the effort and value they entered. They are not "

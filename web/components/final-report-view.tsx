@@ -190,7 +190,7 @@ function Limitations({ r }: { r: FinalReport }) {
 /**
  * The internal Final Report foundation: the assessment rearranged into report sections. Each section
  * keeps its material label, so discovery working material is never mistaken for governed evidence.
- * Internal draft only — not client-facing, not approved, not exported.
+ * Internal draft only — not client-facing and not approved; a DOCX export is still this internal draft.
  */
 export function FinalReportView({ r, markdown, engagementId }: { r: FinalReport; markdown: string; engagementId: string }) {
   const body: Record<ReportSectionKey, React.ReactNode> = {
@@ -210,9 +210,9 @@ export function FinalReportView({ r, markdown, engagementId }: { r: FinalReport;
     <div className="space-y-6">
       <section className="peak-card border-attention">
         <p className="text-sm">
-          <span className="font-semibold">Internal draft report.</span> Not client-facing, not approved for client
-          use, and not exported. Composed from the internal assessment; it requires consultant review before any part
-          of it is used with a client.
+          <span className="font-semibold">Internal draft report.</span> Not client-facing and not approved for client
+          use; a DOCX export is still this internal draft. Composed from the internal assessment; it requires
+          consultant review before any part of it is used with a client.
         </p>
       </section>
 
