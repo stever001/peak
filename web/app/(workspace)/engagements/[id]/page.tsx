@@ -24,6 +24,10 @@ export default async function EngagementPage(props: PageProps<"/engagements/[id]
           <Link href={`/engagements/${e.id}/assessment`} className="peak-button">
             Internal assessment
           </Link>
+          <Link href={`/engagements/${e.id}/final-report`}
+                className="inline-flex min-h-touch shrink-0 items-center justify-center rounded-peak border border-line bg-surface px-6 font-medium hover:border-brand">
+            Final report
+          </Link>
           <Link href={`/engagements/${e.id}/edit`}
                 className="inline-flex min-h-touch shrink-0 items-center justify-center rounded-peak border border-line bg-surface px-6 font-medium hover:border-brand">
             Edit engagement

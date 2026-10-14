@@ -2,15 +2,15 @@ import Link from "next/link";
 
 import type {
   AssessmentFinding,
-  DiscoveryAssessmentContext,
   DiscoveryFinding,
   DiscoveryTrace,
   InternalAssessment,
+  InterviewCoverage,
   LowHangingFruitCandidate,
 } from "@/lib/api";
 import { LEVEL_LABELS } from "@/lib/labels";
 
-function Pill({ children, tone = "bg-line" }: { children: React.ReactNode; tone?: string }) {
+export function Pill({ children, tone = "bg-line" }: { children: React.ReactNode; tone?: string }) {
   return <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold text-ink ${tone}`}>{children}</span>;
 }
 
@@ -18,7 +18,8 @@ function Pill({ children, tone = "bg-line" }: { children: React.ReactNode; tone?
  * Says what kind of material a section holds. The whole point of the page is that a consultant
  * never has to guess whether what they are reading is governed evidence or their own notes.
  */
-function MaterialLabel({ kind }: { kind: "discovery" | "evidence" }) {
+function MaterialLabel({ kind }: { kind: MaterialKind }) {
+  if (kind === "report") return null;
   return kind === "discovery" ? (
     <Pill tone="bg-highlight">Consultant working material</Pill>
   ) : (
@@ -26,11 +27,14 @@ function MaterialLabel({ kind }: { kind: "discovery" | "evidence" }) {
   );
 }
 
-function Section({
-  title, kind, count, children,
-}: { title: string; kind: "discovery" | "evidence"; count?: number; children: React.ReactNode }) {
+/** "report" sections restate counts and fixed text only, so they carry no material label. */
+export type MaterialKind = "discovery" | "evidence" | "report";
+
+export function Section({
+  title, kind, count, id, children,
+}: { title: string; kind: MaterialKind; count?: number; id?: string; children: React.ReactNode }) {
   return (
-    <section className="peak-card">
+    <section id={id} className="peak-card scroll-mt-6">
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-lg font-semibold">
           {title}
@@ -44,7 +48,7 @@ function Section({
 }
 
 /** "Where did this come from?" — the person and interview first, identifiers in the details. */
-function Trace({ trace }: { trace: DiscoveryTrace }) {
+export function Trace({ trace }: { trace: DiscoveryTrace }) {
   const ids = [
     trace.observation_id && `observation ${trace.observation_id}`,
     trace.session_id && `session ${trace.session_id}`,
@@ -127,7 +131,7 @@ function FruitCard({ c }: { c: LowHangingFruitCandidate }) {
   );
 }
 
-function EvidenceFindingCard({ f }: { f: AssessmentFinding }) {
+export function EvidenceFindingCard({ f }: { f: AssessmentFinding }) {
   return (
     <li className="rounded-peak border border-line bg-surface p-4">
       <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -160,8 +164,7 @@ function EvidenceFindingCard({ f }: { f: AssessmentFinding }) {
   );
 }
 
-function Coverage({ d }: { d: DiscoveryAssessmentContext }) {
-  const c = d.coverage;
+export function Coverage({ c }: { c: InterviewCoverage }) {
   const stat = (label: string, value: string | number) => (
     <div key={label} className="rounded-peak border border-line bg-surface px-4 py-3">
       <dt className="text-sm text-ink-muted">{label}</dt>
@@ -240,7 +243,7 @@ export function AssessmentView({ a, engagementId }: { a: InternalAssessment; eng
       </Section>
 
       <Section title="Discovery summary" kind="discovery">
-        {d?.available ? <Coverage d={d} /> : (
+        {d?.available ? <Coverage c={d.coverage} /> : (
           <p className="text-ink-muted">
             No discovery material recorded.{" "}
             <Link href={`/engagements/${engagementId}#discovery`} className="font-medium text-brand">Start an interview</Link>.

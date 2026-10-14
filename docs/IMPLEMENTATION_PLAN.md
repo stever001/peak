@@ -4088,6 +4088,38 @@ Baseline `a29e1e0`. Record:
 **Next:** consuming this material in an internal report, once authenticated production acceptance
 is possible.
 
+---
+
+### Phase 208 — Final Report foundation (local only)
+
+Baseline `cf1eab9`. Record:
+[`PHASE208_FINAL_REPORT_FOUNDATION.md`](PHASE208_FINAL_REPORT_FOUNDATION.md).
+
+> **Open items, still open:** production Admin acceptance is pending provisioning of
+> `admin@peakinventorysolutions.com`, and authenticated production discovery/assessment acceptance
+> is pending with it. **No temporary Admin may be created.**
+
+- [x] Pure `peak/reports/final_report.py`: `compose_final_report` consumes the existing
+  `InternalAssessment` (no `peak.db` import, no re-query) and `render_final_report_markdown`
+  renders it. **Deterministic internal report only — no LLM.**
+- [x] Six fixed sections: executive overview (engagement, client, North Star, count-only summary),
+  discovery summary, low-hanging-fruit opportunities, evidence-backed findings, internal
+  recommendations, limitations and human review.
+- [x] Discovery stays labelled consultant working material; evidence stays governed.
+  Recommendations are only the Phase 118 ones for Phase 117-eligible findings — none are created.
+- [x] Low-hanging fruit keeps the Phase 206 display order, split into labelled value/effort groups;
+  no rank, score, priority or ROI field.
+- [x] `GET /engagements/{id}/final-report` — read-only, derived on every request; write methods 405.
+- [x] `/engagements/[id]/final-report` UI, linked from the engagement and assessment pages;
+  responsive for phone, iPad and desktop.
+- [x] **No client-facing approval, no export, no stored report, no migration 018.**
+- [x] `tests/validate_phase208_final_report_foundation.py` PASS; `npm run build` and `npm run lint`
+  clean.
+- [x] **Not deployed.** Production stays at Phase 207; Render Auto-Deploy remains **OFF**.
+
+**Next:** internal review of the report shape. Export and client-facing approval are later,
+separately approved phases; deploying Phase 208 is its own cutover.
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

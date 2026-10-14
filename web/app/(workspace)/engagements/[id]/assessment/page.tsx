@@ -20,8 +20,13 @@ export default async function AssessmentPage(props: PageProps<"/engagements/[id]
             className="mb-4 inline-flex min-h-touch items-center text-sm font-medium text-brand">
         ← {engagement.engagement_label ?? "Engagement"}
       </Link>
-      <PageHeader title="Internal assessment"
-                  intro={`${engagement.client.name} · ${engagement.engagement_label ?? "Untitled engagement"}`} />
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <PageHeader title="Internal assessment"
+                    intro={`${engagement.client.name} · ${engagement.engagement_label ?? "Untitled engagement"}`} />
+        <Link href={`/engagements/${engagement.id}/final-report`} className="peak-button shrink-0">
+          Final report
+        </Link>
+      </div>
       <AssessmentView a={assessment} engagementId={engagement.id} />
     </>
   );

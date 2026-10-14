@@ -6,7 +6,8 @@ consultant administration. No business logic lives here.
 The Phase 206 assessment route is **read-only and derived**: it composes the existing one-call
 assessment workflow over a caller-owned connection and returns the result. There is no assessment
 writer, no assessment table, and no write endpoint — an assessment is recomputed from persisted
-records on every request, so it can never drift from them.
+records on every request, so it can never drift from them. The Phase 208 final-report route is the
+same: it composes the same assessment into report sections, and nothing is stored.
 
 Run locally (see docs/PHASE201_CONSULTANT_WEB_SHELL_AUTH.md)::
 
@@ -433,6 +434,37 @@ def create_app(
             "engagement": engagement,
             "assessment": dataclasses.asdict(result.assessment),
             "markdown": result.markdown,
+        }
+
+    # --- Phase 208: final report foundation (read-only, derived; any authenticated consultant) --
+
+    @app.get("/engagements/{engagement_id}/final-report")
+    def engagement_final_report(engagement_id: str, _: dict = Depends(current_consultant)):
+        """The engagement's internal Final Report foundation, composed from its assessment.
+
+        Same read path and visibility rules as the assessment route above; the report is then
+        composed from that assessment by a pure function. Nothing is written, cached, or stored,
+        and there is no companion write endpoint.
+        """
+        import dataclasses
+
+        from peak.db.engagement_packet_reader import EngagementNotVisible
+        from peak.reports.final_report import compose_final_report, render_final_report_markdown
+        from peak.workflows.consultant_assessment_workflow import (
+            build_consultant_internal_assessment,
+        )
+
+        engagement = _workspace_call(workspace.get_engagement, session_factory, engagement_id)
+        with session_factory() as session:
+            try:
+                result = build_consultant_internal_assessment(session.connection(), engagement_id)
+            except (LookupError, EngagementNotVisible):
+                raise HTTPException(status.HTTP_404_NOT_FOUND, "not_found") from None
+        report = compose_final_report(result.assessment, engagement)
+        return {
+            "engagement": engagement,
+            "report": dataclasses.asdict(report),
+            "markdown": render_final_report_markdown(report),
         }
 
     return app

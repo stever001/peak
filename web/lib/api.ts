@@ -290,3 +290,77 @@ export type AssessmentResponse = {
   assessment: InternalAssessment;
   markdown: string;
 };
+
+// --- Phase 208: final report foundation (internal, derived, read-only) -------------------------
+
+export type ReportSectionKey =
+  | "executive_overview"
+  | "discovery_summary"
+  | "low_hanging_fruit"
+  | "evidence_findings"
+  | "recommendations"
+  | "limitations";
+
+/** Consecutive candidates sharing the consultant's entered value and effort. Not a tier or rank. */
+export type LowHangingFruitGroup = {
+  estimated_value: Level | null;
+  estimated_effort: Level | null;
+  label: string;
+  candidates: LowHangingFruitCandidate[];
+};
+
+export type FinalReport = {
+  kind: string;
+  status: string;
+  audience: string;
+  client_facing: boolean;
+  approved_for_client: boolean;
+  requires_human_review: boolean;
+  section_order: ReportSectionKey[];
+  section_titles: Record<ReportSectionKey, string>;
+  executive_overview: {
+    engagement_id: string | null;
+    engagement_label: string | null;
+    client_id: string | null;
+    client_name: string | null;
+    north_star: string | null;
+    north_star_context: string | null;
+    summary: string[];
+  };
+  discovery_summary: {
+    material: string;
+    available: boolean;
+    coverage: InterviewCoverage | null;
+    findings: DiscoveryFinding[];
+    limitations: string[];
+  };
+  low_hanging_fruit: {
+    material: string;
+    grouping_note: string;
+    not_ranked_note: string;
+    groups: LowHangingFruitGroup[];
+  };
+  evidence_findings: {
+    material: string;
+    findings: AssessmentFinding[];
+    confidence_notes: string[];
+    excluded_evidence: { evidence_id: string; reason: string }[];
+  };
+  recommendations: {
+    material: string;
+    status: string;
+    recommendations: InternalRecommendation[];
+    blocked_reasons: string[];
+  };
+  limitations: {
+    boundary_statements: string[];
+    assessment_limitations: string[];
+    discovery_limitations: string[];
+  };
+};
+
+export type FinalReportResponse = {
+  engagement: Engagement;
+  report: FinalReport;
+  markdown: string;
+};
