@@ -4149,6 +4149,50 @@ Baseline `1018db2`. Record:
 **Next:** internal review of the exported document. PDF and client-facing approval are later,
 separately approved phases; deploying Phases 208–209 is its own cutover.
 
+---
+
+### Phase 210 — Peak Project Contract (documentation only)
+
+Baseline `1a8477c`. Record: [`PEAK_PROJECT_CONTRACT.md`](PEAK_PROJECT_CONTRACT.md) — **the
+highest-level normative authority**. Where this plan conflicts with it, the Contract governs.
+
+> **Open operational items, still open:** production Admin acceptance is pending provisioning of
+> `admin@peakinventorysolutions.com`, and authenticated production discovery/assessment/report
+> acceptance is pending with it — **no temporary Admin may be created**. Render Auto-Deploy remains
+> **OFF**, and API deploys remain manual until a phase explicitly decides otherwise.
+
+- [x] Authority hierarchy and conflict rule adopted.
+- [x] Settled rules C1–C20 recorded, each with its principle and authority.
+- [x] Planned specialized authorities named, not created: `ARTIFACT_LIFECYCLE.md`,
+  `CAPSULE_PUBLICATION.md`.
+- [x] README carries a one-paragraph authority pointer. No other doc was swept.
+- [x] **No schema, migration, runtime code, test or production change.**
+
+**Reconciliation items (current state against the Contract — gaps, not violations):**
+
+- **Versioning, approval and release (C9, C11–C13, C19)** — not implemented. The Final Report is
+  derived from live state on every request; there is no artifact version, approval chain or release
+  action yet. Detail belongs in `ARTIFACT_LIFECYCLE.md`.
+- **Approval roles (C12)** — consultant accounts have only the `admin` and `consultant` roles. Lead
+  Consultant and Final Approver are not yet modelled, and the Contract does not map them onto
+  existing roles. That mapping, and whether one person may hold both roles for the same version,
+  is for `ARTIFACT_LIFECYCLE.md`.
+- **Single human gate (C12)** — `STATE_TRANSITIONS.md` and `GOVERNANCE_STATES.md` say "only a human
+  sets `approved_for_client`". That is consistent with the Contract but less specific than its
+  two-approval, same-version rule, which governs. Reconcile when `ARTIFACT_LIFECYCLE.md` is written.
+- **Client-facing presentation (C8, C14)** — the Phase 208 report page and Phase 209 DOCX are
+  internal and show internal identifiers, the internal-draft status table and the title "Final
+  report" (filename `final-report-….docx`). Acceptable while internal. A client-facing rendering
+  must drop them.
+- **Capsule "update" action (C10)** — `PEAK_OPERATED_AGENTNET_PUBLICATION_POLICY.md` lists
+  publish/update/supersede/revoke. "Update" must not overwrite a capsule's version binding.
+  Settle its meaning in `CAPSULE_PUBLICATION.md`.
+- **README framing (C1)** — the README still describes an "Internal AI Operating System" with "no
+  frontend and no client-facing application" and pre-production status. That is stale since Phases
+  201–207. Its authority pointer now defers to the Contract; the rewrite is out of scope here.
+
+**Next:** the artifact/versioning work under `ARTIFACT_LIFECYCLE.md`, as its own approved phase.
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

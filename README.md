@@ -2,6 +2,10 @@
 
 An internal, AgentNet-grounded agent workflow system for **Peak Inventory Solutions**.
 
+> **Authority:** [`docs/PEAK_PROJECT_CONTRACT.md`](docs/PEAK_PROJECT_CONTRACT.md) is the
+> highest-level normative authority in this repository. Where this README or any other document
+> conflicts with it, the Contract governs.
+
 > **Status:** Internal, pre-production. Alongside the operating model, agent workflow
 > map, data objects, and implementation plan, the repository now defines a **controlled
 > database schema** (Alembic migrations), a set of **narrow create-only controlled
