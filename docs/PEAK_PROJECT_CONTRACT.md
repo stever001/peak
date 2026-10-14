@@ -15,7 +15,7 @@ invariants. Where detail is needed, it points to a specialized authority instead
 | Level | Authority | Role |
 |---|---|---|
 | 1 | **`docs/PEAK_PROJECT_CONTRACT.md`** (this document) | Highest-level normative authority: the settled rules |
-| 2 | **Specialized normative authorities** — e.g. [`GOVERNANCE_STATES.md`](GOVERNANCE_STATES.md), [`STATE_TRANSITIONS.md`](STATE_TRANSITIONS.md), [`CONTROLLED_WRITE_ALLOWLIST.md`](CONTROLLED_WRITE_ALLOWLIST.md) with `peak/persistence/allowlist.py`, [`DATA_HANDLING_POLICY.md`](DATA_HANDLING_POLICY.md), [`PEAK_OPERATED_AGENTNET_PUBLICATION_POLICY.md`](PEAK_OPERATED_AGENTNET_PUBLICATION_POLICY.md), and the schema/migration authorities; the artifact-lifecycle and capsule-publication authorities once created (§4) | The detailed rules for one domain, consistent with this Contract |
+| 2 | **Specialized normative authorities** — e.g. [`GOVERNANCE_STATES.md`](GOVERNANCE_STATES.md), [`STATE_TRANSITIONS.md`](STATE_TRANSITIONS.md), [`CONTROLLED_WRITE_ALLOWLIST.md`](CONTROLLED_WRITE_ALLOWLIST.md) with `peak/persistence/allowlist.py`, [`DATA_HANDLING_POLICY.md`](DATA_HANDLING_POLICY.md), [`PEAK_OPERATED_AGENTNET_PUBLICATION_POLICY.md`](PEAK_OPERATED_AGENTNET_PUBLICATION_POLICY.md), [`ARTIFACT_LIFECYCLE.md`](ARTIFACT_LIFECYCLE.md), and the schema/migration authorities; the capsule-publication authority once created (§4) | The detailed rules for one domain, consistent with this Contract |
 | 3 | **Phase documents** — `docs/PHASE###_*.md`, indexed in [`PHASE_INDEX.md`](PHASE_INDEX.md) | Historical record of when and why a capability was introduced |
 | 4 | **[`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md)** | Sequencing and planned work |
 | 5 | **Code and tests** | Enforcement and implementation |
@@ -96,7 +96,7 @@ engagements are classified and isolated separately (interim detail in Phases 55�
 that same report content, and no rendering composes report content of its own.
 
 - **Principle:** compose once, render many; renderings cannot drift because they share one source.
-- **Authority:** enforced by `peak/reports/final_report.py`, the one composer; artifact detail in the planned artifact-lifecycle authority (§4).
+- **Authority:** enforced by `peak/reports/final_report.py`, the one composer; artifact detail in [`ARTIFACT_LIFECYCLE.md`](ARTIFACT_LIFECYCLE.md).
 
 ### C8 — Client-facing presentation
 
@@ -105,7 +105,7 @@ version labels (v1/v2/v3), internal artifact IDs, capsule IDs, superseded-versio
 label "final" merely because the artifact has been released.
 
 - **Principle:** clients see the content Peak stands behind; Peak's internal bookkeeping stays internal.
-- **Authority:** planned artifact-lifecycle authority (§4).
+- **Authority:** [`ARTIFACT_LIFECYCLE.md`](ARTIFACT_LIFECYCLE.md).
 
 ### C9 — Versioning
 
@@ -115,7 +115,7 @@ engagement's consulting work, not a repository delivery phase. Working records m
 issued milestone artifact keeps its historical versions immutable.**
 
 - **Principle:** what was issued stays exactly what was issued.
-- **Authority:** planned artifact-lifecycle authority (§4).
+- **Authority:** [`ARTIFACT_LIFECYCLE.md`](ARTIFACT_LIFECYCLE.md).
 
 ### C10 — Capsules bind to immutable versions
 
@@ -132,7 +132,7 @@ artifact version and carry **identical business content**. Presentation and layo
 medium.
 
 - **Principle:** the medium changes the layout, never the substance.
-- **Authority:** C7; planned artifact-lifecycle authority (§4).
+- **Authority:** C7; [`ARTIFACT_LIFECYCLE.md`](ARTIFACT_LIFECYCLE.md).
 
 ### C12 — Sequential approval
 
@@ -142,14 +142,14 @@ content change after an approval invalidates the prior approval chain for releas
 requires re-approval of the new version.
 
 - **Principle:** an approval is for specific content; new content needs new approval.
-- **Authority:** planned artifact-lifecycle authority (§4). The general rule that only humans grant client-facing approval is in [`GOVERNANCE_STATES.md`](GOVERNANCE_STATES.md) and [`STATE_TRANSITIONS.md`](STATE_TRANSITIONS.md).
+- **Authority:** [`ARTIFACT_LIFECYCLE.md`](ARTIFACT_LIFECYCLE.md). The general rule that only humans grant client-facing approval is in [`GOVERNANCE_STATES.md`](GOVERNANCE_STATES.md) and [`STATE_TRANSITIONS.md`](STATE_TRANSITIONS.md).
 
 ### C13 — Release rule
 
 **Only an artifact version holding both required approvals may be released to the client.**
 
 - **Principle:** release is the result of the approval chain, never a substitute for it.
-- **Authority:** planned artifact-lifecycle authority (§4).
+- **Authority:** [`ARTIFACT_LIFECYCLE.md`](ARTIFACT_LIFECYCLE.md).
 
 ### C14 — Internal metadata stays internal
 
@@ -157,7 +157,7 @@ requires re-approval of the new version.
 internal** unless a specific external requirement says otherwise.
 
 - **Principle:** governance records serve Peak's accountability; they are not part of the client deliverable.
-- **Authority:** C8; planned artifact-lifecycle and capsule-publication authorities (§4).
+- **Authority:** C8; [`ARTIFACT_LIFECYCLE.md`](ARTIFACT_LIFECYCLE.md); planned capsule-publication authority (§4).
 
 ### C15 — No client or sample data in the repository
 
@@ -191,14 +191,14 @@ produced this artifact; who approved it; what exact version was released; and wh
 represents it.
 
 - **Principle:** every issued output can be explained after the fact.
-- **Authority:** [`DATABASE_ACCESS_AND_AUDIT.md`](DATABASE_ACCESS_AND_AUDIT.md); planned artifact-lifecycle and capsule-publication authorities (§4).
+- **Authority:** [`DATABASE_ACCESS_AND_AUDIT.md`](DATABASE_ACCESS_AND_AUDIT.md); [`ARTIFACT_LIFECYCLE.md`](ARTIFACT_LIFECYCLE.md); planned capsule-publication authority (§4).
 
 ### C19 — Working state versus issued artifacts
 
 **Working state may change. Issued artifacts must be reconstructible and historically stable.**
 
 - **Principle:** consultants can keep working without rewriting what has already gone out.
-- **Authority:** C9; planned artifact-lifecycle authority (§4).
+- **Authority:** C9; [`ARTIFACT_LIFECYCLE.md`](ARTIFACT_LIFECYCLE.md).
 
 ### C20 — Specialized authority pattern
 
@@ -238,13 +238,13 @@ until one is written.
 | Data architecture | [`CONTROLLED_DATA_ARCHITECTURE.md`](CONTROLLED_DATA_ARCHITECTURE.md) |
 | AgentNet and capsules (current) | [`PEAK_OPERATED_AGENTNET_PUBLICATION_POLICY.md`](PEAK_OPERATED_AGENTNET_PUBLICATION_POLICY.md), [`AGENTNET_MCP_BOUNDARY.md`](AGENTNET_MCP_BOUNDARY.md), [`RESOLVER_CAPSULE_ARCHITECTURE.md`](RESOLVER_CAPSULE_ARCHITECTURE.md) |
 | Operating model | [`OPERATING_MODEL.md`](OPERATING_MODEL.md) |
+| Artifact lifecycle: artifact and version identity, working vs issued state, renderings of a version, the Lead Consultant → Final Approver chain, approval invalidation, release, supersession, client-facing presentation (C7–C9, C11–C14, C18, C19) | [`ARTIFACT_LIFECYCLE.md`](ARTIFACT_LIFECYCLE.md) (Phase 211) |
 
-**Planned specialized authorities.** These do not exist yet. Until they do, the Contract rules that
-point to them govern directly.
+**Planned specialized authority.** This does not exist yet. Until it does, the Contract rules that
+point to it govern directly.
 
 | Planned authority | Will govern | Contract rules |
 |---|---|---|
-| `ARTIFACT_LIFECYCLE.md` | artifact and version identity, working vs issued state, renderings of a version, the Lead Consultant → Final Approver chain, approval invalidation, release, client-facing presentation | C7–C9, C11–C14, C18, C19 |
 | `CAPSULE_PUBLICATION.md` | capsule-to-version binding, supersession, AgentNet publication decisions | C10, C14, C17, C18 |
 
 ---

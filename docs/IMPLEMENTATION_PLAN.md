@@ -4193,6 +4193,59 @@ highest-level normative authority**. Where this plan conflicts with it, the Cont
 
 **Next:** the artifact/versioning work under `ARTIFACT_LIFECYCLE.md`, as its own approved phase.
 
+### Phase 211 — Artifact Lifecycle authority (documentation only)
+
+Baseline `c506b77`. Record: [`ARTIFACT_LIFECYCLE.md`](ARTIFACT_LIFECYCLE.md). It is the specialized
+normative authority for artifact versioning, approval, release, supersession and capsule binding,
+subordinate to [`PEAK_PROJECT_CONTRACT.md`](PEAK_PROJECT_CONTRACT.md). Its rules are numbered
+AL1–AL40.
+
+> **Open operational items, still open:** production Admin acceptance is pending provisioning of
+> `admin@peakinventorysolutions.com`, and authenticated production discovery/assessment/report
+> acceptance is pending with it. **No temporary Admin may be created.** Render Auto-Deploy remains
+> **OFF**, and API deploys remain manual.
+
+- [x] Artifact model defined: Client → Engagement → Engagement Phase (a consulting stage, not a repo
+  phase) → Artifact → Artifact Version.
+- [x] Working state separated from immutable artifact versions. Not every edit creates a version.
+- [x] Conceptual lifecycle defined: working → versioned → lead_approved → final_approved → released
+  → superseded, plus rejected.
+- [x] Sequential Lead Consultant → Final Approver approval on one immutable version. A content change
+  means a new version and a restarted chain.
+- [x] Release eligibility, supersession, web/DOCX identity, client presentation, exact-version
+  capsule binding, and provenance questions recorded.
+- [x] `CAPSULE_PUBLICATION.md` still planned, not created.
+- [x] **No schema, migration, runtime code, test or production change.** Nothing in the lifecycle is
+  implemented.
+
+**Reconciliation items (current state against `ARTIFACT_LIFECYCLE.md` — gaps, not violations).**
+These carry forward and refine the Phase 210 items:
+
+- **Artifact/version persistence (AL3–AL9, AL26, §12)** — not implemented. There is no artifact,
+  version, approval, release or supersession record. The Final Report is an internal draft composed
+  from live working state on every request (AL9), and no content hash exists.
+- **Lead Consultant / Final Approver roles (AL15–AL18)** — not modelled. Accounts have only `admin`
+  and `consultant`, and these business roles are not mapped onto them. Per-artifact role assignment
+  is undefined. AL17 requires two different humans for the two approvals of any one version, with
+  no small-team exception. Nothing enforces this yet. The item stays open until account roles
+  implement Lead Consultant / Final Approver semantics.
+- **Single client-approval gate (§6)** — `GOVERNANCE_STATES.md` and `STATE_TRANSITIONS.md` define one
+  human gate to `approved_for_client`. For artifact versions it must be reconciled to the two-stage,
+  same-version chain, which governs.
+- **Client-facing report presentation (AL36–AL37)** — the Phase 208 page and Phase 209 DOCX show
+  internal IDs, the internal-draft status and banner, the title "Final report" and the file name
+  `final-report-….docx`. That is acceptable while internal. A client-facing rendering must remove
+  them and must render from a released version, not from working state (AL34).
+- **Capsule update semantics (AL38–AL40)** — the publication policy's "update" action must preserve
+  exact version binding and never overwrite a version-to-capsule relationship. The mechanics belong
+  to the planned `CAPSULE_PUBLICATION.md`.
+- **Proposal artifacts (§13)** — proposal-for-next-phase and accepted-proposal artifacts are not
+  implemented, and how client acceptance is captured is undefined.
+- **README framing (Contract C1)** — still stale. Carried from Phase 210.
+
+**Next:** a separately approved phase to design artifact/version persistence against
+`ARTIFACT_LIFECYCLE.md`. Schema and grant changes stay gated (Contract C16).
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing
