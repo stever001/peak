@@ -160,6 +160,15 @@ WORKSPACE_WRITE_COLUMNS = {
         frozenset({"id", "client_id", "engagement_id", "session_id",
                    "recorded_by_consultant_id"}) | DISCOVERY_OBSERVATION_COLUMNS,
     ("discovery_observations", "update_discovery_observation"): DISCOVERY_OBSERVATION_COLUMNS,
+    # Phase 212 — artifact identity and immutable versions. Create only: there is no update and no
+    # delete action for either table (docs/ARTIFACT_LIFECYCLE.md AL5).
+    ("artifacts", "create_artifact"):
+        frozenset({"id", "client_id", "engagement_id", "artifact_type", "engagement_phase_label",
+                   "created_by_consultant_id"}),
+    ("artifact_versions", "create_artifact_version"):
+        frozenset({"id", "artifact_id", "client_id", "engagement_id", "version_number",
+                   "content_format", "content_canonical", "content_hash", "supersedes_version_id",
+                   "version_status", "created_by_consultant_id", "source_references"}),
 }
 
 #: Columns the workspace path may never write: governance, classification, review/audit, and
@@ -201,6 +210,12 @@ assert set(WORKSPACE_ENGAGEMENT_CREATION_STAMP) <= WORKSPACE_FORBIDDEN_COLUMNS
 DISCOVERY_RECORD_TABLES = frozenset(
     {"discovery_sessions", "discovery_answers", "discovery_observations"}
 )
+
+#: Phase 212: artifacts and artifact versions are engagement work records, created with the same
+#: server-set stamp under a stamped engagement. Their only workspace actions are creates.
+ARTIFACT_RECORD_TABLES = frozenset({"artifacts", "artifact_versions"})
+assert all(action.startswith("create_")
+           for table, action in WORKSPACE_WRITE_COLUMNS if table in ARTIFACT_RECORD_TABLES)
 
 # Any action whose name contains one of these substrings is prohibited outright, regardless
 # of the allowlist — publication, client-facing approval, financial verification, deletes,

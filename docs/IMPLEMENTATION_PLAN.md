@@ -4246,6 +4246,52 @@ These carry forward and refine the Phase 210 items:
 **Next:** a separately approved phase to design artifact/version persistence against
 `ARTIFACT_LIFECYCLE.md`. Schema and grant changes stay gated (Contract C16).
 
+### Phase 212 — Artifact version persistence foundation
+
+Baseline `596bafe`. Record:
+[`PHASE212_ARTIFACT_VERSION_PERSISTENCE.md`](PHASE212_ARTIFACT_VERSION_PERSISTENCE.md). Built
+under [`ARTIFACT_LIFECYCLE.md`](ARTIFACT_LIFECYCLE.md).
+
+> **Open items, still open:**
+> - Production Admin acceptance is pending provisioning of `admin@peakinventorysolutions.com`, and
+>   authenticated production discovery/assessment/report acceptance is pending with it. **No
+>   temporary Admin may be created.**
+> - Render Auto-Deploy remains **OFF**, and API deploys remain manual.
+> - **Two-stage approval is not implemented. Capsule publication is not implemented.**
+
+- [x] Migration `018_artifact_versions` adds `artifacts` and `artifact_versions`. It is additive with
+  no data, and **not applied to production**.
+- [x] Each version stores the canonical FinalReport business content (without draft-state flags)
+  and its deterministic sha256 hash. No DOCX or HTML is stored.
+- [x] The engagement phase is a label snapshot on the artifact. No phase entity and no phase CRUD.
+- [x] `peak/workspace/artifacts.py` creates versions only when called explicitly. Identical content
+  creates no version. A new version supersedes the latest one, and the earlier row is never touched.
+- [x] Immutability is enforced in four layers: no update function, create-only allowlist pairs,
+  ORM update/delete refusal, and no UPDATE/DELETE grant in production.
+- [x] **No approval, release, capsule, proposal, API, UI or client-facing change.** The web and
+  DOCX report are unchanged.
+
+**Reconciliation items (carried forward; Phase 211 list updated):**
+
+- **Artifact/version persistence** — the foundation now exists. Still missing:
+  - an API or UI to create or view versions;
+  - rendering web and DOCX from a stored version rather than live state (AL34);
+  - stored `superseded` / approval / release status (supersession is derived; all updates are
+    refused until the approval phase opens a transition).
+- **Lead Consultant / Final Approver roles** — still not modelled. AL17's two-different-humans rule
+  is not enforced.
+- **Single client-approval gate** — still to be reconciled to two-stage, same-version approval.
+- **Client-facing report presentation** — the internal report still shows internal IDs and the title
+  "Final report".
+- **Capsule update semantics** — still to be settled in `CAPSULE_PUBLICATION.md` (planned).
+- **Proposal artifacts** — not implemented. `final_report` is the only artifact type.
+- **README framing** — still stale.
+- **Production cutover** — migration 018 and the verifier pin move are unapplied. No grant change is
+  needed.
+
+**Next:** review of the Phase 212 foundation. The approval chain and the production cutover are
+separate, explicitly approved phases.
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

@@ -49,6 +49,7 @@ EXPECTED_TABLES = [
     "internal_assessment_report_drafts", "internal_report_review_packets",
     "internal_report_review_packet_decisions", "consultants",
     "discovery_questions", "discovery_sessions", "discovery_answers", "discovery_observations",
+    "artifacts", "artifact_versions",
 ]
 
 # Tables that are deliberately NOT governed engagement records and so carry no governance/audit

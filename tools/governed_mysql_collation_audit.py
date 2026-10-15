@@ -156,6 +156,9 @@ EXACT_CLASS = {
     "branch_operator": GOVERNED_ENUM,
     "estimated_effort": GOVERNED_ENUM,
     "estimated_value": GOVERNED_ENUM,
+    # Phase 212 artifact versions: the name of the canonical serialization, a closed vocabulary
+    # (``artifact_type`` and ``version_status`` are already enums by pattern).
+    "content_format": GOVERNED_ENUM,
 }
 
 #: Suffix/substring patterns, applied in order when no exact name matches.

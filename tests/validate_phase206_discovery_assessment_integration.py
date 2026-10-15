@@ -69,7 +69,13 @@ def no_new_persistence_checks():
     """Phase 206 is derived: no migration 018, no new table, no new write action."""
     print("\n[no new persisted state]")
     versions = os.listdir(os.path.join(REPO_ROOT, "alembic", "versions"))
-    check("no migration 018 was added", not any(v.startswith("018") for v in versions))
+    # A claim about this phase only (Phase 121 convention): it holds while this harness is being
+    # authored. Phase 212 legitimately adds 018_artifact_versions.
+    import _schema_history as schema_history
+
+    if schema_history.phase_never_committed(REPO_ROOT, "tests/validate_phase206_discovery_assessment_integration.py"):
+        check("no migration 018 was added", not any(v.startswith("018") for v in versions))
+    check("migration history is still one linear chain", bool(schema_history.migration_chain(REPO_ROOT)))
 
     from peak.persistence import allowlist
 

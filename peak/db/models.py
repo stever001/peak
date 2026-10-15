@@ -16,8 +16,9 @@ from sqlalchemy import (
     JSON, Boolean, CheckConstraint, DateTime, Index, Integer, Numeric, String, Text,
     UniqueConstraint,
 )
-from sqlalchemy import false as sa_false, func, true as sa_true
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import event, false as sa_false, func, true as sa_true
+from sqlalchemy.dialects import mysql
+from sqlalchemy.orm import Mapped, Session, mapped_column
 
 from .base import MYSQL_TABLE_ARGS, AuditMixin, Base, GovernanceMixin, GovernedString
 
@@ -811,6 +812,92 @@ class DiscoveryObservation(Base, GovernanceMixin, AuditMixin):
     estimated_value: Mapped[Optional[str]] = mapped_column(String(8))
     recorded_by_consultant_id: Mapped[str] = mapped_column(GovernedString(64), nullable=False)
 
+
+# --- Phase 212: artifact identity and immutable artifact versions -------------------------------
+#
+# docs/ARTIFACT_LIFECYCLE.md is the authority. An artifact is the logical milestone output of one
+# engagement phase; an artifact version is an immutable snapshot of its canonical business content.
+# Written only by ``peak.workspace.artifacts`` (create actions only — no update, no delete). Both
+# tables refuse ORM updates and deletes outright (listeners below); in production the runtime role
+# holds only SELECT and INSERT on them.
+
+#: The ARTIFACT_LIFECYCLE.md §4 version states. Phase 212 writes only ``versioned``; the rest are
+#: reserved for the approval/release phases. ``superseded`` is currently derived from a newer
+#: version's ``supersedes_version_id`` and is never written.
+ARTIFACT_VERSION_STATUSES = ("versioned", "lead_approved", "final_approved", "released",
+                             "superseded", "rejected")
+
+#: Canonical content can exceed MySQL TEXT's 64 KB, so it is LONGTEXT there.
+_LongText = Text().with_variant(mysql.LONGTEXT(), "mysql", "mariadb")
+
+
+class Artifact(Base, GovernanceMixin, AuditMixin):
+    """The stable identity of one logical engagement artifact (e.g. a final report)."""
+
+    __tablename__ = "artifacts"
+    __table_args__ = MYSQL_TABLE_ARGS
+    # id convention: art_<hex>
+    id: Mapped[str] = mapped_column(GovernedString(64), primary_key=True)
+    client_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    engagement_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    artifact_type: Mapped[str] = mapped_column(String(48), index=True, nullable=False)
+    # Snapshot of the engagement's ``current_phase`` when the artifact was created. There is no
+    # engagement-phase entity; this label is the consulting stage (AL1), not a repo phase.
+    engagement_phase_label: Mapped[Optional[str]] = mapped_column(String(128))
+    created_by_consultant_id: Mapped[str] = mapped_column(GovernedString(64), nullable=False)
+
+
+class ArtifactVersion(Base, GovernanceMixin, AuditMixin):
+    """One immutable snapshot of an artifact's canonical business content. Internal only."""
+
+    __tablename__ = "artifact_versions"
+    __table_args__ = (
+        UniqueConstraint("artifact_id", "version_number", name="uq_artifact_versions_number"),
+        # A version is superseded by at most one later version: the history stays a single line.
+        UniqueConstraint("supersedes_version_id", name="uq_artifact_versions_supersedes"),
+        CheckConstraint("version_status IN ('versioned', 'lead_approved', 'final_approved', "
+                        "'released', 'superseded', 'rejected')",
+                        name="ck_artifact_versions_status"),
+        CheckConstraint("version_number >= 1", name="ck_artifact_versions_number"),
+        MYSQL_TABLE_ARGS,
+    )
+    # id convention: artv_<hex>
+    id: Mapped[str] = mapped_column(GovernedString(64), primary_key=True)
+    artifact_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    client_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    engagement_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    # Internal sequence within the artifact. Never shown to a client (AL36).
+    version_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    # Names the canonical serialization, so a later reader knows how the hash was produced.
+    content_format: Mapped[str] = mapped_column(String(64), nullable=False)
+    # The canonical JSON text, stored exactly as hashed.
+    content_canonical: Mapped[str] = mapped_column(_LongText, nullable=False)
+    # sha256 hex of ``content_canonical`` (UTF-8).
+    content_hash: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    supersedes_version_id: Mapped[Optional[str]] = mapped_column(GovernedString(64))
+    version_status: Mapped[str] = mapped_column(String(24), nullable=False, default="versioned",
+                                                server_default="versioned")
+    created_by_consultant_id: Mapped[str] = mapped_column(GovernedString(64), nullable=False)
+    # Which composer produced the content and which working-state records it referenced.
+    source_references: Mapped[Optional[dict]] = mapped_column(JSON)
+
+
+def _refuse_artifact_change(mapper, connection, target):
+    raise PermissionError(f"{target.__tablename__} rows are immutable: no update or delete.")
+
+
+for _model in (Artifact, ArtifactVersion):
+    event.listen(_model, "before_update", _refuse_artifact_change)
+    event.listen(_model, "before_delete", _refuse_artifact_change)
+
+
+@event.listens_for(Session, "do_orm_execute")
+def _refuse_bulk_artifact_change(state):
+    """Also refuse ``session.execute(update(...))`` / ``delete(...)`` aimed at artifact tables."""
+    if (state.is_update or state.is_delete) and any(
+            m.class_ in (Artifact, ArtifactVersion) for m in state.all_mappers):
+        raise PermissionError("artifact rows are immutable: no update or delete.")
+
 # Convenience list of all model classes (used by tooling/validation).
 ALL_MODELS = [
     Client,
@@ -836,4 +923,6 @@ ALL_MODELS = [
     DiscoverySession,
     DiscoveryAnswer,
     DiscoveryObservation,
+    Artifact,
+    ArtifactVersion,
 ]
