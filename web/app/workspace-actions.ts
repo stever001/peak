@@ -15,9 +15,11 @@ const ENGAGEMENT_FIELDS = [
   "engagement_label", "objective", "assigned_consultant_id", "status", "current_phase",
 ] as const;
 
+/** The listed fields the form actually submitted. An absent field (e.g. a disabled control) is left
+ *  out rather than sent as empty, so it is never cleared by accident. */
 function pick(formData: FormData, fields: readonly string[]): Record<string, string> {
   const out: Record<string, string> = {};
-  for (const field of fields) out[field] = String(formData.get(field) ?? "");
+  for (const field of fields) if (formData.has(field)) out[field] = String(formData.get(field) ?? "");
   return out;
 }
 

@@ -10,6 +10,12 @@ records on every request, so it can never drift from them. The Phase 208 final-r
 same: it composes the same assessment into report sections, and nothing is stored. The Phase 209
 DOCX route renders that same composed report as a download; it adds no write path either.
 
+Phase 213 adds the internal release-package routes: fixing the composed report as an immutable
+version (Phase 212) with its web and DOCX renditions rendered once and stored as a release package,
+serving those stored renditions, and recording the Lead approval, Final Approver designation, final
+approval and release of one package (``peak.workspace.approvals``). Each write is an explicit POST
+that appends records; the report and DOCX routes above stay read-only and never create a version.
+
 Run locally (see docs/PHASE201_CONSULTANT_WEB_SHELL_AUTH.md)::
 
     # with PEAK_RUNTIME_DATABASE_URL and PEAK_WEB_SECRET_KEY set in the environment
@@ -33,7 +39,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field
 
 from peak import accounts, workspace
-from peak.workspace import discovery
+from peak.workspace import approvals, discovery
 
 SESSION_COOKIE = "peak_session"
 INSECURE_COOKIE_ENV = "PEAK_WEB_INSECURE_COOKIE"
@@ -143,13 +149,34 @@ class ObservationCreateIn(ObservationUpdateIn):
     session_id: Optional[str] = None
 
 
+class DecisionIn(BaseModel):
+    """An approval decision on the release package whose package hash the approver was shown."""
+    model_config = ConfigDict(extra="forbid")
+    decision: Literal["approved", "rejected"]
+    package_hash: str = Field(max_length=64)
+    #: The client-facing rendition the approver reviewed; the decision is on the whole package.
+    reviewed_rendition: Literal["web", "docx"]
+    note: Optional[str] = Field(default=None, max_length=approvals.MAX_NOTE_LENGTH)
+
+
+class DesignationIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    consultant_id: str = Field(max_length=64)
+
+
+class ReleaseIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    package_hash: str = Field(max_length=64)
+
+
 def _workspace_call(fn, *args):
     """Run a workspace function, mapping its refusals to 422 and a missing record to 404."""
     try:
         result = fn(*args)
     except workspace.WorkspaceError as exc:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY,
-                            {"code": exc.code, "message": str(exc)}) from None
+        code = (status.HTTP_403_FORBIDDEN if exc.code == "admin_required"
+                else status.HTTP_422_UNPROCESSABLE_ENTITY)
+        raise HTTPException(code, {"code": exc.code, "message": str(exc)}) from None
     if result is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "not_found")
     return result
@@ -313,9 +340,9 @@ def create_app(
         return {"engagements": workspace.list_engagements(session_factory)}
 
     @app.post("/engagements", status_code=status.HTTP_201_CREATED)
-    def engagements_create(body: EngagementCreateIn, _: dict = Depends(current_consultant)):
+    def engagements_create(body: EngagementCreateIn, me: dict = Depends(current_consultant)):
         return {"engagement": _workspace_call(workspace.create_engagement, session_factory,
-                                              _body(body))}
+                                              _body(body), me["role"])}
 
     @app.get("/engagements/{engagement_id}")
     def engagements_get(engagement_id: str, _: dict = Depends(current_consultant)):
@@ -324,9 +351,10 @@ def create_app(
 
     @app.patch("/engagements/{engagement_id}")
     def engagements_update(engagement_id: str, body: EngagementUpdateIn,
-                           _: dict = Depends(current_consultant)):
+                           me: dict = Depends(current_consultant)):
+        """Any consultant may edit; only an Admin may change the assigned consultant (Phase 213)."""
         return {"engagement": _workspace_call(workspace.update_engagement, session_factory,
-                                              engagement_id, _body(body))}
+                                              engagement_id, _body(body), me["role"])}
 
     # --- Phase 204: discovery / interview workflow (any authenticated consultant) ---------------
 
@@ -495,5 +523,80 @@ def create_app(
                 "Cache-Control": "no-store",
             },
         )
+
+    # --- Phase 213: release packages, two-stage approval and release (internal) ----------------
+
+    @app.get("/engagements/{engagement_id}/final-report/packages")
+    def final_report_packages(engagement_id: str, _: dict = Depends(current_consultant)):
+        """Release packages and their approval chains, and whether the live draft matches."""
+        _, report = _final_report(engagement_id)
+        return {"review": approvals.get_final_report_review(session_factory, engagement_id,
+                                                            report)}
+
+    @app.post("/engagements/{engagement_id}/final-report/packages",
+              status_code=status.HTTP_201_CREATED)
+    def final_report_package_create(engagement_id: str, me: dict = Depends(current_consultant)):
+        """Fix the report as composed now as a version and prepare its release package (explicit,
+        never on read). Its web and DOCX renditions are rendered once and stored."""
+        _, report = _final_report(engagement_id)
+        return {"package": _workspace_call(approvals.prepare_final_report_package,
+                                           session_factory, engagement_id, report, me["id"])}
+
+    @app.get("/engagements/{engagement_id}/final-report/released")
+    def final_report_released(engagement_id: str, _: dict = Depends(current_consultant)):
+        """The released package current for client delivery (AL30); 404 if none is released."""
+        _workspace_call(workspace.get_engagement, session_factory, engagement_id)
+        return {"package": _workspace_call(approvals.get_released_package, session_factory,
+                                           engagement_id)}
+
+    @app.get("/release-packages/{package_id}")
+    def release_package_get(package_id: str, _: dict = Depends(current_consultant)):
+        return {"package": _workspace_call(approvals.get_package, session_factory, package_id)}
+
+    def _rendition(package_id: str, kind: str, disposition: str) -> Response:
+        """A rendition's stored bytes, exactly as approved. Never re-rendered."""
+        r = _workspace_call(approvals.get_rendition, session_factory, package_id, kind)
+        headers = {"Cache-Control": "no-store", "X-Peak-Rendition-Hash": r["rendition_hash"]}
+        if disposition == "attachment":
+            headers["Content-Disposition"] = f'attachment; filename="{r["file_name"]}"'
+        else:
+            # Static document: no script, no external fetch, framed only by this application.
+            headers["Content-Security-Policy"] = "default-src 'none'; style-src 'unsafe-inline'; " \
+                                                 "frame-ancestors 'self'"
+        return Response(content=r["bytes"], media_type=r["media_type"], headers=headers)
+
+    @app.get("/release-packages/{package_id}/web")
+    def release_package_web(package_id: str, _: dict = Depends(current_consultant)):
+        return _rendition(package_id, approvals.WEB, "inline")
+
+    @app.get("/release-packages/{package_id}/docx")
+    def release_package_docx(package_id: str, _: dict = Depends(current_consultant)):
+        return _rendition(package_id, approvals.DOCX, "attachment")
+
+    @app.post("/release-packages/{package_id}/lead-approval")
+    def release_package_lead(package_id: str, body: DecisionIn,
+                             me: dict = Depends(current_consultant)):
+        return {"package": _workspace_call(approvals.record_lead_decision, session_factory,
+                                           package_id, body.decision, body.package_hash,
+                                           body.reviewed_rendition, body.note, me["id"])}
+
+    @app.post("/release-packages/{package_id}/final-approver")
+    def release_package_designate(package_id: str, body: DesignationIn,
+                                  me: dict = Depends(current_consultant)):
+        return {"package": _workspace_call(approvals.designate_final_approver, session_factory,
+                                           package_id, body.consultant_id, me["id"])}
+
+    @app.post("/release-packages/{package_id}/final-approval")
+    def release_package_final(package_id: str, body: DecisionIn,
+                              me: dict = Depends(current_consultant)):
+        return {"package": _workspace_call(approvals.record_final_decision, session_factory,
+                                           package_id, body.decision, body.package_hash,
+                                           body.reviewed_rendition, body.note, me["id"])}
+
+    @app.post("/release-packages/{package_id}/release")
+    def release_package_release(package_id: str, body: ReleaseIn,
+                                me: dict = Depends(current_consultant)):
+        return {"package": _workspace_call(approvals.release_package, session_factory,
+                                           package_id, body.package_hash, me["id"])}
 
     return app

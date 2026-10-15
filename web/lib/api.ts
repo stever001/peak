@@ -364,3 +364,86 @@ export type FinalReportResponse = {
   report: FinalReport;
   markdown: string;
 };
+
+// --- Phase 213: release packages, two-stage approval and release (internal only) -------------
+
+export type PackageState =
+  | "prepared" | "lead_approved" | "final_approved" | "released" | "superseded" | "rejected";
+
+export type PersonRef = { id: string; name: string | null };
+
+export type ApprovalDecision = {
+  id: string;
+  decision: "approved" | "rejected";
+  by: PersonRef;
+  at: string | null;
+  note: string | null;
+  package_hash: string;
+  content_hash: string;
+  /** The client-facing rendition this person reviewed; the decision covers the whole package. */
+  reviewed_rendition: "web" | "docx";
+  designation_id: string | null;
+};
+
+export type Designation = {
+  id: string;
+  number: number;
+  consultant: PersonRef;
+  by: PersonRef;
+  at: string | null;
+  supersedes_designation_id: string | null;
+};
+
+export type Rendition = {
+  id: string;
+  media_type: string;
+  file_name: string | null;
+  rendered_by: string;
+  byte_length: number;
+  rendition_hash: string;
+};
+
+/**
+ * One release package: an immutable report version bound to its stored web and DOCX renditions,
+ * and its approval chain. Internal: never part of client-facing output.
+ */
+export type ReleasePackage = {
+  id: string;
+  artifact_id: string;
+  engagement_id: string;
+  package_number: number;
+  artifact_version_id: string;
+  version_number: number | null;
+  content_hash: string;
+  package_hash: string;
+  hash_verified: boolean;
+  /** Why the stored renditions are not client-facing; empty when the package can be approved. */
+  client_problems: string[];
+  renditions: { web?: Rendition; docx?: Rendition };
+  created_by: PersonRef | null;
+  created_at: string | null;
+  supersedes_package_id: string | null;
+  superseded_by_package_id: string | null;
+  state: PackageState;
+  lead_decision: ApprovalDecision | null;
+  final_decision: ApprovalDecision | null;
+  current_designation: { id: string; consultant: PersonRef; by: PersonRef; at: string | null } | null;
+  designations: Designation[];
+  release: { id: string; by: PersonRef; at: string | null; package_hash: string } | null;
+};
+
+export type FinalReportReview = {
+  engagement_id: string;
+  artifact_id: string | null;
+  packages: ReleasePackage[];
+  draft_content_hash: string | null;
+  draft_matches_latest: boolean;
+};
+
+/** The stored web rendition's exact HTML, for review. Never re-rendered. */
+export async function getWebRendition(packageId: string): Promise<string> {
+  const res = await apiFetch(`/release-packages/${encodeURIComponent(packageId)}/web`);
+  if (res.status === 401) redirect("/login");
+  if (!res.ok) throw new Error(`Peak API web rendition failed (${res.status})`);
+  return res.text();
+}

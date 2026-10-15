@@ -278,11 +278,23 @@ def client_facing_checks(report, v1):
           all(token not in markdown and token.encode() not in docx
               for token in (v1["id"], v1["artifact_id"], v1["content_hash"])))
     app_src = open(os.path.join(REPO_ROOT, "peak/consultant_api/app.py")).read()
-    check("the API neither exposes nor calls artifact versioning (no auto-versioning on read)",
-          "artifact" not in app_src.lower())
-    hits = subprocess.run(["git", "-C", REPO_ROOT, "grep", "-il", "artifact", "--", "web/app",
-                           "web/components", "web/lib"], capture_output=True, text=True).stdout
-    check("the web app shows no artifact or version metadata", not hits.strip())
+    # Claims about this phase only (Phase 121 convention): Phase 213 legitimately adds internal
+    # artifact review routes and UI. The durable invariant is that reading the report never
+    # creates a version, checked below for the report and DOCX routes.
+    import _schema_history as schema_history
+
+    if schema_history.phase_never_committed(
+            REPO_ROOT, "tests/validate_phase212_artifact_version_persistence.py"):
+        check("the API neither exposes nor calls artifact versioning (no auto-versioning on read)",
+              "artifact" not in app_src.lower())
+        hits = subprocess.run(["git", "-C", REPO_ROOT, "grep", "-il", "artifact", "--", "web/app",
+                               "web/components", "web/lib"], capture_output=True, text=True).stdout
+        check("the web app shows no artifact or version metadata", not hits.strip())
+    start = app_src.find("def _final_report(")
+    end = app_src.find("return Response(", start)
+    read_routes = app_src[start:end]
+    check("the report and DOCX read routes never create a version (no auto-versioning on read)",
+          start != -1 and end != -1 and "version" not in read_routes.lower())
 
 
 def main() -> int:

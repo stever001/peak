@@ -147,7 +147,9 @@ def persistence_checks():
             imported.add(("." * node.level) + (node.module or ""))
     check("the renderer imports only the stdlib and its sibling report modules",
           imported <= {"__future__", "io", "re", "zipfile", "typing", "xml.sax.saxutils",
-                       ".discovery_assessment", ".final_report", ".internal_assessment"})
+                       ".discovery_assessment", ".final_report", ".internal_assessment",
+                       # Phase 213: the presentation layer, a sibling report module (stdlib only)
+                       ".release_presentation"})
     check("the renderer holds no session, query, write, cache or file call",
           not any(t in source for t in ("session.", "session_factory", ".execute(", "insert(", ".commit(",
                                         "lru_cache", "open(")))

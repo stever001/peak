@@ -12,13 +12,15 @@ import type { ConsultantOption, Engagement } from "@/lib/api";
 type Action = (prev: FormState, formData: FormData) => Promise<FormState>;
 const EDITABLE_STATUSES = ["active", "on_hold", "closed"] as const;
 
-export function EngagementForm({ action, engagement, client, consultants, cancelHref, submitLabel }: {
+export function EngagementForm({ action, engagement, client, consultants, cancelHref, submitLabel, canAssign }: {
   action: Action;
   engagement?: Engagement;
   client: { id: string; name: string | null };
   consultants: ConsultantOption[];
   cancelHref: string;
   submitLabel: string;
+  /** Only an Admin may set the assigned consultant: they give the Lead Consultant approval. */
+  canAssign: boolean;
 }) {
   const [state, formAction, pending] = useActionState<FormState, FormData>(action, {});
   const status = EDITABLE_STATUSES.find((s) => s === engagement?.status) ?? "active";
@@ -34,9 +36,12 @@ export function EngagementForm({ action, engagement, client, consultants, cancel
           <input id="engagement_label" name="engagement_label" required maxLength={255}
                  defaultValue={engagement?.engagement_label ?? ""} className="peak-input" />
         </Field>
-        <Field label="Assigned consultant" htmlFor="assigned_consultant_id">
-          <select id="assigned_consultant_id" name="assigned_consultant_id"
-                  defaultValue={engagement?.assigned_consultant?.id ?? ""} className="peak-input">
+        <Field label="Assigned consultant" htmlFor="assigned_consultant_id"
+               hint={canAssign ? "Gives the Lead Consultant approval of report versions."
+                 : "Only an Admin can change this. The assigned consultant gives the Lead Consultant approval."}>
+          {/* A disabled select is not submitted, so a non-Admin save leaves the assignment as it is. */}
+          <select id="assigned_consultant_id" name="assigned_consultant_id" disabled={!canAssign}
+                  defaultValue={engagement?.assigned_consultant?.id ?? ""} className="peak-input disabled:opacity-60">
             <option value="">Unassigned</option>
             {consultants.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>

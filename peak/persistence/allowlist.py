@@ -169,6 +169,30 @@ WORKSPACE_WRITE_COLUMNS = {
         frozenset({"id", "artifact_id", "client_id", "engagement_id", "version_number",
                    "content_format", "content_canonical", "content_hash", "supersedes_version_id",
                    "version_status", "created_by_consultant_id", "source_references"}),
+    # Phase 213 — release packages and renditions, two-stage approval, Final Approver designation
+    # and release. Each is an append-only record; lifecycle state is derived from them, so
+    # ``artifact_versions`` gains no update action.
+    ("artifact_release_packages", "create_release_package"):
+        frozenset({"id", "artifact_id", "artifact_version_id", "client_id", "engagement_id",
+                   "package_number", "content_hash", "package_hash", "supersedes_package_id",
+                   "created_by_consultant_id"}),
+    ("artifact_renditions", "create_artifact_rendition"):
+        frozenset({"id", "artifact_id", "artifact_version_id", "client_id", "engagement_id",
+                   "release_package_id", "rendition_type", "media_type", "rendered_by",
+                   "file_name", "byte_length", "content_bytes", "rendition_hash"}),
+    ("artifact_approvals", "create_artifact_approval"):
+        frozenset({"id", "artifact_id", "artifact_version_id", "release_package_id", "client_id",
+                   "engagement_id", "approval_level", "decision", "approver_consultant_id",
+                   "content_hash", "package_hash", "reviewed_rendition_type", "decision_note",
+                   "designation_id"}),
+    ("artifact_final_approver_designations", "create_final_approver_designation"):
+        frozenset({"id", "artifact_id", "artifact_version_id", "release_package_id", "client_id",
+                   "engagement_id", "designation_number", "designated_consultant_id",
+                   "designated_by_consultant_id", "supersedes_designation_id"}),
+    ("artifact_releases", "create_artifact_release"):
+        frozenset({"id", "artifact_id", "artifact_version_id", "release_package_id", "client_id",
+                   "engagement_id", "released_by_consultant_id", "content_hash", "package_hash",
+                   "lead_approval_id", "final_approval_id"}),
 }
 
 #: Columns the workspace path may never write: governance, classification, review/audit, and
@@ -214,8 +238,15 @@ DISCOVERY_RECORD_TABLES = frozenset(
 #: Phase 212: artifacts and artifact versions are engagement work records, created with the same
 #: server-set stamp under a stamped engagement. Their only workspace actions are creates.
 ARTIFACT_RECORD_TABLES = frozenset({"artifacts", "artifact_versions"})
+#: Phase 213: release package, rendition, approval, designation and release records, stamped the
+#: same way. Also create-only.
+ARTIFACT_APPROVAL_TABLES = frozenset(
+    {"artifact_release_packages", "artifact_renditions", "artifact_approvals",
+     "artifact_final_approver_designations", "artifact_releases"}
+)
 assert all(action.startswith("create_")
-           for table, action in WORKSPACE_WRITE_COLUMNS if table in ARTIFACT_RECORD_TABLES)
+           for table, action in WORKSPACE_WRITE_COLUMNS
+           if table in ARTIFACT_RECORD_TABLES | ARTIFACT_APPROVAL_TABLES)
 
 # Any action whose name contains one of these substrings is prohibited outright, regardless
 # of the allowlist — publication, client-facing approval, financial verification, deletes,

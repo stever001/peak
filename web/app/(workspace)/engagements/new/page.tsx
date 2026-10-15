@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/page-header";
 import { apiGet, requireConsultant, type Client, type ConsultantOption } from "@/lib/api";
 
 export default async function NewEngagementPage(props: PageProps<"/engagements/new">) {
-  await requireConsultant();
+  const me = await requireConsultant();
   const clientId = (await props.searchParams).client;
   if (typeof clientId !== "string" || !clientId) {
     return (
@@ -27,6 +27,7 @@ export default async function NewEngagementPage(props: PageProps<"/engagements/n
       <PageHeader title="Add engagement" />
       <EngagementForm action={createEngagement} consultants={consultants}
                       client={{ id: client.id, name: client.organization_label }}
+                      canAssign={me.role === "admin"}
                       cancelHref={`/clients/${client.id}`} submitLabel="Add engagement" />
     </>
   );

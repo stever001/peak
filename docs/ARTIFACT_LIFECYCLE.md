@@ -8,12 +8,14 @@ This document sits at level 2 of the authority hierarchy, directly under
 **C7–C9, C11–C14, C18 and C19**, and the artifact side of **C10 and C17**. It implements those rules
 and does not reinterpret them. If anything here conflicts with the Contract, the Contract governs.
 
-**Status: normative, not implemented.** Nothing in this document exists in code or schema yet. It
-says what the lifecycle *must* mean when it is built. It does not define tables, columns, field
+**Status: normative, partly implemented.** Phase 212 implemented artifact versions, and Phase 213
+release packages, two-stage approval and release, for the Final Report. Everything else here is not
+yet built. This document says what the lifecycle *must* mean. It does not define tables, columns, field
 schemas, endpoints or migrations. The gaps between this document and the current system are tracked
 in [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md) (Phase 211 reconciliation items).
 
-Rules are numbered **AL1–AL40** so later phases can cite them.
+Rules are numbered **AL1–AL51** so later phases can cite them. AL41–AL51 (§9A, release packages)
+were added in Phase 213.
 
 ---
 
@@ -150,7 +152,8 @@ working ──(fix content)──▶ versioned ──▶ lead_approved ──▶
   after it (Contract C12).
 - **AL21 — Same version.** Both approvals refer to the **exact same immutable artifact version**,
   identified by its internal identity and content hash (§12). An approval of one version says nothing
-  about any other version.
+  about any other version. For release, the approvals are given to one release package that binds
+  that version to its exact renditions (§9A, AL43).
 - **AL22 — Content change resets the chain.** Any change to business content after either approval
   produces a new version (AL12). Approvals given to earlier versions do not carry forward. The new
   version needs a Lead Consultant approval and then a Final Approver approval of its own.
@@ -168,7 +171,9 @@ working ──(fix content)──▶ versioned ──▶ lead_approved ──▶
   1. the Lead Consultant approved it;
   2. the Final Approver approved **the same version** after that;
   3. its content has not changed since those approvals. Immutability (AL5) guarantees this, and
-     release must still verify it against the recorded content hash.
+     release must still verify it against the recorded content hash;
+  4. both approvals were given to the **same release package**, and its renditions still match their
+     recorded hashes (§9A).
 - **AL26 — Release is an event on a version.** "Released" is a recorded act on one specific version:
   who released it and when. It is never "whatever the report currently says". There is no released
   state for working state or live drafts.
@@ -205,7 +210,76 @@ working ──(fix content)──▶ versioned ──▶ lead_approved ──▶
   composer, before the version is fixed.
 - **AL35 — Content hash covers content, not bytes.** A version's content hash is taken over its
   canonical business content, not over any rendered file. Both renderings therefore correspond to the
-  one hash.
+  one hash. Each rendering proposed for release also has its own hash over its exact bytes (AL44).
+
+---
+
+## 9A. Release packages
+
+The artifact version is the provenance and source layer. Human approval applies one layer above it,
+to what the client will actually receive:
+
+```
+artifact version (canonical business content)
+  → release package
+    → web rendition
+    → DOCX rendition
+      → Lead Consultant approval → Final Approver approval → release
+```
+
+- **AL41 — The version is the source.** An artifact version holds the immutable canonical business
+  content and its provenance (§3, §12). It is the source that client-facing renditions are rendered
+  from. It is not itself what the client receives.
+- **AL42 — A release package binds one version to its renditions.** A client release package binds
+  **one** artifact version to the exact client-facing renditions proposed for release: for a report,
+  its web rendition and its DOCX rendition. A package is immutable once created. One version may
+  have more than one package over time, for example after a presentation change. Each package is a
+  separate subject of approval.
+- **AL43 — Humans approve the package.** The Lead Consultant and the Final Approver each review and
+  approve, or reject, **the same exact release package**. Approving a package approves that
+  version's content *as presented in those renditions*. It never approves another package. Final
+  Approver designation and rejection apply to the package under review. AL17 (different humans) and
+  AL20 (sequential) apply unchanged.
+- **AL44 — Renditions derive from one version and carry their own identity.** Both renditions in a
+  package are rendered from that package's version alone (AL32, AL34). Each rendition has a stable
+  identity and a hash over its exact bytes. The package's identity covers the version's content hash
+  and every rendition hash. Together these prove that what was approved is what was released.
+- **AL45 — Any change needs a new approval cycle.** A change to business content, or to either
+  client-visible rendition, after an approval means a new package, and a new version as well if the
+  content changed. That package needs its own Lead Consultant and Final Approver approvals.
+  Approvals never carry over from one package to another (AL22). A rejected package is terminal:
+  preparing the identical package again never reopens it for another approval cycle.
+- **AL46 — Release releases the approved package.** Only a package holding both approvals can be
+  released (AL25). What is released, and what is delivered, are that package's stored renditions.
+- **AL47 — A released web artifact stays as released.** The released web rendition is the stored
+  approved artifact. It must not change when application rendering code later changes. A client web
+  view resolves to that stored rendition, never to a fresh rendering of the version.
+- **AL48 — A delivered DOCX is the approved file.** A DOCX that is emailed, downloaded or printed for
+  the client is the exact approved DOCX artifact, never a later regeneration, even one expected to
+  match.
+- **AL49 — Internal identifiers stay internal.** Package, version and rendition identities, hashes
+  and numbers are internal provenance. No client-facing rendition shows internal version numbers
+  (AL36).
+- **AL50 — Package renditions are client-facing.** The renditions in a release package are the
+  artifacts humans approve and Peak may release, so they follow §10 (AL36, AL37):
+  - no internal-draft or approval-status wording;
+  - no internal record, version, capsule or approval identifiers;
+  - a business title rather than "Final report";
+  - no version history.
+
+  They present the same canonical business content, with every section in order, through a
+  presentation layer. That layer may leave out or relabel internal status wording and identifiers,
+  but it never composes, adds or reinterprets business content (AL34). The internal working views
+  of a report are not release renditions and are not bound by this rule. **A package whose stored
+  renditions are not client-facing can't be approved or released.** That check concerns only
+  Peak-owned presentation material and Peak-generated identifiers. Business content is never
+  rejected or reworded for containing ordinary words such as "final report" or "internal".
+- **AL51 — The reviewed rendition is recorded.** Each Lead Consultant and Final Approver decision
+  records which of the package's renditions that human reviewed: the web rendition or the DOCX.
+  - A reviewer may review either one and need not review both.
+  - The two reviewers may review different renditions.
+  - The reviewed rendition must belong to the package and still match its stored hash.
+  - The decision still applies to the whole package and its package hash (AL43).
 
 ---
 
@@ -307,4 +381,4 @@ This document deliberately leaves the following to later, separately approved wo
 - retention periods for superseded and rejected versions. Until a retention policy says otherwise,
   versions are not deleted.
 
-Each of these must remain consistent with AL1–AL40 and the Contract.
+Each of these must remain consistent with AL1–AL51 and the Contract.

@@ -7,7 +7,8 @@ Proves, through the consultant API over ``peak.workspace``:
 2. an authenticated consultant can edit a client, and cannot write a governance column;
 3. one client can have several engagements;
 4. an authenticated consultant can create and edit an engagement;
-5. assignment, status, and current phase persist;
+5. assignment, status, and current phase persist (since Phase 213 only an Admin sets or changes the
+   assignment, because the assigned consultant gives the Lead Consultant approval);
 6. every workspace engagement is born with owner ``peak_consultants`` and scope
    ``engagement_authorized``, which no caller can set or change, and which an unchanged
    controlled writer (Phase 34 intake note) accepts only when owner and scope match.
@@ -114,6 +115,11 @@ def api_checks(session_factory):
     anon = TestClient(app, base_url="https://testserver")
     c = TestClient(app, base_url="https://testserver")
     c.post("/auth/login", json={"email": "casey@example.com", "password": PASSWORD})
+    # Phase 213: the assigned consultant is the Lead Consultant, so only an Admin may set it.
+    accounts.create_consultant(session_factory, name="Avery Admin", email="avery@example.com",
+                               role="admin", password=PASSWORD)
+    adm = TestClient(app, base_url="https://testserver")
+    adm.post("/auth/login", json={"email": "avery@example.com", "password": PASSWORD})
 
     print("\n[auth]")
     check("unauthenticated client and engagement access -> 401",
@@ -149,7 +155,7 @@ def api_checks(session_factory):
           [x["id"] for x in c.get("/clients", params={"q": "acme"}).json()["clients"]] == [cid])
 
     print("\n[3-5] engagements")
-    e1 = c.post("/engagements", json={"client_id": cid, "engagement_label": "Inventory review",
+    e1 = adm.post("/engagements", json={"client_id": cid, "engagement_label": "Inventory review",
                                       "assigned_consultant_id": morgan["id"],
                                       "current_phase": "Discovery", "objective": "Baseline."})
     e2 = c.post("/engagements", json={"client_id": cid, "engagement_label": "WMS selection"})
@@ -162,16 +168,16 @@ def api_checks(session_factory):
           got["assigned_consultant"] == {"id": morgan["id"], "name": "Morgan Lee"}
           and got["status"] == "active" and got["current_phase"] == "Discovery"
           and got["client"] == {"id": cid, "name": "Acme Logistics"})
-    r = c.patch(f"/engagements/{eid}", json={"status": "on_hold", "current_phase": "Analysis",
-                                             "assigned_consultant_id": casey["id"]})
+    r = adm.patch(f"/engagements/{eid}", json={"status": "on_hold", "current_phase": "Analysis",
+                                               "assigned_consultant_id": casey["id"]})
     got = r.json().get("engagement", {})
     check("editing an engagement persists status, phase and reassignment",
           r.status_code == 200 and got["status"] == "on_hold" and got["current_phase"] == "Analysis"
           and got["assigned_consultant"]["id"] == casey["id"])
     check("an unknown status, unknown consultant, or client change is refused (422)",
           c.patch(f"/engagements/{eid}", json={"status": "paused"}).status_code == 422
-          and c.patch(f"/engagements/{eid}",
-                      json={"assigned_consultant_id": "cons_nobody"}).status_code == 422
+          and adm.patch(f"/engagements/{eid}",
+                        json={"assigned_consultant_id": "cons_nobody"}).status_code == 422
           and c.patch(f"/engagements/{eid}", json={"client_id": cid}).status_code == 422)
     check("a governance field in an engagement edit is refused (422)",
           c.patch(f"/engagements/{eid}", json={"client_accessible": False}).status_code == 422)

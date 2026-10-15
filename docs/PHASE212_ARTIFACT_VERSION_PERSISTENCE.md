@@ -103,6 +103,10 @@ There is no update path, enforced in four layers:
 All updates are refused for now, including `version_status`. The approval phase will open exactly
 the status transition it needs, explicitly.
 
+> **Phase 213:** no status transition was opened. Persisted `version_status` remains the creation-state
+> marker. The authoritative lifecycle state is derived from release-package, approval, designation, release and
+> supersession records. See [`PHASE213_ARTIFACT_APPROVAL_RELEASE.md`](PHASE213_ARTIFACT_APPROVAL_RELEASE.md).
+
 ## Supersession
 
 A new version records `supersedes_version_id`, and the earlier row is never touched. Nothing is

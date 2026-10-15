@@ -69,6 +69,42 @@ def final_report_content(report) -> dict:
     return content
 
 
+def _build(hint, value):
+    """``value`` (plain JSON data) as an instance of the type ``hint``, recursively."""
+    import typing
+
+    if value is None:
+        return None
+    origin, args = typing.get_origin(hint), typing.get_args(hint)
+    if origin is typing.Union:  # Optional[X]
+        return _build(next(a for a in args if a is not type(None)), value)
+    if origin in (list, typing.List):
+        return [_build(args[0], v) for v in value]
+    if origin in (dict, typing.Dict):
+        return {k: _build(args[1], v) for k, v in value.items()}
+    if dataclasses.is_dataclass(hint):
+        hints = typing.get_type_hints(hint)
+        return hint(**{f.name: _build(hints[f.name], value[f.name])
+                       for f in dataclasses.fields(hint) if f.name in value})
+    return value
+
+
+def final_report_from_content(content: dict):
+    """Rebuild a ``FinalReport`` from a version's stored canonical content (Phase 213).
+
+    Renditions are rendered from this, never from working state, so every rendition of a package
+    derives from the stored version (AL34, AL44). Draft-state fields are not stored and take the
+    composer's fixed values. Refuses unless the rebuilt report has exactly the stored content.
+    """
+    from peak.reports.final_report import FinalReport
+
+    report = _build(FinalReport, content)
+    if canonical_json(final_report_content(report)) != canonical_json(content):
+        raise WorkspaceError("content_unreadable",
+                             "The stored version could not be rebuilt exactly; nothing was rendered.")
+    return report
+
+
 def canonical_json(content: dict) -> str:
     """Deterministic JSON: sorted keys, no insignificant whitespace, UTF-8 text kept as-is."""
     return json.dumps(content, sort_keys=True, separators=(",", ":"), ensure_ascii=False,

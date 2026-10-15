@@ -159,6 +159,15 @@ EXACT_CLASS = {
     # Phase 212 artifact versions: the name of the canonical serialization, a closed vocabulary
     # (``artifact_type`` and ``version_status`` are already enums by pattern).
     "content_format": GOVERNED_ENUM,
+    # Phase 213 approvals: closed vocabularies (CHECK-constrained). ``decision_note`` is prose by
+    # pattern; the consultant, designation and approval references are identifiers by pattern.
+    "approval_level": GOVERNED_ENUM,
+    "decision": GOVERNED_ENUM,
+    # Phase 213 renditions: the stored media type and the renderer module that produced the bytes
+    # are closed vocabularies; ``file_name`` is a display/download name. Hashes classify by pattern.
+    "media_type": GOVERNED_ENUM,
+    "rendered_by": GOVERNED_ENUM,
+    "file_name": ORDINARY_TEXT,
 }
 
 #: Suffix/substring patterns, applied in order when no exact name matches.

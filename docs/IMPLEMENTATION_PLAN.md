@@ -4292,6 +4292,66 @@ under [`ARTIFACT_LIFECYCLE.md`](ARTIFACT_LIFECYCLE.md).
 **Next:** review of the Phase 212 foundation. The approval chain and the production cutover are
 separate, explicitly approved phases.
 
+### Phase 213 — Release packages, two-stage approval and release
+
+Baseline `70e5168`. Record:
+[`PHASE213_ARTIFACT_APPROVAL_RELEASE.md`](PHASE213_ARTIFACT_APPROVAL_RELEASE.md). Built under
+[`ARTIFACT_LIFECYCLE.md`](ARTIFACT_LIFECYCLE.md) §5–§7 and the new §9A.
+
+> **Open items, still open:**
+> - Production Admin acceptance is pending provisioning of `admin@peakinventorysolutions.com`, and
+>   authenticated production discovery/assessment/report acceptance is pending with it. **No
+>   temporary Admin may be created.**
+> - Render Auto-Deploy remains **OFF**, and API deploys remain manual.
+> - **Capsule publication is not implemented. Proposal artifacts are not implemented.**
+
+- [x] `ARTIFACT_LIFECYCLE.md` §9A (AL41–AL51): **humans approve a release package**, which is one
+  version bound to its exact web and DOCX renditions. Any content or rendition change needs a new
+  approval cycle. Released web and DOCX are the stored approved artifacts. The Contract is
+  unchanged.
+- [x] Migration `019_artifact_approval_release` adds five append-only tables: packages, renditions,
+  approvals, designations and releases. It is additive with no data, and **not applied to
+  production**.
+- [x] Both renditions are rendered once from the stored version **in the client presentation** and
+  stored as bytes. They are never re-rendered, so renderer changes can't alter an approved or
+  released package.
+  - The client presentation removes internal status wording and identifiers and uses a business
+    title. It doesn't recompose content.
+  - A package whose renditions fail the client-presentation check can't be approved or released.
+- [x] Each decision records the rendition the human reviewed (web or DOCX).
+- [x] Designation and final decisions are serialized with a lock-first `SELECT … FOR UPDATE` on the
+  engagement row. No grant change is needed.
+- [x] Rejected packages are terminal.
+- [x] The Lead Consultant is the engagement's assigned consultant, **which only an Admin may set or
+  change**. The Final Approver is explicitly designated per package and can be reassigned with
+  history kept. Different humans are enforced.
+- [x] Approvals and release bind to the package hash, and every act re-verifies the stored content
+  and bytes. State is derived. **`artifact_versions` is never updated**: its `version_status` is
+  the Phase 212 creation-state marker.
+- [x] Internal API and an internal review panel that shows the stored web page and DOCX. **Nothing
+  reaches the live report.**
+
+**Reconciliation items (carried forward; Phase 212 list updated):**
+
+- **Client-facing report presentation** — release renditions now use the client presentation
+  (AL50). The internal working report and its draft DOCX export still show internal IDs and draft
+  wording, by design. Remaining gaps:
+  - the client presentation's wording table needs product review before first client use;
+  - the race behaviour has not been exercised on a live MySQL server.
+- **Lead Consultant / Final Approver roles** — modelled as workflow roles, with the Lead assignment
+  Admin-only. Still open: the account-to-human mapping (AL18).
+- **Single client-approval gate** — artifact release now follows the two-stage package chain. The
+  general `GOVERNANCE_STATES.md` / `STATE_TRANSITIONS.md` single-gate wording is still to be
+  reconciled.
+- **Client delivery** — there is no client portal or email delivery yet. When built, it must serve
+  the released package's stored bytes (AL46–AL48).
+- **Capsule update semantics, proposal artifacts, README framing** — unchanged from Phase 212.
+- **Production cutover** — migrations 018 and 019, the verifier pin, and the web and API deploys
+  are unapplied. No grant change is needed. **Prerequisite:** before applying migrations 018/019 to production, test Final Approver reassignment against the final decision using two concurrent connections on a real MySQL instance, and confirm the intended serialization behaviour.
+
+**Next:** review of Phase 213. Client presentation, client delivery and the production cutover are
+separate, explicitly approved phases.
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

@@ -51,8 +51,8 @@ from .internal_assessment import (
     NO_LOW_HANGING_FRUIT_TEXT,
     NO_NORTH_STAR_TEXT,
     NO_STATEMENT_TEXT,
-    _trace_line,
 )
+from .release_presentation import INTERNAL, INTERNAL_FOOTER_TEXT, Presentation
 
 DOCX_MEDIA_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
@@ -62,7 +62,7 @@ MATERIAL_LABELS = {
     MATERIAL_EVIDENCE: "Material: evidence-backed, governed",
 }
 
-FOOTER_TEXT = "Internal draft · Not client-facing · Requires consultant review"
+FOOTER_TEXT = INTERNAL_FOOTER_TEXT
 
 _INK, _MUTED, _BRAND, _RULE = "1F2933", "52606D", "1F4E79", "C9D1D9"
 _TABLE_BORDERS = ("<w:tblBorders>"
@@ -117,45 +117,46 @@ def _table(rows: Sequence[Sequence[str]], header: Optional[Sequence[str]] = None
     return "".join(out) + _p()  # Word needs a paragraph between consecutive tables
 
 
-def _section_heading(report: FinalReport, key: str, material: Optional[str] = None) -> List[str]:
-    out = [_p(report.section_titles[key], "Heading1")]
+def _section_heading(report: FinalReport, key: str, pres: Presentation,
+                     material: Optional[str] = None) -> List[str]:
+    out = [_p(pres.section_title(report, key), "Heading1")]
     if material in MATERIAL_LABELS:
         out.append(_p(MATERIAL_LABELS[material], "MaterialLabel"))
     return out
 
 
 # --- Sections (same content and order as the Phase 208 Markdown) --------------------------------
+# ``pres`` decides presentation only: the internal draft (default, Phase 209) or a release
+# package's client rendition (peak.reports.release_presentation). The content is the same.
 
-def _title_page(report: FinalReport) -> List[str]:
+def _title_page(report: FinalReport, pres: Presentation) -> List[str]:
     o = report.executive_overview
-    out = [_p("Final report", "Title"),
-           _p(f"{o.client_name or 'Client not recorded'} · "
-              f"{o.engagement_label or 'Untitled engagement'}", "Subtitle"),
-           _p("North Star", "Heading3")]
+    out = [_p(pres.title(report), "Title")]
+    if pres.subtitle(report):
+        out.append(_p(pres.subtitle(report), "Subtitle"))
+    out.append(_p("North Star", "Heading3"))
     if o.north_star:
         out.append(_p(o.north_star, "NorthStar"))
         if o.north_star_context:
             out.append(_p(o.north_star_context))
     else:
         out.append(_p(NO_NORTH_STAR_TEXT, "Detail"))
-    out.append(_table([
-        ("Status", report.status),
-        ("Client-facing", "yes" if report.client_facing else "no"),
-        ("Approved for client use", "yes" if report.approved_for_client else "no"),
-        ("Requires human review", "yes" if report.requires_human_review else "no"),
-    ]))
-    out.append(_p(REPORT_STATUS_TEXT, "Notice"))
+    if pres.status_block:
+        out.append(_table([
+            ("Status", report.status),
+            ("Client-facing", "yes" if report.client_facing else "no"),
+            ("Approved for client use", "yes" if report.approved_for_client else "no"),
+            ("Requires human review", "yes" if report.requires_human_review else "no"),
+        ]))
+        out.append(_p(REPORT_STATUS_TEXT, "Notice"))
     out.append('<w:p><w:r><w:br w:type="page"/></w:r></w:p>')
     return out
 
 
-def _overview(report: FinalReport) -> List[str]:
+def _overview(report: FinalReport, pres: Presentation) -> List[str]:
     o = report.executive_overview
-    out = _section_heading(report, SECTION_EXECUTIVE_OVERVIEW)
-    out.append(_table([
-        ("Engagement", f"{o.engagement_label or 'Untitled engagement'} ({o.engagement_id})"),
-        ("Client", (o.client_name or "not recorded") + (f" ({o.client_id})" if o.client_id else "")),
-    ]))
+    out = _section_heading(report, SECTION_EXECUTIVE_OVERVIEW, pres)
+    out.append(_table(pres.overview_rows(report)))
     out.append(_p("North Star", "Heading2"))
     if o.north_star:
         out.append(_p(o.north_star, "NorthStar"))
@@ -164,12 +165,12 @@ def _overview(report: FinalReport) -> List[str]:
     else:
         out.append(_p(NO_NORTH_STAR_TEXT, "Detail"))
     out.append(_p("Summary", "Heading2"))
-    return out + _bullets(o.summary)
+    return out + _bullets(pres.texts(o.summary))
 
 
-def _discovery(report: FinalReport) -> List[str]:
+def _discovery(report: FinalReport, pres: Presentation) -> List[str]:
     s = report.discovery_summary
-    out = _section_heading(report, SECTION_DISCOVERY_SUMMARY, s.material)
+    out = _section_heading(report, SECTION_DISCOVERY_SUMMARY, pres, s.material)
     out += [_p(DISCOVERY_NOT_EVIDENCE_TEXT), _p("Interview coverage", "Heading2")]
     if s.coverage is None:
         out.append(_p(NO_DISCOVERY_TEXT, "Detail"))
@@ -195,14 +196,14 @@ def _discovery(report: FinalReport) -> List[str]:
     for finding in s.findings:
         out += [_p(finding.statement, "ListBullet"),
                 _p(f"Category: {finding.category or 'none recorded'}", "Detail"),
-                _p(f"Where this came from: {_trace_line(finding.trace)}", "Detail")]
+                _p(f"Where this came from: {pres.trace(finding.trace)}", "Detail")]
     out.append(_p("Discovery limitations", "Heading2"))
-    return out + _bullets(s.limitations)
+    return out + _bullets(pres.texts(s.limitations))
 
 
-def _low_hanging_fruit(report: FinalReport) -> List[str]:
+def _low_hanging_fruit(report: FinalReport, pres: Presentation) -> List[str]:
     s = report.low_hanging_fruit
-    out = _section_heading(report, SECTION_LOW_HANGING_FRUIT, s.material)
+    out = _section_heading(report, SECTION_LOW_HANGING_FRUIT, pres, s.material)
     if not s.groups:
         return out + [_p(NO_LOW_HANGING_FRUIT_TEXT, "Detail")]
     out += [_p(s.grouping_note), _p(s.not_ranked_note, "Notice")]
@@ -213,57 +214,46 @@ def _low_hanging_fruit(report: FinalReport) -> List[str]:
                     _p(f"Category: {candidate.category or 'none recorded'} · "
                        f"Consultant-entered effort: {_level(candidate.estimated_effort)}; "
                        f"value: {_level(candidate.estimated_value)}", "Detail"),
-                    _p(f"Where this came from: {_trace_line(candidate.trace)}", "Detail")]
+                    _p(f"Where this came from: {pres.trace(candidate.trace)}", "Detail")]
     return out
 
 
-def _evidence(report: FinalReport) -> List[str]:
+def _evidence(report: FinalReport, pres: Presentation) -> List[str]:
     s = report.evidence_findings
-    out = _section_heading(report, SECTION_EVIDENCE_FINDINGS, s.material)
+    out = _section_heading(report, SECTION_EVIDENCE_FINDINGS, pres, s.material)
     out.append(_p(EVIDENCE_MATERIAL_LABEL))
     if not s.findings:
         out.append(_p(NO_FINDINGS_TEXT, "Detail"))
     for index, f in enumerate(s.findings, start=1):
-        out += [_p(f"Finding {index} — {f.finding_id}", "Heading2"),
+        out += [_p(pres.finding_heading(index, f), "Heading2"),
                 _p(f.statement) if f.statement_available else _p(NO_STATEMENT_TEXT, "Detail"),
-                _table([
-                    ("Evidence", f.evidence_id),
-                    ("Source", ", ".join(f.source_reference_ids) or "none recorded"),
-                    ("Review status", f.review_status),
-                    ("Supporting reviews", ", ".join(f.supporting_review_ids) or "none"),
-                    ("Reliability", f.reliability or "not recorded"),
-                    ("Claim scope", f.claim_scope or "not recorded"),
-                    ("Recommendation eligibility",
-                     "eligible" if f.recommendation_eligible else "blocked"),
-                ])]
+                _table(pres.evidence_rows(f))]
     if s.confidence_notes:
         out.append(_p("Evidence confidence", "Heading2"))
-        out += _bullets(s.confidence_notes)
+        out += _bullets(pres.texts(s.confidence_notes))
     return out
 
 
-def _recommendations(report: FinalReport) -> List[str]:
+def _recommendations(report: FinalReport, pres: Presentation) -> List[str]:
     s = report.recommendations
-    out = _section_heading(report, SECTION_RECOMMENDATIONS, s.material)
+    out = _section_heading(report, SECTION_RECOMMENDATIONS, pres, s.material)
     if not s.recommendations:
         out.append(_p(NO_RECOMMENDATIONS_TEXT, bold_prefix=f"{s.status.capitalize()}. "))
-        return out + ([_p(r, "ListBullet") for r in s.blocked_reasons])
+        return out + ([_p(r, "ListBullet") for r in pres.texts(s.blocked_reasons)])
     for rec in s.recommendations:
-        out += [_p(rec.text, "ListBullet"),
-                _p(f"For finding {rec.finding_id}; evidence "
-                   f"{', '.join(rec.supporting_evidence_ids)}", "Detail"),
-                _p("Internal only; requires human review", "Detail")]
+        out.append(_p(rec.text, "ListBullet"))
+        out += [_p(line, "Detail") for line in pres.recommendation_details(rec)]
     return out
 
 
-def _limitations(report: FinalReport) -> List[str]:
+def _limitations(report: FinalReport, pres: Presentation) -> List[str]:
     s = report.limitations
-    out = _section_heading(report, SECTION_LIMITATIONS)
-    out += _bullets(s.boundary_statements)
+    out = _section_heading(report, SECTION_LIMITATIONS, pres)
+    out += _bullets(pres.texts(s.boundary_statements))
     out.append(_p("Evidence limitations", "Heading2"))
-    out += _bullets(s.assessment_limitations)
+    out += _bullets(pres.texts(s.assessment_limitations))
     out.append(_p("Discovery limitations", "Heading2"))
-    return out + _bullets(s.discovery_limitations)
+    return out + _bullets(pres.texts(s.discovery_limitations))
 
 
 _RENDERERS = {
@@ -278,10 +268,10 @@ _RENDERERS = {
 
 # --- Package parts ------------------------------------------------------------------------------
 
-def _document_xml(report: FinalReport) -> str:
-    body = _title_page(report)
+def _document_xml(report: FinalReport, pres: Presentation) -> str:
+    body = _title_page(report, pres)
     for key in SECTION_ORDER:
-        body += _RENDERERS[key](report)
+        body += _RENDERERS[key](report, pres)
     sect = ('<w:sectPr><w:footerReference w:type="default" r:id="rIdFooter"/>'
             '<w:pgSz w:w="12240" w:h="15840"/>'
             '<w:pgMar w:top="1440" w:right="1260" w:bottom="1440" w:left="1260" '
@@ -297,11 +287,15 @@ def _field(instruction: str) -> str:
             f'<w:r><w:fldChar w:fldCharType="end"/></w:r>')
 
 
-_FOOTER_XML = (
-    f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:ftr {_W}>'
-    f'<w:p><w:pPr><w:pStyle w:val="Footer"/></w:pPr>'
-    f'<w:r><w:t xml:space="preserve">{escape(FOOTER_TEXT)} · Page </w:t></w:r>{_field("PAGE")}'
-    f'<w:r><w:t xml:space="preserve"> of </w:t></w:r>{_field("NUMPAGES")}</w:p></w:ftr>')
+def _footer_xml(text: str) -> str:
+    lead = f"{text} · Page " if text else "Page "
+    return (f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:ftr {_W}>'
+            f'<w:p><w:pPr><w:pStyle w:val="Footer"/></w:pPr>'
+            f'<w:r><w:t xml:space="preserve">{escape(lead)}</w:t></w:r>{_field("PAGE")}'
+            f'<w:r><w:t xml:space="preserve"> of </w:t></w:r>{_field("NUMPAGES")}</w:p></w:ftr>')
+
+
+_FOOTER_XML = _footer_xml(FOOTER_TEXT)
 
 
 def _style(style_id: str, name: str, ppr: str = "", rpr: str = "", kind: str = "paragraph",
@@ -410,15 +404,20 @@ _DOCUMENT_RELS_XML = (
     'relationships/footer" Target="footer1.xml"/></Relationships>')
 
 
-def render_final_report_docx(report: FinalReport) -> bytes:
-    """Render an already-composed FinalReport as DOCX bytes. Deterministic; nothing is stored."""
+def render_final_report_docx(report: FinalReport, presentation: Presentation = INTERNAL) -> bytes:
+    """Render an already-composed FinalReport as DOCX bytes. Deterministic; nothing is stored.
+
+    ``presentation`` defaults to the internal draft. A release package passes the client
+    presentation (``peak.reports.release_presentation``), which changes presentation only.
+    """
     parts = (("[Content_Types].xml", _CONTENT_TYPES_XML),
              ("_rels/.rels", _PACKAGE_RELS_XML),
              ("word/_rels/document.xml.rels", _DOCUMENT_RELS_XML),
-             ("word/document.xml", _document_xml(report)),
+             ("word/document.xml", _document_xml(report, presentation)),
              ("word/styles.xml", _STYLES_XML),
              ("word/numbering.xml", _NUMBERING_XML),
-             ("word/footer1.xml", _FOOTER_XML))
+             ("word/footer1.xml", _footer_xml(presentation.footer(report))
+                                   if presentation.client else _FOOTER_XML))
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
         for name, xml in parts:

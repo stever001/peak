@@ -33,6 +33,8 @@ from peak.persistence.allowlist import (
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 MAX_KEY_PERSONNEL = 25
 MAX_LONG_TEXT = 4000
+#: The account role that may set or change an engagement's assigned consultant (Phase 213).
+ASSIGNMENT_ROLE = "admin"
 
 # Column -> max length for single-line client profile text.
 _CLIENT_TEXT_LIMITS = {
@@ -274,12 +276,22 @@ def get_engagement(session_factory, engagement_id: str) -> Optional[dict]:
         return _engagement_dicts(session, [row])[0] if row is not None else None
 
 
-def create_engagement(session_factory, data: dict) -> dict:
+def _refuse_assignment_change(actor_role: Optional[str]) -> None:
+    """Phase 213: the assigned consultant names the Lead Consultant, whose approval is the first
+    release gate, so only an Admin may set or change it. Every consultant still reaches every
+    engagement; this restricts one field, it is not an access boundary."""
+    if actor_role != ASSIGNMENT_ROLE:
+        raise WorkspaceError("admin_required", "Only an Admin can change the assigned consultant.")
+
+
+def create_engagement(session_factory, data: dict, actor_role: Optional[str] = None) -> dict:
     from peak.db.models import Engagement
 
     with session_factory() as session:
         values = {"id": f"eng_{secrets.token_hex(8)}",
                   **_engagement_values(session, data, creating=True)}
+        if values.get("assigned_consultant_id"):
+            _refuse_assignment_change(actor_role)
         _require_allowed("engagements", "create_workspace_engagement", values)
         # Caller-derived columns are checked above; the governance stamp is added only here.
         session.add(Engagement(**values, **WORKSPACE_ENGAGEMENT_CREATION_STAMP))
@@ -287,7 +299,8 @@ def create_engagement(session_factory, data: dict) -> dict:
     return get_engagement(session_factory, values["id"])
 
 
-def update_engagement(session_factory, engagement_id: str, data: dict) -> Optional[dict]:
+def update_engagement(session_factory, engagement_id: str, data: dict,
+                      actor_role: Optional[str] = None) -> Optional[dict]:
     from sqlalchemy import update
 
     from peak.db.models import Engagement
@@ -296,6 +309,10 @@ def update_engagement(session_factory, engagement_id: str, data: dict) -> Option
         values = _engagement_values(session, data, creating=False)
         if not values:
             raise WorkspaceError("invalid_field", "Nothing to update.")
+        if "assigned_consultant_id" in values:
+            row = session.get(Engagement, engagement_id)
+            if row is not None and row.assigned_consultant_id != values["assigned_consultant_id"]:
+                _refuse_assignment_change(actor_role)
         _require_allowed("engagements", "update_engagement_workspace_fields", values)
         result = session.execute(
             update(Engagement).where(Engagement.id == engagement_id).values(**values))

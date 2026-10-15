@@ -13,7 +13,7 @@ from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import (
-    JSON, Boolean, CheckConstraint, DateTime, Index, Integer, Numeric, String, Text,
+    JSON, Boolean, CheckConstraint, DateTime, Index, Integer, LargeBinary, Numeric, String, Text,
     UniqueConstraint,
 )
 from sqlalchemy import event, false as sa_false, func, true as sa_true
@@ -821,9 +821,11 @@ class DiscoveryObservation(Base, GovernanceMixin, AuditMixin):
 # tables refuse ORM updates and deletes outright (listeners below); in production the runtime role
 # holds only SELECT and INSERT on them.
 
-#: The ARTIFACT_LIFECYCLE.md §4 version states. Phase 212 writes only ``versioned``; the rest are
-#: reserved for the approval/release phases. ``superseded`` is currently derived from a newer
-#: version's ``supersedes_version_id`` and is never written.
+#: The ARTIFACT_LIFECYCLE.md §4 version states. ``version_status`` records the state a version was
+#: created in, always ``versioned``; it is never updated. The current state is derived (Phase 213,
+#: ``peak.workspace.approvals``): approvals, rejections and release from their append-only records,
+#: and ``superseded`` from a newer version's ``supersedes_version_id``. Approval and release apply
+#: to a version's release packages.
 ARTIFACT_VERSION_STATUSES = ("versioned", "lead_approved", "final_approved", "released",
                              "superseded", "rejected")
 
@@ -882,11 +884,176 @@ class ArtifactVersion(Base, GovernanceMixin, AuditMixin):
     source_references: Mapped[Optional[dict]] = mapped_column(JSON)
 
 
+# --- Phase 213: release packages, renditions, two-stage approval, release ------------------------
+#
+# Approval applies to a release package: one immutable artifact version bound to the exact
+# client-facing renditions proposed for release (ARTIFACT_LIFECYCLE.md §9A). Every table here is an
+# append-only record; lifecycle state is derived from them and ``artifact_versions`` is never
+# updated. Written only by ``peak.workspace.approvals`` (create actions only); the same listeners
+# refuse ORM updates and deletes, and in production the runtime role holds only SELECT and INSERT.
+
+ARTIFACT_APPROVAL_LEVELS = ("lead_consultant", "final_approver")
+ARTIFACT_APPROVAL_DECISIONS = ("approved", "rejected")
+ARTIFACT_RENDITION_TYPES = ("web", "docx")
+
+#: Renditions are stored bytes and can exceed MySQL BLOB's 64 KB, so they are LONGBLOB there.
+_LongBlob = LargeBinary().with_variant(mysql.LONGBLOB(), "mysql", "mariadb")
+
+
+class ArtifactReleasePackage(Base, GovernanceMixin, AuditMixin):
+    """One version bound to the exact renditions proposed for release. What humans approve."""
+
+    __tablename__ = "artifact_release_packages"
+    __table_args__ = (
+        UniqueConstraint("artifact_id", "package_number", name="uq_artifact_packages_number"),
+        # A package is superseded by at most one later package: the history stays a single line.
+        UniqueConstraint("supersedes_package_id", name="uq_artifact_packages_supersedes"),
+        CheckConstraint("package_number >= 1", name="ck_artifact_packages_number"),
+        MYSQL_TABLE_ARGS,
+    )
+    # id convention: artpkg_<hex>
+    id: Mapped[str] = mapped_column(GovernedString(64), primary_key=True)
+    artifact_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    artifact_version_id: Mapped[str] = mapped_column(GovernedString(64), index=True,
+                                                     nullable=False)
+    client_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    engagement_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    # Internal sequence within the artifact. Never shown to a client (AL36, AL49).
+    package_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    # The version's canonical content hash, and sha256 over it and every rendition hash.
+    content_hash: Mapped[str] = mapped_column(GovernedString(64), nullable=False)
+    package_hash: Mapped[str] = mapped_column(GovernedString(64), nullable=False)
+    supersedes_package_id: Mapped[Optional[str]] = mapped_column(GovernedString(64))
+    created_by_consultant_id: Mapped[str] = mapped_column(GovernedString(64), nullable=False)
+
+
+class ArtifactRendition(Base, GovernanceMixin, AuditMixin):
+    """The exact rendered bytes of one rendition of a package. Stored, never regenerated."""
+
+    __tablename__ = "artifact_renditions"
+    __table_args__ = (
+        UniqueConstraint("release_package_id", "rendition_type",
+                         name="uq_artifact_renditions_type"),
+        CheckConstraint("rendition_type IN ('web', 'docx')", name="ck_artifact_renditions_type"),
+        MYSQL_TABLE_ARGS,
+    )
+    # id convention: artrnd_<hex>
+    id: Mapped[str] = mapped_column(GovernedString(64), primary_key=True)
+    artifact_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    artifact_version_id: Mapped[str] = mapped_column(GovernedString(64), index=True,
+                                                     nullable=False)
+    client_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    engagement_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    release_package_id: Mapped[str] = mapped_column(GovernedString(64), nullable=False)
+    rendition_type: Mapped[str] = mapped_column(String(16), nullable=False)
+    media_type: Mapped[str] = mapped_column(String(128), nullable=False)
+    # The renderer that produced the bytes, e.g. ``peak.reports.final_report_docx``.
+    rendered_by: Mapped[str] = mapped_column(String(128), nullable=False)
+    file_name: Mapped[Optional[str]] = mapped_column(String(255))
+    byte_length: Mapped[int] = mapped_column(Integer, nullable=False)
+    content_bytes: Mapped[bytes] = mapped_column(_LongBlob, nullable=False)
+    # sha256 hex of ``content_bytes``.
+    rendition_hash: Mapped[str] = mapped_column(GovernedString(64), nullable=False)
+
+
+class ArtifactApproval(Base, GovernanceMixin, AuditMixin):
+    """One approval-level decision on one release package, bound to the hashes the approver saw."""
+
+    __tablename__ = "artifact_approvals"
+    __table_args__ = (
+        # Each level is decided once per package: an approval cannot be repeated or reversed, and a
+        # rejection is final for that package (a revision is a new package, AL45).
+        UniqueConstraint("release_package_id", "approval_level",
+                         name="uq_artifact_approvals_level"),
+        CheckConstraint("approval_level IN ('lead_consultant', 'final_approver')",
+                        name="ck_artifact_approvals_level"),
+        CheckConstraint("decision IN ('approved', 'rejected')",
+                        name="ck_artifact_approvals_decision"),
+        CheckConstraint("reviewed_rendition_type IN ('web', 'docx')",
+                        name="ck_artifact_approvals_reviewed"),
+        MYSQL_TABLE_ARGS,
+    )
+    # id convention: artappr_<hex>
+    id: Mapped[str] = mapped_column(GovernedString(64), primary_key=True)
+    artifact_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    artifact_version_id: Mapped[str] = mapped_column(GovernedString(64), index=True,
+                                                     nullable=False)
+    release_package_id: Mapped[str] = mapped_column(GovernedString(64), index=True,
+                                                    nullable=False)
+    client_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    engagement_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    approval_level: Mapped[str] = mapped_column(String(24), nullable=False)
+    decision: Mapped[str] = mapped_column(String(16), nullable=False)
+    approver_consultant_id: Mapped[str] = mapped_column(GovernedString(64), nullable=False)
+    content_hash: Mapped[str] = mapped_column(GovernedString(64), nullable=False)
+    package_hash: Mapped[str] = mapped_column(GovernedString(64), nullable=False)
+    # Which client-facing rendition the human reviewed (AL51). The decision is still on the package.
+    reviewed_rendition_type: Mapped[str] = mapped_column(String(16), nullable=False)
+    decision_note: Mapped[Optional[str]] = mapped_column(Text)
+    # Final decisions only: the designation the Final Approver acted under.
+    designation_id: Mapped[Optional[str]] = mapped_column(GovernedString(64))
+
+
+class ArtifactFinalApproverDesignation(Base, GovernanceMixin, AuditMixin):
+    """Who is designated Final Approver of one package. Reassignment supersedes, never overwrites."""
+
+    __tablename__ = "artifact_final_approver_designations"
+    __table_args__ = (
+        UniqueConstraint("release_package_id", "designation_number",
+                         name="uq_artifact_designations_number"),
+        UniqueConstraint("supersedes_designation_id", name="uq_artifact_designations_supersedes"),
+        CheckConstraint("designation_number >= 1", name="ck_artifact_designations_number"),
+        MYSQL_TABLE_ARGS,
+    )
+    # id convention: artdsg_<hex>
+    id: Mapped[str] = mapped_column(GovernedString(64), primary_key=True)
+    artifact_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    artifact_version_id: Mapped[str] = mapped_column(GovernedString(64), index=True,
+                                                     nullable=False)
+    release_package_id: Mapped[str] = mapped_column(GovernedString(64), index=True,
+                                                    nullable=False)
+    client_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    engagement_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    designation_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    designated_consultant_id: Mapped[str] = mapped_column(GovernedString(64), nullable=False)
+    designated_by_consultant_id: Mapped[str] = mapped_column(GovernedString(64), nullable=False)
+    supersedes_designation_id: Mapped[Optional[str]] = mapped_column(GovernedString(64))
+
+
+class ArtifactRelease(Base, GovernanceMixin, AuditMixin):
+    """The release of one package (AL26, AL46): who, when, and the approvals and hashes it rested on."""
+
+    __tablename__ = "artifact_releases"
+    __table_args__ = (
+        UniqueConstraint("release_package_id", name="uq_artifact_releases_package"),
+        MYSQL_TABLE_ARGS,
+    )
+    # id convention: artrel_<hex>
+    id: Mapped[str] = mapped_column(GovernedString(64), primary_key=True)
+    artifact_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    artifact_version_id: Mapped[str] = mapped_column(GovernedString(64), index=True,
+                                                     nullable=False)
+    release_package_id: Mapped[str] = mapped_column(GovernedString(64), nullable=False)
+    client_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    engagement_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    released_by_consultant_id: Mapped[str] = mapped_column(GovernedString(64), nullable=False)
+    content_hash: Mapped[str] = mapped_column(GovernedString(64), nullable=False)
+    package_hash: Mapped[str] = mapped_column(GovernedString(64), nullable=False)
+    lead_approval_id: Mapped[str] = mapped_column(GovernedString(64), nullable=False)
+    final_approval_id: Mapped[str] = mapped_column(GovernedString(64), nullable=False)
+
+
+#: Every artifact-lifecycle model: insert-only.
+_IMMUTABLE_ARTIFACT_MODELS = (Artifact, ArtifactVersion, ArtifactReleasePackage,
+                              ArtifactRendition, ArtifactApproval,
+                              ArtifactFinalApproverDesignation, ArtifactRelease)
+
+
 def _refuse_artifact_change(mapper, connection, target):
     raise PermissionError(f"{target.__tablename__} rows are immutable: no update or delete.")
 
 
-for _model in (Artifact, ArtifactVersion):
+for _model in _IMMUTABLE_ARTIFACT_MODELS:
     event.listen(_model, "before_update", _refuse_artifact_change)
     event.listen(_model, "before_delete", _refuse_artifact_change)
 
@@ -895,7 +1062,7 @@ for _model in (Artifact, ArtifactVersion):
 def _refuse_bulk_artifact_change(state):
     """Also refuse ``session.execute(update(...))`` / ``delete(...)`` aimed at artifact tables."""
     if (state.is_update or state.is_delete) and any(
-            m.class_ in (Artifact, ArtifactVersion) for m in state.all_mappers):
+            m.class_ in _IMMUTABLE_ARTIFACT_MODELS for m in state.all_mappers):
         raise PermissionError("artifact rows are immutable: no update or delete.")
 
 # Convenience list of all model classes (used by tooling/validation).
@@ -925,4 +1092,9 @@ ALL_MODELS = [
     DiscoveryObservation,
     Artifact,
     ArtifactVersion,
+    ArtifactReleasePackage,
+    ArtifactRendition,
+    ArtifactApproval,
+    ArtifactFinalApproverDesignation,
+    ArtifactRelease,
 ]
