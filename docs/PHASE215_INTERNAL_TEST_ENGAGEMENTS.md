@@ -5,8 +5,9 @@ acceptance. The normal consultant, report and artifact workflow can then be exer
 creating fake real-client records. Baseline `5d517c1` — *Record Phase 214 deployment results*.
 Index: [`PHASE_INDEX.md`](PHASE_INDEX.md).
 
-**Status: local only. Migration `020_internal_test_engagement_retirement` is added and not applied
-to production. Nothing is deployed and no production data was written.**
+**Status: migration `020_internal_test_engagement_retirement` is applied to production
+(2026-10-16), and the production verifier pin is at 020 and green. The Render and Vercel deploys,
+the Admin bootstrap and the authenticated acceptance follow this record.**
 
 Authorities:
 - [`PEAK_PROJECT_CONTRACT.md`](PEAK_PROJECT_CONTRACT.md) is unchanged; no rule in it is contradicted
@@ -259,18 +260,52 @@ The creation and review controls:
   now build at head, and Phase 209 reuses Phase 208's builder.
 - **The Phase 214 MySQL check** pinned the head to `019`. It now accepts the repository head.
 
-## Production
+## Production cutover (approved)
 
-Untouched:
-- no deploy;
-- no migration;
-- no grant change;
-- no production test data.
+### Schema: 019 → 020 (2026-10-16)
 
-Production authenticated acceptance (Phase 214) remains pending. It now has a supported path,
-subject to these approvals:
-- an approved cutover of migration 020 and this code;
-- Admin bootstrap of `admin@peakinventorysolutions.com`;
-- one internal test client and engagement.
+**Preconditions:**
+- git HEAD `77e7574`, clean;
+- production head `019_artifact_approval_release`;
+- 31 base tables, with the seven artifact tables empty.
 
-A second real consultant is no longer required for an internal_test Final Approval.
+**Migration.** `alembic upgrade 020_internal_test_engagement_retirement` ran with the production
+migration credential in a subshell (`PEAK_ALEMBIC_TARGET=production`,
+`PEAK_PRODUCTION_MIGRATION_CONFIRM=1`, `PEAK_PRODUCTION_SCHEMA_CONFIRM=defaultdb`). It applied
+`019 → 020` only and exited 0.
+
+**Read-only check afterwards:**
+
+| Property | After |
+|---|---|
+| Alembic head | `020_internal_test_engagement_retirement`, single row |
+| New columns | `engagements.deleted_at` (`datetime`, nullable); `engagements.deleted_by_consultant_id` (`varchar`, nullable, `utf8mb4_bin` governed) |
+| Existing engagement rows | none retired (both columns null on the Phase 59 anchor) |
+| Base tables | 31, unchanged |
+| Artifact tables | all seven present and empty |
+| Rows | unchanged: `engagements` 1, `discovery_questions` 29; `clients`, `consultants`, discovery sessions/answers/observations 0 |
+| Runtime grants | unchanged, identical `SHOW GRANTS` |
+
+No data was seeded, no grant was changed and no artifact table was altered.
+
+**Verifier.**
+- `EXPECTED_ALEMBIC_HEAD` moved to `020_internal_test_engagement_retirement`, after the migration
+  was applied (Phase 58 rule). Only the pin and its history comment changed; the footer already
+  names the pinned head.
+- The run against production returned `verified_safe_no_remediation_required`, exit 0:
+  - head matches;
+  - 31 base tables;
+  - **342/342** governed columns deterministic (the new `deleted_by_consultant_id` adds one);
+  - 11/11 idempotency boundaries safe;
+  - no warnings;
+  - no schema mutation, data write or migration by the tool.
+- Phase 43, 58 and 215 harnesses: PASS.
+
+**Pending at this record:**
+- the Render API deploy (Auto-Deploy gate first);
+- the Vercel web deploy;
+- the Admin bootstrap;
+- the authenticated internal_test acceptance.
+
+Until the API deploys, production runs the Phase 214 code on the 020 schema. That is safe: the old
+models do not read the two new nullable columns.

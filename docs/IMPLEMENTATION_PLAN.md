@@ -4411,8 +4411,9 @@ Product functionality, local only. Baseline `5d517c1`. Record:
   source status, and outlive source deletion. The propagation point is
   `workspace.service.source_marker`. No publication is implemented.
 - [x] Migration `020_internal_test_engagement_retirement` (two nullable `engagements` columns).
-- [ ] Production cutover, separately approved. Migrate 020 **before** the API deploy (the models
-  select the new columns), then move the verifier pin. No grant change.
+- [x] Production schema cutover (2026-10-16): 019 → 020 applied; the new columns are present; rows,
+  grants and the empty artifact tables are unchanged. Verifier pin at 020 and green (342/342).
+- [ ] Render API and Vercel web deploys (after the Auto-Deploy gate).
 - [ ] Production acceptance on an internal_test engagement, after the Admin bootstrap.
 
 **Drift fixed:**
