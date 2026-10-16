@@ -31,8 +31,8 @@ value — collision probes report **counts only**. Failures are reported by sani
 by raw driver exception text, which routinely embeds the connection string.
 
 **It changes nothing and decides nothing.** It reports, classifies the risk, and recommends a next
-step. No migration is proposed as code or executed here. Production is expected at
-``014_engagement_classification`` (applied in Phase 58); this tool only observes that fact.
+step. No migration is proposed as code or executed here. Production is expected at the live
+production head pinned in ``EXPECTED_ALEMBIC_HEAD``; this tool only observes that fact.
 
 See docs/PRODUCTION_MYSQL_COLLATION_VERIFICATION.md.
 
@@ -108,12 +108,12 @@ _SAFE_IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9_]{1,64}$")
 
 # --------------------------------------------------------------------------- expectations
 
-#: The head expected **in production**. Moved to 014 in Phase 58, to 016 in Phase 203, and to 017
-#: in Phase 205, each time only after the migration was actually applied to production by the
-#: migration credential.
+#: The head expected **in production**. Moved to 014 in Phase 58, to 016 in Phase 203, to 017 in
+#: Phase 205, and to 019 in Phase 214, each time only after the migration was actually applied to
+#: production by the migration credential.
 #: It tracks the live production head, not the repository head: move it only when a later
 #: migration has genuinely been applied to production, never merely written.
-EXPECTED_ALEMBIC_HEAD = "017_discovery_workflow"
+EXPECTED_ALEMBIC_HEAD = "019_artifact_approval_release"
 #: Tables that existed at 014 and must still exist. The *current* expected table set is derived
 #: from the declared models (``_expected_tables``) rather than frozen as a count (Phase 203).
 HISTORICAL_REQUIRED_TABLES = (
@@ -668,8 +668,8 @@ def render(result: VerificationResult, *, verbose: bool = False) -> None:
             emit(f"  - {name}")
     emit("")
     emit("This tool performs no schema mutation, no data write, no migration, and no cleanup or")
-    emit("delete path. Production is expected at 014_engagement_classification, applied in Phase 58")
-    emit("by the migration credential; any further migration remains a separately approved operation.")
+    emit(f"delete path. Production is expected at {EXPECTED_ALEMBIC_HEAD}, applied by the migration")
+    emit("credential; any further migration remains a separately approved operation.")
 
 
 def main(argv=None) -> int:

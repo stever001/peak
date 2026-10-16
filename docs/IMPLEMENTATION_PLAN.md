@@ -4352,6 +4352,37 @@ Baseline `70e5168`. Record:
 **Next:** review of Phase 213. Client presentation, client delivery and the production cutover are
 separate, explicitly approved phases.
 
+### Phase 214 — Production artifact workflow cutover
+
+Cutover phase; no product functionality. Baseline `4df89ff`. Record:
+[`PHASE214_PRODUCTION_ARTIFACT_CUTOVER.md`](PHASE214_PRODUCTION_ARTIFACT_CUTOVER.md).
+
+- [x] **Live-MySQL concurrency prerequisite passed.** Disposable loopback MySQL 8.2.0, real
+  migrations 017 → 018 → 019, production runtime grants, two live connections with the blocking
+  observed in `performance_schema.data_lock_waits`: a committed final decision refuses a waiting
+  reassignment; a committed reassignment refuses the old designee and leaves only the new designee
+  able to decide. A no-lock negative control fails.
+  `tests/validate_phase214_mysql_artifact_concurrency.py` (`make validate-phase214-mysql`; not in
+  `make validate`).
+- [x] Grant sufficiency confirmed on MySQL: no grant change; artifact tables refuse UPDATE/DELETE;
+  `UPDATE ON engagements` covers `SELECT … FOR UPDATE`.
+- [x] Production read-only pre-cutover check (2026-10-15):
+  - head `017_discovery_workflow`, 24 base tables, no artifact tables;
+  - row counts unchanged and runtime grants unchanged;
+  - collation verifier `verified_safe` (249/249).
+
+  Render Auto-Deploy Off still needs operator confirmation at the dashboard.
+- [x] Production migrated 017 → 018 → 019 (2026-10-15): head 019, 31 tables, seven empty
+  artifact tables, rows and grants unchanged. Verifier pin moved to 019 and green (341/341).
+- [ ] **Remaining approved cutover steps:**
+  - deploy Render by hand, then deploy Vercel by hand;
+  - run the unauthenticated checks.
+- [ ] Authenticated acceptance stays pending provisioning of `admin@peakinventorysolutions.com`.
+  No temporary Admin; no seeded artifact data.
+
+The Phase 213 reconciliation item "the race behaviour has not been exercised on a live MySQL
+server" is closed.
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing
