@@ -4385,7 +4385,7 @@ server" is closed.
 
 ### Phase 215 — Internal test engagements
 
-Product functionality, local only. Baseline `5d517c1`. Record:
+Product functionality, complete in production (2026-10-16). Baseline `5d517c1`. Record:
 [`PHASE215_INTERNAL_TEST_ENGAGEMENTS.md`](PHASE215_INTERNAL_TEST_ENGAGEMENTS.md).
 
 - [x] One `internal_test` classification on the existing Phase 56 columns, server-set from
@@ -4413,8 +4413,12 @@ Product functionality, local only. Baseline `5d517c1`. Record:
 - [x] Migration `020_internal_test_engagement_retirement` (two nullable `engagements` columns).
 - [x] Production schema cutover (2026-10-16): 019 → 020 applied; the new columns are present; rows,
   grants and the empty artifact tables are unchanged. Verifier pin at 020 and green (342/342).
-- [ ] Render API and Vercel web deploys (after the Auto-Deploy gate).
-- [ ] Production acceptance on an internal_test engagement, after the Admin bootstrap.
+- [x] Render API (`875f7ff`, Auto-Deploy OFF) and Vercel web deploys, live.
+- [x] Admin bootstrap by the operator; password later reset solely to separate the Peak Admin
+  credential from the database Service URI (`tools/reset_production_admin_password.py`).
+- [x] Production acceptance on an internal_test engagement: 38/38, persisted records verified
+  read-only, retirement kept all artifact and release history; real-client distinct-human rule
+  intact; no physical deletion, no capsule publication.
 
 **Drift fixed:**
 - The Phase 206/208 harnesses built their database at `017` while using current models. They now

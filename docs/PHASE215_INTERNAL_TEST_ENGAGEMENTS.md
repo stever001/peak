@@ -5,9 +5,15 @@ acceptance. The normal consultant, report and artifact workflow can then be exer
 creating fake real-client records. Baseline `5d517c1` — *Record Phase 214 deployment results*.
 Index: [`PHASE_INDEX.md`](PHASE_INDEX.md).
 
-**Status: migration `020_internal_test_engagement_retirement` is applied to production
-(2026-10-16), and the production verifier pin is at 020 and green. The Render and Vercel deploys,
-the Admin bootstrap and the authenticated acceptance follow this record.**
+**Status: complete in production (2026-10-16).**
+- Migration `020_internal_test_engagement_retirement` is applied, and the verifier pin is at 020
+  and green.
+- The Render API (`875f7ff`) and Vercel web deploys are live.
+- The Admin bootstrap is done.
+- The authenticated internal_test acceptance passed 38/38, and the persisted records were verified
+  read-only afterwards.
+
+See "Production cutover (approved)".
 
 Authorities:
 - [`PEAK_PROJECT_CONTRACT.md`](PEAK_PROJECT_CONTRACT.md) is unchanged; no rule in it is contradicted
@@ -301,11 +307,150 @@ No data was seeded, no grant was changed and no artifact table was altered.
   - no schema mutation, data write or migration by the tool.
 - Phase 43, 58 and 215 harnesses: PASS.
 
-**Pending at this record:**
-- the Render API deploy (Auto-Deploy gate first);
-- the Vercel web deploy;
-- the Admin bootstrap;
-- the authenticated internal_test acceptance.
+The schema record was committed as `875f7ff` (*Record Phase 215 production schema cutover*). Between
+the migration and the API deploy, production ran the Phase 214 code on the 020 schema. That was
+safe: the old models do not read the two new nullable columns.
 
-Until the API deploys, production runs the Phase 214 code on the 020 schema. That is safe: the old
-models do not read the two new nullable columns.
+### Render API deploy (manual, 2026-10-16)
+
+- **Auto-Deploy gate.** The operator confirmed Render Auto-Deploy is OFF before deploying.
+- **Deploy.** The operator manually deployed commit `875f7ff` as deploy
+  `dep-db98er0473hc73f9uqdg`, and it is live.
+- **Logged-out API checks** against https://peak-consultant-api.onrender.com, with no 404 on any
+  Phase 215 route and no 500 anywhere:
+  - `/healthz` returns 200 and `/auth/me` returns 401;
+  - a wrong-password login returns 401 `invalid_credentials`;
+  - `POST /engagements/{id}/internal-test-deletion` returns 401 (it was 404 before the deploy),
+    also with a forged session cookie;
+  - `GET /clients?internal_test=true`, `POST /clients` with `internal_test` and `POST /engagements`
+    with `internal_test` and the confirmation each return 401;
+  - the Phase 213 package, rendition, release and Final Report routes still return 401.
+
+### Vercel web deploy (2026-10-16)
+
+- **Deploy.** `vercel --prod` ran from `web/` at `875f7ff`, with no environment variable changed.
+  Deployment `dpl_FNZ6ZxW6ptwwTHoa1cFrtpdbcP18` (project `peak-web`, target production) is Ready
+  and aliased to https://peak-web-five.vercel.app.
+- **Logged-out web checks:**
+  - `/login` returns 200 with HSTS and shows no internal-test, package, approval or report wording.
+  - Every protected route redirects to `/login`. That covers the workspace pages, both
+    internal-test creation pages (`/engagements/new?type=internal_test`,
+    `/clients/new?internal_test=1`), engagement edit and assessment, the Final Report and its DOCX,
+    and the release-package renditions.
+  - A forged cookie also redirects.
+
+### Admin bootstrap and credential separation (2026-10-16)
+
+**Bootstrap.** The operator ran `tools/bootstrap_admin.py --production` in their own terminal,
+entering the password interactively. It printed
+`CREATED: Admin 'Steve Rouse' <admin@peakinventorysolutions.com> id=cons_2ad52d4889aff4e4b916fd7d`.
+This is the only consultant row in production.
+
+**Password reset.** The Admin password was then reset with
+`tools/reset_production_admin_password.py` (commit `3cca8fb`). The only purpose was to separate the
+Peak Admin credential from the database Service URI, which had been entered as the Admin password
+at bootstrap. The reset:
+- was run by the operator in their own terminal, with the production migration credential;
+- changed only `consultants.password_hash` of that one Admin row;
+- left the id, email, role, name and `created_at` unchanged.
+
+Neither the password nor the hash was printed or stored outside the database. Rotating the database
+credential itself is the operator's decision and outside this record.
+
+### Authenticated internal_test acceptance (2026-10-16)
+
+The operator ran the acceptance as the Admin against the production API: the password through
+`getpass`, the session cookie held only in memory. Result: **38/38 checks, 0 failures.** It created
+only synthetic internal-test records.
+
+| Record | Id |
+|---|---|
+| Internal test client | `internal_test_87053d6a0a99b705` ("Peak Internal Acceptance — Phase 215 (synthetic)") |
+| Engagement | `eng_d98efd28378668f9` ("Internal Acceptance — Phase 215") |
+| Release package | `artpkg_9d46b0ec9b0e3c80` |
+| Artifact / version | `art_2a8c0c6c9b09215f` (`final_report`) / `artv_f0a9ae97c8dc659b` (number 1) |
+
+What the acceptance covered:
+- **A. Internal test client.** The client was created in the reserved namespace, and the
+  internal-test chooser lists it.
+- **B/C. Engagement.** Creation without the confirmation was refused
+  (`internal_test_confirmation_required`), and a spoofed `engagement_category` was refused (422).
+  With the confirmation, the engagement was created as `internal_test` / `active`, with the Admin as
+  Lead.
+- **D. Discovery and report.** North Star, one synthetic observation, the assessment, the Final
+  Report and the draft DOCX.
+- **E. Approval and release.** One artifact version and one release package were created, with the
+  stored web and DOCX hashes verified and no internal ids or Internal Test label in the web
+  rendition.
+  - Every out-of-order step was refused with its specific code.
+  - The Lead approved (reviewed: web), self-designated as Final Approver (internal_test only) and
+    gave the final approval (reviewed: docx), with both decisions bound to one package hash.
+  - The package was released; a second release was refused, and the released bytes equal the
+    stored bytes.
+- **F. Logical retirement.** A mistyped name was refused (`confirmation_required`), and the exact
+  name retired the engagement.
+  - The engagement left the active list, and its history stays readable with `source_status`
+    `deleted`.
+  - The released package stays readable and unchanged.
+  - New discovery, report, package, approval and edit requests, and a second retirement, all return
+    `engagement_deleted`.
+
+### Read-only verification of the persisted records (2026-10-16)
+
+**How it was checked.** A probe ran with the read-only verifier login, inside a `READ ONLY`
+transaction, using SELECT only. It never read `consultants.password_hash`, and it recomputed every
+hash from the stored bytes. Result: **all 33 checks passed**, with production head
+`020_internal_test_engagement_retirement`.
+
+| Area | Verified |
+|---|---|
+| Client | `internal_test_87053d6a0a99b705`, in the reserved `internal_test_` namespace. Clients carry no workspace stamp by design; the stamp is engagement-scoped. |
+| Classification | `engagement_category` `internal_test`, `real_client_data` false, `client_accessible` false, `capsule_publication_authorized` false; stamp `peak_consultants` / `engagement_authorized` |
+| Lead | `assigned_consultant_id` = the Admin (`cons_2ad52d4889aff4e4b916fd7d`) |
+| Retirement | `deleted_at` set (`2026-10-16 22:15:56` UTC); `deleted_by_consultant_id` = the Admin. The derived source marker is `internal_test` / `deleted`. |
+| Artifact rows | exactly one artifact, one version and one package for the engagement. The version's content hash recomputes from `content_canonical` and equals the package's. |
+| Renditions | `web` (5,782 bytes) and `docx` (4,982 bytes, ZIP): sha256 of the stored bytes equals `rendition_hash`, and `byte_length` matches. `package_hash` recomputes from the version id, content hash and rendition hashes. The web bytes contain no internal ids or Internal Test label. |
+| Approvals | `lead_consultant` and `final_approver`, both `approved`, both by the Admin, bound to the same package and content hashes; reviewed `web` / `docx`; lead before final |
+| Same human | permitted because, and only because, the engagement is `internal_test` (AL52) |
+| Designation | exactly one: number 1, nothing superseded, designated and designated-by the Admin. The final decision references it. |
+| Release | exactly one row, released by the Admin, resting on both approval ids and the same hashes. It was recorded before retirement. |
+| After retirement | every stored hash still verifies, and the released package remains readable and unchanged |
+| Scope | no `real_client` engagement carries `deleted_at`; `capsule_publication_candidates` is empty |
+
+The version row reads `version_status` `versioned`. That is expected: lifecycle state is derived
+from the approval and release records, and `artifact_versions` is never updated.
+
+**What the retirement did and did not do:**
+- It was logical only. The engagement row and all of its discovery, artifact, approval and release
+  history remain, and the immutable artifact records were not touched.
+- Nothing was physically deleted. No DELETE grant exists or was added.
+- No capsule was published.
+
+### Real-client regression (code and harness evidence)
+
+No real-client record was created in production, and none is needed. The distinct-human rule is
+proven offline:
+- **Where it is enforced.** `peak/workspace/approvals.py` refuses `same_human` at three points: the
+  Final Approver designation, the final decision and the release. Each is relaxed only when
+  `_same_human_permitted(engagement)` holds.
+- **The relaxation is narrow.** It is `service.is_internal_test`, a byte-exact comparison of
+  `engagement_category` with `internal_test`. A real_client engagement cannot be switched to
+  internal_test after creation (Phase 215 harness: 422, row unchanged).
+- **Phase 213 harness**, on real_client engagements: 127 checks, 0 failures, re-run at closure.
+  - It refuses designating the Lead approver as Final Approver (`same_human`).
+  - It refuses a final approval from the Lead approver (`same_human`).
+- **Phase 215 harness:** 72 checks, 0 failures, re-run at closure. On a real_client engagement, the
+  Lead still cannot designate themselves (`same_human`), while a different consultant still can.
+- **Release-time check.** It is defence in depth behind the designation and decision refusals, so
+  it is not reachable through the API on a real_client package.
+
+### Closure
+
+Phase 215 is closed:
+- schema 020 is in production;
+- the Render (`875f7ff`) and Vercel (`dpl_FNZ6ZxW6ptwwTHoa1cFrtpdbcP18`) production deploys are live;
+- the Admin is bootstrapped, and its password has been separated from the database credential;
+- the internal_test acceptance passed 38/38 and was verified read-only;
+- logical retirement kept the immutable artifact and release history;
+- the real-client distinct-human approval rule is intact;
+- there was no physical deletion and no capsule publication.
