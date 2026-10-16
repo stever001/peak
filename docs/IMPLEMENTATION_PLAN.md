@@ -4383,6 +4383,43 @@ Cutover phase; no product functionality. Baseline `4df89ff`. Record:
 The Phase 213 reconciliation item "the race behaviour has not been exercised on a live MySQL
 server" is closed.
 
+### Phase 215 — Internal test engagements
+
+Product functionality, local only. Baseline `5d517c1`. Record:
+[`PHASE215_INTERNAL_TEST_ENGAGEMENTS.md`](PHASE215_INTERNAL_TEST_ENGAGEMENTS.md).
+
+- [x] One `internal_test` classification on the existing Phase 56 columns, server-set from
+  `WORKSPACE_INTERNAL_TEST_CLASSIFICATION`:
+  - internal test clients (reserved `internal_test_` namespace) and internal_test engagements,
+    creatable by any consultant with the classification server-forced; deletion stays Admin-only;
+  - creation offers Real Client / Internal Test / Training, with an internal-test-client chooser
+    and a required confirmation (also server-enforced); no classification switch after creation;
+  - a Consultant creating internal_test becomes its Lead automatically (server-set);
+    reassignment stays Admin-only; real-client assignment is unchanged;
+  - the Phase 55 namespace rule is enforced both ways.
+- [x] The normal workflow accepts internal_test through the existing workspace stamp:
+  - discovery, assessment, Final Report, DOCX, artifact version and release package;
+  - the unstamped Phase 59 anchor stays refused.
+- [x] AL52: one human may give both approvals on internal_test; both stages are still required.
+  real_client is unchanged.
+- [x] AL53: Admin logical deletion of internal_test (`deleted_at`, `deleted_by_consultant_id`):
+  - no new work is accepted afterwards;
+  - all history is kept;
+  - real_client is never deletable;
+  - no DELETE grant and no change to the immutability guards.
+- [x] AL54 booked: capsules from internal_test data carry machine-readable classification and
+  source status, and outlive source deletion. The propagation point is
+  `workspace.service.source_marker`. No publication is implemented.
+- [x] Migration `020_internal_test_engagement_retirement` (two nullable `engagements` columns).
+- [ ] Production cutover, separately approved. Migrate 020 **before** the API deploy (the models
+  select the new columns), then move the verifier pin. No grant change.
+- [ ] Production acceptance on an internal_test engagement, after the Admin bootstrap.
+
+**Drift fixed:**
+- The Phase 206/208 harnesses built their database at `017` while using current models. They now
+  build at head.
+- The Phase 214 MySQL check now accepts the repository head instead of pinning `019`.
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

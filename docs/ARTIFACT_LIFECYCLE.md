@@ -14,8 +14,9 @@ yet built. This document says what the lifecycle *must* mean. It does not define
 schemas, endpoints or migrations. The gaps between this document and the current system are tracked
 in [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md) (Phase 211 reconciliation items).
 
-Rules are numbered **AL1–AL51** so later phases can cite them. AL41–AL51 (§9A, release packages)
-were added in Phase 213.
+Rules are numbered **AL1–AL54** so later phases can cite them. AL41–AL51 (§9A, release packages)
+were added in Phase 213. AL52–AL54 (§9B, internal test engagements) were added in Phase 215, along
+with a narrow exception in AL17.
 
 ---
 
@@ -135,7 +136,9 @@ working ──(fix content)──▶ versioned ──▶ lead_approved ──▶
   must come from **different humans**. The same person may not satisfy both approval levels for the
   same version. This applies per version's approval chain. It does not stop a person from holding
   different roles on different engagements, artifacts or versions. How these roles map onto
-  accounts remains an implementation question (AL18).
+  accounts remains an implementation question (AL18). **Exception:** on an `internal_test`
+  engagement, one human may give both approvals (AL52). Both decisions are still separate and
+  recorded separately.
 - **AL18 — Roles are business roles, not account roles.** This document does not map Lead Consultant
   or Final Approver onto the existing `admin` and `consultant` account roles. That mapping, and how
   role holders are assigned per artifact, is an implementation reconciliation item. Role assignment
@@ -283,6 +286,43 @@ artifact version (canonical business content)
 
 ---
 
+## 9B. Internal test engagements
+
+An `internal_test` engagement is used for testing, training and acceptance. It holds no real client
+data (`real_client_data = false`) and is never client-accessible (`client_accessible = false`). Any
+consultant may create one; that classification is always forced by the server, never chosen
+column by column. Only an Admin may delete one (AL53). These rules were added in Phase 215
+([`PHASE215_INTERNAL_TEST_ENGAGEMENTS.md`](PHASE215_INTERNAL_TEST_ENGAGEMENTS.md)).
+
+- **AL52 — One human may give both approvals on internal_test.** On an `internal_test` engagement,
+  the Lead Consultant may designate themselves as Final Approver and give both approvals.
+  - Everything else in §5–§7 and §9A still applies: Lead approval first, an explicit Final Approver
+    designation, the final approval, the binding to the same package and package hash, the
+    reviewed-rendition record, and the release gate.
+  - Neither stage may be skipped.
+  - On a `real_client` engagement AL17 is unchanged: two different humans.
+- **AL53 — Deleting an internal_test engagement retires the source; it never destroys history.** An
+  Admin's deletion of an `internal_test` engagement is logical:
+  - The engagement is marked deleted, leaves the active lists, and accepts no new discovery, report,
+    artifact, package, approval or release activity.
+  - Its artifact versions, release packages, renditions, approvals, designations, releases, hashes
+    and provenance are kept, immutable and auditable (AL5).
+  - A `real_client` engagement cannot be deleted.
+- **AL54 — Capsules from internal_test data say so, and outlive deletion.** For the future
+  capsule-publication authority:
+  - Every capsule derived from `internal_test` data must carry its source classification
+    machine-readably, for example `engagement_classification: internal_test`. Presentation text
+    alone is not enough.
+  - Its source status must also be machine-readable, for example `source_status: deleted` once the
+    engagement is deleted.
+  - Test material must never be presented as real-client operational data.
+  - Deleting an `internal_test` engagement must not silently delete, rewrite or hide an
+    already-published capsule. Published history stays auditable, and the source's retirement is
+    represented explicitly by the publication-management mechanism.
+  - Publication itself remains separately authorized (Contract C17).
+
+---
+
 ## 10. Client presentation
 
 - **AL36 — The client sees only released content.** A client-facing rendering shows only the content
@@ -381,4 +421,4 @@ This document deliberately leaves the following to later, separately approved wo
 - retention periods for superseded and rejected versions. Until a retention policy says otherwise,
   versions are not deleted.
 
-Each of these must remain consistent with AL1–AL51 and the Contract.
+Each of these must remain consistent with AL1–AL54 and the Contract.

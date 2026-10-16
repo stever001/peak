@@ -32,7 +32,7 @@ from peak.persistence.allowlist import (
     is_allowed_workspace_write,
 )
 
-from .service import WorkspaceError
+from .service import WorkspaceError, require_active
 
 ARTIFACT_TYPE_FINAL_REPORT = "final_report"
 #: Artifact types this phase can create. ARTIFACT_LIFECYCLE.md §13 names more; each is added when
@@ -226,6 +226,7 @@ def _workspace_engagement(session, engagement_id: str):
     if any(getattr(engagement, k) != v for k, v in WORKSPACE_ENGAGEMENT_CREATION_STAMP.items()):
         raise WorkspaceError("not_a_workspace_engagement",
                              "Artifacts are available only for consultant-workspace engagements.")
+    require_active(engagement)
     return engagement
 
 

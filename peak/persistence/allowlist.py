@@ -144,6 +144,10 @@ WORKSPACE_WRITE_COLUMNS = {
     ("engagements", "update_engagement_workspace_fields"): ENGAGEMENT_WORKSPACE_COLUMNS,
     # Phase 204 — discovery / interview workflow. No delete: questions are deactivated.
     ("engagements", "set_engagement_north_star"): frozenset({"north_star", "north_star_context"}),
+    # Phase 215 — an Admin's logical deletion of an internal_test engagement. The action name avoids
+    # the prohibited "delete" substring on purpose: no row is deleted, the engagement is retired.
+    ("engagements", "retire_internal_test_engagement"):
+        frozenset({"deleted_at", "deleted_by_consultant_id"}),
     ("discovery_questions", "create_discovery_question"):
         frozenset({"id", "seed_key"}) | DISCOVERY_QUESTION_COLUMNS,
     ("discovery_questions", "update_discovery_question"): DISCOVERY_QUESTION_COLUMNS,
@@ -225,8 +229,24 @@ WORKSPACE_ENGAGEMENT_CREATION_STAMP = {
     "authorization_scope": WORKSPACE_ENGAGEMENT_AUTHORIZATION_SCOPE,
 }
 
+#: Phase 215: the classification an internal_test workspace engagement is born with,
+#: for testing, training and acceptance. Like the stamp it is a server-set constant: a caller (any
+#: consultant) can only ask for it (``internal_test: true``), never write or override these columns. The engagement
+#: still carries the workspace stamp, so discovery, reports and artifacts accept it; a historical
+#: internal record without the stamp (the Phase 59 anchor) stays refused. The client must be in the
+#: reserved internal-test namespace (``peak.persistence.governance``), and a real_client
+#: engagement must not be. ``capsule_publication_authorized`` keeps its default (false).
+WORKSPACE_INTERNAL_TEST_CLASSIFICATION = {
+    "engagement_category": "internal_test",
+    "real_client_data": False,
+    "client_accessible": False,
+}
+#: The reserved client-id prefix an Admin-created internal-test client receives.
+WORKSPACE_INTERNAL_TEST_CLIENT_PREFIX = "internal_test_"
+
 assert not any(cols & WORKSPACE_FORBIDDEN_COLUMNS for cols in WORKSPACE_WRITE_COLUMNS.values())
 assert set(WORKSPACE_ENGAGEMENT_CREATION_STAMP) <= WORKSPACE_FORBIDDEN_COLUMNS
+assert set(WORKSPACE_INTERNAL_TEST_CLASSIFICATION) <= WORKSPACE_FORBIDDEN_COLUMNS
 
 #: Phase 204: discovery sessions, answers and observations are engagement work records. They are
 #: created with the same server-set stamp, and only under an engagement that carries it, so a

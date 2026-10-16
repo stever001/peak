@@ -1,3 +1,4 @@
+import { InternalTestBadge } from "@/components/internal-test-badge";
 import Link from "next/link";
 
 import { PageHeader } from "@/components/page-header";
@@ -37,6 +38,7 @@ export default async function ClientsPage(props: PageProps<"/clients">) {
               <Link href={`/clients/${c.id}`}
                     className="flex min-h-20 flex-col justify-center gap-1 rounded-peak border border-line bg-surface px-5 py-4 hover:border-brand">
                 <span className="text-lg font-semibold text-brand">{c.organization_label}</span>
+                {c.internal_test && <InternalTestBadge />}
                 <span className="text-sm text-ink-muted">
                   {[c.city, c.country].filter(Boolean).join(", ") || "No location"}
                   {c.contact_name ? ` · ${c.contact_name}` : ""}

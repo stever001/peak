@@ -368,8 +368,8 @@ def main() -> int:
         print(f"[disposable MySQL server: {version}, loopback]")
         check("the server is MySQL 8.x", version.startswith("8."))
         migrated, current = _migrate(migrate_url)
-        check("alembic upgrade head applies 017 -> 018 -> 019 on MySQL",
-              migrated and current.startswith("019_artifact_approval_release"))
+        check("alembic upgrade head applies every migration (017 -> 018 -> 019 and later) on MySQL",
+              migrated and current.endswith("(head)"))
         if not migrated:
             return 1
         _grant_runtime(admin)

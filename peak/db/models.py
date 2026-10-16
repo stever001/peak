@@ -74,6 +74,11 @@ class Engagement(Base, GovernanceMixin, AuditMixin):
     # Phase 204 discovery: the consultant-defined North Star for the current discovery effort.
     north_star: Mapped[Optional[str]] = mapped_column(Text)
     north_star_context: Mapped[Optional[str]] = mapped_column(Text)
+    # Phase 215: an Admin's logical deletion of an internal_test engagement. The row and every record
+    # under it are kept; a set ``deleted_at`` retires the engagement from active use. Never set on a
+    # real_client engagement.
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    deleted_by_consultant_id: Mapped[Optional[str]] = mapped_column(GovernedString(64))
 
 
 class EngagementRecord(Base, GovernanceMixin, AuditMixin):

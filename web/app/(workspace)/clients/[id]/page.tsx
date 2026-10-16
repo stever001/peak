@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { Detail } from "@/components/field";
 import { EngagementList } from "@/components/engagement-list";
+import { InternalTestBadge } from "@/components/internal-test-badge";
 import { PageHeader } from "@/components/page-header";
 import { apiGet, requireConsultant, type Client } from "@/lib/api";
 
@@ -20,7 +21,10 @@ export default async function ClientPage(props: PageProps<"/clients/[id]">) {
         ← All clients
       </Link>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <PageHeader title={client.organization_label} intro={client.description ?? undefined} />
+        <div>
+          <PageHeader title={client.organization_label} intro={client.description ?? undefined} />
+          {client.internal_test && <InternalTestBadge />}
+        </div>
         <Link href={`/clients/${client.id}/edit`}
               className="inline-flex min-h-touch shrink-0 items-center justify-center rounded-peak border border-line bg-surface px-6 font-medium hover:border-brand">
           Edit client

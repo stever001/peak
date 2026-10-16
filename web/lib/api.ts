@@ -51,7 +51,15 @@ export type ClientSummary = {
   city: string | null;
   country: string | null;
   contact_name: string | null;
+  /** Phase 215: an Admin-created internal test client (reserved namespace). */
+  internal_test: boolean;
   engagement_count: number;
+};
+
+/** Phase 215: machine-readable source state; `internal_test` marks test material, never real-client data. */
+export type SourceMarker = {
+  engagement_classification: "real_client" | "internal_test";
+  source_status: "active" | "deleted";
 };
 
 export type Engagement = {
@@ -62,10 +70,12 @@ export type Engagement = {
   current_phase: string | null;
   client: { id: string; name: string | null };
   assigned_consultant: { id: string; name: string | null } | null;
-};
+  deleted_at: string | null;
+} & SourceMarker;
 
 export type Client = {
   id: string;
+  internal_test: boolean;
   organization_label: string;
   description: string | null;
   address_line1: string | null;
@@ -430,6 +440,7 @@ export type ReleasePackage = {
   current_designation: { id: string; consultant: PersonRef; by: PersonRef; at: string | null } | null;
   designations: Designation[];
   release: { id: string; by: PersonRef; at: string | null; package_hash: string } | null;
+  source: SourceMarker | null;
 };
 
 export type FinalReportReview = {

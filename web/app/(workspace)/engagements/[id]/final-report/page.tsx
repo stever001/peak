@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { ArtifactReviewPanel } from "@/components/artifact-review-panel";
 import { FinalReportView } from "@/components/final-report-view";
+import { InternalTestBadge } from "@/components/internal-test-badge";
 import { PageHeader } from "@/components/page-header";
 import {
   apiGet, requireConsultant, type ConsultantOption, type FinalReportResponse, type FinalReportReview,
@@ -29,8 +30,13 @@ export default async function FinalReportPage(props: PageProps<"/engagements/[id
         ← {engagement.engagement_label ?? "Engagement"}
       </Link>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <PageHeader title="Final report (internal draft)"
-                    intro={`${engagement.client.name} · ${engagement.engagement_label ?? "Untitled engagement"}`} />
+        <div>
+          <PageHeader title="Final report (internal draft)"
+                      intro={`${engagement.client.name} · ${engagement.engagement_label ?? "Untitled engagement"}`} />
+          {engagement.engagement_classification === "internal_test" && (
+            <InternalTestBadge deleted={engagement.source_status === "deleted"} />
+          )}
+        </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-end">
           {/* A plain link, not <Link>: the route handler answers with a file attachment. */}
           <a href={`/engagements/${engagement.id}/final-report/docx`} download className="peak-button shrink-0">
@@ -43,7 +49,8 @@ export default async function FinalReportPage(props: PageProps<"/engagements/[id
         </div>
       </div>
       <ArtifactReviewPanel review={review} engagementId={engagement.id} meId={me.id}
-                           lead={engagement.assigned_consultant} options={consultants} />
+                           lead={engagement.assigned_consultant} options={consultants}
+                           internalTest={engagement.engagement_classification === "internal_test"} />
       <h2 className="mb-3 text-xl font-semibold text-brand">Live draft (working state)</h2>
       <FinalReportView r={report} markdown={markdown} engagementId={engagement.id} />
     </>

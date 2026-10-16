@@ -33,6 +33,14 @@ function clientBody(formData: FormData) {
   return { ...pick(formData, CLIENT_FIELDS), key_personnel: keyPersonnel };
 }
 
+/** Phase 215: present only when the internal test option was chosen. The server forces the
+ *  classification; an engagement also passes the confirmation, which the server requires. */
+function internalTest(formData: FormData) {
+  if (formData.get("internal_test") !== "true") return {};
+  return formData.get("internal_test_confirmed") === "true"
+    ? { internal_test: true, internal_test_confirmed: true } : { internal_test: true };
+}
+
 /** Turn an API refusal into a short message for the form. */
 async function refusal(res: Response): Promise<FormState> {
   if (res.status === 401) redirect("/login");
@@ -47,10 +55,15 @@ async function send(path: string, method: "POST" | "PATCH", body: unknown) {
 }
 
 export async function createClient(_prev: FormState, formData: FormData): Promise<FormState> {
-  const res = await send("/clients", "POST", clientBody(formData));
+  const test = formData.get("internal_test") === "true";
+  const res = await send("/clients", "POST", { ...clientBody(formData), ...(test ? { internal_test: true } : {}) });
   if (!res.ok) return refusal(res);
   const { client } = await res.json();
   revalidatePath("/clients");
+  // Opened from the engagement form's "Create internal test client": go back to it, with this client chosen.
+  if (test && formData.get("return_to") === "engagement") {
+    redirect(`/engagements/new?type=internal_test&client=${encodeURIComponent(client.id)}`);
+  }
   redirect(`/clients/${client.id}`);
 }
 
@@ -64,12 +77,24 @@ export async function updateClient(
 }
 
 export async function createEngagement(_prev: FormState, formData: FormData): Promise<FormState> {
-  const body = { ...pick(formData, ENGAGEMENT_FIELDS), client_id: String(formData.get("client_id") ?? "") };
+  const body = { ...pick(formData, ENGAGEMENT_FIELDS), client_id: String(formData.get("client_id") ?? ""),
+                 ...internalTest(formData) };
   const res = await send("/engagements", "POST", body);
   if (!res.ok) return refusal(res);
   const { engagement } = await res.json();
   revalidatePath("/engagements");
   redirect(`/engagements/${engagement.id}`);
+}
+
+/** Phase 215: an Admin's logical deletion of an internal test engagement; the name must be retyped. */
+export async function deleteInternalTestEngagement(
+  id: string, _prev: FormState, formData: FormData,
+): Promise<FormState> {
+  const res = await send(`/engagements/${encodeURIComponent(id)}/internal-test-deletion`, "POST",
+                         { confirm_engagement_label: String(formData.get("confirm_engagement_label") ?? "") });
+  if (!res.ok) return refusal(res);
+  revalidatePath("/engagements");
+  redirect("/engagements");
 }
 
 export async function updateEngagement(

@@ -298,11 +298,12 @@ def api_checks(factory):
 
 
 def build_database(tmp):
-    """A temporary SQLite database at head 017, with the question pool initialized."""
+    """A temporary SQLite database at the repository head (the models track head; Phase 215
+    added engagement columns), with the question pool initialized."""
     db = os.path.join(tmp, "api.sqlite3")
     env = {k: v for k, v in os.environ.items() if not k.startswith("PEAK_")}
     env["PEAK_DATABASE_URL"] = f"sqlite:///{db}"
-    subprocess.run([sys.executable, "-m", "alembic", "upgrade", "017_discovery_workflow"],
+    subprocess.run([sys.executable, "-m", "alembic", "upgrade", "head"],
                    cwd=REPO_ROOT, env=env, capture_output=True, text=True, check=True)
     from peak.db.session import create_session_factory
 

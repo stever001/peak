@@ -52,7 +52,7 @@ from peak.persistence.allowlist import (
     is_allowed_workspace_write,
 )
 
-from . import artifacts
+from . import artifacts, service
 from .service import WorkspaceError
 
 LEAD = "lead_consultant"
@@ -263,10 +263,16 @@ def _chain_dict(session, loaded) -> dict:
                 "reviewed_rendition": a.reviewed_rendition_type,
                 "designation_id": a.designation_id}
 
+    from peak.db.models import Engagement
+
     current = _current_designation(designations)
+    engagement = session.get(Engagement, package.engagement_id)
     return {
         "id": package.id, "artifact_id": package.artifact_id,
         "engagement_id": package.engagement_id, "package_number": package.package_number,
+        # Phase 215: the source classification and status, for the review surface and for any
+        # future capsule projection of this package. Internal only; never in a rendition.
+        "source": service.source_marker(engagement) if engagement else None,
         "artifact_version_id": package.artifact_version_id,
         "version_number": version.version_number if version else None,
         "content_hash": package.content_hash, "package_hash": package.package_hash,
@@ -472,6 +478,15 @@ def prepare_final_report_package(session_factory, engagement_id: str, report,
     return {**get_package(session_factory, package["id"]), "created": True}
 
 
+def _same_human_permitted(engagement) -> bool:
+    """Phase 215 (AL52): an internal_test engagement may have one human give both approvals.
+
+    Both stages, the Final Approver designation, the package-hash binding and the reviewed-rendition
+    record still apply; only the different-human rule is relaxed. real_client keeps it (AL16).
+    """
+    return service.is_internal_test(engagement)
+
+
 def _package_engagement_id(session_factory, package_id: str) -> Optional[str]:
     """The package's engagement id (immutable), read in its own short transaction."""
     from peak.db.models import ArtifactReleasePackage
@@ -583,7 +598,7 @@ def designate_final_approver(session_factory, package_id: str, designee_id: str,
                     "the Final Approver.")
         if session.get(Consultant, designee_id or "") is None:
             _refuse("invalid_field", "Choose an existing consultant as Final Approver.")
-        if designee_id == lead.approver_consultant_id:
+        if designee_id == lead.approver_consultant_id and not _same_human_permitted(engagement):
             _refuse("same_human",
                     "The Final Approver must be a different person from the Lead approver.")
         current = _current_designation(designations)
@@ -622,7 +637,7 @@ def record_final_decision(session_factory, package_id: str, decision: str,
         opened = _open_package(session, package_id)
         if opened is None:
             return None
-        _, (package, version, renditions, approvals, designations, _, _) = opened
+        engagement, (package, version, renditions, approvals, designations, _, _) = opened
         lead = approvals.get(LEAD)
         if lead is None or lead.decision != APPROVED:
             _refuse("lead_approval_required",
@@ -632,7 +647,7 @@ def record_final_decision(session_factory, package_id: str, decision: str,
         current = _current_designation(designations)
         if current is None:
             _refuse("no_final_approver_designated", "Designate a Final Approver first.")
-        if consultant_id == lead.approver_consultant_id:
+        if consultant_id == lead.approver_consultant_id and not _same_human_permitted(engagement):
             _refuse("same_human",
                     "The Lead approver cannot also give the final approval for this package.")
         if consultant_id != current.designated_consultant_id:
@@ -662,12 +677,13 @@ def release_package(session_factory, package_id: str, package_hash_seen: Optiona
         opened = _open_package(session, package_id)
         if opened is None:
             return None
-        _, (package, version, renditions, approvals, _, _, _) = opened
+        engagement, (package, version, renditions, approvals, _, _, _) = opened
         lead, final = approvals.get(LEAD), approvals.get(FINAL)
         if not (lead and final and lead.decision == APPROVED and final.decision == APPROVED):
             _refuse("approvals_required",
                     "Release needs the Lead approval and then the Final Approver's approval.")
-        if lead.approver_consultant_id == final.approver_consultant_id:
+        if (lead.approver_consultant_id == final.approver_consultant_id
+                and not _same_human_permitted(engagement)):
             _refuse("same_human", "The two approvals must come from different people.")
         if consultant_id not in (lead.approver_consultant_id, final.approver_consultant_id):
             _refuse("not_an_approver",

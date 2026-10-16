@@ -1,13 +1,16 @@
 import Link from "next/link";
 
+import { deleteInternalTestEngagement } from "@/app/workspace-actions";
 import { DiscoverySection } from "@/components/discovery-section";
 import { Detail } from "@/components/field";
+import { InternalTestBadge } from "@/components/internal-test-badge";
+import { InternalTestDeleteForm } from "@/components/internal-test-delete-form";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
 import { apiGet, requireConsultant, type Discovery, type Engagement } from "@/lib/api";
 
 export default async function EngagementPage(props: PageProps<"/engagements/[id]">) {
-  await requireConsultant();
+  const me = await requireConsultant();
   const { id } = await props.params;
   const [{ engagement: e }, { discovery }] = await Promise.all([
     apiGet<{ engagement: Engagement }>(`/engagements/${encodeURIComponent(id)}`),
@@ -19,7 +22,10 @@ export default async function EngagementPage(props: PageProps<"/engagements/[id]
         ← All engagements
       </Link>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <PageHeader title={e.engagement_label ?? "Untitled engagement"} />
+        <div>
+          <PageHeader title={e.engagement_label ?? "Untitled engagement"} />
+          {e.engagement_classification === "internal_test" && <InternalTestBadge deleted={e.source_status === "deleted"} />}
+        </div>
         <div className="flex shrink-0 flex-wrap gap-3">
           <Link href={`/engagements/${e.id}/assessment`} className="peak-button">
             Internal assessment
@@ -34,6 +40,12 @@ export default async function EngagementPage(props: PageProps<"/engagements/[id]
           </Link>
         </div>
       </div>
+      {e.source_status === "deleted" && (
+        <p className="peak-card mb-6">
+          This internal test engagement was deleted{e.deleted_at ? ` on ${e.deleted_at.slice(0, 10)}` : ""}. Its
+          history is kept for audit; it accepts no new work.
+        </p>
+      )}
       <section className="peak-card">
         <dl className="grid gap-5 sm:grid-cols-2">
           <Detail label="Client" value={
@@ -48,6 +60,10 @@ export default async function EngagementPage(props: PageProps<"/engagements/[id]
         </dl>
       </section>
       <DiscoverySection engagementId={e.id} d={discovery} />
+      {me.role === "admin" && e.engagement_classification === "internal_test" && e.source_status === "active" && (
+        <InternalTestDeleteForm action={deleteInternalTestEngagement.bind(null, e.id)}
+                                label={e.engagement_label ?? ""} />
+      )}
     </>
   );
 }

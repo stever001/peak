@@ -23,8 +23,10 @@ function Text({ name, label, value, type = "text", wide, required }: {
   );
 }
 
-export function ClientForm({ action, client, cancelHref, submitLabel }: {
+export function ClientForm({ action, client, cancelHref, submitLabel, internalTestDefault = false }: {
   action: Action; client?: Client; cancelHref: string; submitLabel: string;
+  /** Phase 215: opened from the engagement form's "Create internal test client". */
+  internalTestDefault?: boolean;
 }) {
   const [state, formAction, pending] = useActionState<FormState, FormData>(action, {});
   const [people, setPeople] = useState<KeyPerson[]>(client?.key_personnel ?? []);
@@ -99,6 +101,24 @@ export function ClientForm({ action, client, cancelHref, submitLabel }: {
           Add person
         </button>
       </section>
+
+      {/* Phase 215: any consultant may create an internal test client; only on create. */}
+      {!client && (
+        <section className="peak-card">
+          {internalTestDefault && <input type="hidden" name="return_to" value="engagement" />}
+          <label className="flex min-h-touch items-start gap-3">
+            <input type="checkbox" name="internal_test" value="true" defaultChecked={internalTestDefault}
+                   className="mt-1 h-5 w-5" />
+            <span>
+              <span className="font-medium">Internal test client</span>
+              <span className="block text-sm text-ink-muted">
+                For testing, training and acceptance only. Use synthetic details, never real client data.
+                Its engagements are Internal Test engagements.
+              </span>
+            </span>
+          </label>
+        </section>
+      )}
 
       <FormMessage state={state} />
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">

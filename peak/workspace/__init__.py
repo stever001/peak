@@ -9,6 +9,7 @@ from .service import (  # noqa: F401
     WorkspaceError,
     create_client,
     create_engagement,
+    delete_internal_test_engagement,
     get_client,
     get_engagement,
     list_clients,

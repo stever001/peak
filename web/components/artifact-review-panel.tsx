@@ -1,6 +1,7 @@
 import {
   designateFinalApprover, finalDecision, leadDecision, prepareReleasePackage, releasePackage,
 } from "@/app/artifact-actions";
+import { InternalTestBadge } from "@/components/internal-test-badge";
 import { Pill } from "@/components/assessment-view";
 import { DecisionForm, DesignateForm, ReleaseForm, SubmitVersionForm } from "@/components/artifact-review-forms";
 import {
@@ -96,9 +97,11 @@ function RenditionLinks({ p }: { p: ReleasePackage }) {
 }
 
 /** What the signed-in consultant can do next on the latest package. The API enforces every rule. */
-function Controls({ p, engagementId, meId, leadId, leadName, options }: {
+function Controls({ p, engagementId, meId, leadId, leadName, options, internalTest }: {
   p: ReleasePackage; engagementId: string; meId: string; leadId: string | null; leadName: string | null;
   options: ConsultantOption[];
+  /** Phase 215: on an internal test engagement the Lead may also be the Final Approver. */
+  internalTest: boolean;
 }) {
   const leadApprover = p.lead_decision?.by.id ?? null;
   const designee = p.current_designation?.consultant.id ?? null;
@@ -113,7 +116,7 @@ function Controls({ p, engagementId, meId, leadId, leadName, options }: {
   }
   if (p.state === "lead_approved") {
     const canDesignate = meId === leadApprover || meId === leadId;
-    const choices = options.filter((o) => o.id !== leadApprover && o.id !== designee);
+    const choices = options.filter((o) => (internalTest || o.id !== leadApprover) && o.id !== designee);
     return (
       <div className="space-y-5">
         {canDesignate && (
@@ -145,9 +148,10 @@ function Controls({ p, engagementId, meId, leadId, leadName, options }: {
  * page shown here and the DOCX offered here are those stored files, never a fresh rendering. Package and version
  * numbers, approvers and release records are internal: none of it appears in the report or its renditions.
  */
-export async function ArtifactReviewPanel({ review, engagementId, meId, lead, options }: {
+export async function ArtifactReviewPanel({ review, engagementId, meId, lead, options, internalTest = false }: {
   review: FinalReportReview; engagementId: string; meId: string; lead: PersonRef | null;
   options: ConsultantOption[];
+  internalTest?: boolean;
 }) {
   const [latest, ...earlier] = review.packages;
   const webHtml = latest?.hash_verified ? await getWebRendition(latest.id) : null;
@@ -157,12 +161,15 @@ export async function ArtifactReviewPanel({ review, engagementId, meId, lead, op
       <div className="flex flex-wrap items-center gap-2">
         <h2 id="review-heading" className="text-xl font-semibold text-brand">Review and release</h2>
         <Pill>Internal only</Pill>
+        {internalTest && <InternalTestBadge />}
       </div>
       <p className="text-sm text-ink-muted">
         Approval applies to a release package: a fixed version of this report with its exact client-facing web page
         and DOCX file, stored when the package is prepared. What you review here is exactly what would be released.
         Review either one; your decision covers both. The Lead Consultant
-        approves first, then a different consultant designated as Final Approver.
+        approves first, then {internalTest
+          ? "the consultant designated as Final Approver, who on an Internal Test engagement may be the Lead"
+          : "a different consultant designated as Final Approver"}.
       </p>
       {!latest ? (
         <div className="space-y-3">
@@ -212,7 +219,7 @@ export async function ArtifactReviewPanel({ review, engagementId, meId, lead, op
             )}
             <PackageRecord p={latest} />
             <Controls p={latest} engagementId={engagementId} meId={meId} leadId={lead?.id ?? null}
-                      leadName={lead?.name ?? null} options={options} />
+                      leadName={lead?.name ?? null} options={options} internalTest={internalTest} />
           </article>
           {earlier.length > 0 && (
             <details className="rounded-peak border border-line p-4">

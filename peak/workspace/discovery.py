@@ -24,7 +24,7 @@ from peak.persistence.allowlist import (
     is_allowed_workspace_write,
 )
 
-from .service import WorkspaceError, _clean
+from .service import WorkspaceError, _clean, require_active
 
 ANSWER_TYPES = ("short_text", "long_text", "yes_no", "single_choice")
 BRANCH_OPERATORS = ("equals", "not_equals")
@@ -240,6 +240,7 @@ def _workspace_engagement(session, engagement_id: str):
     if any(getattr(engagement, k) != v for k, v in WORKSPACE_ENGAGEMENT_CREATION_STAMP.items()):
         raise WorkspaceError("not_a_workspace_engagement",
                              "Discovery is available only for consultant-workspace engagements.")
+    require_active(engagement)
     return engagement
 
 
@@ -301,8 +302,8 @@ def get_discovery(session_factory, engagement_id: str) -> Optional[dict]:
         engagement = session.get(Engagement, engagement_id)
         if engagement is None:
             return None
-        eligible = all(getattr(engagement, k) == v
-                       for k, v in WORKSPACE_ENGAGEMENT_CREATION_STAMP.items())
+        eligible = engagement.deleted_at is None and all(
+            getattr(engagement, k) == v for k, v in WORKSPACE_ENGAGEMENT_CREATION_STAMP.items())
         sessions = session.scalars(select(DiscoverySession)
                                    .where(DiscoverySession.engagement_id == engagement_id)
                                    .order_by(DiscoverySession.started_at.desc())).all()
@@ -447,6 +448,8 @@ def _open_session(session, session_id: str):
     s = session.get(DiscoverySession, session_id)
     if s is not None and s.status != "in_progress":
         raise WorkspaceError("session_completed", "This interview is completed and read-only.")
+    if s is not None:
+        _workspace_engagement(session, s.engagement_id)
     return s
 
 
@@ -611,6 +614,9 @@ def update_observation(session_factory, observation_id: str, data: dict) -> Opti
         raise WorkspaceError("invalid_field", "Nothing to update.")
     _require_allowed("discovery_observations", "update_discovery_observation", values)
     with session_factory() as session:
+        existing = session.get(DiscoveryObservation, observation_id)
+        if existing is not None:
+            _workspace_engagement(session, existing.engagement_id)
         result = session.execute(update(DiscoveryObservation)
                                  .where(DiscoveryObservation.id == observation_id).values(**values))
         session.commit()

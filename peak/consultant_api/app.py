@@ -83,6 +83,11 @@ class ClientIn(BaseModel):
     key_personnel: Optional[List[KeyPerson]] = None
 
 
+class ClientCreateIn(ClientIn):
+    """Phase 215: ``internal_test`` creates an internal test client (any consultant)."""
+    internal_test: Optional[bool] = None
+
+
 class EngagementUpdateIn(BaseModel):
     """Engagement workflow fields only; the client cannot be changed after creation."""
     model_config = ConfigDict(extra="forbid")
@@ -95,6 +100,17 @@ class EngagementUpdateIn(BaseModel):
 
 class EngagementCreateIn(EngagementUpdateIn):
     client_id: str
+    #: Phase 215: any consultant; the engagement must belong to an internal test client and its
+    #: classification is server-forced. ``internal_test_confirmed`` must be true with it: the
+    #: affirmative confirmation, checked here as well as in the form.
+    internal_test: Optional[bool] = None
+    internal_test_confirmed: Optional[bool] = None
+
+
+class InternalTestDeleteIn(BaseModel):
+    """Phase 215: the Admin repeats the engagement's name to confirm the deletion."""
+    model_config = ConfigDict(extra="forbid")
+    confirm_engagement_label: str = Field(max_length=255)
 
 
 class BranchIn(BaseModel):
@@ -319,11 +335,12 @@ def create_app(
         return {"consultants": workspace.list_consultant_options(session_factory)}
 
     @app.get("/clients")
-    def clients_list(q: Optional[str] = None, _: dict = Depends(current_consultant)):
-        return {"clients": workspace.list_clients(session_factory, q)}
+    def clients_list(q: Optional[str] = None, internal_test: Optional[bool] = None,
+                     _: dict = Depends(current_consultant)):
+        return {"clients": workspace.list_clients(session_factory, q, internal_test)}
 
     @app.post("/clients", status_code=status.HTTP_201_CREATED)
-    def clients_create(body: ClientIn, _: dict = Depends(current_consultant)):
+    def clients_create(body: ClientCreateIn, _: dict = Depends(current_consultant)):
         return {"client": _workspace_call(workspace.create_client, session_factory, _body(body))}
 
     @app.get("/clients/{client_id}")
@@ -342,7 +359,7 @@ def create_app(
     @app.post("/engagements", status_code=status.HTTP_201_CREATED)
     def engagements_create(body: EngagementCreateIn, me: dict = Depends(current_consultant)):
         return {"engagement": _workspace_call(workspace.create_engagement, session_factory,
-                                              _body(body), me["role"])}
+                                              _body(body), me["role"], me["id"])}
 
     @app.get("/engagements/{engagement_id}")
     def engagements_get(engagement_id: str, _: dict = Depends(current_consultant)):
@@ -355,6 +372,15 @@ def create_app(
         """Any consultant may edit; only an Admin may change the assigned consultant (Phase 213)."""
         return {"engagement": _workspace_call(workspace.update_engagement, session_factory,
                                               engagement_id, _body(body), me["role"])}
+
+    @app.post("/engagements/{engagement_id}/internal-test-deletion")
+    def engagements_delete_internal_test(engagement_id: str, body: InternalTestDeleteIn,
+                                         me: dict = Depends(require_admin)):
+        """Phase 215: an Admin's logical deletion of an internal_test engagement. Nothing is
+        physically deleted; real_client engagements are refused."""
+        return {"engagement": _workspace_call(
+            workspace.delete_internal_test_engagement, session_factory, engagement_id,
+            body.confirm_engagement_label, me["id"], me["role"])}
 
     # --- Phase 204: discovery / interview workflow (any authenticated consultant) ---------------
 
@@ -456,7 +482,9 @@ def create_app(
         engagement = _workspace_call(workspace.get_engagement, session_factory, engagement_id)
         with session_factory() as session:
             try:
-                result = build_consultant_internal_assessment(session.connection(), engagement_id)
+                result = build_consultant_internal_assessment(
+                    session.connection(), engagement_id,
+                    **workspace.service.assessment_read_options(session_factory, engagement_id))
             except (LookupError, EngagementNotVisible):
                 raise HTTPException(status.HTTP_404_NOT_FOUND, "not_found") from None
         return {
@@ -479,7 +507,9 @@ def create_app(
         engagement = _workspace_call(workspace.get_engagement, session_factory, engagement_id)
         with session_factory() as session:
             try:
-                result = build_consultant_internal_assessment(session.connection(), engagement_id)
+                result = build_consultant_internal_assessment(
+                    session.connection(), engagement_id,
+                    **workspace.service.assessment_read_options(session_factory, engagement_id))
             except (LookupError, EngagementNotVisible):
                 raise HTTPException(status.HTTP_404_NOT_FOUND, "not_found") from None
         return engagement, compose_final_report(result.assessment, engagement)
