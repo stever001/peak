@@ -5,10 +5,13 @@ feature phase: **no product functionality is added**, and migrations 018 and 019
 Baseline `4df89ff` — *Add Phase 213 artifact approval and release*.
 Index: [`PHASE_INDEX.md`](PHASE_INDEX.md).
 
-**Status: migrations 018 and 019 are applied to production (2026-10-15), and production is at
-`019_artifact_approval_release`. The verifier pin has moved to 019 and the verifier is green. The
-Render and Vercel deploys follow this record. Authenticated acceptance remains pending provisioning
-of `admin@peakinventorysolutions.com`.**
+**Status: the Phase 212/213 artifact workflow is live in production (2026-10-15).**
+- Migrations 018/019 are applied: production is at `019_artifact_approval_release`, the verifier pin
+  is at 019 and the verifier is green.
+- The Render API runs `230a12a` (manual deploy, Auto-Deploy confirmed **Off**), and the Vercel web is
+  deployed.
+- Every logged-out check passes.
+- **Authenticated acceptance remains pending provisioning of `admin@peakinventorysolutions.com`.**
 
 ## Baseline
 
@@ -167,6 +170,58 @@ No data was seeded, no grant was changed and no existing row was modified.
 - `alembic downgrade 017_discovery_workflow` drops only the seven empty artifact tables.
 - There is no grant to revoke and no row to remove.
 
+## Render deploy (manual)
+
+- **Auto-Deploy** was confirmed **Off** by the operator at the Render dashboard before the deploy,
+  and was not changed.
+- **Deploy:** a manual deploy of `peak-consultant-api` at commit `230a12a` succeeded and is live.
+
+Logged-out API checks against https://peak-consultant-api.onrender.com:
+
+| Request | Before deploy | After deploy |
+|---|---|---|
+| `GET /healthz` | 200 | 200 `{"status":"ok"}` |
+| `GET /auth/me`, `GET /clients` | 401 | 401 `not_authenticated` |
+| `GET /release-packages/x` | **404** | **401** |
+| `GET /release-packages/x/web`, `/docx` | — | 401 |
+| `GET /engagements/x/final-report/packages` | **404** | **401** |
+| `GET /engagements/x/final-report/released` | — | 401 |
+| `POST /release-packages/x/release` | — | 401 |
+| Forged `peak_session` cookie on `/release-packages/x` | — | 401 |
+| Wrong-password login | 401 | 401 `invalid_credentials`, not 500 |
+| `/docs`, `/openapi.json` | 404 | 404 |
+
+What the results show:
+- **The new code is live:** the Phase 213 routes moving from 404 to 401 shows they now exist and
+  are protected.
+- **The schema is readable:** the wrong-password 401 shows the API reads the migrated database
+  without errors.
+- **The checks were taken after the migration too:** between the migration and the deploy, the
+  Phase 207 code still served `/healthz` 200 and a wrong-password login 401 on the migrated
+  schema.
+
+## Vercel deploy (manual)
+
+- **How:** `vercel --prod` from `web/`, against the already-linked `peak-web` project, at `230a12a`.
+  No environment variable was changed, and GitHub was not reconnected.
+- **Result:** deployment `dpl_DX4gdjJ3TGXgrhLA7wmuLJavgpJw`, target `production`, **Ready**,
+  aliased to **https://peak-web-five.vercel.app**.
+
+Logged-out web checks:
+
+| Path | Result |
+|---|---|
+| `/login` | 200, HSTS `max-age=63072000; includeSubDomains; preload`; no package, approval or report content in the page |
+| `/`, `/dashboard`, `/engagements`, `/engagements/x`, `/clients`, `/engagements/x/assessment` | 307 → `/login` |
+| `/engagements/x/final-report` (Final Report and the release review panel) | 307 → `/login`, also with a forged cookie |
+| `/release-packages/x/web`, `/release-packages/x/docx` (stored renditions) | 307 → `/login`, also with a forged cookie |
+| `/release-packages/x` | 404: no page exists at that path, and nothing is served |
+
+**How the rendition routes are protected.** They are not in the web proxy's optimistic cookie
+matcher. They are protected one layer down: each route handler calls the API and redirects to
+`/login` on its 401, so the API's authentication is what guards them, as with every other route.
+No artifact content is reachable without authentication.
+
 ## Validation
 
 - `tests/validate_phase214_mysql_artifact_concurrency.py` against MySQL 8.2.0: **PASS**, 43 checks,
@@ -188,8 +243,7 @@ No data was seeded, no grant was changed and no existing row was modified.
 
 ## Open items
 
-- **Render Auto-Deploy.** The operator must confirm it is still Off at the dashboard before the
-  Render deploy.
+- **Render Auto-Deploy** remains **Off**; API deploys stay manual.
 
 - **Authenticated production acceptance** is pending provisioning of
   `admin@peakinventorysolutions.com`. This is the Phase 203 item, carried forward; no temporary

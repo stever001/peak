@@ -4374,9 +4374,9 @@ Cutover phase; no product functionality. Baseline `4df89ff`. Record:
   Render Auto-Deploy Off still needs operator confirmation at the dashboard.
 - [x] Production migrated 017 → 018 → 019 (2026-10-15): head 019, 31 tables, seven empty
   artifact tables, rows and grants unchanged. Verifier pin moved to 019 and green (341/341).
-- [ ] **Remaining approved cutover steps:**
-  - deploy Render by hand, then deploy Vercel by hand;
-  - run the unauthenticated checks.
+- [x] Render API deployed by hand at `230a12a`, with Auto-Deploy confirmed Off; Vercel web
+  deployed by hand. Logged out, the Phase 213 API routes moved 404 → 401, and the web's protected
+  report and rendition routes redirect to `/login`.
 - [ ] Authenticated acceptance stays pending provisioning of `admin@peakinventorysolutions.com`.
   No temporary Admin; no seeded artifact data.
 
