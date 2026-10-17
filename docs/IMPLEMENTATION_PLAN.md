@@ -4427,7 +4427,7 @@ Product functionality, complete in production (2026-10-16). Baseline `5d517c1`. 
 
 ### Phase 216 — Discovery instrument hardening
 
-Product methodology, implemented locally. Baseline `312a2c6`. Record:
+Product methodology; implementation `3025614`, schema in production. Baseline `312a2c6`. Record:
 [`PHASE216_DISCOVERY_INSTRUMENT.md`](PHASE216_DISCOVERY_INSTRUMENT.md).
 
 - [x] The Peak discovery instrument (`peak/workspace/discovery_instrument.py`):
@@ -4455,7 +4455,9 @@ Product methodology, implemented locally. Baseline `312a2c6`. Record:
 - [x] The seed tool inserts the instrument and retires the 29 Phase 204 questions by deactivation.
 - [x] Read-only production check: the pool is unedited, there are 0 answers, and the grants are
   sufficient.
-- [ ] Production rollout: 021 migration, verifier pin, API/web deploys, then seeding the instrument.
+- [x] Production schema cutover (2026-10-17): 020 → 021 applied; columns, constraint and indexes
+  present; rows, content and grants unchanged. Verifier pin at 021 and green (345/345).
+- [ ] Render API and Vercel web deploys, then seeding the instrument and its read-only check.
 
 **Still to do:**
 

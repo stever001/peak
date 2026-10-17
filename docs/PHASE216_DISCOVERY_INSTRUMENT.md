@@ -5,9 +5,9 @@ smallest question set that reliably exposes operational problems Peak can help s
 recorded rationale and source provenance for every question. Baseline `312a2c6` — *Record Phase
 215 production acceptance and closure*. Index: [`PHASE_INDEX.md`](PHASE_INDEX.md).
 
-**Status: implemented and validated locally. Migration `021_discovery_observation_trace_basis` is
-not applied to production, and the production question pool is unchanged.** The rollout plan is
-under "Production rollout".
+**Status: implementation committed as `3025614`. Migration `021_discovery_observation_trace_basis`
+is applied to production (2026-10-17), and the verifier pin is at 021 and green. The API and web
+deploys and the instrument seed follow this record**; see "Production rollout".
 
 Authorities:
 - [`PEAK_PROJECT_CONTRACT.md`](PEAK_PROJECT_CONTRACT.md) is unchanged. C4 (*discovery is not
@@ -318,7 +318,7 @@ The changes are minimal:
 - **Observation cards, the assessment and the Final Report** show the basis and the prompting
   question.
 
-## Production rollout (not performed)
+## Production rollout
 
 **Read-only check before any change** (2026-10-16). It used the read-only login inside a
 `READ ONLY` transaction, SELECT/SHOW only:
@@ -335,7 +335,47 @@ The changes are minimal:
 No historical answer exists to preserve yet. The rollout still only deactivates, so the 29 rows
 and their wording are kept.
 
-**Sequence, each step separately approved:**
+### Schema: 020 → 021 (2026-10-17)
+
+**Preflight (read-only):**
+- `main` = `origin/main` = `3025614`, clean;
+- production head `020_internal_test_engagement_retirement`;
+- 29 `discovery_questions`, all active and unedited; 0 answers;
+- runtime grants as listed above.
+
+**Migration.** `alembic upgrade 021_discovery_observation_trace_basis` ran with the production
+migration credential in a subshell (`PEAK_ALEMBIC_TARGET=production`,
+`PEAK_PRODUCTION_MIGRATION_CONFIRM=1`, `PEAK_PRODUCTION_SCHEMA_CONFIRM=defaultdb`). It applied
+`020 → 021` only.
+
+**Read-only check afterwards:**
+
+| Property | After |
+|---|---|
+| Alembic head | `021_discovery_observation_trace_basis`, single row |
+| New columns | all seven present and nullable: `discovery_observations.question_id` (`utf8mb4_bin`), `.basis`; `discovery_questions.engagement_id`, `.added_by_consultant_id` (both `utf8mb4_bin`), `.rationale`, `.domain`, `.finding_classes` (JSON) |
+| Constraint | `ck_discovery_observations_basis` present |
+| Indexes | `ix_discovery_observations_question_id`, `ix_discovery_questions_engagement_id` |
+| Row counts | unchanged in every table (`discovery_questions` 29, `discovery_answers` 0, `discovery_observations` 1, `engagements` 2, artifact tables 1/1/1/2/2/1/1) |
+| Content | unchanged: a fingerprint over every row of the artifact tables, `engagements`, `clients` and the discovery record tables (excluding only the two new, null observation columns) equals the preflight value |
+| Question pool | unchanged: 29 Phase 204 rows, active, matching the seed |
+| Runtime grants | unchanged, identical `SHOW GRANTS` |
+
+**Verifier.**
+- `EXPECTED_ALEMBIC_HEAD` moved to `021_discovery_observation_trace_basis`, after the migration was
+  applied (Phase 58 rule).
+- The run against production returned `verified_safe_no_remediation_required`, exit 0:
+  - head matches;
+  - 31 base tables;
+  - **345/345** governed columns deterministic (the three new governed ids add three);
+  - 11/11 idempotency boundaries safe;
+  - no schema mutation, data write or migration by the tool.
+- Phase 43, 58 and 216 harnesses: PASS.
+
+**Pending at this record:** the Render API deploy (Auto-Deploy gate first), the Vercel web deploy,
+the instrument seed and its read-only verification.
+
+### Remaining sequence (each step separately approved)
 1. Migrate production 020 → 021 with the migration credential and target guard.
 2. Run the read-only verifier, then move `EXPECTED_ALEMBIC_HEAD` to 021.
 3. Deploy the API (Render, Auto-Deploy gate first), then the web app (Vercel). The models select
