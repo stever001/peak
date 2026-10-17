@@ -1,9 +1,13 @@
-"""The initial Peak inventory discovery question pool (Phase 204).
+"""The initial Peak inventory discovery question pool (Phase 204) — superseded in Phase 216.
+
+Kept as the historical record of the 29 MVP questions seeded in Phase 205. It is **no longer
+loaded**: ``tools/init_discovery_questions.py`` now seeds the Phase 216 instrument
+(``peak.workspace.discovery_instrument``) and retires these questions by deactivation
+(``SUPERSEDED_PHASE204_KEYS``). Rows already seeded from this file keep their wording, and every
+answer keeps its prompt snapshot.
 
 Application configuration, not client data: prompts only, no answers, and nothing about any
-client. Loaded only by the explicit ``tools/init_discovery_questions.py``, which inserts each entry
-once (keyed by ``seed_key``). After that the questions are ordinary rows: editable and
-deactivatable in the app, and never re-imposed from this file.
+client.
 
 A ``branch`` names an earlier entry's ``seed_key``, an operator and a value.
 """

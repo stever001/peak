@@ -117,7 +117,24 @@ export type Question = {
   display_order: number;
   active: boolean;
   branch: { question_id: string; operator: "equals" | "not_equals"; value: string } | null;
+  /** Phase 216: seeded Peak Method question, editable only by an Admin. */
+  canonical: boolean;
+  seed_key: string | null;
+  /** Canonical or global (no engagement): created, edited and deactivated only by an Admin. */
+  admin_controlled: boolean;
+  /** Supplemental-question provenance: the engagement it was added in (asked only there). */
+  engagement_id: string | null;
+  added_by_consultant_id: string | null;
+  rationale: string | null;
+  domain: string | null;
+  finding_classes: string[];
+  created_at: string | null;
+  /** Derived, never stored: answers with text, and observations that name the question. */
+  usage?: { answered: number; observations: number };
 };
+
+/** Phase 216: what a consultant observation rests on. Never makes it evidence. */
+export type ObservationBasis = "testimony" | "observed" | "document" | "measured" | "inferred";
 
 export type SessionSummary = {
   id: string;
@@ -137,10 +154,14 @@ export type Observation = {
   low_hanging_fruit: boolean;
   estimated_effort: Level | null;
   estimated_value: Level | null;
+  basis: ObservationBasis | null;
+  question: { id: string; prompt: string | null; category: string | null } | null;
   session: { id: string; interviewee_name: string } | null;
   recorded_by: string | null;
   created_at: string | null;
 };
+
+export type QuestionOption = { id: string; prompt: string; category: string };
 
 export type Discovery = {
   engagement_id: string;
@@ -150,6 +171,7 @@ export type Discovery = {
   key_personnel: KeyPerson[];
   sessions: SessionSummary[];
   observations: Observation[];
+  questions: QuestionOption[];
 };
 
 export type InterviewSession = {
@@ -195,6 +217,7 @@ export type DiscoveryFinding = {
   low_hanging_fruit: boolean;
   estimated_effort: Level | null;
   estimated_value: Level | null;
+  basis: ObservationBasis | null;
   status: string;
   internal_only: boolean;
   requires_human_review: boolean;
@@ -207,6 +230,7 @@ export type LowHangingFruitCandidate = {
   estimated_effort: Level | null;
   estimated_value: Level | null;
   trace: DiscoveryTrace;
+  basis: ObservationBasis | null;
   internal_only: boolean;
   requires_human_review: boolean;
 };

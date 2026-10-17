@@ -70,10 +70,12 @@ REQUIRED_TABLE_ARGS = {"mysql_engine": "InnoDB", "mysql_charset": "utf8mb4"}
 #: ``alter_column`` and ``get_bind`` were added for Phase 44's migration 013, which re-declares
 #: existing columns with an explicit collation and must branch on the dialect to do it. Both are
 #: schema/introspection operations; neither reads or writes a row, so the "no data operations"
-#: guarantee below is unchanged.
+#: guarantee below is unchanged. ``create_check_constraint`` and ``drop_constraint`` were added for
+#: Phase 216's migration 021, which adds a named CHECK to an existing table. Both are schema-only,
+#: and ``drop_constraint`` is destructive, so it is permitted only in a downgrade.
 ALLOWED_MIGRATION_OPS = frozenset({
     "create_table", "create_index", "drop_index", "drop_table", "add_column", "drop_column",
-    "alter_column", "get_bind",
+    "alter_column", "get_bind", "create_check_constraint", "drop_constraint",
 })
 #: Operations that would insert data or run arbitrary SQL. None may ever appear.
 FORBIDDEN_MIGRATION_OPS = frozenset({
@@ -81,7 +83,7 @@ FORBIDDEN_MIGRATION_OPS = frozenset({
 })
 #: Destructive operations, permitted **only** inside a downgrade and only on objects the same
 #: migration created.
-DESTRUCTIVE_OPS = frozenset({"drop_table", "drop_index", "drop_column"})
+DESTRUCTIVE_OPS = frozenset({"drop_table", "drop_index", "drop_column", "drop_constraint"})
 
 #: Identifier names known to exceed the MySQL limit. These must never reappear (Phase 38/39).
 KNOWN_OVERLONG_IDENTIFIERS = (

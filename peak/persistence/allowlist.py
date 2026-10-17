@@ -130,9 +130,13 @@ DISCOVERY_QUESTION_COLUMNS = frozenset(
     {"prompt", "category", "answer_type", "choices", "display_order", "active",
      "branch_question_id", "branch_operator", "branch_value"}
 )
+#: Phase 216: why a supplemental question was asked, and its optional domain / finding-class tags.
+DISCOVERY_QUESTION_PROVENANCE_COLUMNS = frozenset({"rationale", "domain", "finding_classes"})
 DISCOVERY_SESSION_DETAIL_COLUMNS = frozenset({"interviewee_name", "interviewee_title", "notes"})
 DISCOVERY_OBSERVATION_COLUMNS = frozenset(
-    {"category", "observation_text", "low_hanging_fruit", "estimated_effort", "estimated_value"}
+    {"category", "observation_text", "low_hanging_fruit", "estimated_effort", "estimated_value",
+     # Phase 216: the prompting question and the observation's basis (both optional).
+     "question_id", "basis"}
 )
 
 #: The complete set of workspace (table, action) pairs and the columns each may write.
@@ -148,9 +152,13 @@ WORKSPACE_WRITE_COLUMNS = {
     # the prohibited "delete" substring on purpose: no row is deleted, the engagement is retired.
     ("engagements", "retire_internal_test_engagement"):
         frozenset({"deleted_at", "deleted_by_consultant_id"}),
+    # Phase 216: a supplemental question records, at creation only, the engagement it was added in
+    # and who added it. Neither is editable afterwards.
     ("discovery_questions", "create_discovery_question"):
-        frozenset({"id", "seed_key"}) | DISCOVERY_QUESTION_COLUMNS,
-    ("discovery_questions", "update_discovery_question"): DISCOVERY_QUESTION_COLUMNS,
+        frozenset({"id", "seed_key", "engagement_id", "added_by_consultant_id"})
+        | DISCOVERY_QUESTION_COLUMNS | DISCOVERY_QUESTION_PROVENANCE_COLUMNS,
+    ("discovery_questions", "update_discovery_question"):
+        DISCOVERY_QUESTION_COLUMNS | DISCOVERY_QUESTION_PROVENANCE_COLUMNS,
     ("discovery_sessions", "start_discovery_session"):
         frozenset({"id", "client_id", "engagement_id", "status", "conducted_by_consultant_id",
                    "started_at"}) | DISCOVERY_SESSION_DETAIL_COLUMNS,

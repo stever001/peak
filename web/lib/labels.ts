@@ -14,3 +14,30 @@ export function formatDate(iso: string | null): string {
     year: "numeric", month: "short", day: "numeric",
   });
 }
+
+/** Phase 216: what a consultant observation rests on. A label, never a promotion to evidence. */
+export const BASIS_LABELS: Record<string, string> = {
+  testimony: "Client testimony",
+  observed: "Consultant observation on site",
+  document: "Document or system record reviewed",
+  measured: "Measured or counted by the consultant",
+  inferred: "Consultant inference",
+};
+
+/** Phase 216 diagnostic classification vocabulary (provisional). Mirrors the server catalogue. */
+export const FINDING_CLASS_LABELS: Record<string, string> = {
+  ACC: "Record inaccuracy",
+  CTRL: "Transaction control / authorization",
+  PROC: "Process step",
+  LOC: "Location / storage discipline",
+  REPL: "Replenishment / reorder",
+  FUL: "Picking / fulfillment",
+  COND: "Returns, damaged, excess, obsolete",
+  DATA: "Item master data",
+  SYS: "Systems and handoffs",
+  VIS: "Measurement / visibility",
+  OWN: "Ownership / accountability",
+  PEOPLE: "Key-person dependency / training",
+  TRACE: "Lot / serial / expiry traceability",
+  IMPACT: "Business consequence",
+};

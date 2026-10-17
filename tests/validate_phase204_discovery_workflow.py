@@ -80,9 +80,15 @@ def allowlist_checks():
     check("ten discovery write actions, none a delete, none touching a forbidden column",
           len(pairs) == 10 and not any("delete" in act for _, act in pairs)
           and not any(cols & a.WORKSPACE_FORBIDDEN_COLUMNS for cols in pairs.values()))
+    # Phase 216: an observation's ``question_id`` is a "prompted by" annotation, editable so a
+    # consultant can correct it, and the service keeps it within the observation's engagement. It
+    # is not an identity or engagement link, so it is the one exemption here.
+    prompted_by = {("discovery_observations", "update_discovery_observation"): {"question_id"}}
     check("no discovery update action can change identity or engagement links",
-          not any(cols & {"id", "client_id", "engagement_id", "session_id", "question_id",
-                          "conducted_by_consultant_id", "recorded_by_consultant_id", "seed_key"}
+          not any((cols - prompted_by.get((t, act), set()))
+                  & {"id", "client_id", "engagement_id", "session_id", "question_id",
+                     "conducted_by_consultant_id", "recorded_by_consultant_id", "seed_key",
+                     "added_by_consultant_id"}
                   for (t, act), cols in pairs.items() if act.startswith("update")))
     check("discovery tables stay off the generic controlled-writer path",
           not any(a.is_allowed_table(t) for t in a.DISCOVERY_RECORD_TABLES | {"discovery_questions"}))
@@ -103,10 +109,15 @@ def api_checks(factory, tmp):
 
     me = accounts.create_consultant(factory, name="Casey Consultant", email="casey@example.com",
                                     role="consultant", password=PASSWORD)
+    accounts.create_consultant(factory, name="Ada Admin", email="ada@example.com", role="admin",
+                               password=PASSWORD)
     app = create_app(session_factory=factory, secret_key=SECRET, secure_cookie=True)
     anon = TestClient(app, base_url="https://testserver")
     c = TestClient(app, base_url="https://testserver")
     c.post("/auth/login", json={"email": "casey@example.com", "password": PASSWORD})
+    # Phase 216: canonical (seeded) questions are edited by an Admin.
+    adm = TestClient(app, base_url="https://testserver")
+    adm.post("/auth/login", json={"email": "ada@example.com", "password": PASSWORD})
     check("unauthenticated question and discovery access -> 401",
           anon.get("/questions").status_code == 401
           and anon.get("/engagements/x/discovery").status_code == 401)
@@ -121,8 +132,7 @@ def api_checks(factory, tmp):
     second = init.initialize(factory)
     questions = c.get("/questions").json()["questions"]
     check(f"initializer creates the pool once ({first['created']} questions), then is a no-op",
-          20 <= first["created"] <= 35 and second == {"created": 0,
-                                                      "already_present": first["created"]}
+          first["created"] == 46 and second == {"created": 0, "already_present": 46, "retired": 0}
           and len(questions) == first["created"])
     with factory() as s:
         ids = dict(s.execute(select(DiscoveryQuestion.seed_key, DiscoveryQuestion.id)).all())
@@ -152,29 +162,33 @@ def api_checks(factory, tmp):
     check("an interview starts in progress, conducted by the signed-in consultant",
           r.status_code == 201 and sess["status"] == "in_progress"
           and sess["conducted_by"] == "Casey Consultant")
+    # Phase 216 instrument keys: count_method opens count_program (anything but "No regular
+    # counting") or count_why_not ("No regular counting").
     check("branch follow-ups are hidden until their question is answered",
-          ids["cc_performed"] in shown and ids["cc_frequency"] not in shown
-          and ids["cc_why_not"] not in shown)
-    c.put(f"/sessions/{sid}/answers/{ids['cc_performed']}", json={"answer": "No"})
+          ids["count_method"] in shown and ids["count_program"] not in shown
+          and ids["count_why_not"] not in shown)
+    c.put(f"/sessions/{sid}/answers/{ids['count_method']}", json={"answer": "No regular counting"})
     shown = {q["id"] for q in c.get(f"/sessions/{sid}").json()["session"]["questions"]}
-    check("'No' shows the not-performed follow-up and hides the frequency one",
-          ids["cc_why_not"] in shown and ids["cc_frequency"] not in shown)
-    c.put(f"/sessions/{sid}/answers/{ids['cc_performed']}", json={"answer": "yes"})
+    check("'No regular counting' shows the why-not follow-up and hides the program one",
+          ids["count_why_not"] in shown and ids["count_program"] not in shown)
+    c.put(f"/sessions/{sid}/answers/{ids['count_method']}", json={"answer": "Regular cycle counts"})
     shown = {q["id"] for q in c.get(f"/sessions/{sid}").json()["session"]["questions"]}
-    check("changing to 'yes' swaps the follow-ups deterministically",
-          ids["cc_frequency"] in shown and ids["cc_why_not"] not in shown)
+    check("changing the answer swaps the follow-ups deterministically",
+          ids["count_program"] in shown and ids["count_why_not"] not in shown)
     check("answering a hidden follow-up is refused (422)",
-          c.put(f"/sessions/{sid}/answers/{ids['cc_why_not']}", json={"answer": "x"}).status_code
+          c.put(f"/sessions/{sid}/answers/{ids['count_why_not']}", json={"answer": "x"}).status_code
           == 422)
-    c.put(f"/sessions/{sid}/answers/{ids['goal_success']}", json={"answer": "Trustworthy counts."})
-    c.put(f"/sessions/{sid}/answers/{ids['cc_frequency']}", json={"answer": "Weekly"})
+    c.put(f"/sessions/{sid}/answers/{ids['goal_north_star']}", json={"answer": "Trustworthy counts."})
+    c.put(f"/sessions/{sid}/answers/{ids['count_program']}", json={"answer": "Weekly"})
+    c.put(f"/sessions/{sid}/answers/{ids['ctx_traceability']}", json={"answer": "Yes"})
     check("an answer outside a single-choice list is refused (422)",
-          c.put(f"/sessions/{sid}/answers/{ids['acc_confidence']}",
+          c.put(f"/sessions/{sid}/answers/{ids['acc_check_before_promise']}",
                 json={"answer": "Unsure"}).status_code == 422)
     resumed = {q["id"]: q["answer"] for q in c.get(f"/sessions/{sid}").json()["session"]["questions"]}
     check("resuming shows saved answers (yes/no stored normalized)",
-          resumed[ids["cc_performed"]] == "yes" and resumed[ids["goal_success"]] == "Trustworthy counts."
-          and resumed[ids["cc_frequency"]] == "Weekly")
+          resumed[ids["ctx_traceability"]] == "yes"
+          and resumed[ids["goal_north_star"]] == "Trustworthy counts."
+          and resumed[ids["count_program"]] == "Weekly")
 
     print("\n[5-6] observations and low-hanging fruit")
     r = c.post(f"/engagements/{eid}/observations",
@@ -226,26 +240,27 @@ def api_checks(factory, tmp):
                       json={"north_star": "X"}).status_code == 422)
 
     print("\n[7] question pool")
-    r = c.post("/questions", json={"prompt": "Which shift has the most adjustments?",
+    # Phase 216: a global question (asked in every engagement) is added and edited by an Admin.
+    r = adm.post("/questions", json={"prompt": "Which shift has the most adjustments?",
                                    "category": "Labor / workflow", "answer_type": "single_choice",
                                    "choices": ["Day", "Night", "Weekend"]})
     new_q = r.json()["question"]
     check("a question can be added (appended to the end of the pool)",
           r.status_code == 201 and new_q["active"] and new_q["display_order"] > max(
               q["display_order"] for q in questions))
-    r = c.patch(f"/questions/{new_q['id']}", json={"prompt": "Which shift records the most adjustments?"})
+    r = adm.patch(f"/questions/{new_q['id']}", json={"prompt": "Which shift records the most adjustments?"})
     check("a question can be edited", r.status_code == 200
           and r.json()["question"]["prompt"].startswith("Which shift records"))
     check("a branch on a later question, or with an impossible value, is refused (422)",
-          c.patch(f"/questions/{ids['goal_success']}", json={"branch": {
+          adm.patch(f"/questions/{ids['goal_north_star']}", json={"branch": {
               "question_id": new_q["id"], "operator": "equals", "value": "Day"}}).status_code == 422
-          and c.post("/questions", json={"prompt": "X?", "category": "X", "answer_type": "short_text",
-                                         "branch": {"question_id": ids["cc_performed"],
+          and adm.post("/questions", json={"prompt": "X?", "category": "X", "answer_type": "short_text",
+                                         "branch": {"question_id": ids["ctx_traceability"],
                                                     "operator": "equals", "value": "maybe"}}
                      ).status_code == 422)
     check("an arbitrary branch operator is refused (422)",
-          c.post("/questions", json={"prompt": "X?", "category": "X", "answer_type": "short_text",
-                                     "branch": {"question_id": ids["cc_performed"],
+          adm.post("/questions", json={"prompt": "X?", "category": "X", "answer_type": "short_text",
+                                     "branch": {"question_id": ids["ctx_traceability"],
                                                 "operator": "contains", "value": "yes"}}
                  ).status_code == 422)
 
@@ -254,18 +269,19 @@ def api_checks(factory, tmp):
     done = c.get(f"/sessions/{sid}").json()["session"]
     check("completing makes the interview read-only (answers then refused, 422)",
           done["status"] == "completed" and done["completed_at"]
-          and c.put(f"/sessions/{sid}/answers/{ids['goal_pain']}",
+          and c.put(f"/sessions/{sid}/answers/{ids['goal_pain_incident']}",
                     json={"answer": "x"}).status_code == 422)
-    c.patch(f"/questions/{ids['goal_success']}", json={"prompt": "Reworded success question?"})
-    c.patch(f"/questions/{ids['goal_success']}", json={"active": False})
+    from peak.workspace.discovery_instrument import BY_KEY
+    adm.patch(f"/questions/{ids['goal_north_star']}", json={"prompt": "Reworded success question?"})
+    adm.patch(f"/questions/{ids['goal_north_star']}", json={"active": False})
     after = c.get(f"/sessions/{sid}").json()["session"]
     check("a deactivated question leaves the flow but its answer stays, with the original prompt",
-          ids["goal_success"] not in {q["id"] for q in after["questions"]}
-          and any(h["question_id"] == ids["goal_success"] and h["answer"] == "Trustworthy counts."
-                  and h["prompt"] == "What outcome would make this engagement clearly successful?"
+          ids["goal_north_star"] not in {q["id"] for q in after["questions"]}
+          and any(h["question_id"] == ids["goal_north_star"] and h["answer"] == "Trustworthy counts."
+                  and h["prompt"] == BY_KEY["goal_north_star"]["question"]
                   for h in after["history"]))
     check("the question is deactivated, not deleted, and can be reactivated",
-          c.patch(f"/questions/{ids['goal_success']}", json={"active": True}).json()["question"]["active"]
+          adm.patch(f"/questions/{ids['goal_north_star']}", json={"active": True}).json()["question"]["active"]
           and len(c.get("/questions").json()["questions"]) == len(questions) + 1)
 
 

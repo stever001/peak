@@ -84,6 +84,9 @@ function observationBody(formData: FormData) {
     low_hanging_fruit: formData.get("low_hanging_fruit") === "on",
     estimated_effort: level(formData, "estimated_effort"),
     estimated_value: level(formData, "estimated_value"),
+    // Phase 216: the prompting question and the basis; empty clears either.
+    question_id: text(formData, "question_id") || null,
+    basis: text(formData, "basis") || null,
   };
 }
 
@@ -127,14 +130,27 @@ function questionBody(formData: FormData, editing: boolean) {
       ? { question_id: branchQuestion, operator: text(formData, "branch_operator"),
           value: text(formData, "branch_value") }
       : null,
+    // Phase 216 supplemental-question provenance; the engagement is fixed at creation.
+    ...(formData.has("rationale") ? {
+      rationale: text(formData, "rationale"),
+      domain: text(formData, "domain"),
+      finding_classes: formData.getAll("finding_classes").map(String),
+    } : {}),
+    ...(!editing && text(formData, "engagement_id") ? { engagement_id: text(formData, "engagement_id") } : {}),
   };
+}
+
+/** A same-site path to return to after saving, or the question pool. */
+function returnPath(formData: FormData) {
+  const to = text(formData, "return_to");
+  return to.startsWith("/") && !to.startsWith("//") ? to : "/questions";
 }
 
 export async function createQuestion(_prev: FormState, formData: FormData): Promise<FormState> {
   const res = await send("/questions", "POST", questionBody(formData, false));
   if (!res.ok) return refusal(res);
   revalidatePath("/questions");
-  redirect("/questions");
+  redirect(returnPath(formData));
 }
 
 export async function updateQuestion(
@@ -144,5 +160,5 @@ export async function updateQuestion(
                          questionBody(formData, true));
   if (!res.ok) return refusal(res);
   revalidatePath("/questions");
-  redirect("/questions");
+  redirect(returnPath(formData));
 }

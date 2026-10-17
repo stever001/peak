@@ -45,6 +45,22 @@ from typing import Dict, List, Optional
 SOURCE_DISCOVERY_OBSERVATION = "discovery_observation"
 SOURCE_DIRECT_STRUCTURED_ANSWER = "direct_structured_answer"
 
+#: Phase 216: what a consultant observation rests on, as readers see it. A basis describes footing;
+#: it never promotes discovery material to evidence (Contract C4), whichever value it has.
+OBSERVATION_BASIS_LABELS = {
+    "testimony": "Client testimony",
+    "observed": "Consultant observation on site",
+    "document": "Document or system record reviewed by the consultant",
+    "measured": "Measured or counted by the consultant",
+    "inferred": "Consultant inference",
+}
+BASIS_NOT_RECORDED_TEXT = "Basis not recorded"
+
+
+def basis_label(basis: Optional[str]) -> str:
+    return OBSERVATION_BASIS_LABELS.get(basis, BASIS_NOT_RECORDED_TEXT)
+
+
 #: The status every discovery-derived item carries. It is working material, never a deliverable.
 DISCOVERY_STATUS_CONSULTANT_WORKING_MATERIAL = "consultant_working_material"
 
@@ -96,6 +112,7 @@ class DiscoveryFinding:
     low_hanging_fruit: bool = False
     estimated_effort: Optional[str] = None
     estimated_value: Optional[str] = None
+    basis: Optional[str] = None  # Phase 216: OBSERVATION_BASIS_LABELS key, as recorded
     status: str = DISCOVERY_STATUS_CONSULTANT_WORKING_MATERIAL
     internal_only: bool = True
     requires_human_review: bool = True
@@ -111,6 +128,7 @@ class LowHangingFruitCandidate:
     estimated_effort: Optional[str] = None
     estimated_value: Optional[str] = None
     trace: DiscoveryTrace = field(default_factory=DiscoveryTrace)
+    basis: Optional[str] = None  # Phase 216
     internal_only: bool = True
     requires_human_review: bool = True
 
@@ -222,7 +240,9 @@ def build_interview_coverage(sessions: List[dict], answers: List[dict],
 
 
 def build_discovery_findings(observations: List[dict], sessions: List[dict],
-                             consultant_names: Optional[Dict[str, str]] = None
+                             consultant_names: Optional[Dict[str, str]] = None,
+                             answers: Optional[List[dict]] = None,
+                             question_prompts: Optional[Dict[str, str]] = None
                              ) -> List[DiscoveryFinding]:
     """One finding per consultant observation, quoting the observation exactly.
 
@@ -230,9 +250,16 @@ def build_discovery_findings(observations: List[dict], sessions: List[dict],
     consultant asked; an observation is a statement the consultant chose to make. Only the second
     is a finding, and only because the consultant already wrote it as one — which is why the
     statement is quoted rather than synthesised.
+
+    Phase 216: when the observation names the question that prompted it, the trace carries that
+    question. If the observation's interview answered it, the trace also names that answer and uses
+    the answer's prompt snapshot; otherwise it uses the question's prompt. The answer's text is never
+    copied into the finding. The observation's ``basis`` is carried as recorded.
     """
     names = consultant_names or {}
+    prompts = question_prompts or {}
     by_session = {s.get("session_id"): s for s in sessions}
+    answered = {(a.get("session_id"), a.get("question_id")): a for a in _answered(answers or [])}
     findings = []
     for observation in observations:
         statement = (observation.get("observation_text") or "").strip()
@@ -240,6 +267,8 @@ def build_discovery_findings(observations: List[dict], sessions: List[dict],
             continue  # an empty observation states nothing; it is not a finding
         observation_id = observation.get("observation_id")
         session = by_session.get(observation.get("session_id")) or {}
+        question_id = observation.get("question_id")
+        answer = answered.get((observation.get("session_id"), question_id)) if question_id else None
         findings.append(DiscoveryFinding(
             finding_id=f"disc_{observation_id}",
             statement=statement,
@@ -250,12 +279,17 @@ def build_discovery_findings(observations: List[dict], sessions: List[dict],
                 session_id=observation.get("session_id"),
                 interviewee_name=session.get("interviewee_name"),
                 observation_id=observation_id,
+                question_id=question_id,
+                answer_id=answer.get("answer_id") if answer else None,
+                question_prompt=(answer.get("question_prompt_snapshot") if answer
+                                 else prompts.get(question_id)) if question_id else None,
                 recorded_by=names.get(observation.get("recorded_by_consultant_id")),
                 recorded_by_consultant_id=observation.get("recorded_by_consultant_id"),
             ),
             low_hanging_fruit=bool(observation.get("low_hanging_fruit")),
             estimated_effort=observation.get("estimated_effort"),
             estimated_value=observation.get("estimated_value"),
+            basis=observation.get("basis"),
         ))
     return findings
 
@@ -282,6 +316,7 @@ def build_low_hanging_fruit(findings: List[DiscoveryFinding]) -> List[LowHanging
             estimated_effort=f.estimated_effort,
             estimated_value=f.estimated_value,
             trace=f.trace,
+            basis=f.basis,
         )
         for f in findings if f.low_hanging_fruit
     ]
@@ -303,7 +338,8 @@ def build_discovery_assessment_context(summaries: Optional[dict]) -> DiscoveryAs
     active_questions = list(summaries.get("active_questions") or [])
     names = dict(summaries.get("consultant_names") or {})
 
-    findings = build_discovery_findings(observations, sessions, names)
+    findings = build_discovery_findings(observations, sessions, names, answers,
+                                        dict(summaries.get("question_prompts") or {}))
     context = DiscoveryAssessmentContext(
         engagement_id=north_star.get("engagement_id"),
         north_star=north_star.get("north_star"),

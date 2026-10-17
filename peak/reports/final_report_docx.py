@@ -28,7 +28,7 @@ import zipfile
 from typing import Iterable, List, Optional, Sequence
 from xml.sax.saxutils import escape
 
-from .discovery_assessment import DISCOVERY_NOT_EVIDENCE_TEXT, NO_DISCOVERY_TEXT
+from .discovery_assessment import DISCOVERY_NOT_EVIDENCE_TEXT, NO_DISCOVERY_TEXT, basis_label
 from .final_report import (
     MATERIAL_DISCOVERY,
     MATERIAL_EVIDENCE,
@@ -196,6 +196,7 @@ def _discovery(report: FinalReport, pres: Presentation) -> List[str]:
     for finding in s.findings:
         out += [_p(finding.statement, "ListBullet"),
                 _p(f"Category: {finding.category or 'none recorded'}", "Detail"),
+                _p(f"Basis: {basis_label(finding.basis)}", "Detail"),
                 _p(f"Where this came from: {pres.trace(finding.trace)}", "Detail")]
     out.append(_p("Discovery limitations", "Heading2"))
     return out + _bullets(pres.texts(s.limitations))
@@ -214,6 +215,7 @@ def _low_hanging_fruit(report: FinalReport, pres: Presentation) -> List[str]:
                     _p(f"Category: {candidate.category or 'none recorded'} · "
                        f"Consultant-entered effort: {_level(candidate.estimated_effort)}; "
                        f"value: {_level(candidate.estimated_value)}", "Detail"),
+                    _p(f"Basis: {basis_label(candidate.basis)}", "Detail"),
                     _p(f"Where this came from: {pres.trace(candidate.trace)}", "Detail")]
     return out
 

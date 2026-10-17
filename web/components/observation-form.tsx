@@ -6,8 +6,8 @@ import { useActionState } from "react";
 import type { FormState } from "@/app/actions";
 import { Field } from "@/components/field";
 import { FormMessage } from "@/components/form-message";
-import type { Observation, SessionSummary } from "@/lib/api";
-import { LEVEL_LABELS } from "@/lib/labels";
+import type { Observation, QuestionOption, SessionSummary } from "@/lib/api";
+import { BASIS_LABELS, FINDING_CLASS_LABELS, LEVEL_LABELS } from "@/lib/labels";
 
 type Action = (prev: FormState, formData: FormData) => Promise<FormState>;
 
@@ -22,14 +22,18 @@ function LevelSelect({ name, label, value }: { name: string; label: string; valu
   );
 }
 
-export function ObservationForm({ action, observation, sessions, submitLabel, cancelHref }: {
+export function ObservationForm({ action, observation, sessions, questions, submitLabel, cancelHref }: {
   action: Action;
   observation?: Observation;
   sessions?: SessionSummary[];
+  /** Questions this engagement asks, for "Prompted by" (Phase 216). */
+  questions: QuestionOption[];
   submitLabel: string;
   cancelHref?: string;
 }) {
   const [state, formAction, pending] = useActionState<FormState, FormData>(action, {});
+  const categories = [...new Set(questions.map((q) => q.category))];
+  const linked = observation?.question;
   return (
     // Keyed on the success message so the form clears after each new observation.
     <form key={state.success} action={formAction} className="space-y-4">
@@ -39,9 +43,33 @@ export function ObservationForm({ action, observation, sessions, submitLabel, ca
                   className="peak-input min-h-28 py-3" />
       </Field>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Category (optional)" htmlFor="category">
-          <input id="category" name="category" maxLength={64} defaultValue={observation?.category ?? ""}
-                 className="peak-input" />
+        <Field label="Category (optional)" htmlFor="category" hint="A finding-class code such as CTRL, or your own label.">
+          <input id="category" name="category" maxLength={64} list="finding-classes"
+                 defaultValue={observation?.category ?? ""} className="peak-input" />
+          <datalist id="finding-classes">
+            {Object.entries(FINDING_CLASS_LABELS).map(([code, label]) => <option key={code} value={code}>{label}</option>)}
+          </datalist>
+        </Field>
+        <Field label="Basis (optional)" htmlFor="basis" hint="What this rests on. Discovery material is never evidence.">
+          <select id="basis" name="basis" defaultValue={observation?.basis ?? ""} className="peak-input">
+            <option value="">Not recorded</option>
+            {Object.entries(BASIS_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
+        </Field>
+        <Field label="Prompted by question (optional)" htmlFor="question_id" wide>
+          <select id="question_id" name="question_id" defaultValue={linked?.id ?? ""} className="peak-input">
+            <option value="">Not linked to a question</option>
+            {linked && !questions.some((q) => q.id === linked.id) && (
+              <option value={linked.id}>{linked.prompt ?? "Linked question (no longer active)"}</option>
+            )}
+            {categories.map((c) => (
+              <optgroup key={c} label={c}>
+                {questions.filter((q) => q.category === c).map((q) => (
+                  <option key={q.id} value={q.id}>{q.prompt.length > 90 ? `${q.prompt.slice(0, 90)}…` : q.prompt}</option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
         </Field>
         {sessions && (
           <Field label="From interview (optional)" htmlFor="session_id">

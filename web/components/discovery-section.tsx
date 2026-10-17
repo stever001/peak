@@ -4,7 +4,7 @@ import { createObservation, saveNorthStar } from "@/app/discovery-actions";
 import { NorthStarForm } from "@/components/north-star-form";
 import { ObservationForm } from "@/components/observation-form";
 import type { Discovery, Observation } from "@/lib/api";
-import { formatDate, LEVEL_LABELS } from "@/lib/labels";
+import { BASIS_LABELS, formatDate, LEVEL_LABELS } from "@/lib/labels";
 
 function Pill({ children, tone = "bg-line" }: { children: React.ReactNode; tone?: string }) {
   return <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold text-ink ${tone}`}>{children}</span>;
@@ -20,6 +20,11 @@ function ObservationCard({ o }: { o: Observation }) {
         {o.category && <span className="text-sm text-ink-muted">{o.category}</span>}
       </div>
       <p className="whitespace-pre-line">{o.observation_text}</p>
+      <p className="mt-2 text-sm text-ink-muted">
+        {[`Basis: ${o.basis ? BASIS_LABELS[o.basis] : "not recorded"}`,
+          o.question ? `Prompted by: "${o.question.prompt ?? "a question no longer active"}"` : null,
+        ].filter(Boolean).join(" · ")}
+      </p>
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm text-ink-muted">
         <span>
           {[o.recorded_by, formatDate(o.created_at),
@@ -67,7 +72,13 @@ export function DiscoverySection({ engagementId, d }: { engagementId: string; d:
       <div className="peak-card">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h3 className="text-lg font-semibold">Interviews</h3>
-          <Link href={`/engagements/${engagementId}/interviews/new`} className="peak-button">Start interview</Link>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Link href={`/questions/new?engagement=${encodeURIComponent(engagementId)}&return_to=${encodeURIComponent(`/engagements/${engagementId}#discovery`)}`}
+                  className="inline-flex min-h-touch items-center justify-center rounded-peak border border-line bg-surface px-4 font-medium">
+              Add supplemental question
+            </Link>
+            <Link href={`/engagements/${engagementId}/interviews/new`} className="peak-button">Start interview</Link>
+          </div>
         </div>
         {d.sessions.length === 0 ? <p className="text-ink-muted">No interviews yet.</p> : (
           <ul className="grid gap-3 lg:grid-cols-2">
@@ -107,7 +118,7 @@ export function DiscoverySection({ engagementId, d }: { engagementId: string; d:
           </summary>
           <div className="mt-3">
             <ObservationForm action={createObservation.bind(null, engagementId)} sessions={d.sessions}
-                             submitLabel="Record observation" />
+                             questions={d.questions} submitLabel="Record observation" />
           </div>
         </details>
         {d.observations.length > 0 && (

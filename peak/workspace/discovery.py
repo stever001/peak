@@ -10,7 +10,26 @@ the signed-in consultant, never a caller-supplied value. Nothing is deleted: que
 Branching is deliberately small. A question may name one *earlier* question (lower display order),
 an operator (``equals`` / ``not_equals``) and a value. A question is shown when it has no branch, or
 when its branch question is itself shown and the stored answer satisfies the rule. There is no
-expression language.
+expression language, and the next question is never chosen by a model.
+
+**Canonical and supplemental questions (Phase 216).** A question with a ``seed_key`` was inserted by
+``tools/init_discovery_questions.py`` from the Peak discovery instrument
+(``peak.workspace.discovery_instrument``). It is canonical: globally authoritative for the Peak
+Method, so only an Admin may edit or deactivate it. **Every global question is Admin-controlled**:
+a question with no engagement is asked in every interview, so only an Admin may create, edit or
+deactivate one, whether or not it is canonical. A Consultant may add a **supplemental** question
+only within an engagement. It records its field-use provenance (the engagement, who added it, why,
+optional domain and finding-class tags), is asked only in that engagement's interviews, and may be
+edited by any consultant. It is never made canonical here: promotion into the Peak Method is a
+deliberate, manual Admin review of the instrument (docs/PHASE216_DISCOVERY_INSTRUMENT.md). Whether a
+question was answered, and whether an observation names it, is derived from those records
+(``usage``), never stored.
+
+**Answers guide; they never conclude (Phase 216).** An answer may decide which question is shown
+next, open a follow-up or an evidence request, and guide an observation. It never creates a finding,
+becomes governed evidence, or authorizes a recommendation on its own. Only a consultant observation
+is a finding. It may name the question that prompted it (``question_id``) and its ``basis``, and it
+remains discovery material (Contract C4).
 """
 
 from __future__ import annotations
@@ -30,6 +49,15 @@ ANSWER_TYPES = ("short_text", "long_text", "yes_no", "single_choice")
 BRANCH_OPERATORS = ("equals", "not_equals")
 YES_NO = ("yes", "no")
 LEVELS = ("low", "medium", "high")
+#: Mirrors ``peak.db.models.DISCOVERY_OBSERVATION_BASES``.
+OBSERVATION_BASES = ("testimony", "observed", "document", "measured", "inferred")
+#: Who may create, edit or deactivate a canonical (seeded) or any other global question.
+CANONICAL_QUESTION_EDIT_ROLE = "admin"
+
+
+def _admin_controlled(seed_key: Optional[str], engagement_id: Optional[str]) -> bool:
+    """Canonical questions, and every global question, are Admin-controlled (Phase 216)."""
+    return seed_key is not None or engagement_id is None
 MAX_CHOICES = 20
 _ANSWER_LIMITS = {"short_text": 1000, "long_text": 10000}
 
@@ -54,13 +82,35 @@ def _level(value, label: str) -> Optional[str]:
 # --------------------------------------------------------------------------- question pool
 
 
-def _question_dict(q) -> dict:
+def _question_dict(q, usage: Optional[dict] = None) -> dict:
     return {
         "id": q.id, "prompt": q.prompt, "category": q.category, "answer_type": q.answer_type,
         "choices": q.choices or [], "display_order": q.display_order, "active": bool(q.active),
         "branch": ({"question_id": q.branch_question_id, "operator": q.branch_operator,
                     "value": q.branch_value} if q.branch_question_id else None),
+        "canonical": q.seed_key is not None, "seed_key": q.seed_key,
+        "admin_controlled": _admin_controlled(q.seed_key, q.engagement_id),
+        "engagement_id": q.engagement_id, "added_by_consultant_id": q.added_by_consultant_id,
+        "rationale": q.rationale, "domain": q.domain, "finding_classes": q.finding_classes or [],
+        "created_at": q.created_at.isoformat() if q.created_at else None,
+        **({"usage": usage} if usage is not None else {}),
     }
+
+
+def _finding_classes(value) -> Optional[list]:
+    from .discovery_instrument import FINDING_CLASSES
+
+    if value is None:
+        return None
+    if not isinstance(value, list) or any(v not in FINDING_CLASSES for v in value):
+        raise WorkspaceError("invalid_field",
+                             f"Finding classes must be codes from: {', '.join(FINDING_CLASSES)}.")
+    return sorted(set(value), key=list(FINDING_CLASSES).index) or None
+
+
+def _in_scope(question_engagement_id: Optional[str], engagement_id: Optional[str]) -> bool:
+    """A global question is asked everywhere; an engagement's supplemental question only there."""
+    return question_engagement_id is None or question_engagement_id == engagement_id
 
 
 def _choices(value) -> Optional[list]:
@@ -83,13 +133,18 @@ def _validate_branch_value(parent, value: str) -> None:
         raise WorkspaceError("invalid_branch", "The branch value must be one of that question's choices.")
 
 
-def _question_values(session, data: dict, current=None) -> dict:
-    """Validate a create (``current`` None) or an edit merged over ``current``."""
+def _question_values(session, data: dict, current=None, engagement_id: Optional[str] = None) -> dict:
+    """Validate a create (``current`` None) or an edit merged over ``current``.
+
+    ``engagement_id`` is the new question's engagement on a create; an edit keeps ``current``'s.
+    """
     from sqlalchemy import func, select
 
     from peak.db.models import DiscoveryQuestion
 
-    allowed = {"prompt", "category", "answer_type", "choices", "display_order", "active", "branch"}
+    scope = current.engagement_id if current is not None else engagement_id
+    allowed = {"prompt", "category", "answer_type", "choices", "display_order", "active", "branch",
+               "rationale", "domain", "finding_classes"}
     unknown = set(data) - allowed
     if unknown:
         raise WorkspaceError("invalid_field", f"Not an editable question field: {sorted(unknown)[0]}")
@@ -110,6 +165,12 @@ def _question_values(session, data: dict, current=None) -> dict:
         if not isinstance(order, int) or isinstance(order, bool) or not 0 <= order <= 1_000_000:
             raise WorkspaceError("invalid_field", "Display order must be a whole number from 0.")
         values["display_order"] = order
+    if "rationale" in data:
+        values["rationale"] = _clean(data["rationale"], 4000, "Rationale")
+    if "domain" in data:
+        values["domain"] = _clean(data["domain"], 128, "Domain")
+    if "finding_classes" in data:
+        values["finding_classes"] = _finding_classes(data["finding_classes"])
     if "active" in data:
         if not isinstance(data["active"], bool):
             raise WorkspaceError("invalid_field", "Active must be true or false.")
@@ -159,7 +220,15 @@ def _question_values(session, data: dict, current=None) -> dict:
             raise WorkspaceError("invalid_branch", "The branch must name another existing question.")
         if parent.display_order >= order:
             raise WorkspaceError("invalid_branch", "The branch must name an earlier question.")
+        if not _in_scope(parent.engagement_id, scope):
+            raise WorkspaceError("invalid_branch",
+                                 "A question can branch only on a question asked in the same "
+                                 "interviews.")
         _validate_branch_value(parent, merged("branch_value"))
+    if scope is not None and not merged("rationale"):
+        raise WorkspaceError("invalid_field",
+                             "Say why you are asking this question: a supplemental question added "
+                             "in an engagement needs a rationale.")
 
     if current is not None:
         # Questions that branch on this one must stay later, with values that still make sense.
@@ -174,7 +243,32 @@ def _question_values(session, data: dict, current=None) -> dict:
     return values
 
 
-def list_questions(session_factory) -> list:
+def _usage(session, question_ids) -> dict:
+    """``{question_id: {"answered": n, "observations": n}}``, derived from the records.
+
+    ``answered`` counts answers with text; ``observations`` counts observations that name the
+    question (each one is a discovery finding, Phase 206). Nothing here is stored.
+    """
+    from sqlalchemy import func, select
+
+    from peak.db.models import DiscoveryAnswer, DiscoveryObservation
+
+    ids = list(question_ids)
+    if not ids:
+        return {}
+    answered = dict(session.execute(
+        select(DiscoveryAnswer.question_id, func.count())
+        .where(DiscoveryAnswer.question_id.in_(ids), DiscoveryAnswer.answer_text.isnot(None))
+        .group_by(DiscoveryAnswer.question_id)).all())
+    observed = dict(session.execute(
+        select(DiscoveryObservation.question_id, func.count())
+        .where(DiscoveryObservation.question_id.in_(ids))
+        .group_by(DiscoveryObservation.question_id)).all())
+    return {i: {"answered": answered.get(i, 0), "observations": observed.get(i, 0)} for i in ids}
+
+
+def list_questions(session_factory, engagement_id: Optional[str] = None) -> list:
+    """The pool in display order, with usage. With ``engagement_id``: what that engagement asks."""
     from sqlalchemy import select
 
     from peak.db.models import DiscoveryQuestion
@@ -182,7 +276,10 @@ def list_questions(session_factory) -> list:
     with session_factory() as session:
         rows = session.scalars(select(DiscoveryQuestion).order_by(
             DiscoveryQuestion.display_order, DiscoveryQuestion.id)).all()
-        return [_question_dict(q) for q in rows]
+        if engagement_id is not None:
+            rows = [q for q in rows if _in_scope(q.engagement_id, engagement_id)]
+        usage = _usage(session, [q.id for q in rows])
+        return [_question_dict(q, usage.get(q.id)) for q in rows]
 
 
 def get_question(session_factory, question_id: str) -> Optional[dict]:
@@ -190,25 +287,50 @@ def get_question(session_factory, question_id: str) -> Optional[dict]:
 
     with session_factory() as session:
         q = session.get(DiscoveryQuestion, question_id)
-        return _question_dict(q) if q is not None else None
+        return _question_dict(q, _usage(session, [q.id]).get(q.id)) if q is not None else None
 
 
-def create_question(session_factory, data: dict, seed_key: Optional[str] = None) -> dict:
-    """Add a question. ``seed_key`` is used only by the explicit initialization tool."""
+def create_question(session_factory, data: dict, seed_key: Optional[str] = None,
+                    actor_id: Optional[str] = None, actor_role: Optional[str] = None) -> dict:
+    """Add a question. ``seed_key`` is used only by the explicit initialization tool.
+
+    Without a ``seed_key`` the question is supplemental. ``data["engagement_id"]`` names the
+    engagement it is added in (a workspace engagement, not retired); it is then asked only there and
+    needs a rationale. ``actor_id`` is recorded as ``added_by_consultant_id``. A question with no
+    engagement is global, and only an Admin ``actor_role`` may create one (the seed tool's canonical
+    inserts excepted).
+    """
     from peak.db.models import DiscoveryQuestion
 
+    data = dict(data)
+    engagement_id = data.pop("engagement_id", None) or None
+    if seed_key is not None and (engagement_id is not None or actor_id is not None):
+        raise WorkspaceError("invalid_field", "A canonical question has no engagement or author.")
+    if seed_key is None and engagement_id is None and actor_role != CANONICAL_QUESTION_EDIT_ROLE:
+        raise WorkspaceError("admin_required",
+                             "Only an Admin can add a question asked in every engagement. Add a "
+                             "supplemental question from the engagement instead.")
     with session_factory() as session:
+        if engagement_id is not None and _workspace_engagement(session, engagement_id) is None:
+            raise WorkspaceError("invalid_field", "That engagement does not exist.")
         values = {"id": f"dq_{secrets.token_hex(8)}", "active": True,
-                  **_question_values(session, data)}
+                  **_question_values(session, data, engagement_id=engagement_id)}
         if seed_key is not None:
             values["seed_key"] = seed_key
+        else:
+            if engagement_id is not None:
+                values["engagement_id"] = engagement_id
+            if actor_id is not None:
+                values["added_by_consultant_id"] = actor_id
         _require_allowed("discovery_questions", "create_discovery_question", values)
         session.add(DiscoveryQuestion(**values))
         session.commit()
         return _question_dict(session.get(DiscoveryQuestion, values["id"]))
 
 
-def update_question(session_factory, question_id: str, data: dict) -> Optional[dict]:
+def update_question(session_factory, question_id: str, data: dict,
+                    actor_role: Optional[str] = None) -> Optional[dict]:
+    """Edit or (de)activate a question. A canonical question needs an Admin ``actor_role``."""
     from sqlalchemy import update
 
     from peak.db.models import DiscoveryQuestion
@@ -217,6 +339,12 @@ def update_question(session_factory, question_id: str, data: dict) -> Optional[d
         current = session.get(DiscoveryQuestion, question_id)
         if current is None:
             return None
+        if (_admin_controlled(current.seed_key, current.engagement_id)
+                and actor_role != CANONICAL_QUESTION_EDIT_ROLE):
+            raise WorkspaceError("admin_required",
+                                 "Peak Method and other global questions can be edited or "
+                                 "deactivated only by an Admin. Add a supplemental question in "
+                                 "an engagement instead.")
         values = _question_values(session, data, current)
         if not values:
             raise WorkspaceError("invalid_field", "Nothing to update.")
@@ -278,12 +406,28 @@ def _names(session, ids) -> dict:
                                 .where(Consultant.id.in_(ids))).all()) if ids else {}
 
 
-def _observation_dict(o, names, sessions) -> dict:
+def _question_refs(session, ids) -> dict:
+    """``{question_id: question}`` for the ids given, active or not."""
+    from sqlalchemy import select
+
+    from peak.db.models import DiscoveryQuestion
+
+    ids = {i for i in ids if i}
+    return {q.id: q for q in session.scalars(select(DiscoveryQuestion)
+                                             .where(DiscoveryQuestion.id.in_(ids)))} if ids else {}
+
+
+def _observation_dict(o, names, sessions, questions=None) -> dict:
     s = sessions.get(o.session_id)
+    q = (questions or {}).get(o.question_id)
     return {
         "id": o.id, "engagement_id": o.engagement_id, "category": o.category,
         "observation_text": o.observation_text, "low_hanging_fruit": bool(o.low_hanging_fruit),
         "estimated_effort": o.estimated_effort, "estimated_value": o.estimated_value,
+        "basis": o.basis,
+        "question": ({"id": q.id, "prompt": q.prompt, "category": q.category} if q
+                     else ({"id": o.question_id, "prompt": None, "category": None}
+                           if o.question_id else None)),
         "session": ({"id": s.id, "interviewee_name": s.interviewee_name} if s else None),
         "recorded_by": names.get(o.recorded_by_consultant_id),
         "created_at": o.created_at.isoformat() if o.created_at else None,
@@ -295,7 +439,8 @@ def get_discovery(session_factory, engagement_id: str) -> Optional[dict]:
     from sqlalchemy import func, select
 
     from peak.db.models import (
-        Client, DiscoveryAnswer, DiscoveryObservation, DiscoverySession, Engagement,
+        Client, DiscoveryAnswer, DiscoveryObservation, DiscoveryQuestion, DiscoverySession,
+        Engagement,
     )
 
     with session_factory() as session:
@@ -319,6 +464,10 @@ def get_discovery(session_factory, engagement_id: str) -> Optional[dict]:
         names = _names(session, [s.conducted_by_consultant_id for s in sessions]
                        + [o.recorded_by_consultant_id for o in observations])
         by_id = {s.id: s for s in sessions}
+        linked = _question_refs(session, [o.question_id for o in observations])
+        active = session.scalars(select(DiscoveryQuestion).where(DiscoveryQuestion.active.is_(True))
+                                 .order_by(DiscoveryQuestion.display_order,
+                                           DiscoveryQuestion.id)).all()
         client = session.get(Client, engagement.client_id)
         return {
             "engagement_id": engagement.id,
@@ -332,7 +481,10 @@ def get_discovery(session_factory, engagement_id: str) -> Optional[dict]:
                 "conducted_by": names.get(s.conducted_by_consultant_id),
                 "started_at": s.started_at.isoformat(), "answered_count": answered.get(s.id, 0),
             } for s in sessions],
-            "observations": [_observation_dict(o, names, by_id) for o in observations],
+            "observations": [_observation_dict(o, names, by_id, linked) for o in observations],
+            # For the observation form's "prompted by" choice (Phase 216).
+            "questions": [{"id": q.id, "prompt": q.prompt, "category": q.category}
+                          for q in active if _in_scope(q.engagement_id, engagement.id)],
         }
 
 
@@ -363,8 +515,9 @@ def _session_flow(session, discovery_session):
 
     from peak.db.models import DiscoveryAnswer, DiscoveryQuestion
 
-    questions = session.scalars(select(DiscoveryQuestion).order_by(
+    questions = [q for q in session.scalars(select(DiscoveryQuestion).order_by(
         DiscoveryQuestion.display_order, DiscoveryQuestion.id)).all()
+        if _in_scope(q.engagement_id, discovery_session.engagement_id)]
     answer_rows = session.scalars(select(DiscoveryAnswer)
                                   .where(DiscoveryAnswer.session_id == discovery_session.id)).all()
     answers = {a.question_id: a.answer_text for a in answer_rows}
@@ -545,7 +698,7 @@ def save_answer(session_factory, session_id: str, question_id: str, answer) -> O
 
 def _observation_values(data: dict, creating: bool) -> dict:
     allowed = {"category", "observation_text", "low_hanging_fruit", "estimated_effort",
-               "estimated_value"} | ({"session_id"} if creating else set())
+               "estimated_value", "question_id", "basis"} | ({"session_id"} if creating else set())
     unknown = set(data) - allowed
     if unknown:
         raise WorkspaceError("invalid_field", f"Not an editable observation field: {sorted(unknown)[0]}")
@@ -562,9 +715,33 @@ def _observation_values(data: dict, creating: bool) -> dict:
         values["estimated_effort"] = _level(data["estimated_effort"], "Estimated effort")
     if "estimated_value" in data:
         values["estimated_value"] = _level(data["estimated_value"], "Estimated value")
+    if "question_id" in data:
+        values["question_id"] = data["question_id"] or None
+        if values["question_id"] is not None and not isinstance(values["question_id"], str):
+            raise WorkspaceError("invalid_field", "The question must be a question id.")
+    if "basis" in data:
+        if data["basis"] in (None, ""):
+            values["basis"] = None
+        elif data["basis"] not in OBSERVATION_BASES:
+            raise WorkspaceError("invalid_field", "Basis must be testimony, observed, document, "
+                                                  "measured or inferred.")
+        else:
+            values["basis"] = data["basis"]
     if (creating or "observation_text" in values) and not values.get("observation_text"):
         raise WorkspaceError("invalid_field", "The observation text is required.")
     return values
+
+
+def _require_question(session, question_id: Optional[str], engagement_id: str) -> None:
+    """A prompting question, when named, must exist (active or retired) and be asked in this
+    engagement: global, or this engagement's own supplemental question."""
+    from peak.db.models import DiscoveryQuestion
+
+    if question_id is None:
+        return
+    question = session.get(DiscoveryQuestion, question_id)
+    if question is None or not _in_scope(question.engagement_id, engagement_id):
+        raise WorkspaceError("invalid_field", "That question is not asked in this engagement.")
 
 
 def get_observation(session_factory, observation_id: str) -> Optional[dict]:
@@ -576,7 +753,7 @@ def get_observation(session_factory, observation_id: str) -> Optional[dict]:
             return None
         s = session.get(DiscoverySession, o.session_id) if o.session_id else None
         return _observation_dict(o, _names(session, [o.recorded_by_consultant_id]),
-                                 {s.id: s} if s else {})
+                                 {s.id: s} if s else {}, _question_refs(session, [o.question_id]))
 
 
 def create_observation(session_factory, engagement_id: str, data: dict,
@@ -594,6 +771,7 @@ def create_observation(session_factory, engagement_id: str, data: dict,
             linked = session.get(DiscoverySession, session_id)
             if linked is None or linked.engagement_id != engagement.id:
                 raise WorkspaceError("invalid_field", "That interview is not part of this engagement.")
+        _require_question(session, values.get("question_id"), engagement.id)
         values.update(id=f"dobs_{secrets.token_hex(8)}", client_id=engagement.client_id,
                       engagement_id=engagement.id, session_id=session_id,
                       recorded_by_consultant_id=consultant_id)
@@ -617,6 +795,7 @@ def update_observation(session_factory, observation_id: str, data: dict) -> Opti
         existing = session.get(DiscoveryObservation, observation_id)
         if existing is not None:
             _workspace_engagement(session, existing.engagement_id)
+            _require_question(session, values.get("question_id"), existing.engagement_id)
         result = session.execute(update(DiscoveryObservation)
                                  .where(DiscoveryObservation.id == observation_id).values(**values))
         session.commit()

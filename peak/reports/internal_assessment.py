@@ -49,6 +49,7 @@ from .discovery_assessment import (
     LOW_HANGING_FRUIT_GROUPING_TEXT,
     NO_DISCOVERY_TEXT,
     DiscoveryAssessmentContext,
+    basis_label,
 )
 
 #: The only status this document can carry. It is a working document, not a deliverable.
@@ -330,6 +331,7 @@ def _render_discovery_findings(discovery: Optional[DiscoveryAssessmentContext]) 
         lines += [f"### Discovery finding {index} — {finding.finding_id}", "", finding.statement, ""]
         lines.append(f"- Category: {finding.category or 'none recorded'}")
         lines.append(f"- Source: {finding.source_type}")
+        lines.append(f"- Basis: {basis_label(finding.basis)}")
         lines.append(f"- Where this came from: {_trace_line(finding.trace)}")
         if finding.low_hanging_fruit:
             lines.append(f"- Consultant flagged as low-hanging fruit: effort "

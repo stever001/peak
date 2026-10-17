@@ -4425,6 +4425,38 @@ Product functionality, complete in production (2026-10-16). Baseline `5d517c1`. 
   build at head.
 - The Phase 214 MySQL check now accepts the repository head instead of pinning `019`.
 
+### Phase 216 — Discovery instrument hardening
+
+Product methodology, implemented locally. Baseline `312a2c6`. Record:
+[`PHASE216_DISCOVERY_INSTRUMENT.md`](PHASE216_DISCOVERY_INSTRUMENT.md).
+
+- [x] The Peak discovery instrument (`peak/workspace/discovery_instrument.py`):
+  - 29 core questions and 17 conditional follow-ups on the existing deterministic branch;
+  - 10 gates, and 6 evidence requests answered Provided / Will provide / Not available;
+  - a session runs 29–42 questions.
+- [x] A 12-field rationale per question, keyed by stable key and versioned in the repository, as
+  future training source material. No training feature is built.
+- [x] Source provenance per question: sources, what each supports, further reading and revision
+  triggers. Peak Method design choices are labelled; `peak_field_observation` is registered for
+  promoted supplemental questions.
+- [x] Governing rule: answers guide branching, follow-ups, evidence requests and observations, but
+  never create a finding, become evidence or authorize a recommendation. No model-selected
+  questions.
+- [x] Canonical (seeded) and all global questions are Admin-only to create, edit or deactivate.
+  Consultants add supplemental questions only within an engagement; they record their field-use
+  provenance and are asked only there, and usage is derived. Promotion is a manual Admin review of
+  the repository catalogue; no workflow is built.
+- [x] External sources verified (2026-10-17): 18 confirmed, bibliographic details corrected, 3
+  roles narrowed, none removed; no page numbers.
+- [x] Observations may name their prompting question and basis (testimony / observed / document /
+  measured / inferred). These are shown in the assessment and Final Report, and discovery is still
+  not evidence (C4).
+- [x] Migration `021_discovery_observation_trace_basis`, nullable columns only.
+- [x] The seed tool inserts the instrument and retires the 29 Phase 204 questions by deactivation.
+- [x] Read-only production check: the pool is unedited, there are 0 answers, and the grants are
+  sufficient.
+- [ ] Production rollout: 021 migration, verifier pin, API/web deploys, then seeding the instrument.
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

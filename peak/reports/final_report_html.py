@@ -22,7 +22,7 @@ from __future__ import annotations
 from html import escape
 from typing import Iterable, List, Optional, Sequence
 
-from .discovery_assessment import DISCOVERY_NOT_EVIDENCE_TEXT, NO_DISCOVERY_TEXT
+from .discovery_assessment import DISCOVERY_NOT_EVIDENCE_TEXT, NO_DISCOVERY_TEXT, basis_label
 from .final_report import (
     NO_RECOMMENDATIONS_TEXT,
     REPORT_STATUS_TEXT,
@@ -174,6 +174,7 @@ def _discovery(report: FinalReport, pres: Presentation) -> List[str]:
     else:
         out.append("<ul>" + "".join(
             _item(f.statement, [f"Category: {f.category or 'none recorded'}",
+                                f"Basis: {basis_label(f.basis)}",
                                 f"Where this came from: {pres.trace(f.trace)}"])
             for f in s.findings) + "</ul>")
     out.append("<h3>Discovery limitations</h3>")
@@ -192,6 +193,7 @@ def _low_hanging_fruit(report: FinalReport, pres: Presentation) -> List[str]:
             _item(c.statement, [f"Category: {c.category or 'none recorded'} · "
                                 f"Consultant-entered effort: {_level(c.estimated_effort)}; "
                                 f"value: {_level(c.estimated_value)}",
+                                f"Basis: {basis_label(c.basis)}",
                                 f"Where this came from: {pres.trace(c.trace)}"])
             for c in group.candidates) + "</ul>")
     return out

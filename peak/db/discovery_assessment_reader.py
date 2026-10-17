@@ -129,6 +129,8 @@ def fetch_observation_summaries(connection, engagement_id: str) -> List[Dict[str
         DiscoveryObservation.estimated_effort,
         DiscoveryObservation.estimated_value,
         DiscoveryObservation.recorded_by_consultant_id,
+        DiscoveryObservation.question_id,
+        DiscoveryObservation.basis,
         DiscoveryObservation.owner_id,
         DiscoveryObservation.authorization_scope,
     ).where(DiscoveryObservation.engagement_id == engagement_id
@@ -136,11 +138,12 @@ def fetch_observation_summaries(connection, engagement_id: str) -> List[Dict[str
     return _rows(connection, statement)
 
 
-def fetch_active_question_summaries(connection) -> List[Dict[str, object]]:
+def fetch_active_question_summaries(connection, engagement_id=None) -> List[Dict[str, object]]:
     """The active question pool in display order — the denominator side of interview coverage.
 
     Branch metadata is selected so the projection can tell whether a global "answered out of"
-    percentage would be misleading. It is application configuration, not client data.
+    percentage would be misleading. It is application configuration, not client data. Phase 216:
+    only questions this engagement asks — global ones and its own supplemental questions.
     """
     statement = select(
         DiscoveryQuestion.id.label("question_id"),
@@ -148,9 +151,25 @@ def fetch_active_question_summaries(connection) -> List[Dict[str, object]]:
         DiscoveryQuestion.answer_type,
         DiscoveryQuestion.display_order,
         DiscoveryQuestion.branch_question_id,
-    ).where(DiscoveryQuestion.active.is_(True)
+    ).where(DiscoveryQuestion.active.is_(True),
+            (DiscoveryQuestion.engagement_id.is_(None))
+            | (DiscoveryQuestion.engagement_id == engagement_id)
             ).order_by(DiscoveryQuestion.display_order, DiscoveryQuestion.id)
     return _rows(connection, statement)
+
+
+def fetch_question_prompts(connection, question_ids) -> Dict[str, str]:
+    """``{question_id: prompt}`` for the questions observations name (Phase 216), active or not.
+
+    Used only when the observation's interview holds no answer to that question; otherwise the
+    trace uses the answer's prompt snapshot, so a later edit cannot restate what was asked.
+    """
+    ids = sorted({i for i in question_ids if i})
+    if not ids:
+        return {}
+    statement = select(DiscoveryQuestion.id, DiscoveryQuestion.prompt
+                       ).where(DiscoveryQuestion.id.in_(ids))
+    return {row[0]: row[1] for row in connection.execute(statement)}
 
 
 def fetch_consultant_names(connection, consultant_ids) -> Dict[str, str]:
@@ -172,7 +191,7 @@ def fetch_discovery_summaries(connection, engagement_id: str) -> Dict[str, objec
     """Fetch every discovery summary the assessment projection needs for one engagement.
 
     Returns ``{"north_star": {...}, "sessions": [...], "answers": [...], "observations": [...],
-    "active_questions": [...], "consultant_names": {...}}``. Visibility is **not** re-decided here:
+    "active_questions": [...], "question_prompts": {...}, "consultant_names": {...}}``. Visibility is **not** re-decided here:
     the caller has already passed the Phase 57 engagement check through
     :mod:`peak.db.engagement_packet_reader`, and an engagement with no discovery records simply
     returns empty lists.
@@ -188,6 +207,8 @@ def fetch_discovery_summaries(connection, engagement_id: str) -> Dict[str, objec
         "sessions": sessions,
         "answers": fetch_answer_summaries(connection, engagement_id),
         "observations": observations,
-        "active_questions": fetch_active_question_summaries(connection),
+        "active_questions": fetch_active_question_summaries(connection, engagement_id),
+        "question_prompts": fetch_question_prompts(
+            connection, [o.get("question_id") for o in observations]),
         "consultant_names": names,
     }

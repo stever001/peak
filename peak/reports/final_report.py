@@ -43,6 +43,7 @@ from .discovery_assessment import (
     LOW_HANGING_FRUIT_GROUPING_TEXT,
     NO_DISCOVERY_TEXT,
     DiscoveryFinding,
+    basis_label,
     InterviewCoverage,
     LowHangingFruitCandidate,
 )
@@ -271,6 +272,14 @@ def _discovery_limitations(assessment: InternalAssessment) -> List[str]:
                      "shown only to some interviewees, so the denominator would be ambiguous.")
     if not discovery.findings:
         items.append(NO_DISCOVERY_FINDINGS_TEXT)
+    # Phase 216: say plainly how many findings rest on what someone said or concluded.
+    uncorroborated = sum(1 for f in discovery.findings if f.basis in ("testimony", "inferred"))
+    if uncorroborated:
+        items.append(f"{_plural(uncorroborated, 'discovery finding')} rest on client testimony or "
+                     "consultant inference only.")
+    unrecorded = sum(1 for f in discovery.findings if not f.basis)
+    if unrecorded:
+        items.append(f"{_plural(unrecorded, 'discovery finding')} have no recorded basis.")
     return items
 
 
@@ -367,6 +376,7 @@ def _render_discovery(report: FinalReport) -> List[str]:
     for finding in s.findings:
         lines += [f"- {finding.statement}",
                   f"  - Category: {finding.category or 'none recorded'}",
+                  f"  - Basis: {basis_label(finding.basis)}",
                   f"  - Where this came from: {_trace_line(finding.trace)}"]
     if s.findings:
         lines.append("")
@@ -388,6 +398,7 @@ def _render_low_hanging_fruit(report: FinalReport) -> List[str]:
                       f"  - Category: {candidate.category or 'none recorded'}",
                       f"  - Consultant-entered effort: {_level(candidate.estimated_effort)}; "
                       f"value: {_level(candidate.estimated_value)}",
+                      f"  - Basis: {basis_label(candidate.basis)}",
                       f"  - Where this came from: {_trace_line(candidate.trace)}"]
         lines.append("")
     return lines

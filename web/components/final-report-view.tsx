@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { Coverage, EvidenceFindingCard, Pill, Section, Trace, type MaterialKind } from "@/components/assessment-view";
+import { Basis, Coverage, EvidenceFindingCard, Pill, Section, Trace, type MaterialKind } from "@/components/assessment-view";
 import type { FinalReport, ReportSectionKey } from "@/lib/api";
 import { LEVEL_LABELS } from "@/lib/labels";
 
@@ -81,6 +81,7 @@ function Discovery({ r }: { r: FinalReport }) {
             <li key={f.finding_id} className="rounded-peak border border-line bg-surface p-4">
               {f.category && <p className="mb-1 text-sm text-ink-muted">{f.category}</p>}
               <p className="whitespace-pre-line">{f.statement}</p>
+              <Basis basis={f.basis} />
               <Trace trace={f.trace} />
             </li>
           ))}
@@ -115,6 +116,7 @@ function Fruit({ r }: { r: FinalReport }) {
                 <li key={c.finding_id} className="rounded-peak border border-line bg-surface p-4">
                   {c.category && <p className="mb-1 text-sm text-ink-muted">{c.category}</p>}
                   <p className="whitespace-pre-line">{c.statement}</p>
+                  <Basis basis={c.basis} />
                   <Trace trace={c.trace} />
                 </li>
               ))}

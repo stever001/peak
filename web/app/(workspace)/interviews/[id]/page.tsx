@@ -45,7 +45,11 @@ export default async function InterviewPage(props: PageProps<"/interviews/[id]">
           </div>
         </div>
         {open && (
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
+            <Link href={`/questions/new?engagement=${encodeURIComponent(s.engagement.id)}&return_to=${encodeURIComponent(`/interviews/${s.id}`)}`}
+                  className="inline-flex min-h-touch items-center rounded-peak border border-line bg-surface px-4 font-medium">
+              Add supplemental question
+            </Link>
             {!reviewing && (
               <Link href={`/interviews/${s.id}?review=1`}
                     className="inline-flex min-h-touch items-center rounded-peak border border-line bg-surface px-4 font-medium">

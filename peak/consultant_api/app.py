@@ -130,6 +130,11 @@ class QuestionIn(BaseModel):
     display_order: Optional[int] = None
     active: Optional[bool] = None
     branch: Optional[BranchIn] = None
+    # Phase 216: supplemental-question provenance. ``engagement_id`` only on create.
+    engagement_id: Optional[str] = None
+    rationale: Optional[str] = None
+    domain: Optional[str] = None
+    finding_classes: Optional[List[str]] = None
 
 
 class NorthStarIn(BaseModel):
@@ -159,6 +164,9 @@ class ObservationUpdateIn(BaseModel):
     low_hanging_fruit: Optional[bool] = None
     estimated_effort: Optional[Literal["low", "medium", "high"]] = None
     estimated_value: Optional[Literal["low", "medium", "high"]] = None
+    # Phase 216: the prompting question and the observation's basis; null clears either.
+    question_id: Optional[str] = None
+    basis: Optional[Literal["testimony", "observed", "document", "measured", "inferred"]] = None
 
 
 class ObservationCreateIn(ObservationUpdateIn):
@@ -385,22 +393,29 @@ def create_app(
     # --- Phase 204: discovery / interview workflow (any authenticated consultant) ---------------
 
     @app.get("/questions")
-    def questions_list(_: dict = Depends(current_consultant)):
-        return {"questions": discovery.list_questions(session_factory)}
+    def questions_list(engagement_id: Optional[str] = None,
+                       _: dict = Depends(current_consultant)):
+        return {"questions": discovery.list_questions(session_factory, engagement_id)}
 
     @app.post("/questions", status_code=status.HTTP_201_CREATED)
-    def questions_create(body: QuestionIn, _: dict = Depends(current_consultant)):
+    def questions_create(body: QuestionIn, me: dict = Depends(current_consultant)):
+        # Never canonical: the API never sets seed_key. A global question needs an Admin; a
+        # Consultant adds supplemental questions only within an engagement (Phase 216).
         return {"question": _workspace_call(discovery.create_question, session_factory,
-                                            body.model_dump(exclude_unset=True))}
+                                            body.model_dump(exclude_unset=True), None, me["id"],
+                                            me["role"])}
 
     @app.get("/questions/{question_id}")
     def questions_get(question_id: str, _: dict = Depends(current_consultant)):
         return {"question": _workspace_call(discovery.get_question, session_factory, question_id)}
 
     @app.patch("/questions/{question_id}")
-    def questions_update(question_id: str, body: QuestionIn, _: dict = Depends(current_consultant)):
+    def questions_update(question_id: str, body: QuestionIn,
+                         me: dict = Depends(current_consultant)):
+        # A canonical (seeded) question needs an Admin; the service enforces it (Phase 216).
         return {"question": _workspace_call(discovery.update_question, session_factory,
-                                            question_id, body.model_dump(exclude_unset=True))}
+                                            question_id, body.model_dump(exclude_unset=True),
+                                            me["role"])}
 
     @app.get("/engagements/{engagement_id}/discovery")
     def discovery_get(engagement_id: str, _: dict = Depends(current_consultant)):

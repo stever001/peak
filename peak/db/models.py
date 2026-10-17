@@ -747,8 +747,18 @@ class DiscoveryQuestion(Base):
     branch_question_id: Mapped[Optional[str]] = mapped_column(GovernedString(64))
     branch_operator: Mapped[Optional[str]] = mapped_column(String(16))
     branch_value: Mapped[Optional[str]] = mapped_column(String(255))
-    # Set only by tools/init_discovery_questions.py, so initialization is idempotent.
+    # Set only by tools/init_discovery_questions.py, so initialization is idempotent. A question
+    # with a seed_key is canonical (Peak Method, Admin-controlled; Phase 216).
     seed_key: Mapped[Optional[str]] = mapped_column(GovernedString(64))
+    # Phase 216: field-use provenance of a consultant-added (supplemental) question. Set at
+    # creation and never changed: the engagement it was added in (it is asked only there), and who
+    # added it. Rationale and tags say why it was asked. Never set on a canonical question by the
+    # seed tool, and never a route to canonical status: promotion is a separate Admin review.
+    engagement_id: Mapped[Optional[str]] = mapped_column(GovernedString(64), index=True)
+    added_by_consultant_id: Mapped[Optional[str]] = mapped_column(GovernedString(64))
+    rationale: Mapped[Optional[str]] = mapped_column(Text)
+    domain: Mapped[Optional[str]] = mapped_column(String(128))
+    finding_classes: Mapped[Optional[list]] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(),
                                                  onupdate=func.now(), nullable=False)
@@ -793,6 +803,11 @@ class DiscoveryAnswer(Base, GovernanceMixin, AuditMixin):
     answer_text: Mapped[Optional[str]] = mapped_column(Text)
 
 
+#: Phase 216: what a consultant observation rests on. A description of footing, never a promotion:
+#: every basis is still discovery material, not governed evidence (Contract C4).
+DISCOVERY_OBSERVATION_BASES = ("testimony", "observed", "document", "measured", "inferred")
+
+
 class DiscoveryObservation(Base, GovernanceMixin, AuditMixin):
     """A consultant observation, optionally tied to an interview. Internal working note only."""
 
@@ -802,6 +817,8 @@ class DiscoveryObservation(Base, GovernanceMixin, AuditMixin):
                         name="ck_discovery_observations_effort"),
         CheckConstraint("estimated_value IS NULL OR estimated_value IN ('low', 'medium', 'high')",
                         name="ck_discovery_observations_value"),
+        CheckConstraint("basis IS NULL OR basis IN ('testimony', 'observed', 'document', "
+                        "'measured', 'inferred')", name="ck_discovery_observations_basis"),
         MYSQL_TABLE_ARGS,
     )
     # id convention: dobs_<hex>
@@ -816,6 +833,11 @@ class DiscoveryObservation(Base, GovernanceMixin, AuditMixin):
     estimated_effort: Mapped[Optional[str]] = mapped_column(String(8))
     estimated_value: Mapped[Optional[str]] = mapped_column(String(8))
     recorded_by_consultant_id: Mapped[str] = mapped_column(GovernedString(64), nullable=False)
+    # Phase 216: the question that prompted this observation (a ``discovery_questions.id``), and
+    # what the observation rests on (``DISCOVERY_OBSERVATION_BASES``). Both optional. Neither makes
+    # the observation evidence (Contract C4); they make its origin and footing readable.
+    question_id: Mapped[Optional[str]] = mapped_column(GovernedString(64), index=True)
+    basis: Mapped[Optional[str]] = mapped_column(String(16))
 
 
 # --- Phase 212: artifact identity and immutable artifact versions -------------------------------

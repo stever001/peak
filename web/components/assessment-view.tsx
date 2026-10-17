@@ -8,7 +8,7 @@ import type {
   InterviewCoverage,
   LowHangingFruitCandidate,
 } from "@/lib/api";
-import { LEVEL_LABELS } from "@/lib/labels";
+import { BASIS_LABELS, LEVEL_LABELS } from "@/lib/labels";
 
 export function Pill({ children, tone = "bg-line" }: { children: React.ReactNode; tone?: string }) {
   return <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold text-ink ${tone}`}>{children}</span>;
@@ -98,6 +98,11 @@ function LevelPills({ value, effort }: { value: string | null; effort: string | 
   );
 }
 
+/** Phase 216: what a discovery finding rests on. A label only; discovery is never evidence. */
+export function Basis({ basis }: { basis: string | null }) {
+  return <p className="mt-2 text-sm text-ink-muted">Basis: {basis ? BASIS_LABELS[basis] ?? basis : "not recorded"}</p>;
+}
+
 function DiscoveryFindingCard({ f }: { f: DiscoveryFinding }) {
   return (
     <li className="rounded-peak border border-line bg-surface p-4">
@@ -110,6 +115,7 @@ function DiscoveryFindingCard({ f }: { f: DiscoveryFinding }) {
       <p className="mt-2 text-sm text-ink-muted">
         Not reviewed evidence — this does not support a formal recommendation on its own.
       </p>
+      <Basis basis={f.basis} />
       <Trace trace={f.trace} />
     </li>
   );
@@ -126,6 +132,7 @@ function FruitCard({ c }: { c: LowHangingFruitCandidate }) {
       <p className="mt-2 text-sm text-ink-muted">
         The consultant’s own flag on their own observation. Not an approved recommendation.
       </p>
+      <Basis basis={c.basis} />
       <Trace trace={c.trace} />
     </li>
   );
