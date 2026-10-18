@@ -330,7 +330,7 @@ The changes are minimal:
 | Edits | **none**: every row matches the Phase 204 seed (prompt, category, type, choices, order, active, branch), and `updated_at` equals `created_at` on all 29 |
 | `discovery_sessions` / `discovery_answers` | 0 / 0 (0 answers with text) |
 | `discovery_observations` | 1, the Phase 215 synthetic internal-test observation |
-| Runtime grants | SELECT and INSERT on the schema; UPDATE on `discovery_questions` and `discovery_observations` (no change needed) |
+| Runtime grants | SELECT and INSERT on the schema; table-level UPDATE on six tables (`clients`, `engagements`, `discovery_questions`, `discovery_sessions`, `discovery_answers`, `discovery_observations`), from Phases 203 and 205; no change needed |
 
 No historical answer exists to preserve yet. The rollout still only deactivates, so the 29 rows
 and their wording are kept.
@@ -389,6 +389,63 @@ the instrument seed and its read-only verification.
 
 The seed tool uses the runtime credential, which already holds INSERT and UPDATE on
 `discovery_questions` (questions were always editable in the app). No grant change is needed.
+
+### Verifier credential reduced to read-only (2026-10-18)
+
+`peak_prod_verify_ro` is now **read-only by database grant**: `SELECT ON defaultdb.*` only, plus
+the implicit `USAGE ON *.*`. Before this, it held the platform's default for new service users:
+global privileges with `GRANT OPTION`, identical to `peak_prod_migrate`. That was the accepted
+risk carried since Phase 203. The earlier "read-only login" checks in this record were read-only
+by `READ ONLY` transaction and tool code, not by grant. The reduction was made during Phase 216
+closure.
+
+**What the verifier needs.** `tools/production_mysql_collation_verify.py` is the only tool that
+connects with this credential. Every statement it runs is a hard-coded SELECT: `VERSION()`,
+`DATABASE()`, a collation probe on literals, `INFORMATION_SCHEMA` reads for the schema,
+`alembic_version`, and the optional `COUNT(*) … GROUP BY` collision probe. `SELECT ON defaultdb.*`
+covers all of them.
+
+**Rehearsal.** The exact sequence ran first on a disposable, loopback-only MySQL 8.4.8 (the
+production version) with `partial_revokes=ON`. The test verifier and a separate grantor carried the
+production grant set, partial revokes included, and the schema was migrated to 021. Afterwards:
+- `SHOW GRANTS` was exactly USAGE and SELECT on the schema, with no residual restrictions;
+- the unmodified verifier returned `verified_safe_no_remediation_required` (345/345, 11/11);
+- INSERT, UPDATE, DELETE, CREATE, DROP, ALTER, CREATE USER and GRANT were refused;
+- the grantor's own grants were unchanged.
+
+The instance was torn down.
+
+**Production.** The operator ran these two statements as `peak_prod_migrate` on `defaultdb`, and
+nothing else:
+
+```sql
+REVOKE ALL PRIVILEGES, GRANT OPTION FROM 'peak_prod_verify_ro'@'%';
+GRANT SELECT ON `defaultdb`.* TO 'peak_prod_verify_ro'@'%';
+```
+
+The revoke comes first and the grant is issued by a different account: under partial revokes,
+granting to yourself after revoking leaves an account with no privileges (Phase 85).
+
+**Afterwards, read-only, as the verifier itself:**
+- `CURRENT_USER()` is `peak_prod_verify_ro@%`, and `SHOW GRANTS` is exactly USAGE on `*.*` and
+  SELECT on `defaultdb.*`;
+- the verifier returned `verified_safe_no_remediation_required`, exit 0, with output identical to
+  the run just before: head 021, 31 base tables, 345/345 governed columns, 11/11 boundaries;
+- all 31 tables have unchanged row counts and content fingerprints, and the question pool is
+  unchanged.
+
+No user, password, env file, application code, runtime grant or migration-user grant changed.
+
+**Consequence for later checks.** The verifier can no longer read `mysql.*`, so it cannot list
+other users' grants. Check the runtime and migration grants through each credential's own
+`SHOW GRANTS FOR CURRENT_USER()` (the Phase 50 gate does this for the runtime user).
+
+**Follow-ups (not done here):**
+1. Review whether `peak_prod_migrate` can be reduced below the platform default while keeping the
+   capability migrations need.
+2. Review the Phase 50 runtime gate. Its `FORBIDDEN_GRANTS` lists UPDATE, which predates the six
+   table-level UPDATE grants approved in Phases 203 and 205, so the gate may now encode obsolete
+   assumptions.
 
 ## Validation
 
