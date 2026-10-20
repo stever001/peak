@@ -262,8 +262,19 @@ def create_app(
 ) -> FastAPI:
     """Build the app. Arguments override environment configuration (used by tests)."""
     if session_factory is None:
-        from peak.db.session import create_session_factory
+        from urllib.parse import urlsplit
 
+        from peak.db.session import create_session_factory, get_runtime_database_url
+
+        # TEMPORARY (Phase 216 runtime-credential diagnosis): username and schema only — never the
+        # URL, password, host, port or query. Remove once the Render runtime identity is confirmed.
+        _parts = urlsplit(get_runtime_database_url())
+        try:
+            _user = _parts.username or ""
+        except ValueError:
+            _user = "<unparseable>"
+        print(f"runtime_db_identity username={_user} "
+              f"database={_parts.path.lstrip('/').split('/', 1)[0]}", flush=True)
         session_factory = create_session_factory()
     if secret_key is None:
         secret_key = accounts.get_secret_key()
