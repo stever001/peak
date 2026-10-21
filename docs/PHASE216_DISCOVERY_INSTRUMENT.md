@@ -5,9 +5,16 @@ smallest question set that reliably exposes operational problems Peak can help s
 recorded rationale and source provenance for every question. Baseline `312a2c6` — *Record Phase
 215 production acceptance and closure*. Index: [`PHASE_INDEX.md`](PHASE_INDEX.md).
 
-**Status: implementation committed as `3025614`. Migration `021_discovery_observation_trace_basis`
-is applied to production (2026-10-17), and the verifier pin is at 021 and green. The API and web
-deploys and the instrument seed follow this record**; see "Production rollout".
+**Status: Phase 216 is CLOSED (2026-10-21).**
+- Implementation: `3025614`.
+- Migration `021_discovery_observation_trace_basis` applied to production (2026-10-17); verifier
+  pin at 021 and green.
+- Instrument seeded; API and web deployed.
+- Authenticated production acceptance passed with 0 failures.
+- Closure commit `a7e1b15` (runtime identity guard, collation classification, records) deployed to
+  Render as `dep-dbcj3hei0phs73f07ri0`, Live, with post-deploy checks passing.
+
+See "Production rollout".
 
 Authorities:
 - [`PEAK_PROJECT_CONTRACT.md`](PEAK_PROJECT_CONTRACT.md) is unchanged. C4 (*discovery is not
@@ -374,7 +381,7 @@ migration credential in a subshell (`PEAK_ALEMBIC_TARGET=production`,
   - no schema mutation, data write or migration by the tool.
 - Phase 43, 58 and 216 harnesses: PASS.
 
-**Pending at this record:** the Render API deploy (Auto-Deploy gate first), the Vercel web deploy,
+**Pending at this record (all since completed; see below):** the Render API deploy (Auto-Deploy gate first), the Vercel web deploy,
 the instrument seed and its read-only verification.
 
 ### Remaining sequence (each step separately approved)
@@ -483,7 +490,8 @@ excess privileges masked the misconfiguration.
 - Lab, SQLite and injected session factories are unaffected.
 
 The harness is `tests/validate_phase216_runtime_identity_guard.py`, in `make validate-phase216`.
-The guard is committed separately from this record and deployed under its own approval.
+The guard was committed in `a7e1b15` and is live in production (see "Closure deployment and
+post-deploy checks").
 
 ### Authenticated production acceptance (2026-10-21)
 
@@ -546,12 +554,50 @@ All are internal-test, logically retired and kept as acceptance history. No clea
 Production now holds 5 engagements, 4 clients, 4 observations, 76 questions, artifact tables
 2/2/2/4/2/1/1 and 0 capsule candidates.
 
-**Follow-ups (not done here):**
+### Closure deployment and post-deploy checks (2026-10-21)
+
+**Closure commit.** `a7e1b15e7b5c0e90efad7ce74258155461dd6d5d`, *Close Phase 216 discovery
+hardening*. It removes the temporary runtime diagnostic and adds the startup identity guard with its
+harness. It also adds the `basis` / `domain` collation classifications and this record.
+
+**Render deploy.**
+- `peak-consultant-api`: manual deploy `dep-dbcj3hei0phs73f07ri0` of `a7e1b15`, status **Live**.
+- Auto-Deploy stayed Off, and no environment variable changed.
+
+**Post-deploy checks** (non-destructive):
+- **Health:** `/healthz` returned 200.
+- **Runtime identity:** the process-list probe (read-only, as `peak_prod_migrate`; user names and
+  counts only) showed `peak_prod_runtime` as the only API connection to `defaultdb`. No
+  `peak_prod_verify_ro` connection was observed.
+- **Startup guard:** active. The service started and serves as `peak_prod_runtime`, so the guard
+  accepted it. The `runtime_db_identity` log line is gone from the deployed code.
+- **Authenticated login** (existing Admin):
+  - sign in returned 200;
+  - `/auth/me` returned 200 with role `admin`;
+  - `GET /engagements` returned 200;
+  - logout returned 204;
+  - `/auth/me` after logout returned 401.
+
+  A second manual run used an incorrect password and got 401. That was neither a lockout (the
+  lockout answers 429) nor a product failure, and login writes nothing. The operator also signed
+  in to the web app successfully.
+- **Logged-out protection:**
+  - 9 protected API routes returned 401: `/auth/me`, `/engagements`, `/clients`, `/questions`,
+    `/consultants`, an engagement, its Final Report, a release package, and `POST /clients`;
+  - the protected web routes `/`, `/engagements`, `/questions` and a Final Report page
+    redirected (307) to `/login`;
+  - no unexpected 404 or 500.
+
+No Vercel deploy, grant change, schema change or production data write was made during closure
+verification.
+
+**Phase 216 is CLOSED.**
+
+**Follow-ups outside Phase 216:**
 1. Review whether `peak_prod_migrate` can be reduced below the platform default while keeping the
    capability migrations need.
-2. Review the Phase 50 runtime gate. Its `FORBIDDEN_GRANTS` lists UPDATE, which predates the six
-   table-level UPDATE grants approved in Phases 203 and 205, so the gate may now encode obsolete
-   assumptions.
+2. Update the Phase 50 runtime grant gate. Its `FORBIDDEN_GRANTS` lists UPDATE, which predates the
+   six table-level UPDATE grants approved in Phases 203 and 205.
 
 ## Phase Learnings
 
