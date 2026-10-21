@@ -168,6 +168,11 @@ EXACT_CLASS = {
     "media_type": GOVERNED_ENUM,
     "rendered_by": GOVERNED_ENUM,
     "file_name": ORDINARY_TEXT,
+    # Phase 216 discovery instrument: ``discovery_observations.basis`` is a closed vocabulary
+    # (CHECK-constrained) carried into findings and reports; ``discovery_questions.domain`` is a
+    # display label for a supplemental question and decides no identity, uniqueness or authorization.
+    "basis": GOVERNED_ENUM,
+    "domain": ORDINARY_TEXT,
 }
 
 #: Suffix/substring patterns, applied in order when no exact name matches.

@@ -58,6 +58,38 @@ def get_runtime_database_url() -> str:
     return url
 
 
+#: Phase 216: the API runtime must never connect as the verifier or the migration user. Production is
+#: recognised as a MySQL URL on the ``defaultdb`` schema or a ``prod`` username (the
+#: ``tools/bootstrap_admin.py`` convention); there, only the runtime user is accepted.
+FORBIDDEN_RUNTIME_USERS = frozenset({"peak_prod_verify_ro", "peak_prod_migrate"})
+PRODUCTION_RUNTIME_USER = "peak_prod_runtime"
+PRODUCTION_SCHEMA = "defaultdb"
+
+
+def require_runtime_identity(url: str) -> None:
+    """Refuse a runtime URL whose user is not the runtime credential (Phase 216).
+
+    Only the username and schema are inspected; the message names the username alone, never the
+    URL, host or password.
+    """
+    from urllib.parse import urlsplit
+
+    parts = urlsplit(url)
+    try:
+        user = (parts.username or "").lower()
+    except ValueError:
+        user = ""
+    schema = parts.path.lstrip("/").split("/", 1)[0].lower()
+    production = parts.scheme.split("+", 1)[0] in ("mysql", "mariadb") and (
+        schema == PRODUCTION_SCHEMA or "prod" in user)
+    if user in FORBIDDEN_RUNTIME_USERS or (production and user != PRODUCTION_RUNTIME_USER):
+        raise RuntimeError(
+            f"{RUNTIME_DATABASE_URL_ENV} connects as database user {user!r}, which is not the "
+            f"runtime credential. The API must connect as {PRODUCTION_RUNTIME_USER} in production; "
+            "the verifier and migration users are never valid here. Refusing to start."
+        )
+
+
 def get_database_url() -> str:
     """Deprecated alias for :func:`get_runtime_database_url`.
 

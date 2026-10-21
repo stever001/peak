@@ -288,7 +288,9 @@ column, adds no data and leaves the artifact tables alone.
 | `discovery_questions` | `engagement_id` (governed), indexed; `added_by_consultant_id` (governed); `rationale`; `domain`; `finding_classes` (JSON) |
 
 **Governed columns.** Three new governed string columns are added. The production collation
-verifier pin stays at `020` until 021 is really applied (Phase 58 rule).
+verifier pin stays at `020` until 021 is really applied (Phase 58 rule). The collation policy
+(`tools/governed_mysql_collation_audit.py`) classifies `basis` as a closed-vocabulary enum and
+`domain` as ordinary text.
 
 **Allowlist:**
 - the observation create and update actions gain `question_id` and `basis`;
@@ -440,12 +442,131 @@ No user, password, env file, application code, runtime grant or migration-user g
 other users' grants. Check the runtime and migration grants through each credential's own
 `SHOW GRANTS FOR CURRENT_USER()` (the Phase 50 gate does this for the runtime user).
 
+### Runtime credential misconfiguration found and corrected (2026-10-18 → 2026-10-20)
+
+This was a configuration error inside Peak's own deployment, not an external compromise.
+
+**Root cause (verified).** The Render service-level `PEAK_RUNTIME_DATABASE_URL` held the
+`peak_prod_verify_ro` credential, not `peak_prod_runtime`. While the verifier kept the platform's
+broad default privileges, the API could write with it and nothing looked wrong. The verifier's
+excess privileges masked the misconfiguration.
+
+**How it surfaced.**
+1. After the verifier was reduced to SELECT (above), fresh API connections lost write capability.
+2. Preparing a release package failed with MySQL 1142 (`INSERT command denied … for table
+   'artifacts'`).
+3. A Phase 215 acceptance rerun during diagnosis created one extra synthetic record set (below).
+4. A temporary startup diagnostic (`adcdf2f`) logged the runtime username and schema only, never
+   the URL, password, host, port or query.
+
+**Correction.**
+- The Render variable was changed to the `peak_prod_runtime` credential.
+- A fresh deploy of `adcdf2f` logged `runtime_db_identity username=peak_prod_runtime
+  database=defaultdb`.
+- The verifier's privileges were **not** restored; it stays `USAGE ON *.*` + `SELECT ON
+  defaultdb.*`.
+- No grant, user, schema or data change was made to fix it.
+
+**Package regression (2026-10-20), under the intended runtime grants.** It passed 10/10:
+- client `internal_test_006cbd6dc344e697`, engagement `eng_06915dc34fba292f`, package
+  `artpkg_d97e9f706cffd217` (package hash `755213571bbc…`);
+- the stored web and DOCX renditions matched their recorded hashes, and the package hash verified;
+- the engagement was retired logically, and the prepared package stayed readable and unchanged;
+- no approval, designation, release, capsule or physical delete.
+
+**Startup guard.** The diagnostic is removed. In its place, `create_app` calls
+`peak.db.session.require_runtime_identity` before it builds the session factory.
+- It always refuses `peak_prod_verify_ro` and `peak_prod_migrate`.
+- On production (a MySQL URL on `defaultdb`, or a `prod` username), it refuses anything other than
+  `peak_prod_runtime`, including a service-admin login.
+- The refusal names only the username, never the URL, host, port, query or password.
+- Lab, SQLite and injected session factories are unaffected.
+
+The harness is `tests/validate_phase216_runtime_identity_guard.py`, in `make validate-phase216`.
+The guard is committed separately from this record and deployed under its own approval.
+
+### Authenticated production acceptance (2026-10-21)
+
+**Deployment state.**
+- Render API: live on `adcdf2f`, which contains the Phase 216 code (`3025614`), with the runtime
+  identity confirmed as above.
+- Vercel web app: serving the Phase 216 pages. The acceptance's web checks found the basis and the
+  prompting question on the assessment and Final Report pages.
+- Production schema: head `021`, with the instrument seeded: 46 active canonical questions and 29
+  inactive Phase 204 questions, all retained.
+
+**The run.** The operator ran it as the existing Admin; no Consultant account was created. It
+passed with **0 failures**, on one new synthetic internal-test engagement:
+
+| Record | Id |
+|---|---|
+| Client | `internal_test_863363318336278b` ("Peak Internal Acceptance — Phase 216 (synthetic)") |
+| Engagement | `eng_a592f7547365ce31` ("Internal Acceptance — Phase 216") |
+| Interview | `dsess_01fd57d4ec9c76f5` |
+| Supplemental question | `dq_4ee9fd0d7e13affa` |
+| Observation | `dobs_ed99de2fae4b018a` (basis `testimony`, prompted by `acc_phantom_example`) |
+
+It covered:
+- the canonical pool and its Admin control;
+- supplemental provenance and engagement scoping, including refusal to become canonical or global;
+- branching;
+- the observation trace and basis through the assessment, Final Report JSON/Markdown, web and DOCX;
+- the evidence boundary: answer text never enters a finding;
+- logical retirement, with history readable and no new discovery afterwards.
+
+**Read-only persistence check afterwards** (`peak_prod_verify_ro`, `READ ONLY` transaction, SELECT
+only):
+- one new client and one new engagement, both internal-test; the engagement is logically retired
+  (`deleted_at` and `deleted_by` set), with no real client data, no client access and no capsule
+  authorization;
+- one completed interview, 8 distinct answers on it, and one observation linked to it;
+- exactly one supplemental question in the pool: tied only to `eng_a592f7547365ce31`, with no
+  `seed_key`;
+- the 75 seeded rows are still exactly the 46 active instrument keys plus the 29 inactive Phase 204
+  keys, with none edited since the seed (latest canonical `updated_at` is 2026-10-17 23:26:18);
+  total `discovery_questions` is 76;
+- 0 rows for this engagement in any of the seven artifact tables, and 0
+  `capsule_publication_candidates` anywhere;
+- rows referencing the acceptance ids exist only in `clients`, `engagements` and the four discovery
+  tables;
+- the package-regression records are intact: engagement retired; package present with
+  `updated_at = created_at`; both renditions present; no approval, designation or release;
+- alembic head `021`.
+
+### Synthetic production records from diagnosis and acceptance
+
+All are internal-test, logically retired and kept as acceptance history. No cleanup is needed.
+
+| Engagement | Client | Origin |
+|---|---|---|
+| `eng_d8e10e847d47cb25` | `internal_test_c281411fb7cf17a0` | accidental Phase 215 acceptance rerun during diagnosis (one observation, no artifact) |
+| `eng_06915dc34fba292f` | `internal_test_006cbd6dc344e697` | Phase 216 runtime-credential package regression (one prepared package `artpkg_d97e9f706cffd217`, no approval or release) |
+| `eng_a592f7547365ce31` | `internal_test_863363318336278b` | Phase 216 authenticated acceptance (above) |
+
+Production now holds 5 engagements, 4 clients, 4 observations, 76 questions, artifact tables
+2/2/2/4/2/1/1 and 0 capsule candidates.
+
 **Follow-ups (not done here):**
 1. Review whether `peak_prod_migrate` can be reduced below the platform default while keeping the
    capability migrations need.
 2. Review the Phase 50 runtime gate. Its `FORBIDDEN_GRANTS` lists UPDATE, which predates the six
    table-level UPDATE grants approved in Phases 203 and 205, so the gate may now encode obsolete
    assumptions.
+
+## Phase Learnings
+
+These are advisory, not governing rules, unless separately promoted.
+- **Least privilege exposes hidden configuration errors.** A credential with broad privileges can
+  stand in for the wrong one without anyone noticing. Narrowing it is how the wrong runtime URL was
+  found.
+- **Assert production identity at startup.** Don't infer it from env-file names or dashboard
+  labels. The API now checks its database user before it serves.
+- **Verify by actual process identity.** When production behavior contradicts the expected
+  configuration, check which identity the running process really uses (a username-only log line,
+  `CURRENT_USER()`). Re-reading the dashboard value is not enough.
+- **Package and release acceptance earns its place.** It crosses a second database connection and
+  session boundary that discovery-only checks never reach. It found a failure the earlier checks
+  had missed.
 
 ## Validation
 
@@ -461,6 +582,9 @@ other users' grants. Check the runtime and migration grants through each credent
   - observation trace and basis through the assessment, Markdown, web and DOCX;
   - "answers never become findings";
   - governance.
+- `tests/validate_phase216_runtime_identity_guard.py`, in `make validate-phase216`. It covers the
+  refused and accepted identities, the `create_app` startup path in a subprocess, the
+  injected-factory bypass, and a refusal message that leaks no secret.
 - `tests/validate_phase204_discovery_workflow.py`, updated to the instrument keys. Canonical edits
   are made as an Admin, and the identity-link check has the exemption described above.
 - Web: `npm run lint` and `npm run build` are clean.

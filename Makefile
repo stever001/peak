@@ -352,8 +352,9 @@ validate-phase213: ## Run the Phase 213 artifact approval and release check (off
 validate-phase215: ## Run the Phase 215 internal test engagements check (offline; temporary SQLite only)
 	$(PYTHON) tests/validate_phase215_internal_test_engagements.py
 
-validate-phase216: ## Run the Phase 216 discovery instrument check (offline; temporary SQLite only)
+validate-phase216: ## Run the Phase 216 discovery instrument and runtime-identity guard checks (offline; temporary SQLite only)
 	$(PYTHON) tests/validate_phase216_discovery_instrument.py
+	$(PYTHON) tests/validate_phase216_runtime_identity_guard.py
 
 validate-admin-password-reset: ## Check the production Admin password-reset tool (offline; temporary SQLite only)
 	$(PYTHON) tests/validate_production_admin_password_reset.py
