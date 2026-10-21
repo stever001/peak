@@ -29,7 +29,9 @@ export default async function NewEngagementPage(props: PageProps<"/engagements/n
       <EngagementForm action={createEngagement} consultants={consultants}
                       creation={{
                         realClient: opened && !openedTest ? { id: opened.id, name: opened.organization_label } : null,
-                        testClients, initialKind, initialTestClientId: openedTest ? opened.id : "",
+                        testClients, initialKind,
+                        // Only a client the chooser offers; a retired internal test client is not one.
+                        initialTestClientId: openedTest && testClients.some((c) => c.id === opened.id) ? opened.id : "",
                       }}
                       canAssign={me.role === "admin"}
                       cancelHref={cancelHref} submitLabel="Add engagement" />

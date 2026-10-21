@@ -53,6 +53,7 @@ export type ClientSummary = {
   contact_name: string | null;
   /** Phase 215: an Admin-created internal test client (reserved namespace). */
   internal_test: boolean;
+  /** Active (not retired) engagements only. */
   engagement_count: number;
 };
 

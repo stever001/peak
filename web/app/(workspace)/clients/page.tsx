@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { PageHeader } from "@/components/page-header";
 import { apiGet, requireConsultant, type ClientSummary } from "@/lib/api";
+import { clientCardDetails } from "@/lib/client-card";
 
 export default async function ClientsPage(props: PageProps<"/clients">) {
   await requireConsultant();
@@ -29,24 +30,25 @@ export default async function ClientsPage(props: PageProps<"/clients">) {
       </form>
       {clients.length === 0 ? (
         <div className="peak-card text-ink-muted">
-          {query ? `No clients match “${query}”.` : "No clients yet. Add the first one."}
+          {query ? `No clients match “${query}”.` : "No active clients yet."}
         </div>
       ) : (
         <ul className="grid gap-3 lg:grid-cols-2">
-          {clients.map((c) => (
-            <li key={c.id}>
-              <Link href={`/clients/${c.id}`}
-                    className="flex min-h-20 flex-col justify-center gap-1 rounded-peak border border-line bg-surface px-5 py-4 hover:border-brand">
-                <span className="text-lg font-semibold text-brand">{c.organization_label}</span>
-                {c.internal_test && <InternalTestBadge />}
-                <span className="text-sm text-ink-muted">
-                  {[c.city, c.country].filter(Boolean).join(", ") || "No location"}
-                  {c.contact_name ? ` · ${c.contact_name}` : ""}
-                  {` · ${c.engagement_count} ${c.engagement_count === 1 ? "engagement" : "engagements"}`}
-                </span>
-              </Link>
-            </li>
-          ))}
+          {clients.map((c) => {
+            const details = clientCardDetails(c);
+            return (
+              <li key={c.id}>
+                <Link href={`/clients/${c.id}`}
+                      className="flex min-h-20 flex-col justify-center gap-1 rounded-peak border border-line bg-surface px-5 py-4 hover:border-brand">
+                  <span className="flex flex-wrap items-center gap-2">
+                    <span className="text-lg font-semibold text-brand">{c.organization_label}</span>
+                    {c.internal_test && <InternalTestBadge />}
+                  </span>
+                  {details.length > 0 && <span className="text-sm text-ink-muted">{details.join(" · ")}</span>}
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       )}
     </>

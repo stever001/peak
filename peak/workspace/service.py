@@ -226,7 +226,10 @@ def _require_allowed(table: str, action: str, values: dict) -> None:
 def list_clients(session_factory, query: Optional[str] = None,
                  internal_test: Optional[bool] = None) -> list:
     """Clients by name. ``internal_test`` true lists only reserved internal-test clients (the
-    engagement form's Internal Test chooser); false lists only real clients; None lists both."""
+    engagement form's Internal Test chooser); false lists only real clients; None lists both (the
+    normal Clients workspace). Both the chooser and the workspace leave out retired internal-test
+    clients, those whose engagements have all been retired; their records stay readable at
+    ``/clients/{id}``. ``engagement_count`` counts active engagements only."""
     from sqlalchemy import func, or_, select
 
     from peak.db.models import Client, Engagement
@@ -245,6 +248,11 @@ def list_clients(session_factory, query: Optional[str] = None,
         counts = dict(session.execute(
             select(Engagement.client_id, func.count()).where(Engagement.deleted_at.is_(None))
             .group_by(Engagement.client_id)).all())
+        if internal_test is not False:
+            retired = set(session.scalars(
+                select(Engagement.client_id).where(Engagement.deleted_at.is_not(None)).distinct()))
+            rows = [r for r in rows if not (is_reserved_internal_test_client_id(r.id)
+                                            and r.id in retired and not counts.get(r.id))]
         return [{"id": r.id, "organization_label": r.organization_label, "city": r.city,
                  "country": r.country, "contact_name": r.contact_name,
                  "internal_test": is_reserved_internal_test_client_id(r.id),
