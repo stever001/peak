@@ -33,13 +33,13 @@ from __future__ import annotations
 import os
 import threading
 import time
-from typing import Dict, List, Literal, Optional
+from typing import Dict, List, Literal, Optional, Union
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field
 
 from peak import accounts, workspace
-from peak.workspace import approvals, discovery
+from peak.workspace import approvals, discovery, engagement_phases
 
 SESSION_COOKIE = "peak_session"
 INSECURE_COOKIE_ENV = "PEAK_WEB_INSECURE_COOKIE"
@@ -193,12 +193,111 @@ class ReleaseIn(BaseModel):
     package_hash: str = Field(max_length=64)
 
 
+# --- Phase 217: engagement roadmap, phases, guided work plans --------------------------------
+# No body here can set an origin, a status beyond the named transition, an actor, or a framing
+# field after creation: the service sets those. ``si_suggested`` is never reachable from the API.
+
+
+class RoadmapItemIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    template_key: Optional[str] = Field(default=None, max_length=64)
+    title: Optional[str] = None
+    problem_framing: Optional[str] = None
+    rationale: Optional[str] = None
+    expected_outcome: Optional[str] = None
+    source_observation_ids: Optional[List[str]] = None
+    sequence: Optional[int] = None
+
+
+class RoadmapRevisionIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    title: Optional[str] = None
+    problem_framing: Optional[str] = None
+    rationale: Optional[str] = None
+    expected_outcome: Optional[str] = None
+    source_observation_ids: Optional[List[str]] = None
+    sequence: Optional[int] = None
+
+
+class RoadmapDecisionIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    status: Literal["proposed", "accepted", "deferred", "declined"]
+    note: Optional[str] = None
+
+
+class PhaseIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    roadmap_item_id: Optional[str] = Field(default=None, max_length=64)
+    title: Optional[str] = None
+    scope_summary: Optional[str] = None
+    origin_note: Optional[str] = None
+
+
+class PhaseAuthorizationIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    authorization_basis: str
+    authorization_reference: Optional[str] = None
+
+
+class TemplateTasksIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    template_key: Optional[str] = Field(default=None, max_length=64)
+
+
+class TaskConditionIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    task_id: str = Field(max_length=64)
+    record_kind: str = Field(max_length=24)
+
+
+class TaskIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    title: str
+    instructions: str
+    inclusion_reason: str
+    why_it_matters: Optional[str] = None
+    what_to_observe: Optional[str] = None
+    suggested_evidence: Optional[List[str]] = None
+    follow_up_questions: Optional[List[str]] = None
+    expected_result: Optional[str] = None
+    required: Optional[bool] = None
+    requires_record: Optional[bool] = None
+    depends_on_task_ids: Optional[List[str]] = None
+    condition: Optional[TaskConditionIn] = None
+
+
+class TaskUpdateIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    status: Optional[Literal["in_progress"]] = None
+    consultant_notes: Optional[str] = None
+
+
+class TaskCompletionIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    result_summary: str
+
+
+class TaskNotApplicableIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    reason: str
+
+
+class TaskRecordIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    record_kind: str = Field(max_length=24)
+    record_text: str
+    structured: Optional[Dict[str, Union[str, int, float]]] = None
+    basis: Optional[str] = Field(default=None, max_length=16)
+    supersedes_record_id: Optional[str] = Field(default=None, max_length=64)
+
+
 def _workspace_call(fn, *args):
     """Run a workspace function, mapping its refusals to 422 and a missing record to 404."""
     try:
         result = fn(*args)
     except workspace.WorkspaceError as exc:
-        code = (status.HTTP_403_FORBIDDEN if exc.code == "admin_required"
+        code = (status.HTTP_403_FORBIDDEN
+                if exc.code in ("admin_required", "lead_or_admin_required")
                 else status.HTTP_422_UNPROCESSABLE_ENTITY)
         raise HTTPException(code, {"code": exc.code, "message": str(exc)}) from None
     if result is None:
@@ -475,6 +574,105 @@ def create_app(
                             _: dict = Depends(current_consultant)):
         return {"observation": _workspace_call(discovery.update_observation, session_factory,
                                                observation_id, body.model_dump(exclude_unset=True))}
+
+    # --- Phase 217: engagement roadmap, phases, guided work plans (any authenticated consultant;
+    # recording a phase authorization is Lead or Admin only) -----------------------------------
+
+    @app.get("/engagements/{engagement_id}/roadmap")
+    def roadmap_get(engagement_id: str, _: dict = Depends(current_consultant)):
+        return {"roadmap": _workspace_call(engagement_phases.get_roadmap, session_factory,
+                                           engagement_id)}
+
+    @app.post("/engagements/{engagement_id}/roadmap-items", status_code=status.HTTP_201_CREATED)
+    def roadmap_item_create(engagement_id: str, body: RoadmapItemIn,
+                            me: dict = Depends(current_consultant)):
+        return {"roadmap_item": _workspace_call(engagement_phases.create_roadmap_item,
+                                                session_factory, engagement_id,
+                                                body.model_dump(exclude_unset=True), me["id"])}
+
+    @app.post("/roadmap-items/{item_id}/decision")
+    def roadmap_item_decide(item_id: str, body: RoadmapDecisionIn,
+                            me: dict = Depends(current_consultant)):
+        return {"roadmap_item": _workspace_call(engagement_phases.decide_roadmap_item,
+                                                session_factory, item_id, body.status, body.note,
+                                                me["id"])}
+
+    @app.post("/roadmap-items/{item_id}/revision", status_code=status.HTTP_201_CREATED)
+    def roadmap_item_revise(item_id: str, body: RoadmapRevisionIn,
+                            me: dict = Depends(current_consultant)):
+        return {"roadmap_item": _workspace_call(engagement_phases.revise_roadmap_item,
+                                                session_factory, item_id,
+                                                body.model_dump(exclude_unset=True), me["id"])}
+
+    @app.get("/engagements/{engagement_id}/phases")
+    def phases_list(engagement_id: str, _: dict = Depends(current_consultant)):
+        return {"phases": _workspace_call(engagement_phases.list_phases, session_factory,
+                                          engagement_id)}
+
+    @app.post("/engagements/{engagement_id}/phases", status_code=status.HTTP_201_CREATED)
+    def phases_create(engagement_id: str, body: PhaseIn, me: dict = Depends(current_consultant)):
+        return {"phase": _workspace_call(engagement_phases.create_phase, session_factory,
+                                         engagement_id, body.model_dump(exclude_unset=True),
+                                         me["id"])}
+
+    @app.get("/phases/{phase_id}")
+    def phases_get(phase_id: str, _: dict = Depends(current_consultant)):
+        return {"phase": _workspace_call(engagement_phases.get_phase, session_factory, phase_id)}
+
+    @app.get("/phases/{phase_id}/readiness")
+    def phases_readiness(phase_id: str, _: dict = Depends(current_consultant)):
+        phase = _workspace_call(engagement_phases.get_phase, session_factory, phase_id)
+        return {"readiness": phase["readiness"]}
+
+    @app.post("/phases/{phase_id}/authorization")
+    def phases_authorize(phase_id: str, body: PhaseAuthorizationIn,
+                         me: dict = Depends(current_consultant)):
+        return {"phase": _workspace_call(engagement_phases.authorize_phase, session_factory,
+                                         phase_id, body.model_dump(exclude_unset=True), me["id"],
+                                         me["role"])}
+
+    @app.post("/phases/{phase_id}/template-tasks")
+    def phases_template_tasks(phase_id: str, body: TemplateTasksIn,
+                              me: dict = Depends(current_consultant)):
+        return {"phase": _workspace_call(engagement_phases.add_template_tasks, session_factory,
+                                         phase_id, body.template_key, me["id"])}
+
+    @app.post("/phases/{phase_id}/tasks", status_code=status.HTTP_201_CREATED)
+    def phases_add_task(phase_id: str, body: TaskIn, me: dict = Depends(current_consultant)):
+        data = body.model_dump(exclude_unset=True)
+        return {"phase": _workspace_call(engagement_phases.add_task, session_factory, phase_id,
+                                         data, me["id"])}
+
+    @app.post("/phases/{phase_id}/completion")
+    def phases_complete(phase_id: str, me: dict = Depends(current_consultant)):
+        return {"phase": _workspace_call(engagement_phases.complete_phase, session_factory,
+                                         phase_id, me["id"])}
+
+    @app.patch("/tasks/{task_id}")
+    def tasks_update(task_id: str, body: TaskUpdateIn, _: dict = Depends(current_consultant)):
+        return {"phase": _workspace_call(engagement_phases.update_task, session_factory, task_id,
+                                         body.model_dump(exclude_unset=True))}
+
+    @app.post("/tasks/{task_id}/acceptance")
+    def tasks_accept(task_id: str, _: dict = Depends(current_consultant)):
+        return {"phase": _workspace_call(engagement_phases.accept_task, session_factory, task_id)}
+
+    @app.post("/tasks/{task_id}/completion")
+    def tasks_complete(task_id: str, body: TaskCompletionIn,
+                       me: dict = Depends(current_consultant)):
+        return {"phase": _workspace_call(engagement_phases.complete_task, session_factory,
+                                         task_id, body.model_dump(), me["id"])}
+
+    @app.post("/tasks/{task_id}/not-applicable")
+    def tasks_not_applicable(task_id: str, body: TaskNotApplicableIn,
+                             me: dict = Depends(current_consultant)):
+        return {"phase": _workspace_call(engagement_phases.resolve_task_not_applicable,
+                                         session_factory, task_id, body.model_dump(), me["id"])}
+
+    @app.post("/tasks/{task_id}/records", status_code=status.HTTP_201_CREATED)
+    def tasks_record(task_id: str, body: TaskRecordIn, me: dict = Depends(current_consultant)):
+        return {"phase": _workspace_call(engagement_phases.record_task_work, session_factory,
+                                         task_id, body.model_dump(exclude_unset=True), me["id"])}
 
     # --- Phase 206: internal assessment (read-only, derived; any authenticated consultant) ------
 

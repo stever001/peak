@@ -52,6 +52,7 @@ EXPECTED_TABLES = [
     "artifacts", "artifact_versions",
     "artifact_release_packages", "artifact_renditions", "artifact_approvals",
     "artifact_final_approver_designations", "artifact_releases",
+    "roadmap_items", "engagement_phases", "phase_tasks", "phase_task_records",
 ]
 
 # Tables that are deliberately NOT governed engagement records and so carry no governance/audit

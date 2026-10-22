@@ -209,6 +209,18 @@ until one is written.
 - **Principle:** the Contract stays short enough to be read in full and obeyed.
 - **Authority:** this section and §4.
 
+### C21 — Advisory engagement boundary
+
+**Peak engagement work is advisory and improvement-oriented.** It may examine workflows, records,
+policies, controls, physical operations, employee practices and supporting evidence to understand
+how the business operates and to identify practical improvements. It is never framed, generated,
+executed, scored, labelled or reported as an audit, a compliance test, certification, assurance, a
+finding of non-compliance or a control deficiency determination. Only an engagement created under a
+separate, governed audit capability could be an exception, and Peak has none.
+
+- **Principle:** do not use normal advisory work to approximate an audit.
+- **Authority:** [`ADVISORY_ENGAGEMENT_BOUNDARY.md`](ADVISORY_ENGAGEMENT_BOUNDARY.md) (Phase 217); `peak/workspace/advisory_boundary.py`.
+
 ---
 
 ## 3. How lower authorities relate to this Contract
@@ -239,6 +251,7 @@ until one is written.
 | AgentNet and capsules (current) | [`PEAK_OPERATED_AGENTNET_PUBLICATION_POLICY.md`](PEAK_OPERATED_AGENTNET_PUBLICATION_POLICY.md), [`AGENTNET_MCP_BOUNDARY.md`](AGENTNET_MCP_BOUNDARY.md), [`RESOLVER_CAPSULE_ARCHITECTURE.md`](RESOLVER_CAPSULE_ARCHITECTURE.md) |
 | Operating model | [`OPERATING_MODEL.md`](OPERATING_MODEL.md) |
 | Artifact lifecycle: artifact and version identity, working vs issued state, renderings of a version, the Lead Consultant → Final Approver chain, approval invalidation, release, supersession, client-facing presentation (C7–C9, C11–C14, C18, C19) | [`ARTIFACT_LIFECYCLE.md`](ARTIFACT_LIFECYCLE.md) (Phase 211) |
+| Advisory engagement boundary: permitted subject matter, prohibited audit/compliance framing, where it is enforced (C21) | [`ADVISORY_ENGAGEMENT_BOUNDARY.md`](ADVISORY_ENGAGEMENT_BOUNDARY.md) (Phase 217) |
 
 **Planned specialized authority.** This does not exist yet. Until it does, the Contract rules that
 point to it govern directly.

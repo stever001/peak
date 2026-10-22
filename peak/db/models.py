@@ -1092,6 +1092,212 @@ def _refuse_bulk_artifact_change(state):
             m.class_ in _IMMUTABLE_ARTIFACT_MODELS for m in state.all_mappers):
         raise PermissionError("artifact rows are immutable: no update or delete.")
 
+
+# --- Phase 217: engagement roadmap, engagement phases, guided work plans -------------------------
+#
+# docs/PHASE217_ENGAGEMENT_ROADMAP_WORK_PLAN.md is the record. A roadmap item is advisory: proposed
+# future consulting work derived from discovery. An engagement phase is one separately authorized,
+# sellable unit of consulting work (the "Engagement Phase" of Contract C9 / ARTIFACT_LIFECYCLE AL1,
+# as a record). Its guided work plan is its ordered tasks; the consultant records what actually
+# happened as task records. Written only by ``peak.workspace.engagement_phases``. Every framing
+# field stays inside the advisory boundary (Contract C21, docs/ADVISORY_ENGAGEMENT_BOUNDARY.md).
+
+#: Roadmap item lifecycle. ``proposed`` is a suggestion; ``accepted`` means the client wants this
+#: phase proposed to them, not that it is authorized. ``superseded`` is set only by a revision.
+ROADMAP_ITEM_STATUSES = ("proposed", "accepted", "deferred", "declined", "superseded")
+#: Who framed a roadmap item or a task. ``peak_method`` is a deterministic Peak Method template;
+#: ``si_suggested`` is reserved for a synthesis proposal and always enters as a suggestion.
+WORK_ORIGINS = ("peak_method", "consultant", "si_suggested")
+#: Engagement phase lifecycle. ``planned`` is scoped but not authorized; work is recorded only once
+#: ``authorized``; ``completed`` is set only when the deterministic readiness check passes.
+ENGAGEMENT_PHASE_STATUSES = ("planned", "authorized", "completed")
+ENGAGEMENT_PHASE_ORIGINS = ("roadmap_item", "manual")
+#: Task states. ``suggested`` is not part of the plan until a consultant accepts it.
+PHASE_TASK_STATUSES = ("suggested", "open", "in_progress", "completed", "not_applicable")
+#: What a consultant may record against a task. The media kinds are reserved for future evidence
+#: capture (iPad photos included); the service refuses them until storage exists.
+PHASE_TASK_RECORD_KINDS = ("note", "interview_response", "measurement", "mismatch", "photo",
+                           "document_photo", "document")
+
+
+def _in(column: str, values) -> str:
+    return f"{column} IN ({', '.join(repr(v) for v in values)})"
+
+
+class RoadmapItem(Base, GovernanceMixin, AuditMixin):
+    """One proposed future phase of consulting work. Advisory; never authorized work by itself.
+
+    Framing is fixed at creation: a revision is a new item that supersedes this one, so a roadmap
+    is never silently rewritten. Only the lifecycle columns change.
+    """
+
+    __tablename__ = "roadmap_items"
+    __table_args__ = (
+        UniqueConstraint("supersedes_item_id", name="uq_roadmap_items_supersedes"),
+        CheckConstraint(_in("status", ROADMAP_ITEM_STATUSES), name="ck_roadmap_items_status"),
+        CheckConstraint(_in("origin", WORK_ORIGINS), name="ck_roadmap_items_origin"),
+        CheckConstraint("sequence >= 1", name="ck_roadmap_items_sequence"),
+        MYSQL_TABLE_ARGS,
+    )
+    # id convention: rmi_<hex>
+    id: Mapped[str] = mapped_column(GovernedString(64), primary_key=True)
+    client_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    engagement_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    sequence: Mapped[int] = mapped_column(Integer, nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    problem_framing: Mapped[str] = mapped_column(Text, nullable=False)
+    rationale: Mapped[str] = mapped_column(Text, nullable=False)
+    expected_outcome: Mapped[str] = mapped_column(Text, nullable=False)
+    # The discovery observations (``discovery_observations.id``) this item rests on, as a list.
+    source_observation_ids: Mapped[Optional[list]] = mapped_column(JSON)
+    origin: Mapped[str] = mapped_column(String(16), nullable=False)
+    # The Peak Method phase template, when ``origin`` is ``peak_method``.
+    template_key: Mapped[Optional[str]] = mapped_column(GovernedString(64))
+    method_version: Mapped[Optional[str]] = mapped_column(String(64))
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="proposed")
+    status_note: Mapped[Optional[str]] = mapped_column(Text)
+    supersedes_item_id: Mapped[Optional[str]] = mapped_column(GovernedString(64))
+    created_by_consultant_id: Mapped[str] = mapped_column(GovernedString(64), nullable=False)
+    decided_by_consultant_id: Mapped[Optional[str]] = mapped_column(GovernedString(64))
+    decided_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+
+
+class EngagementPhase(Base, GovernanceMixin, AuditMixin):
+    """One separately authorized unit of consulting work. Its tasks are its guided work plan.
+
+    A future proposal or final-report artifact binds to a phase through the artifact, not here.
+    Authorization is a recorded human act; nothing derives it.
+    """
+
+    __tablename__ = "engagement_phases"
+    __table_args__ = (
+        # A roadmap item becomes at most one phase.
+        UniqueConstraint("roadmap_item_id", name="uq_engagement_phases_roadmap_item"),
+        CheckConstraint(_in("status", ENGAGEMENT_PHASE_STATUSES),
+                        name="ck_engagement_phases_status"),
+        CheckConstraint(_in("origin", ENGAGEMENT_PHASE_ORIGINS),
+                        name="ck_engagement_phases_origin"),
+        MYSQL_TABLE_ARGS,
+    )
+    # id convention: ephase_<hex>
+    id: Mapped[str] = mapped_column(GovernedString(64), primary_key=True)
+    client_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    engagement_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    origin: Mapped[str] = mapped_column(String(16), nullable=False)
+    roadmap_item_id: Mapped[Optional[str]] = mapped_column(GovernedString(64))
+    # Why a manually created phase exists (required when ``origin`` is ``manual``).
+    origin_note: Mapped[Optional[str]] = mapped_column(Text)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    scope_summary: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="planned")
+    created_by_consultant_id: Mapped[str] = mapped_column(GovernedString(64), nullable=False)
+    # What the client agreed to and where it is recorded (e.g. a signed proposal), as told by the
+    # authorizing consultant. A structured proposal/fee binding is later work.
+    authorization_basis: Mapped[Optional[str]] = mapped_column(Text)
+    authorization_reference: Mapped[Optional[str]] = mapped_column(String(255))
+    authorized_by_consultant_id: Mapped[Optional[str]] = mapped_column(GovernedString(64))
+    authorized_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    completed_by_consultant_id: Mapped[Optional[str]] = mapped_column(GovernedString(64))
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+
+
+class PhaseTask(Base, GovernanceMixin, AuditMixin):
+    """One ordered step of a phase's guided work plan: what to do, observe, ask and record."""
+
+    __tablename__ = "phase_tasks"
+    __table_args__ = (
+        UniqueConstraint("phase_id", "sequence", name="uq_phase_tasks_sequence"),
+        CheckConstraint(_in("status", PHASE_TASK_STATUSES), name="ck_phase_tasks_status"),
+        CheckConstraint(_in("origin", WORK_ORIGINS), name="ck_phase_tasks_origin"),
+        CheckConstraint("condition_record_kind IS NULL OR "
+                        + _in("condition_record_kind", PHASE_TASK_RECORD_KINDS),
+                        name="ck_phase_tasks_condition_kind"),
+        CheckConstraint("sequence >= 1", name="ck_phase_tasks_sequence"),
+        MYSQL_TABLE_ARGS,
+    )
+    # id convention: ptask_<hex>
+    id: Mapped[str] = mapped_column(GovernedString(64), primary_key=True)
+    client_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    engagement_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    phase_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    sequence: Mapped[int] = mapped_column(Integer, nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    instructions: Mapped[str] = mapped_column(Text, nullable=False)
+    why_it_matters: Mapped[Optional[str]] = mapped_column(Text)
+    what_to_observe: Mapped[Optional[str]] = mapped_column(Text)
+    # Lists: record kinds that would help, and questions to ask.
+    suggested_evidence: Mapped[Optional[list]] = mapped_column(JSON)
+    follow_up_questions: Mapped[Optional[list]] = mapped_column(JSON)
+    expected_result: Mapped[Optional[str]] = mapped_column(Text)
+    required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True,
+                                           server_default=sa_true())
+    # Completing the task needs at least one record against it.
+    requires_record: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False,
+                                                  server_default=sa_false())
+    # Task ids (same phase) that must be resolved first.
+    depends_on_task_ids: Mapped[Optional[list]] = mapped_column(JSON)
+    # Conditional follow-up: the task applies only if this earlier task has a record of this kind.
+    condition_task_id: Mapped[Optional[str]] = mapped_column(GovernedString(64))
+    condition_record_kind: Mapped[Optional[str]] = mapped_column(String(24))
+    origin: Mapped[str] = mapped_column(String(16), nullable=False)
+    template_key: Mapped[Optional[str]] = mapped_column(GovernedString(64))
+    inclusion_reason: Mapped[Optional[str]] = mapped_column(Text)
+    # True when the task joined the plan after the phase was authorized: visible scope change.
+    added_after_authorization: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False,
+                                                            server_default=sa_false())
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="open")
+    consultant_notes: Mapped[Optional[str]] = mapped_column(Text)
+    result_summary: Mapped[Optional[str]] = mapped_column(Text)
+    not_applicable_reason: Mapped[Optional[str]] = mapped_column(Text)
+    created_by_consultant_id: Mapped[str] = mapped_column(GovernedString(64), nullable=False)
+    completed_by_consultant_id: Mapped[Optional[str]] = mapped_column(GovernedString(64))
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+
+
+class PhaseTaskRecord(Base, GovernanceMixin, AuditMixin):
+    """What the consultant recorded while doing a task. Insert-only; a correction supersedes.
+
+    Consultant working material, not governed evidence (Contract C4 applies in the same way).
+    """
+
+    __tablename__ = "phase_task_records"
+    __table_args__ = (
+        UniqueConstraint("supersedes_record_id", name="uq_phase_task_records_supersedes"),
+        CheckConstraint(_in("record_kind", PHASE_TASK_RECORD_KINDS),
+                        name="ck_phase_task_records_kind"),
+        CheckConstraint("basis IS NULL OR " + _in("basis", DISCOVERY_OBSERVATION_BASES),
+                        name="ck_phase_task_records_basis"),
+        MYSQL_TABLE_ARGS,
+    )
+    # id convention: ptrec_<hex>
+    id: Mapped[str] = mapped_column(GovernedString(64), primary_key=True)
+    client_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    engagement_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    phase_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    task_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    record_kind: Mapped[str] = mapped_column(String(24), nullable=False)
+    record_text: Mapped[str] = mapped_column(Text, nullable=False)
+    # Kind-specific fields (e.g. a mismatch's reference, expected, observed, resolution).
+    structured: Mapped[Optional[dict]] = mapped_column(JSON)
+    basis: Mapped[Optional[str]] = mapped_column(String(16))
+    supersedes_record_id: Mapped[Optional[str]] = mapped_column(GovernedString(64))
+    recorded_by_consultant_id: Mapped[str] = mapped_column(GovernedString(64), nullable=False)
+
+
+def _refuse_task_record_change(mapper, connection, target):
+    raise PermissionError("phase_task_records rows are immutable: no update or delete.")
+
+
+event.listen(PhaseTaskRecord, "before_update", _refuse_task_record_change)
+event.listen(PhaseTaskRecord, "before_delete", _refuse_task_record_change)
+
+
+@event.listens_for(Session, "do_orm_execute")
+def _refuse_bulk_task_record_change(state):
+    if (state.is_update or state.is_delete) and any(
+            m.class_ is PhaseTaskRecord for m in state.all_mappers):
+        raise PermissionError("phase_task_records rows are immutable: no update or delete.")
+
 # Convenience list of all model classes (used by tooling/validation).
 ALL_MODELS = [
     Client,
@@ -1124,4 +1330,8 @@ ALL_MODELS = [
     ArtifactApproval,
     ArtifactFinalApproverDesignation,
     ArtifactRelease,
+    RoadmapItem,
+    EngagementPhase,
+    PhaseTask,
+    PhaseTaskRecord,
 ]

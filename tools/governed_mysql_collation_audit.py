@@ -173,6 +173,16 @@ EXACT_CLASS = {
     # display label for a supplemental question and decides no identity, uniqueness or authorization.
     "basis": GOVERNED_ENUM,
     "domain": ORDINARY_TEXT,
+    # Phase 217 roadmap, phases and guided work plans: ``origin``, the record kinds and the Peak
+    # Method template version are closed vocabularies (CHECK-constrained or catalogue-defined);
+    # ``title`` and the authorization reference a consultant types are display text and decide no
+    # identity, uniqueness or authorization (the authorization itself is the consultant id + time).
+    "origin": GOVERNED_ENUM,
+    "record_kind": GOVERNED_ENUM,
+    "condition_record_kind": GOVERNED_ENUM,
+    "method_version": GOVERNED_ENUM,
+    "title": ORDINARY_TEXT,
+    "authorization_reference": ORDINARY_TEXT,
 }
 
 #: Suffix/substring patterns, applied in order when no exact name matches.

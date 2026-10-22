@@ -51,6 +51,10 @@ Client
 - **AL1 — Engagement Phase means a consulting stage.** It is a stage of the engagement's consulting
   work, such as intake, discovery, assessment or a later delivery stage. It is **not** a repository
   delivery phase (Phase 208, Phase 211 and so on). It is the same "Phase" as in Contract C9.
+  *Phase 217:* a separately authorized, sellable stage after discovery is now a record
+  (`engagement_phases`). Intake and discovery remain stages without a record, and
+  `engagements.current_phase` / `artifacts.engagement_phase_label` remain free-text labels. Binding
+  an artifact (a proposal, a final report) to an `engagement_phases` row is later work.
 - **AL2 — Artifact.** A named milestone output of one engagement phase, such as "the assessment
   report for this engagement's assessment stage". An artifact has a type (§13) and an ordered set of
   versions. It belongs to exactly one engagement, so it inherits that engagement's client, owner

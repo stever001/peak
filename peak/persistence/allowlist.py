@@ -139,6 +139,19 @@ DISCOVERY_OBSERVATION_COLUMNS = frozenset(
      "question_id", "basis"}
 )
 
+#: Phase 217: what a roadmap item and a guided task say. Fixed at creation (no update action
+#: writes them), and the only columns the advisory-boundary check applies to.
+ROADMAP_ITEM_FRAMING_COLUMNS = frozenset(
+    {"sequence", "title", "problem_framing", "rationale", "expected_outcome",
+     "source_observation_ids", "origin", "template_key", "method_version"}
+)
+PHASE_TASK_FRAMING_COLUMNS = frozenset(
+    {"sequence", "title", "instructions", "why_it_matters", "what_to_observe",
+     "suggested_evidence", "follow_up_questions", "expected_result", "required",
+     "requires_record", "depends_on_task_ids", "condition_task_id", "condition_record_kind",
+     "origin", "template_key", "inclusion_reason"}
+)
+
 #: The complete set of workspace (table, action) pairs and the columns each may write.
 WORKSPACE_WRITE_COLUMNS = {
     ("clients", "create_client_profile"): frozenset({"id"}) | CLIENT_PROFILE_COLUMNS,
@@ -205,6 +218,38 @@ WORKSPACE_WRITE_COLUMNS = {
         frozenset({"id", "artifact_id", "artifact_version_id", "release_package_id", "client_id",
                    "engagement_id", "released_by_consultant_id", "content_hash", "package_hash",
                    "lead_approval_id", "final_approval_id"}),
+    # Phase 217 — engagement roadmap, engagement phases, guided work plans. Framing columns are
+    # written at creation only; each later action writes only lifecycle or progress columns. Task
+    # records are create-only: a correction is a new record that supersedes.
+    ("roadmap_items", "create_roadmap_item"):
+        frozenset({"id", "client_id", "engagement_id", "status", "supersedes_item_id",
+                   "created_by_consultant_id"}) | ROADMAP_ITEM_FRAMING_COLUMNS,
+    ("roadmap_items", "decide_roadmap_item"):
+        frozenset({"status", "status_note", "decided_by_consultant_id", "decided_at"}),
+    ("roadmap_items", "mark_roadmap_item_superseded"): frozenset({"status"}),
+    ("engagement_phases", "create_engagement_phase"):
+        frozenset({"id", "client_id", "engagement_id", "origin", "roadmap_item_id", "origin_note",
+                   "title", "scope_summary", "status", "created_by_consultant_id"}),
+    ("engagement_phases", "record_phase_authorization"):
+        frozenset({"status", "authorization_basis", "authorization_reference",
+                   "authorized_by_consultant_id", "authorized_at"}),
+    ("engagement_phases", "complete_engagement_phase"):
+        frozenset({"status", "completed_by_consultant_id", "completed_at"}),
+    ("phase_tasks", "create_phase_task"):
+        frozenset({"id", "client_id", "engagement_id", "phase_id", "status",
+                   "added_after_authorization", "created_by_consultant_id"})
+        | PHASE_TASK_FRAMING_COLUMNS,
+    ("phase_tasks", "update_phase_task_progress"): frozenset({"status", "consultant_notes"}),
+    ("phase_tasks", "accept_suggested_phase_task"): frozenset({"status"}),
+    ("phase_tasks", "complete_phase_task"):
+        frozenset({"status", "result_summary", "completed_by_consultant_id", "completed_at"}),
+    ("phase_tasks", "resolve_phase_task_not_applicable"):
+        frozenset({"status", "not_applicable_reason", "completed_by_consultant_id",
+                   "completed_at"}),
+    ("phase_task_records", "create_phase_task_record"):
+        frozenset({"id", "client_id", "engagement_id", "phase_id", "task_id", "record_kind",
+                   "record_text", "structured", "basis", "supersedes_record_id",
+                   "recorded_by_consultant_id"}),
 }
 
 #: Columns the workspace path may never write: governance, classification, review/audit, and
@@ -275,6 +320,18 @@ ARTIFACT_APPROVAL_TABLES = frozenset(
 assert all(action.startswith("create_")
            for table, action in WORKSPACE_WRITE_COLUMNS
            if table in ARTIFACT_RECORD_TABLES | ARTIFACT_APPROVAL_TABLES)
+
+#: Phase 217: roadmap, phase, task and task-record rows are engagement work records, created with
+#: the same server-set stamp under a stamped engagement. Task records are create-only, and no
+#: action after creation writes a framing column.
+ENGAGEMENT_PHASE_RECORD_TABLES = frozenset(
+    {"roadmap_items", "engagement_phases", "phase_tasks", "phase_task_records"}
+)
+assert all(action.startswith("create_")
+           for table, action in WORKSPACE_WRITE_COLUMNS if table == "phase_task_records")
+assert not any(cols & (ROADMAP_ITEM_FRAMING_COLUMNS | PHASE_TASK_FRAMING_COLUMNS)
+               for (table, action), cols in WORKSPACE_WRITE_COLUMNS.items()
+               if table in ENGAGEMENT_PHASE_RECORD_TABLES and not action.startswith("create_"))
 
 # Any action whose name contains one of these substrings is prohibited outright, regardless
 # of the allowlist — publication, client-facing approval, financial verification, deletes,
