@@ -151,29 +151,48 @@ FORBIDDEN_GRANTS = (
 #: Global privileges that carry no authority and may appear at ``*.*`` without failing the gate.
 HARMLESS_GLOBAL = {"USAGE"}
 
+#: The only table-level exception to FORBIDDEN_GRANTS: UPDATE on exactly these mutable tables
+#: (approved in Phases 203 and 205), in the schema that holds the required grants. UPDATE at
+#: schema or global scope, or on any other table, still fails.
+APPROVED_TABLE_UPDATE = frozenset({
+    "clients", "engagements", "discovery_questions", "discovery_sessions",
+    "discovery_answers", "discovery_observations",
+})
+
 _GRANT_RE = re.compile(r"^GRANT\s+(.*?)\s+ON\s+(\S+)\s+TO\s", re.IGNORECASE | re.DOTALL)
+
+
+def _split_scope(scope):
+    """``db.*`` / ``*.*`` / ``db.table`` (backtick- or ANSI-quoted) -> ``(db, object)``."""
+    db, _, obj = scope.replace("`", "").replace('"', "").strip().partition(".")
+    return db, obj
 
 
 def parse_grants(lines):
     """Parse ``SHOW GRANTS`` output into a sanitized structure. Returns booleans and priv names.
 
-    Only privilege *names* and the global/schema scope distinction leave this function. The user,
-    host, and database names in each grant line are discarded and never returned or logged.
+    Only privilege *names* and the global/schema/table scope distinction leave this function. The
+    user, host, database, and table names in each grant line are discarded and never returned or
+    logged.
     """
     schema_privs, global_privs = set(), set()
+    table_grants = []                     # (db, table, privilege names) — internal only
+    required_schemas = set()              # schemas holding SELECT + INSERT — internal only
     all_privileges = global_all = grant_option = False
-    parsed = 0
+    role_grants = parsed = 0
 
     for line in lines:
         text = str(line)
         if text.upper().startswith("GRANT ") and " ON " not in text.upper():
-            continue                      # role-style grant: GRANT `role` TO `user`
+            role_grants += 1              # role-style grant: GRANT `role` TO `user`
+            continue
         match = _GRANT_RE.match(text)
         if not match:
             continue
         parsed += 1
-        priv_text, scope = match.group(1).upper(), match.group(2)
-        is_global = scope.replace("`", "").strip().startswith("*.*")
+        priv_text = match.group(1).upper()
+        db, obj = _split_scope(match.group(2))
+        is_global = db == "*"
         names = {re.sub(r"\s*\(.*\)$", "", p.strip()).strip()
                  for p in re.split(r",\s*(?![^(]*\))", priv_text)}
         if "ALL PRIVILEGES" in names or "ALL" in names:
@@ -181,18 +200,35 @@ def parse_grants(lines):
             global_all = global_all or is_global
         if "GRANT OPTION" in names or "WITH GRANT OPTION" in text.upper():
             grant_option = True
-        (global_privs if is_global else schema_privs).update(names)
+        if is_global:
+            global_privs.update(names)
+        elif obj == "*":
+            schema_privs.update(names)
+            if set(REQUIRED_GRANTS) <= names:
+                required_schemas.add(db)
+        else:
+            table_grants.append((db, obj, names))
+
+    table_forbidden = set()
+    for db, table, names in table_grants:
+        for priv in names & set(FORBIDDEN_GRANTS):
+            approved = (priv == "UPDATE" and table.lower() in APPROVED_TABLE_UPDATE
+                        and db in required_schemas)
+            if not approved:
+                table_forbidden.add(priv)
 
     effective = schema_privs | global_privs
     held = lambda priv: priv in effective or all_privileges   # noqa: E731
     return {
         "parsed": parsed,
         "missing_required": [p for p in REQUIRED_GRANTS if not held(p)],
-        "excess": [p for p in FORBIDDEN_GRANTS if held(p)],
+        "excess": [p for p in FORBIDDEN_GRANTS if held(p) or p in table_forbidden],
         "all_privileges": all_privileges,
         "global_all": global_all,
         "grant_option": grant_option,
         "global_beyond_usage": sorted(global_privs - HARMLESS_GLOBAL - {"GRANT OPTION"}),
+        "schema_beyond_policy": bool(schema_privs - set(REQUIRED_GRANTS)),
+        "role_grants": role_grants,
     }
 
 
@@ -380,7 +416,9 @@ def run_gate(self_test: bool = False) -> "tuple[GateResult, int]":
     parsed = parse_grants(rows)
     result.grants_checked = parsed["parsed"] > 0
     result.required_grants_present = not parsed["missing_required"]
-    result.excess_grants_present = bool(parsed["excess"]) or parsed["all_privileges"]
+    result.excess_grants_present = (bool(parsed["excess"]) or parsed["all_privileges"]
+                                    or parsed["schema_beyond_policy"]
+                                    or parsed["role_grants"] > 0)
     result.global_privileges_present = bool(parsed["global_beyond_usage"]) or parsed["global_all"]
     result.grant_option_present = parsed["grant_option"]
 
@@ -389,6 +427,10 @@ def run_gate(self_test: bool = False) -> "tuple[GateResult, int]":
         result.notes.append("missing_required=" + ",".join(parsed["missing_required"]))
     if parsed["excess"]:
         result.notes.append("excess=" + ",".join(parsed["excess"]))
+    if parsed["schema_beyond_policy"]:
+        result.notes.append("schema_privileges_beyond_select_insert")
+    if parsed["role_grants"]:
+        result.notes.append("role_grants_present")
 
     ready = (result.connectivity_succeeded and result.grants_checked
              and result.required_grants_present and not result.excess_grants_present

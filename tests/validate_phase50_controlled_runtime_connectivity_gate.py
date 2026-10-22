@@ -23,6 +23,8 @@ Six layers:
 
 * **Policy** — required grants (SELECT, INSERT) and the forbidden set (UPDATE/DELETE/DDL/global/
   GRANT OPTION) are explicit, and the parser is exercised over every posture without a database.
+  The one exception is table-level UPDATE on the six approved mutable tables; UPDATE at schema or
+  global scope, or on any other table, still fails.
 
 * **Behaviour** — the gate refuses without a runtime URL, self-test refuses when one *is* set, and
   self-test can never report readiness.
@@ -358,10 +360,18 @@ def statement_surface_checks() -> None:
     app_tables = list(getattr(p11, "EXPECTED_TABLES", []))
     check(f"{len(app_tables)} application tables are known to this check, including every "
           "table that existed at 014", not schema_history.missing_tables(app_tables))
-    leaked = sorted(t for t in app_tables if t in code)
-    check("no application table name appears anywhere in the gate's code", not leaked)
+    # The one exemption is the APPROVED_TABLE_UPDATE policy literal, which only names tables to
+    # *compare* against SHOW GRANTS output; it never reaches a statement (checked below).
+    policy_literal = re.compile(r"APPROVED_TABLE_UPDATE = frozenset\(\{.*?\}\)", re.DOTALL)
+    check("the approved table-UPDATE policy literal is present exactly once",
+          len(policy_literal.findall(code)) == 1)
+    leaked = sorted(t for t in app_tables if t in policy_literal.sub("", code))
+    check("no application table name appears in the gate's code outside the policy literal",
+          not leaked)
     if leaked:
         print(f"        leaked: {leaked}")
+    check("no application table name appears in any statement the gate can issue",
+          not any(t in s for t in app_tables for s in gate.ALLOWED_STATEMENTS.values()))
     check("gate never selects from a table (no FROM clause in any statement)",
           not any(" FROM " in s.upper() for s in gate.ALLOWED_STATEMENTS.values()))
     check("gate issues no COUNT(",
@@ -392,7 +402,8 @@ def policy_checks() -> None:
         p = gate.parse_grants(lines)
         return (not p["missing_required"] and not p["excess"] and not p["all_privileges"]
                 and not p["global_all"] and not p["grant_option"]
-                and not p["global_beyond_usage"])
+                and not p["global_beyond_usage"] and not p["schema_beyond_policy"]
+                and not p["role_grants"])
 
     check("exact SELECT+INSERT on a schema passes",
           verdict(["GRANT SELECT, INSERT ON `s`.* TO `u`@`%`"]))
@@ -414,10 +425,69 @@ def policy_checks() -> None:
     check("missing INSERT fails", not verdict(["GRANT SELECT ON `s`.* TO `u`@`%`"]))
     check("missing SELECT fails", not verdict(["GRANT INSERT ON `s`.* TO `u`@`%`"]))
 
-    parsed = gate.parse_grants(["GRANT SELECT, INSERT ON `secret_schema`.* TO `secret_user`@`h`"])
+    # Table-level UPDATE on exactly six mutable tables (approved in Phases 203 and 205).
+    approved = ("clients", "engagements", "discovery_questions", "discovery_sessions",
+                "discovery_answers", "discovery_observations")
+    check("approved table-level UPDATE set is exactly the six mutable tables",
+          gate.APPROVED_TABLE_UPDATE == frozenset(approved))
+    check("UPDATE stays in the forbidden set (exception is table-scoped only)",
+          "UPDATE" in gate.FORBIDDEN_GRANTS)
+    # Production's recorded SHOW GRANTS (PHASE205_DISCOVERY_PRODUCTION_CUTOVER.md), ANSI-quoted.
+    runtime = ['GRANT USAGE ON *.* TO "peak_prod_runtime"@"%"',
+               'GRANT SELECT, INSERT ON "defaultdb".* TO "peak_prod_runtime"@"%"']
+    runtime += [f'GRANT UPDATE ON "defaultdb"."{t}" TO "peak_prod_runtime"@"%"'
+                for t in sorted(approved)]
+    check("recorded production runtime grants pass (USAGE, SELECT+INSERT, six table UPDATEs)",
+          verdict(runtime))
+    check("backtick-quoted equivalent passes",
+          verdict([line.replace('"', "`") for line in runtime]))
+    check("UPDATE on a subset of the six passes",
+          verdict(runtime[:2] + runtime[2:4]))
+    check("UPDATE on defaultdb.* fails",
+          not verdict(runtime + ['GRANT UPDATE ON "defaultdb".* TO "u"@"%"']))
+    check("UPDATE on *.* fails",
+          not verdict(runtime + ['GRANT UPDATE ON *.* TO "u"@"%"']))
+    check("UPDATE on a seventh, unapproved table fails",
+          not verdict(runtime + ['GRANT UPDATE ON "defaultdb"."users" TO "u"@"%"']))
+    check("UPDATE on an approved table name in another schema fails",
+          not verdict(runtime + ['GRANT UPDATE ON "other"."clients" TO "u"@"%"']))
+    check("DELETE on an approved table fails",
+          not verdict(runtime + ['GRANT DELETE ON "defaultdb"."clients" TO "u"@"%"']))
+    check("UPDATE, DELETE on an approved table fails",
+          not verdict(runtime[:2] + ['GRANT UPDATE, DELETE ON "defaultdb"."clients" TO "u"@"%"']))
+    check("DELETE on defaultdb.* fails",
+          not verdict(runtime + ['GRANT DELETE ON "defaultdb".* TO "u"@"%"']))
+    check("DELETE on *.* fails",
+          not verdict(runtime + ['GRANT DELETE ON *.* TO "u"@"%"']))
+    for ddl in ("CREATE", "ALTER", "DROP", "INDEX", "REFERENCES", "TRIGGER"):
+        check(f"{ddl} on an approved table fails",
+              not verdict(runtime + [f'GRANT {ddl} ON "defaultdb"."clients" TO "u"@"%"']))
+        check(f"{ddl} on defaultdb.* fails",
+              not verdict(runtime + [f'GRANT {ddl} ON "defaultdb".* TO "u"@"%"']))
+    check("CREATE USER (global) fails",
+          not verdict(runtime + ['GRANT CREATE USER ON *.* TO "u"@"%"']))
+    check("SUPER (global) fails", not verdict(runtime + ['GRANT SUPER ON *.* TO "u"@"%"']))
+    check("dynamic admin privilege (global) fails",
+          not verdict(runtime + ['GRANT ROLE_ADMIN, SYSTEM_VARIABLES_ADMIN ON *.* TO "u"@"%"']))
+    check("SELECT on *.* fails", not verdict(runtime + ['GRANT SELECT ON *.* TO "u"@"%"']))
+    check("INSERT on *.* fails", not verdict(runtime + ['GRANT INSERT ON *.* TO "u"@"%"']))
+    check("ALL PRIVILEGES on an approved table fails",
+          not verdict(runtime + ['GRANT ALL PRIVILEGES ON "defaultdb"."clients" TO "u"@"%"']))
+    check("WITH GRANT OPTION on an approved table UPDATE fails",
+          not verdict(runtime[:2] + ['GRANT UPDATE ON "defaultdb"."clients" TO "u"@"%" '
+                                     "WITH GRANT OPTION"]))
+    check("an unexpected schema privilege outside the forbidden list fails",
+          not verdict(runtime + ['GRANT SHOW_ROUTINE ON "defaultdb".* TO "u"@"%"']))
+    check("a granted role fails", not verdict(runtime + ['GRANT "some_role"@"%" TO "u"@"%"']))
+    check("table UPDATE alone does not satisfy the required schema grants",
+          not verdict(runtime[:1] + runtime[2:]))
+
+    parsed = gate.parse_grants(["GRANT SELECT, INSERT ON `secret_schema`.* TO `secret_user`@`h`",
+                                "GRANT UPDATE ON `secret_schema`.`secret_table` TO `secret_user`@`h`"])
     flat = repr(parsed)
-    check("parser returns no user, host, or database name",
-          "secret_schema" not in flat and "secret_user" not in flat)
+    check("parser returns no user, host, database, or table name",
+          "secret_schema" not in flat and "secret_user" not in flat
+          and "secret_table" not in flat)
 
 
 # --------------------------------------------------------------------------- 5. behaviour

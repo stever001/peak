@@ -596,8 +596,11 @@ verification.
 **Follow-ups outside Phase 216:**
 1. Review whether `peak_prod_migrate` can be reduced below the platform default while keeping the
    capability migrations need.
-2. Update the Phase 50 runtime grant gate. Its `FORBIDDEN_GRANTS` lists UPDATE, which predates the
-   six table-level UPDATE grants approved in Phases 203 and 205.
+
+**Resolved after closure:** the Phase 50 runtime grant gate now distinguishes global, schema and
+table scope. It accepts table-level UPDATE only on the six tables approved in Phases 203 and 205,
+and still rejects UPDATE at schema or global scope or on any other table. No production grant
+changed.
 
 ## Phase Learnings
 

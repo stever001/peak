@@ -45,22 +45,32 @@ fails closed.
 **It cannot mutate or read data.** Both statements are hard-coded and checked for identity — not
 resemblance — immediately before execution, then re-checked for a `SELECT`/`SHOW` opener, the
 absence of a statement separator, and the absence of any mutating verb. Neither statement contains a
-`FROM` clause or a `COUNT(`, and no application table name appears anywhere in the tool.
+`FROM` clause or a `COUNT(`, and no application table name appears in either statement. The only
+table names in the tool are the `APPROVED_TABLE_UPDATE` policy literal (§3), used solely to compare
+against `SHOW GRANTS` output.
 
 **It cannot leak a deployment detail.** Failures are reported by exception *type* only, because
 driver messages routinely embed the connection string. The grant parser discards the user, host, and
-database names in every grant line; only privilege names — vocabulary defined in the tool itself —
-and the global/schema scope distinction survive.
+database and table names in every grant line; only privilege names — vocabulary defined in the tool
+itself — and the global/schema/table scope distinction survive.
 
 ## 3. Grant policy
 
-**Required:** `SELECT`, `INSERT` — all the create-only controlled writers need.
+The gate distinguishes three scopes:
 
-**Forbidden:** `UPDATE`, `DELETE`, `CREATE`, `ALTER`, `DROP`, `INDEX`, `REFERENCES`,
-`CREATE TEMPORARY TABLES`, `LOCK TABLES`, `EXECUTE`, `CREATE VIEW`, `SHOW VIEW`, `CREATE ROUTINE`,
-`ALTER ROUTINE`, `EVENT`, `TRIGGER`, `PROCESS`, `RELOAD`, `FILE`, `SHUTDOWN`, `SUPER`,
-`CREATE USER`, `ROLE_ADMIN`, `CREATE TABLESPACE`, replication privileges, `ALL PRIVILEGES`,
-`WITH GRANT OPTION`, and any global `*.*` privilege other than harmless `USAGE`.
+- **Global `*.*`:** `USAGE` only.
+- **Schema `defaultdb.*`:** `SELECT`, `INSERT` required — all the create-only controlled writers
+  need — and nothing else. `UPDATE` is not allowed at schema scope.
+- **Table:** `UPDATE` only on `clients`, `engagements`, `discovery_questions`,
+  `discovery_sessions`, `discovery_answers` and `discovery_observations` (`APPROVED_TABLE_UPDATE`,
+  approved in Phases 203 and 205), in the schema that holds `SELECT`, `INSERT`.
+
+**Forbidden:** `UPDATE` at schema or global scope or on any other table or schema; and anywhere:
+`DELETE`, `CREATE`, `ALTER`, `DROP`, `INDEX`, `REFERENCES`, `CREATE TEMPORARY TABLES`,
+`LOCK TABLES`, `EXECUTE`, `CREATE VIEW`, `SHOW VIEW`, `CREATE ROUTINE`, `ALTER ROUTINE`, `EVENT`,
+`TRIGGER`, `PROCESS`, `RELOAD`, `FILE`, `SHUTDOWN`, `SUPER`, `CREATE USER`, `ROLE_ADMIN`,
+`CREATE TABLESPACE`, replication privileges, `ALL PRIVILEGES`, `WITH GRANT OPTION`, any granted
+role, any other schema privilege, and any global `*.*` privilege other than harmless `USAGE`.
 
 The gate passes only on an **exact** match: zero missing required grants and zero excess. A
 credential that is too broad *or* too narrow fails.
