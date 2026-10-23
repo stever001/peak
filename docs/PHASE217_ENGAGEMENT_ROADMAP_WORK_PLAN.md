@@ -73,9 +73,10 @@ column; it is future artifact binding.
 `POST /phases/{id}/completion` · `PATCH /tasks/{id}` · `POST /tasks/{id}/acceptance` ·
 `POST /tasks/{id}/completion` · `POST /tasks/{id}/not-applicable` · `POST /tasks/{id}/records`.
 
-## Production cutover (prepared; NOT performed)
+## Production cutover
 
-**Status: pending.** Production is at `021`. Nothing below has been run against production.
+**Status: complete (2026-10-23). Phase 217 is CLOSED.** The sequence below was carried out as
+written. The [record](#production-cutover-record-2026-10-23) follows it.
 
 ### Runtime grant policy (Phase 50 gate, prepared in the repository)
 
@@ -160,6 +161,88 @@ admin, role and `GRANT OPTION` fail. Today's six-table production grants are a s
 
 **Rollback before step 7:** `alembic downgrade 021_discovery_observation_trace_basis` drops the four
 empty tables. This needs separate approval, and the API must not have been deployed.
+
+### Production cutover record (2026-10-23)
+
+**Commits.** Implementation `3994ed8`; cutover preparation `6d558ab` (nine-table Phase 50 policy,
+Phase 217 harness made order-independent); verifier pin `ba07f1e` `[skip render]`.
+
+**Preflight (read-only).** As `peak_prod_verify_ro` unless noted:
+- head `021_discovery_observation_trace_basis`;
+- 31 base tables, none of the four Phase 217 tables;
+- verifier `verified_safe_no_remediation_required`: 345/345 governed columns, 11/11 idempotency
+  boundaries;
+- `COUNT(*)` + `CHECKSUM TABLE` baseline over the 30 existing application tables (133 rows),
+  identical on two passes;
+- as `peak_prod_runtime`: runtime grants were the original six table UPDATEs, and the Phase 50 gate
+  passed under the nine-table policy.
+
+**Migration.** As `peak_prod_migrate`, with the target guard (`PEAK_ALEMBIC_TARGET=production`,
+`PEAK_PRODUCTION_MIGRATION_CONFIRM=1`, `PEAK_PRODUCTION_SCHEMA_CONFIRM=defaultdb`):
+`alembic upgrade 022_engagement_roadmap_work_plan` ran `021 → 022` only, exit 0.
+
+**Schema check afterwards (read-only):**
+
+| Property | After |
+|---|---|
+| Alembic head | `022_engagement_roadmap_work_plan`, single row |
+| Base tables | 35 (34 application + `alembic_version`) |
+| New tables | `roadmap_items`, `engagement_phases`, `phase_tasks`, `phase_task_records`; InnoDB, primary key each, all empty |
+| Constraints | 11 CHECK and 4 UNIQUE, names as designed; no foreign keys (none declared) |
+| Indexes | 31 `ix_*` |
+| Collation | 49/49 new governed columns `utf8mb4_bin`; 345/345 existing governed columns unchanged |
+| Existing tables | no `CREATE_TIME` at or after the new tables (no rebuild); counts and checksums equal the baseline |
+
+**Grants.** As `peak_prod_migrate`, exactly the three statements in step 7. As `peak_prod_runtime`,
+`SHOW GRANTS` afterwards was:
+- USAGE on `*.*`;
+- `SELECT, INSERT` on `defaultdb.*`;
+- table-level UPDATE on exactly the nine approved tables.
+
+There was no UPDATE on `phase_task_records`, no schema or global UPDATE, no DELETE, DDL or admin
+privilege, no `GRANT OPTION` and no role. The live Phase 50 gate passed.
+
+**Verifier.** `EXPECTED_ALEMBIC_HEAD` was moved to 022 only after the migration (`ba07f1e`). The live
+run returned `verified_safe_no_remediation_required`:
+- head matches;
+- 35 tables;
+- 394/394 governed columns deterministic;
+- 11/11 idempotency boundaries safe;
+- no warnings.
+
+**Render deploy.**
+- `peak-consultant-api`: manual deploy `dep-dbdu468n74is73etg0b0` of `ba07f1e`, status **Live**.
+- Auto-Deploy stayed Off, and no environment variable changed.
+- Since `3994ed8`, the deployed tree differs only by the gate, tests, docs and verifier pin; there
+  is no application code change.
+
+**Post-deploy checks** (non-destructive):
+- **Health:** `/healthz` returned 200.
+- **Logged-out protection:** 401 on `/auth/me`, `/engagements`, `/clients`, `/questions`,
+  `/consultants`, an engagement, its Final Report, and `POST /clients`.
+- **Route registration:** all 17 Phase 217 routes returned 404 before the deploy and **401** after
+  it, logged out. No 404 or 500.
+- **Authenticated, read-only** (existing Admin, run by the operator):
+  - login returned 200;
+  - `/auth/me` returned 200 with role `admin`;
+  - `/engagements` returned 200 with 1 engagement;
+  - that engagement's `/roadmap` returned 200 (0 items, 0 suggestions);
+  - its `/phases` returned 200 (0 phases);
+  - logout returned 204, and `/auth/me` afterwards returned 401.
+- **Runtime identity:** the process-list probe (read-only, as `peak_prod_migrate`; user names and
+  counts only) showed one API connection, `peak_prod_runtime` on `defaultdb`, besides the server's
+  `event_scheduler`. No `peak_prod_verify_ro` or other application user was observed.
+
+**Final state.**
+- Head `022`.
+- Phase 50 gate PASS; verifier 394/394 and 11/11.
+- The 30 existing tables' counts and checksums still equal the pre-022 baseline (133 rows).
+- `roadmap_items`, `engagement_phases`, `phase_tasks` and `phase_task_records` each have 0 rows. No
+  Phase 217 production record was created.
+
+**No Vercel deploy:** Phase 217 has no UI. No production data was written at any step.
+
+**Phase 217 is CLOSED.**
 
 ## Validation
 
