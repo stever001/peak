@@ -465,9 +465,16 @@ def app_checks(tmp, show_example=False):
                          "structured": {"reference": "PO 1001 / PS 88", "expected": "10 cases",
                                         "observed": "7 cases"}}).json()["phase"]
     t2_recs = next(t for t in fix["tasks"] if t["id"] == t2)["records"]
+    # By id, not list position: both records can share a created_at second, and ties sort by id.
+    by_id = {r["id"]: r for r in t2_recs}
+    rec2 = next((i for i in by_id if i != rec1), None)
+    original, correction = by_id.get(rec1), by_id.get(rec2)
     check("a correction supersedes; the original record is kept",
-          len(t2_recs) == 2 and t2_recs[0]["superseded_by"] == t2_recs[1]["id"]
-          and t2_recs[0]["record_text"] == "Short shipped by 2 cases.")
+          len(t2_recs) == 2 and original is not None and correction is not None
+          and original["record_text"] == "Short shipped by 2 cases."
+          and correction["record_text"] == "Short shipped by 3 cases."
+          and correction["supersedes_record_id"] == rec1
+          and original["superseded_by"] == rec2)
     check("a record is corrected at most once",
           code(lee.post(f"/tasks/{t2}/records",
                         json={"record_kind": "mismatch", "record_text": "again",

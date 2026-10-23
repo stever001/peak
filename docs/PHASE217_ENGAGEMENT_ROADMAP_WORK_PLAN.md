@@ -73,13 +73,93 @@ column; it is future artifact binding.
 `POST /phases/{id}/completion` · `PATCH /tasks/{id}` · `POST /tasks/{id}/acceptance` ·
 `POST /tasks/{id}/completion` · `POST /tasks/{id}/not-applicable` · `POST /tasks/{id}/records`.
 
-## Production implications (not performed)
+## Production cutover (prepared; NOT performed)
 
-- Apply `022` before an API deploy that reads the new tables (the existing routes do not read them).
-- Grant the runtime role SELECT, INSERT on the four tables, and UPDATE on `roadmap_items`,
-  `engagement_phases`, `phase_tasks` (none on `phase_task_records`). The Phase 50 gate's
-  `APPROVED_TABLE_UPDATE` must be extended by the same approved step; it is unchanged here.
-- Re-pin the production collation verifier at `022`.
+**Status: pending.** Production is at `021`. Nothing below has been run against production.
+
+### Runtime grant policy (Phase 50 gate, prepared in the repository)
+
+`APPROVED_TABLE_UPDATE` in `tools/production_runtime_connectivity_gate.py` now holds exactly nine
+tables: the six from Phases 203/205 (`clients`, `engagements`, `discovery_questions`,
+`discovery_sessions`, `discovery_answers`, `discovery_observations`) plus `roadmap_items`,
+`engagement_phases` and `phase_tasks`. **`phase_task_records` is not approved:** it is insert-only,
+so table-level UPDATE on it fails the gate. The rest of the policy is unchanged: global `USAGE`
+only; `defaultdb.*` exactly `SELECT, INSERT`; no UPDATE at schema or global scope; DELETE, DDL,
+admin, role and `GRANT OPTION` fail. Today's six-table production grants are a subset and still pass.
+
+### Why the order matters
+
+- The Phase 217 API runs on a `021` schema, but only partly: existing routes are unaffected (no
+  existing model changed), and the 17 Phase 217 routes fail with a generic 500 (`no such table`),
+  writing nothing. There is no startup schema-head check. So `022` must be applied first.
+- After `022` and before the UPDATE grants, phase work would create rows but fail on any status
+  change (authorization, task progress). The grants must be in place before the deploy.
+
+### Expected numbers at `022`
+
+- 35 base tables (31 + 4), no existing table altered, every new table empty.
+- Verifier: 394/394 governed columns deterministic (345 + 49 new, all pinned `utf8mb4_bin` by the
+  migration), 11/11 idempotency boundaries (unchanged; the new tables carry no `idempotency_key`).
+- Constraints:
+  - CHECK: `ck_roadmap_items_{status,origin,sequence}`, `ck_engagement_phases_{status,origin}`,
+    `ck_phase_tasks_{status,origin,condition_kind,sequence}`, `ck_phase_task_records_{kind,basis}`;
+  - UNIQUE: `uq_roadmap_items_supersedes`, `uq_engagement_phases_roadmap_item`,
+    `uq_phase_tasks_sequence`, `uq_phase_task_records_supersedes`;
+  - 31 secondary `ix_*` indexes.
+
+### Sequence (each step separately approved)
+
+1. **Repository.** The commit containing this section and the nine-table gate is on `origin/main`.
+2. **Preflight, read-only, as `peak_prod_verify_ro`:**
+   - `alembic_version` is a single row `021_discovery_observation_trace_basis`;
+   - 31 base tables, none of the four new ones;
+   - `make production-mysql-collation-verify` (pin still `021`) returns
+     `verified_safe_no_remediation_required`, 345/345, 11/11;
+   - record `COUNT(*)` and `CHECKSUM TABLE` for each of the 30 existing application tables
+     (SELECT only; the Phase 216 count-and-fingerprint method).
+3. **Preflight gate, as `peak_prod_runtime`:** `make runtime-connectivity-gate` passes against the
+   current six-table grants under the nine-table policy.
+4. **Migrate**, as `peak_prod_migrate`, in a subshell: `PEAK_ALEMBIC_TARGET=production`,
+   `PEAK_PRODUCTION_MIGRATION_CONFIRM=1`, `PEAK_PRODUCTION_SCHEMA_CONFIRM=defaultdb`,
+   `alembic upgrade 022_engagement_roadmap_work_plan`. Applies `021 → 022` only.
+5. **Verify the schema, read-only:**
+   - head `022_engagement_roadmap_work_plan`;
+   - 35 base tables;
+   - the four tables exist, are empty, and carry the constraints and indexes listed above (from
+     `information_schema`).
+6. **SELECT/INSERT coverage.** As `peak_prod_runtime`, `SHOW GRANTS FOR CURRENT_USER()` still shows
+   `SELECT, INSERT ON defaultdb.*` with no table-level revoke. That schema-scoped grant covers all
+   four new tables. A `SELECT COUNT(*)` on each returns 0. INSERT is proven by scope, not by writing.
+7. **Grant.** As `peak_prod_migrate` (as in Phase 205):
+   ```sql
+   GRANT UPDATE ON `defaultdb`.`roadmap_items`      TO `peak_prod_runtime`@`%`;
+   GRANT UPDATE ON `defaultdb`.`engagement_phases`  TO `peak_prod_runtime`@`%`;
+   GRANT UPDATE ON `defaultdb`.`phase_tasks`        TO `peak_prod_runtime`@`%`;
+   ```
+   **No grant on `phase_task_records`.** No DELETE, DDL or schema-wide change.
+8. **Confirm no UPDATE on `phase_task_records`.** As `peak_prod_runtime`, `SHOW GRANTS` is exactly:
+   - USAGE on `*.*`;
+   - `SELECT, INSERT` on `defaultdb.*`;
+   - nine table-level UPDATE lines;
+   - no line naming `phase_task_records`.
+9. **Gate.** `make runtime-connectivity-gate` against the live grants passes. The gate itself fails
+   on UPDATE on `phase_task_records`, or on any tenth table.
+10. **Verifier re-pin.**
+    - Move `EXPECTED_ALEMBIC_HEAD` to `022_engagement_roadmap_work_plan` only now (Phase 58 rule),
+      in a separate commit.
+    - Run `make production-mysql-collation-verify`. Expect `verified_safe_no_remediation_required`,
+      394/394, 11/11, 35 tables.
+11. **No unexpected change.** Repeat the step 2 `COUNT(*)` and `CHECKSUM TABLE` for the 30 existing
+    tables. They must equal the preflight values.
+12. **Only then is the API eligible for deployment:**
+    - manual Render deploy, Auto-Deploy confirmed off first;
+    - health, login and logged-out checks;
+    - Phase 217 routes return 401 when logged out, not 404.
+
+    No Vercel deploy: Phase 217 has no UI.
+
+**Rollback before step 7:** `alembic downgrade 021_discovery_observation_trace_basis` drops the four
+empty tables. This needs separate approval, and the API must not have been deployed.
 
 ## Validation
 

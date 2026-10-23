@@ -62,8 +62,10 @@ The gate distinguishes three scopes:
 - **Schema `defaultdb.*`:** `SELECT`, `INSERT` required — all the create-only controlled writers
   need — and nothing else. `UPDATE` is not allowed at schema scope.
 - **Table:** `UPDATE` only on `clients`, `engagements`, `discovery_questions`,
-  `discovery_sessions`, `discovery_answers` and `discovery_observations` (`APPROVED_TABLE_UPDATE`,
-  approved in Phases 203 and 205), in the schema that holds `SELECT`, `INSERT`.
+  `discovery_sessions`, `discovery_answers`, `discovery_observations` (approved in Phases 203 and
+  205), `roadmap_items`, `engagement_phases` and `phase_tasks` (approved in Phase 217) — nine
+  tables, `APPROVED_TABLE_UPDATE` — in the schema that holds `SELECT`, `INSERT`. The insert-only
+  `phase_task_records` (Phase 217) is deliberately not approved.
 
 **Forbidden:** `UPDATE` at schema or global scope or on any other table or schema; and anywhere:
 `DELETE`, `CREATE`, `ALTER`, `DROP`, `INDEX`, `REFERENCES`, `CREATE TEMPORARY TABLES`,

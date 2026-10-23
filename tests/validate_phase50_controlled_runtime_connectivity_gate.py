@@ -425,29 +425,49 @@ def policy_checks() -> None:
     check("missing INSERT fails", not verdict(["GRANT SELECT ON `s`.* TO `u`@`%`"]))
     check("missing SELECT fails", not verdict(["GRANT INSERT ON `s`.* TO `u`@`%`"]))
 
-    # Table-level UPDATE on exactly six mutable tables (approved in Phases 203 and 205).
-    approved = ("clients", "engagements", "discovery_questions", "discovery_sessions",
-                "discovery_answers", "discovery_observations")
-    check("approved table-level UPDATE set is exactly the six mutable tables",
-          gate.APPROVED_TABLE_UPDATE == frozenset(approved))
+    # Table-level UPDATE on exactly nine mutable tables (approved in Phases 203, 205 and 217).
+    approved_205 = ("clients", "engagements", "discovery_questions", "discovery_sessions",
+                    "discovery_answers", "discovery_observations")
+    approved_217 = ("roadmap_items", "engagement_phases", "phase_tasks")
+    approved = approved_205 + approved_217
+    check("approved table-level UPDATE set is exactly the nine mutable tables",
+          gate.APPROVED_TABLE_UPDATE == frozenset(approved)
+          and len(gate.APPROVED_TABLE_UPDATE) == 9)
+    check("the insert-only Phase 217 task-record table is not approved for UPDATE",
+          "phase_task_records" not in gate.APPROVED_TABLE_UPDATE)
     check("UPDATE stays in the forbidden set (exception is table-scoped only)",
           "UPDATE" in gate.FORBIDDEN_GRANTS)
+    base = ['GRANT USAGE ON *.* TO "peak_prod_runtime"@"%"',
+            'GRANT SELECT, INSERT ON "defaultdb".* TO "peak_prod_runtime"@"%"']
+    table_update = lambda tables: [f'GRANT UPDATE ON "defaultdb"."{t}" TO "peak_prod_runtime"@"%"'
+                                   for t in sorted(tables)]   # noqa: E731
     # Production's recorded SHOW GRANTS (PHASE205_DISCOVERY_PRODUCTION_CUTOVER.md), ANSI-quoted.
-    runtime = ['GRANT USAGE ON *.* TO "peak_prod_runtime"@"%"',
-               'GRANT SELECT, INSERT ON "defaultdb".* TO "peak_prod_runtime"@"%"']
-    runtime += [f'GRANT UPDATE ON "defaultdb"."{t}" TO "peak_prod_runtime"@"%"'
-                for t in sorted(approved)]
+    runtime_205 = base + table_update(approved_205)
     check("recorded production runtime grants pass (USAGE, SELECT+INSERT, six table UPDATEs)",
+          verdict(runtime_205))
+    # The Phase 217 target: the recorded grants plus UPDATE on the three new mutable tables.
+    runtime = base + table_update(approved)
+    check("Phase 217 target grants pass (recorded grants + UPDATE on the three new tables)",
           verdict(runtime))
     check("backtick-quoted equivalent passes",
           verdict([line.replace('"', "`") for line in runtime]))
-    check("UPDATE on a subset of the six passes",
+    check("UPDATE on a subset of the nine passes",
           verdict(runtime[:2] + runtime[2:4]))
+    check("UPDATE on only the three Phase 217 tables passes",
+          verdict(base + table_update(approved_217)))
+    check("UPDATE on phase_task_records fails",
+          not verdict(runtime + ['GRANT UPDATE ON "defaultdb"."phase_task_records" '
+                                 'TO "u"@"%"']))
+    check("UPDATE on phase_task_records alongside the recorded grants fails",
+          not verdict(runtime_205 + ['GRANT UPDATE ON "defaultdb"."phase_task_records" '
+                                     'TO "u"@"%"']))
+    check("DELETE on a Phase 217 table fails",
+          not verdict(runtime + ['GRANT DELETE ON "defaultdb"."phase_tasks" TO "u"@"%"']))
     check("UPDATE on defaultdb.* fails",
           not verdict(runtime + ['GRANT UPDATE ON "defaultdb".* TO "u"@"%"']))
     check("UPDATE on *.* fails",
           not verdict(runtime + ['GRANT UPDATE ON *.* TO "u"@"%"']))
-    check("UPDATE on a seventh, unapproved table fails",
+    check("UPDATE on a tenth, unapproved table fails",
           not verdict(runtime + ['GRANT UPDATE ON "defaultdb"."users" TO "u"@"%"']))
     check("UPDATE on an approved table name in another schema fails",
           not verdict(runtime + ['GRANT UPDATE ON "other"."clients" TO "u"@"%"']))

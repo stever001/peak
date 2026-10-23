@@ -152,11 +152,13 @@ FORBIDDEN_GRANTS = (
 HARMLESS_GLOBAL = {"USAGE"}
 
 #: The only table-level exception to FORBIDDEN_GRANTS: UPDATE on exactly these mutable tables
-#: (approved in Phases 203 and 205), in the schema that holds the required grants. UPDATE at
-#: schema or global scope, or on any other table, still fails.
+#: (approved in Phases 203, 205 and 217), in the schema that holds the required grants. UPDATE at
+#: schema or global scope, or on any other table, still fails. The Phase 217 task-record table is
+#: insert-only and deliberately absent.
 APPROVED_TABLE_UPDATE = frozenset({
     "clients", "engagements", "discovery_questions", "discovery_sessions",
     "discovery_answers", "discovery_observations",
+    "roadmap_items", "engagement_phases", "phase_tasks",
 })
 
 _GRANT_RE = re.compile(r"^GRANT\s+(.*?)\s+ON\s+(\S+)\s+TO\s", re.IGNORECASE | re.DOTALL)
