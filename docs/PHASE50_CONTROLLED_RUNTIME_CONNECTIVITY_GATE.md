@@ -45,9 +45,9 @@ fails closed.
 **It cannot mutate or read data.** Both statements are hard-coded and checked for identity — not
 resemblance — immediately before execution, then re-checked for a `SELECT`/`SHOW` opener, the
 absence of a statement separator, and the absence of any mutating verb. Neither statement contains a
-`FROM` clause or a `COUNT(`, and no application table name appears in either statement. The only
-table names in the tool are the `APPROVED_TABLE_UPDATE` policy literal (§3), used solely to compare
-against `SHOW GRANTS` output.
+`FROM` clause or a `COUNT(`, and no application table name appears in either statement, or
+anywhere in the tool. The approved UPDATE tables are read from the canonical runtime persistence
+policy (§3), used solely to compare against `SHOW GRANTS` output.
 
 **It cannot leak a deployment detail.** Failures are reported by exception *type* only, because
 driver messages routinely embed the connection string. The grant parser discards the user, host, and
@@ -61,11 +61,36 @@ The gate distinguishes three scopes:
 - **Global `*.*`:** `USAGE` only.
 - **Schema `defaultdb.*`:** `SELECT`, `INSERT` required — all the create-only controlled writers
   need — and nothing else. `UPDATE` is not allowed at schema scope.
-- **Table:** `UPDATE` only on `clients`, `engagements`, `discovery_questions`,
-  `discovery_sessions`, `discovery_answers`, `discovery_observations` (approved in Phases 203 and
-  205), `roadmap_items`, `engagement_phases` and `phase_tasks` (approved in Phase 217) — nine
-  tables, `APPROVED_TABLE_UPDATE` — in the schema that holds `SELECT`, `INSERT`. The insert-only
-  `phase_task_records` (Phase 217) is deliberately not approved.
+- **Table:** `UPDATE` only on the tables classified `mutable` in the canonical runtime persistence
+  policy, in the schema that holds `SELECT`, `INSERT`. Today that is nine tables: `clients`,
+  `engagements`, `discovery_questions`, `discovery_sessions`, `discovery_answers`,
+  `discovery_observations` (Phases 203 and 205), and `roadmap_items`, `engagement_phases`,
+  `phase_tasks` (Phase 217). `phase_task_records` is `append_only`, so UPDATE on it fails.
+
+**Where the table rule comes from.** `peak/persistence/runtime_persistence.py` classifies every
+application table once:
+- `mutable`: the application inserts and updates rows;
+- `append_only`: it inserts and never updates (a correction is a new row);
+- `read_only`: no runtime write path exists.
+
+The gate's `APPROVED_TABLE_UPDATE` is derived from that classification (`update_eligible_tables()`),
+and the gate keeps no table list of its own. So a phase that adds a mutable table classifies it
+there, and the gate follows without an edit. At import, the module checks that it agrees with the
+write-path allowlist (`peak/persistence/allowlist.py`):
+- a table is `mutable` exactly when it has a workspace action other than `create_*`;
+- every table a runtime path writes is classified;
+- a `read_only` table has no write path.
+
+An unclassified table, or any other classification, is never UPDATE-eligible. The Phase 50 harness
+also requires every model table to be classified.
+
+**Subset, never excess.** The gate requires `SELECT` and `INSERT` but no particular UPDATE grant.
+Production may hold a subset of the mutable set, as during a cutover that migrates before it grants.
+UPDATE beyond the mutable set always fails.
+
+**Schema-wide `SELECT`, `INSERT`** remains a separate, current grant design. The database therefore
+enforces only the UPDATE boundary. `append_only` and `read_only` differ in application policy, not by
+grant.
 
 **Forbidden:** `UPDATE` at schema or global scope or on any other table or schema; and anywhere:
 `DELETE`, `CREATE`, `ALTER`, `DROP`, `INDEX`, `REFERENCES`, `CREATE TEMPORARY TABLES`,

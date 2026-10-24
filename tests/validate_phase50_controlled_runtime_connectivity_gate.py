@@ -360,14 +360,13 @@ def statement_surface_checks() -> None:
     app_tables = list(getattr(p11, "EXPECTED_TABLES", []))
     check(f"{len(app_tables)} application tables are known to this check, including every "
           "table that existed at 014", not schema_history.missing_tables(app_tables))
-    # The one exemption is the APPROVED_TABLE_UPDATE policy literal, which only names tables to
-    # *compare* against SHOW GRANTS output; it never reaches a statement (checked below).
-    policy_literal = re.compile(r"APPROVED_TABLE_UPDATE = frozenset\(\{.*?\}\)", re.DOTALL)
-    check("the approved table-UPDATE policy literal is present exactly once",
-          len(policy_literal.findall(code)) == 1)
-    leaked = sorted(t for t in app_tables if t in policy_literal.sub("", code))
-    check("no application table name appears in the gate's code outside the policy literal",
-          not leaked)
+    # The approved UPDATE tables come from the canonical runtime persistence policy; the gate keeps
+    # no table literal of its own, and no table name reaches a statement (checked below).
+    check("the gate derives its approved table-UPDATE set from the canonical policy",
+          "APPROVED_TABLE_UPDATE = runtime_persistence.update_eligible_tables()" in code
+          and not re.search(r"APPROVED_TABLE_UPDATE\s*=\s*frozenset", code))
+    leaked = sorted(t for t in app_tables if re.search(rf"\b{t}\b", code))
+    check("no application table name appears anywhere in the gate's code", not leaked)
     if leaked:
         print(f"        leaked: {leaked}")
     check("no application table name appears in any statement the gate can issue",
@@ -425,7 +424,9 @@ def policy_checks() -> None:
     check("missing INSERT fails", not verdict(["GRANT SELECT ON `s`.* TO `u`@`%`"]))
     check("missing SELECT fails", not verdict(["GRANT INSERT ON `s`.* TO `u`@`%`"]))
 
-    # Table-level UPDATE on exactly nine mutable tables (approved in Phases 203, 205 and 217).
+    # Table-level UPDATE on exactly nine mutable tables (approved in Phases 203, 205 and 217),
+    # derived from the canonical policy. Pinned here on purpose: changing the mutable set changes
+    # the production grants, so it should be a reviewed change to this check too.
     approved_205 = ("clients", "engagements", "discovery_questions", "discovery_sessions",
                     "discovery_answers", "discovery_observations")
     approved_217 = ("roadmap_items", "engagement_phases", "phase_tasks")
@@ -433,6 +434,8 @@ def policy_checks() -> None:
     check("approved table-level UPDATE set is exactly the nine mutable tables",
           gate.APPROVED_TABLE_UPDATE == frozenset(approved)
           and len(gate.APPROVED_TABLE_UPDATE) == 9)
+    check("the gate's set is the policy's mutable tables",
+          gate.APPROVED_TABLE_UPDATE == gate.runtime_persistence.update_eligible_tables())
     check("the insert-only Phase 217 task-record table is not approved for UPDATE",
           "phase_task_records" not in gate.APPROVED_TABLE_UPDATE)
     check("UPDATE stays in the forbidden set (exception is table-scoped only)",
@@ -511,6 +514,82 @@ def policy_checks() -> None:
 
 
 # --------------------------------------------------------------------------- 5. behaviour
+
+
+def canonical_policy_checks() -> None:
+    print("\n4b. Canonical runtime persistence policy: one classification per table, gate derives")
+    from peak.db import models
+    from peak.persistence import runtime_persistence as rp
+
+    policy = rp.RUNTIME_TABLE_PERSISTENCE
+    model_tables = {m.__tablename__ for m in models.ALL_MODELS}
+    unclassified = sorted(model_tables - set(policy))
+    check("every model table is classified (none silently defaults)", not unclassified)
+    if unclassified:
+        print(f"        unclassified: {unclassified}")
+    check("the policy names no table outside the models", not set(policy) - model_tables)
+    check("the vocabulary is exactly mutable / append_only / read_only",
+          rp.CLASSIFICATIONS == {"mutable", "append_only", "read_only"}
+          and set(policy.values()) <= rp.CLASSIFICATIONS)
+    check("phase_task_records is append_only and not UPDATE-eligible",
+          policy.get("phase_task_records") == "append_only"
+          and "phase_task_records" not in rp.update_eligible_tables())
+    check("an unclassified table or unknown class is never UPDATE-eligible",
+          rp.update_eligible_tables({"x": "writable", "y": "MUTABLE", "z": None}) == frozenset())
+    check("the current policy agrees with the write-path allowlist", rp.policy_problems() == [])
+    check("classifying phase_task_records mutable is rejected (it has no update action)",
+          rp.policy_problems({**policy, "phase_task_records": rp.MUTABLE})
+          == ["phase_task_records: mutable but has no update action"])
+    check("classifying a table with update actions append_only is rejected",
+          rp.policy_problems({**policy, "phase_tasks": rp.APPEND_ONLY})
+          == ["phase_tasks: has an update action but is not mutable"])
+    missing = {t: k for t, k in policy.items() if t != "phase_task_records"}
+    check("leaving a written table unclassified is rejected",
+          rp.policy_problems(missing)
+          == ["phase_task_records: written at runtime but unclassified"])
+    check("an unknown classification is rejected",
+          rp.policy_problems({**policy, "consultants": "writable"})
+          == ["consultants: unknown classification 'writable'"])
+    check("a read_only table with a write path is rejected",
+          rp.policy_problems({**policy, "artifacts": rp.READ_ONLY})
+          == ["artifacts: read_only but has a write path"])
+
+    def verdict(gate, lines):
+        p = gate.parse_grants(lines)
+        return not (p["missing_required"] or p["excess"] or p["all_privileges"]
+                    or p["global_all"] or p["grant_option"] or p["global_beyond_usage"]
+                    or p["schema_beyond_policy"] or p["role_grants"])
+
+    base = ['GRANT USAGE ON *.* TO "u"@"%"', 'GRANT SELECT, INSERT ON "defaultdb".* TO "u"@"%"']
+    # Declaring a table once in the policy changes the gate, with no edit to the gate itself.
+    original = dict(policy)
+    try:
+        policy["future_mutable_table"] = rp.MUTABLE
+        policy["future_record_table"] = rp.APPEND_ONLY
+        policy["future_reference_table"] = rp.READ_ONLY
+        gate = load_gate()
+        check("a new table classified mutable joins the gate's UPDATE set automatically",
+              "future_mutable_table" in gate.APPROVED_TABLE_UPDATE)
+        check("... and UPDATE on it then passes the gate",
+              verdict(gate, base + ['GRANT UPDATE ON "defaultdb"."future_mutable_table" '
+                                    'TO "u"@"%"']))
+        for name in ("future_record_table", "future_reference_table"):
+            check(f"a new {policy[name]} table is not UPDATE-eligible, and UPDATE on it fails",
+                  name not in gate.APPROVED_TABLE_UPDATE
+                  and not verdict(gate, base + [f'GRANT UPDATE ON "defaultdb"."{name}" '
+                                                'TO "u"@"%"']))
+        policy["phase_tasks"] = rp.APPEND_ONLY
+        gate = load_gate()
+        check("reclassifying a table append_only withdraws its UPDATE eligibility",
+              "phase_tasks" not in gate.APPROVED_TABLE_UPDATE
+              and not verdict(gate, base + ['GRANT UPDATE ON "defaultdb"."phase_tasks" '
+                                            'TO "u"@"%"']))
+    finally:
+        policy.clear()
+        policy.update(original)
+    check("policy restored after the derivation checks",
+          load_gate().APPROVED_TABLE_UPDATE == rp.update_eligible_tables()
+          and len(rp.update_eligible_tables()) == 9)
 
 
 def behaviour_checks() -> None:
@@ -726,6 +805,7 @@ def main() -> int:
     provenance_checks()
     statement_surface_checks()
     policy_checks()
+    canonical_policy_checks()
     behaviour_checks()
     driver_taxonomy_checks()
     regression_checks()

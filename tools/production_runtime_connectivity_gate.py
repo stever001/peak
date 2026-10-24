@@ -44,6 +44,8 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
+from peak.persistence import runtime_persistence  # noqa: E402  (stdlib-only policy module)
+
 RUNTIME_URL_ENV = "PEAK_RUNTIME_DATABASE_URL"
 #: Never read. Named here only so they can be removed from this process's environment.
 SCRUBBED_ENV = ("PEAK_DATABASE_URL", "PEAK_PRODUCTION_DB_URL",
@@ -151,15 +153,12 @@ FORBIDDEN_GRANTS = (
 #: Global privileges that carry no authority and may appear at ``*.*`` without failing the gate.
 HARMLESS_GLOBAL = {"USAGE"}
 
-#: The only table-level exception to FORBIDDEN_GRANTS: UPDATE on exactly these mutable tables
-#: (approved in Phases 203, 205 and 217), in the schema that holds the required grants. UPDATE at
-#: schema or global scope, or on any other table, still fails. The Phase 217 task-record table is
-#: insert-only and deliberately absent.
-APPROVED_TABLE_UPDATE = frozenset({
-    "clients", "engagements", "discovery_questions", "discovery_sessions",
-    "discovery_answers", "discovery_observations",
-    "roadmap_items", "engagement_phases", "phase_tasks",
-})
+#: The only table-level exception to FORBIDDEN_GRANTS: UPDATE on the tables the canonical runtime
+#: persistence policy classifies ``mutable`` (``peak/persistence/runtime_persistence.py``), in the
+#: schema that holds the required grants. The gate keeps no table list of its own. UPDATE at schema
+#: or global scope, or on any append-only, read-only or unclassified table, still fails. A subset
+#: passes (a cutover grants after migrating); an excess never does.
+APPROVED_TABLE_UPDATE = runtime_persistence.update_eligible_tables()
 
 _GRANT_RE = re.compile(r"^GRANT\s+(.*?)\s+ON\s+(\S+)\s+TO\s", re.IGNORECASE | re.DOTALL)
 

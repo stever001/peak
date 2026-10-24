@@ -211,6 +211,15 @@ Phase 44**; this table is the entry point for everything after it.
 - **Phase 52** — the implementation plan records it as "Phase 52A"; there is no `PHASE52_*.md`.
 - **Phase 86** — code-only validation maintenance, indexed here under the convention above.
 - **Phase 87** — docs-only navigation work; this file is its record.
+- **Runtime persistence policy consolidation** (maintenance after Phase 217, repository only):
+  - `peak/persistence/runtime_persistence.py` classifies every application table once:
+    `mutable` / `append_only` / `read_only`. It is checked against the write-path allowlist at
+    import.
+  - The Phase 50 gate derives its table-level UPDATE allowance from that classification, instead of
+    keeping its own list (`PHASE50_CONTROLLED_RUNTIME_CONNECTIVITY_GATE.md` §3).
+  - Policy unchanged: the same nine UPDATE tables, `phase_task_records` append-only, subset allowed,
+    excess fails.
+  - No production, grant or schema change.
 
 ## Open items carried forward
 
