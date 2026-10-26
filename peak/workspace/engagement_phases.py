@@ -524,7 +524,9 @@ def complete_phase(session_factory, phase_id: str, consultant_id: str) -> Option
 # --------------------------------------------------------------------------- work plan
 
 
-def _task_dict(t, records) -> dict:
+def _task_dict(t, records, by_id=None, names=None) -> dict:
+    by_id = by_id or {}
+    names = names or {}
     return {
         "id": t.id, "phase_id": t.phase_id, "sequence": t.sequence, "title": t.title,
         "instructions": t.instructions, "why_it_matters": t.why_it_matters,
@@ -542,17 +544,59 @@ def _task_dict(t, records) -> dict:
         "status": t.status, "consultant_notes": t.consultant_notes,
         "result_summary": t.result_summary, "not_applicable_reason": t.not_applicable_reason,
         "completed_by_consultant_id": t.completed_by_consultant_id,
+        "completed_by": names.get(t.completed_by_consultant_id),
         "completed_at": _iso(t.completed_at),
-        "records": [_record_dict(r, records) for r in records if r.task_id == t.id],
+        "records": [_record_dict(r, records, names) for r in records if r.task_id == t.id],
+        # Phase 218: the work state the rules below already decide, so a client can show it
+        # without re-deriving any rule. Read-only; nothing here is stored.
+        "work_state": _task_work_state(t, by_id, records),
     }
 
 
-def _record_dict(r, all_records) -> dict:
+def _task_work_state(task, by_id, records) -> dict:
+    """Prerequisites, condition, record need and completion blockers, as the rules decide them."""
+    condition = by_id.get(task.condition_task_id) if task.condition_task_id else None
+    return {
+        "applies": _applies(task, by_id, records) if task.status != "suggested" else None,
+        "prerequisites": [{"task_id": d, "sequence": by_id[d].sequence, "title": by_id[d].title,
+                           "resolved": _resolved(by_id[d], by_id, records)}
+                          for d in task.depends_on_task_ids or [] if d in by_id],
+        "condition_task": ({"task_id": condition.id, "sequence": condition.sequence,
+                            "title": condition.title} if condition is not None else None),
+        "record_missing": bool(task.requires_record) and not _active_kinds(records, task.id),
+        "completion_blockers": [{"code": code, "message": message} for code, message
+                                in _completion_blockers(task, by_id, records)],
+    }
+
+
+def _completion_blockers(task, by_id, records) -> list:
+    """Why this task cannot be completed now, in the order :func:`complete_task` checks.
+
+    Task-level only; the phase's own status is checked separately (``_phase_for_work``).
+    """
+    if task.status == "suggested":
+        return [("task_not_accepted", "Accept the suggested task into the plan first.")]
+    if task.status in RESOLVED_TASK_STATUSES:
+        return [("task_resolved", "This task is already resolved.")]
+    blockers = []
+    pending = [by_id[d].sequence for d in task.depends_on_task_ids or []
+               if d in by_id and not _resolved(by_id[d], by_id, records)]
+    if pending:
+        blockers.append(("prerequisites_incomplete",
+                         f"Resolve task(s) {', '.join(map(str, pending))} first."))
+    if task.requires_record and not _active_kinds(records, task.id):
+        blockers.append(("record_required",
+                         "Record what you found against this task before completing it."))
+    return blockers
+
+
+def _record_dict(r, all_records, names=None) -> dict:
     superseded_by = next((o.id for o in all_records if o.supersedes_record_id == r.id), None)
     return {"id": r.id, "task_id": r.task_id, "record_kind": r.record_kind,
             "record_text": r.record_text, "structured": r.structured or {}, "basis": r.basis,
             "supersedes_record_id": r.supersedes_record_id, "superseded_by": superseded_by,
             "recorded_by_consultant_id": r.recorded_by_consultant_id,
+            "recorded_by": (names or {}).get(r.recorded_by_consultant_id),
             "created_at": _iso(r.created_at)}
 
 
@@ -570,15 +614,26 @@ def _plan_state(session, phase):
 
 def get_phase(session_factory, phase_id: str) -> Optional[dict]:
     """The phase, its ordered work plan with each task's records, and its readiness."""
-    from peak.db.models import EngagementPhase
+    from peak.db.models import EngagementPhase, RoadmapItem
+
+    from .discovery import _names
 
     with session_factory() as session:
         phase = session.get(EngagementPhase, phase_id)
         if phase is None:
             return None
         phase, tasks, records = _plan_state(session, phase)
-        out = _phase_summary(phase, [t for t in tasks if t.status != "suggested"])
-        out["tasks"] = [_task_dict(t, records) for t in tasks]
+        by_id = {t.id: t for t in tasks if t.status != "suggested"}
+        names = _names(session, [phase.authorized_by_consultant_id]
+                       + [t.completed_by_consultant_id for t in tasks]
+                       + [r.recorded_by_consultant_id for r in records])
+        out = _phase_summary(phase, list(by_id.values()))
+        if out["authorization"]:
+            out["authorization"]["authorized_by"] = names.get(phase.authorized_by_consultant_id)
+        item = session.get(RoadmapItem, phase.roadmap_item_id) if phase.roadmap_item_id else None
+        out["roadmap_item"] = ({"id": item.id, "title": item.title, "status": item.status}
+                               if item is not None else None)
+        out["tasks"] = [_task_dict(t, records, by_id, names) for t in tasks]
         out["readiness"] = phase_readiness(phase, tasks, records)
         return out
 
@@ -874,17 +929,11 @@ def complete_task(session_factory, task_id: str, data: dict,
         task, phase = _task_for_work(session, task_id)
         if task is None:
             return None
-        _open_task(task)
         _, tasks, records = _plan_state(session, phase)
         by_id = {t.id: t for t in tasks if t.status != "suggested"}
-        pending = [by_id[d].sequence for d in task.depends_on_task_ids or []
-                   if d in by_id and not _resolved(by_id[d], by_id, records)]
-        if pending:
-            raise WorkspaceError("prerequisites_incomplete",
-                                 f"Resolve task(s) {', '.join(map(str, pending))} first.")
-        if task.requires_record and not _active_kinds(records, task.id):
-            raise WorkspaceError("record_required",
-                                 "Record what you found against this task before completing it.")
+        blockers = _completion_blockers(task, by_id, records)
+        if blockers:   # the same list get_phase reports as the task's completion_blockers
+            raise WorkspaceError(*blockers[0])
         values = {"status": "completed", "result_summary": summary,
                   "completed_by_consultant_id": consultant_id, "completed_at": _now()}
         _require_allowed("phase_tasks", "complete_phase_task", values)

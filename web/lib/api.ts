@@ -483,3 +483,109 @@ export async function getWebRendition(packageId: string): Promise<string> {
   if (!res.ok) throw new Error(`Peak API web rendition failed (${res.status})`);
   return res.text();
 }
+
+// --- Phase 217/218: engagement phases and guided work plans ------------------------------------
+
+export type PhaseStatus = "planned" | "authorized" | "completed";
+export type TaskStatus = "suggested" | "open" | "in_progress" | "completed" | "not_applicable";
+/** The record kinds a consultant can enter today. Photo and document capture is reserved. */
+export type WorkRecordKind = "note" | "interview_response" | "measurement" | "mismatch";
+export type RecordKind = WorkRecordKind | "photo" | "document_photo" | "document";
+
+export type PhaseAuthorization = {
+  basis: string | null;
+  reference: string | null;
+  authorized_by: string | null;
+  authorized_at: string | null;
+};
+
+export type EngagementPhaseSummary = {
+  id: string;
+  engagement_id: string;
+  title: string;
+  scope_summary: string;
+  status: PhaseStatus;
+  origin: "roadmap_item" | "manual";
+  origin_note: string | null;
+  authorized: boolean;
+  authorization: PhaseAuthorization | null;
+  work_plan_status: "not_started" | "draft" | "active" | "closed";
+  completed_at: string | null;
+  created_at: string | null;
+};
+
+/** What a consultant recorded while doing a task. Insert-only; a correction supersedes. */
+export type TaskRecord = {
+  id: string;
+  task_id: string;
+  record_kind: RecordKind;
+  record_text: string;
+  structured: Record<string, string | number>;
+  basis: ObservationBasis | null;
+  supersedes_record_id: string | null;
+  superseded_by: string | null;
+  recorded_by: string | null;
+  created_at: string | null;
+};
+
+export type TaskRef = { task_id: string; sequence: number; title: string };
+
+/** Decided by the API's rules; the UI shows it and never re-derives it. */
+export type TaskWorkState = {
+  /** Conditional task: true/false once its condition task is resolved, null while pending. */
+  applies: boolean | null;
+  prerequisites: (TaskRef & { resolved: boolean })[];
+  condition_task: TaskRef | null;
+  record_missing: boolean;
+  completion_blockers: { code: string; message: string }[];
+};
+
+export type PhaseTask = {
+  id: string;
+  phase_id: string;
+  sequence: number;
+  title: string;
+  instructions: string;
+  why_it_matters: string | null;
+  what_to_observe: string | null;
+  suggested_evidence: RecordKind[];
+  follow_up_questions: string[];
+  expected_result: string | null;
+  required: boolean;
+  requires_record: boolean;
+  condition: { task_id: string; record_kind: RecordKind } | null;
+  origin: "peak_method" | "consultant" | "si_suggested";
+  inclusion_reason: string | null;
+  added_after_authorization: boolean;
+  status: TaskStatus;
+  result_summary: string | null;
+  not_applicable_reason: string | null;
+  completed_by: string | null;
+  completed_at: string | null;
+  records: TaskRecord[];
+  work_state: TaskWorkState;
+};
+
+export type ReadinessItem = {
+  code: string;
+  reason_text: string | null;
+  task_id?: string;
+  sequence?: number;
+  title?: string;
+};
+
+export type PhaseReadiness = {
+  ready: boolean;
+  phase_status: PhaseStatus;
+  required_tasks: number;
+  required_resolved: number;
+  blocking: ReadinessItem[];
+  notes: ReadinessItem[];
+  rule: string;
+};
+
+export type EngagementPhaseDetail = EngagementPhaseSummary & {
+  roadmap_item: { id: string; title: string; status: string } | null;
+  tasks: PhaseTask[];
+  readiness: PhaseReadiness;
+};

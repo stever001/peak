@@ -7,14 +7,18 @@ import { InternalTestBadge } from "@/components/internal-test-badge";
 import { InternalTestDeleteForm } from "@/components/internal-test-delete-form";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
-import { apiGet, requireConsultant, type Discovery, type Engagement } from "@/lib/api";
+import { WorkPlanSection } from "@/components/work-plan-section";
+import {
+  apiGet, requireConsultant, type Discovery, type Engagement, type EngagementPhaseSummary,
+} from "@/lib/api";
 
 export default async function EngagementPage(props: PageProps<"/engagements/[id]">) {
   const me = await requireConsultant();
   const { id } = await props.params;
-  const [{ engagement: e }, { discovery }] = await Promise.all([
+  const [{ engagement: e }, { discovery }, { phases }] = await Promise.all([
     apiGet<{ engagement: Engagement }>(`/engagements/${encodeURIComponent(id)}`),
     apiGet<{ discovery: Discovery }>(`/engagements/${encodeURIComponent(id)}/discovery`),
+    apiGet<{ phases: EngagementPhaseSummary[] }>(`/engagements/${encodeURIComponent(id)}/phases`),
   ]);
   return (
     <>
@@ -59,6 +63,7 @@ export default async function EngagementPage(props: PageProps<"/engagements/[id]
           </div>
         </dl>
       </section>
+      <WorkPlanSection phases={phases} />
       <DiscoverySection engagementId={e.id} d={discovery} />
       {me.role === "admin" && e.engagement_classification === "internal_test" && e.source_status === "active" && (
         <InternalTestDeleteForm action={deleteInternalTestEngagement.bind(null, e.id)}
