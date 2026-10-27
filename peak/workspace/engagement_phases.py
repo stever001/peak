@@ -164,11 +164,27 @@ def _discovery_grounding(session, engagement_id: str):
     return observations, categories
 
 
+def _roadmap_item_state(item, phase_ids: dict, names: dict) -> dict:
+    """Phase 219: what the rules below allow next for this item, so a client need not re-derive it.
+
+    Read-only. ``decisions`` are the statuses :func:`decide_roadmap_item` would accept now (an
+    accepted item that already has a phase accepts none); ``revisable`` mirrors
+    :func:`revise_roadmap_item`.
+    """
+    phase_id = phase_ids.get(item.id)
+    return {**_roadmap_item_dict(item),
+            "decisions": [] if phase_id else list(ROADMAP_TRANSITIONS.get(item.status, ())),
+            "revisable": item.status in ("proposed", "deferred"),
+            "phase_id": phase_id, "decided_by": names.get(item.decided_by_consultant_id)}
+
+
 def get_roadmap(session_factory, engagement_id: str) -> Optional[dict]:
     """Live roadmap items in sequence, superseded history, and deterministic suggestions."""
     from sqlalchemy import select
 
-    from peak.db.models import Engagement, RoadmapItem
+    from peak.db.models import Engagement, EngagementPhase, RoadmapItem
+
+    from .discovery import _names
 
     with session_factory() as session:
         engagement = session.get(Engagement, engagement_id)
@@ -181,11 +197,17 @@ def get_roadmap(session_factory, engagement_id: str) -> Optional[dict]:
         observations, categories = _discovery_grounding(session, engagement_id)
         suggestions = method.suggest(observations, categories,
                                      on_roadmap={i.template_key for i in live if i.template_key})
+        phase_ids = dict(session.execute(
+            select(EngagementPhase.roadmap_item_id, EngagementPhase.id)
+            .where(EngagementPhase.engagement_id == engagement_id,
+                   EngagementPhase.roadmap_item_id.is_not(None))).all())
+        names = _names(session, [i.decided_by_consultant_id for i in items])
         return {
             "engagement_id": engagement_id,
             "enabled": engagement.deleted_at is None and _stamped(engagement),
-            "items": [_roadmap_item_dict(i) for i in live],
-            "superseded": [_roadmap_item_dict(i) for i in items if i.status == "superseded"],
+            "items": [_roadmap_item_state(i, phase_ids, names) for i in live],
+            "superseded": [_roadmap_item_state(i, phase_ids, names) for i in items
+                           if i.status == "superseded"],
             "suggestions": suggestions,
         }
 

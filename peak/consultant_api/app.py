@@ -39,7 +39,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field
 
 from peak import accounts, workspace
-from peak.workspace import approvals, discovery, engagement_phases
+from peak.workspace import approvals, discovery, engagement_phases, peak_method_phases
 
 SESSION_COOKIE = "peak_session"
 INSECURE_COOKIE_ENV = "PEAK_WEB_INSECURE_COOKIE"
@@ -589,6 +589,11 @@ def create_app(
         return {"roadmap_item": _workspace_call(engagement_phases.create_roadmap_item,
                                                 session_factory, engagement_id,
                                                 body.model_dump(exclude_unset=True), me["id"])}
+
+    @app.get("/phase-templates")
+    def phase_templates(_: dict = Depends(current_consultant)):
+        """Phase 219: the Peak Method phase templates a work plan can start from (read-only)."""
+        return {"templates": peak_method_phases.catalogue()}
 
     @app.post("/roadmap-items/{item_id}/decision")
     def roadmap_item_decide(item_id: str, body: RoadmapDecisionIn,

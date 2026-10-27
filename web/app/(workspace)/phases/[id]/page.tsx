@@ -6,6 +6,7 @@ import { PhaseStatusPill, ReadinessPanel, TaskCard } from "@/components/work-pla
 import { PageHeader } from "@/components/page-header";
 import { apiGet, requireConsultant, type EngagementPhaseDetail } from "@/lib/api";
 import { formatDate } from "@/lib/labels";
+import { setupFinished } from "@/lib/phase-setup";
 import { nextTask } from "@/lib/work-plan";
 
 /** Phase 218: the phase workspace. What to do next, what is blocked, done or optional. */
@@ -56,11 +57,17 @@ export default async function PhasePage(props: PageProps<"/phases/[id]">) {
         </dl>
       </section>
 
-      {p.status === "planned" && (
-        <p role="status" className="peak-card mb-6 border-l-4 border-l-highlight">
-          This phase is planned but not authorized. Work cannot be recorded until the engagement Lead or an
-          Admin records what the client agreed to. You can read the work plan below to prepare.
-        </p>
+      {!setupFinished(p) && (
+        <div role="status" className="peak-card mb-6 space-y-2 border-l-4 border-l-highlight">
+          <p>
+            {p.status === "planned"
+              ? "This phase is planned but not authorized. Work cannot be recorded until the engagement Lead or an Admin records what the client agreed to. You can read the work plan below to prepare."
+              : "This phase is authorized but has no work plan tasks yet."}
+          </p>
+          <Link href={`/phases/${p.id}/setup`} className="inline-flex min-h-touch items-center font-medium text-brand">
+            Continue phase setup →
+          </Link>
+        </div>
       )}
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_24rem] xl:items-start">

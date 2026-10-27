@@ -243,3 +243,18 @@ def suggest(observations: List[dict], question_categories: dict, on_roadmap=()) 
             "method_version": METHOD_VERSION,
         })
     return out
+
+
+def catalogue() -> List[dict]:
+    """The templates as a consultant chooses between them (Phase 219): read-only, in catalogue order.
+
+    Framing and task outline only; trigger categories and task guidance stay with the template and
+    reach a phase only when its tasks are added.
+    """
+    return [{
+        "template_key": t["key"], "title": t["title"], "problem_framing": t["problem_framing"],
+        "expected_outcome": t["expected_outcome"], "scope_summary": t["scope_summary"],
+        "method_version": METHOD_VERSION,
+        "tasks": [{"sequence": n, "title": s["title"], "required": s["required"]}
+                  for n, s in enumerate(t["tasks"], start=1)],
+    } for t in TEMPLATES]

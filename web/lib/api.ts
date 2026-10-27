@@ -506,6 +506,7 @@ export type EngagementPhaseSummary = {
   scope_summary: string;
   status: PhaseStatus;
   origin: "roadmap_item" | "manual";
+  roadmap_item_id: string | null;
   origin_note: string | null;
   authorized: boolean;
   authorization: PhaseAuthorization | null;
@@ -555,6 +556,8 @@ export type PhaseTask = {
   requires_record: boolean;
   condition: { task_id: string; record_kind: RecordKind } | null;
   origin: "peak_method" | "consultant" | "si_suggested";
+  /** Template step key ("template.step") for a Peak Method task; null otherwise. */
+  template_key: string | null;
   inclusion_reason: string | null;
   added_after_authorization: boolean;
   status: TaskStatus;
@@ -588,4 +591,63 @@ export type EngagementPhaseDetail = EngagementPhaseSummary & {
   roadmap_item: { id: string; title: string; status: string } | null;
   tasks: PhaseTask[];
   readiness: PhaseReadiness;
+};
+
+// --- Phase 219: roadmap and phase setup ----------------------------------------------------------
+
+export type RoadmapStatus = "proposed" | "accepted" | "deferred" | "declined" | "superseded";
+export type RoadmapDecision = "proposed" | "accepted" | "deferred" | "declined";
+
+/** Proposed future work, stored on the engagement's roadmap. Advisory: never authorized work. */
+export type RoadmapItem = {
+  id: string;
+  sequence: number;
+  title: string;
+  problem_framing: string;
+  rationale: string;
+  expected_outcome: string;
+  source_observation_ids: string[];
+  origin: "peak_method" | "consultant" | "si_suggested";
+  template_key: string | null;
+  status: RoadmapStatus;
+  status_note: string | null;
+  supersedes_item_id: string | null;
+  decided_at: string | null;
+  created_at: string | null;
+  /** Decided by the API's rules: the statuses a decision may set now. */
+  decisions: RoadmapDecision[];
+  revisable: boolean;
+  /** The phase created from this item, if any. */
+  phase_id: string | null;
+  decided_by: string | null;
+};
+
+/** Computed by Peak from discovery observations each time; nothing is stored until it is added. */
+export type RoadmapSuggestion = {
+  template_key: string;
+  title: string;
+  problem_framing: string;
+  rationale: string;
+  expected_outcome: string;
+  source_observation_ids: string[];
+  grounding: string;
+};
+
+export type Roadmap = {
+  engagement_id: string;
+  /** False for engagements created outside the consultant workspace (no roadmap work there). */
+  enabled: boolean;
+  items: RoadmapItem[];
+  superseded: RoadmapItem[];
+  suggestions: RoadmapSuggestion[];
+};
+
+/** A Peak Method phase template: the starting work plan for a phase. */
+export type PhaseTemplate = {
+  template_key: string;
+  title: string;
+  problem_framing: string;
+  expected_outcome: string;
+  scope_summary: string;
+  tasks: { sequence: number; title: string; required: boolean }[];
 };
