@@ -25,7 +25,7 @@ export default async function EngagementPage(props: PageProps<"/engagements/[id]
       <Link href="/engagements" className="mb-4 inline-flex min-h-touch items-center text-sm font-medium text-brand">
         ← All engagements
       </Link>
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <PageHeader title={e.engagement_label ?? "Untitled engagement"} />
           {e.engagement_classification === "internal_test" && <InternalTestBadge deleted={e.source_status === "deleted"} />}
@@ -53,7 +53,7 @@ export default async function EngagementPage(props: PageProps<"/engagements/[id]
       <section className="peak-card">
         <dl className="grid gap-5 sm:grid-cols-2">
           <Detail label="Client" value={
-            <Link href={`/clients/${e.client.id}`} className="font-medium text-brand">{e.client.name}</Link>
+            <Link href={`/clients/${e.client.id}`} className="inline-flex min-h-touch items-center font-medium text-brand">{e.client.name}</Link>
           } />
           <Detail label="Status" value={<StatusBadge status={e.status} />} />
           <Detail label="Assigned consultant" value={e.assigned_consultant?.name ?? "Unassigned"} />

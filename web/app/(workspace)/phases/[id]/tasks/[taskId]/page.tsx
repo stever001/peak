@@ -151,7 +151,7 @@ export default async function TaskPage(props: PageProps<"/phases/[id]/tasks/[tas
                 <ul className="space-y-1">
                   {w.prerequisites.map((d) => (
                     <li key={d.task_id}>
-                      <Link href={`/phases/${p.id}/tasks/${d.task_id}`} className="font-medium text-brand">
+                      <Link href={`/phases/${p.id}/tasks/${d.task_id}`} className="inline-flex min-h-touch items-center font-medium text-brand">
                         {d.resolved ? "✓" : "○"} Task {d.sequence}: {d.title}
                       </Link>
                     </li>

@@ -72,7 +72,7 @@ export function ReadinessPanel({ phase }: { phase: EngagementPhaseDetail }) {
     return t ? `Task ${t.sequence}: ${t.title}` : "";
   };
   const link = (taskId: string | undefined, children: ReactNode) => taskId
-    ? <Link href={`/phases/${phase.id}/tasks/${taskId}`} className="font-medium text-brand underline-offset-2 hover:underline">{children}</Link>
+    ? <Link href={`/phases/${phase.id}/tasks/${taskId}`} className="inline-flex min-h-touch items-center font-medium text-brand underline-offset-2 hover:underline">{children}</Link>
     : children;
   return (
     <section aria-labelledby="readiness" className={`peak-card border-l-4 ${r.ready ? "border-l-accent" : "border-l-attention"}`}>
