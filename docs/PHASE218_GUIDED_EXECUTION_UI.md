@@ -10,7 +10,8 @@ iPad, on site, open an authorized phase, see what to do next, follow each task's
 what they found, correct a record, complete or set aside a task, and see readiness, all in plain
 language and without the rules being re-implemented in the browser.
 
-Repository only: no migration, no production change, no deploy.
+Built in the repository with no migration; deployed to production on 2026-10-26 (see *Production
+cutover*). **Phase 218 is CLOSED.**
 
 Not built: creating roadmap items or phases, recording authorization, adding template or consultant
 tasks from the web (all remain API-only, see *Limitations*); proposals, fees, billing, photo or
@@ -100,6 +101,62 @@ task accepted and marked as added after authorization; readiness to ready and ph
 discovery observation created; every route the UI calls refuses logged out (401); static checks on
 routes, actions, proxy, record kinds, no file or camera input, no guidance prefill, boundary text
 scan, no observation endpoint, no new migration.
+
+## Production cutover
+
+**Status: complete (2026-10-26). Phase 218 is CLOSED.** Deployment only: no migration, no grant
+change, no environment variable change, and no production data written.
+
+- **Releases.** Render API `dep-dbfsrcafngtc73cu41gg` from `0d4bc1f` (deployed manually; Auto-Deploy
+  stays off; environment unchanged). Vercel web `dpl_5C3HE2o3ywmo3mB1vCSCumCfsVgv` from `4446b1d`
+  (Git-connected production deploy, Ready).
+- **Node runtime.** `e54477b` pins `web/package.json` (and the lockfile root) to
+  `engines.node ">=24.22.1 <25"`; the Vercel project is set to Node 24.x. The exact Node patch Vercel
+  used is not shown in the build output, so it is not observable. Local validation ran on Node
+  24.22.1. Render runs the Python API and is unaffected.
+- **Responsive fix.** `4446b1d` fixes a pre-existing iPad portrait overflow on the engagement page:
+  the header actions now go side by side only from `lg`, because with the `md` sidebar about 516px
+  is left at 820px. It also gives the client link, readiness task links and prerequisite links the
+  touch-target height.
+- **Health and protection.** `/healthz` 200. With no session, every protected and Phase 217/218 API
+  route returns 401, and the `/phases/{id}` and `/phases/{id}/tasks/{taskId}` web pages redirect
+  (307) to `/login`.
+- **Authenticated check (existing Admin, read-only).** API checks:
+  - login 200, `/auth/me` 200 admin, `/engagements` count 1, `/clients` count 0;
+  - engagement detail, discovery, roadmap and phases all 200, with phases = 0;
+  - an unknown phase returns 404;
+  - logout 204, then `/auth/me` 401.
+
+  Web checks:
+  - the work-plan section, its empty state and the discovery section are present;
+  - no advisory-boundary terms appear in the work-plan section;
+  - a signed-in unknown phase shows the normal not-found page;
+  - no non-GET requests are made while pages load.
+- **Responsive measurements (production engagement page).** At 1440×900, 820×1180 and 1180×820:
+  overflow 0px, 0 elements past the edge, 0 controls under 40px.
+- **Runtime database identity.** Checked straight after the authenticated check: API connections as
+  `peak_prod_runtime` on `defaultdb` (4, Sleep). There was no `peak_prod_verify_ro` connection, and
+  the only other connection was the MySQL event scheduler.
+- **Preservation.** Checks run as `peak_prod_verify_ro` in a read-only transaction, plus the gate:
+  - Alembic head is `022_engagement_roadmap_work_plan`, with 35 base tables;
+  - the Phase 50 gate passes live (required grants present, no excess grants, no grant option);
+  - the verifier is green: 394/394 governed columns and 11/11 idempotency boundaries;
+  - `roadmap_items`, `engagement_phases`, `phase_tasks` and `phase_task_records` all have 0 rows;
+  - the 30-table count/checksum baseline is identical to the Phase 217 closure and Phase 218
+    preflight snapshots.
+- **Observations, all pre-existing and not caused by Phase 218.**
+  - The engagement page's "Internal assessment" and "Final report" links (Phases 206 and 208)
+    return 404 for the only active production engagement, the unstamped Phase 59 internal anchor.
+    The API's visibility check refuses that anchor by design (Phase 215).
+  - The one whole-page "audit" match is the Phase 215 Admin internal-test deletion copy ("history …
+    is kept for audit"). It describes record retention, not engagement framing, so it is outside
+    the advisory boundary's scope.
+
+**Deferred acceptance.** No production engagement phase, task or record was created, so the
+populated phase and task screens were not exercised in production. The Phase 218 harness and the
+local walkthrough cover them. Populated execution acceptance waits for the first real work plan.
+Photo and document capture remain deferred. The web workflow for starting a work plan (roadmap item →
+phase → authorization → template tasks) moves to the next phase.
 
 ## Limitations (not fixed in Phase 218)
 
