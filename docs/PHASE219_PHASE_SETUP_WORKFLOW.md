@@ -14,7 +14,7 @@ Engagement → proposed roadmap work → accepted → engagement phase (planned)
 
 This is operational setup only: no proposals, fees, billing, signatures, uploads, client login, SI
 generation, Final Report or artifact changes, and no role changes. Built in the repository with no
-migration; not deployed.
+migration; deployed to production on 2026-10-26 (see *Production cutover*). **Phase 219 is CLOSED.**
 
 ## The flow
 
@@ -118,6 +118,64 @@ Static checks:
 - the boundary text scan passes;
 - the handoff and back-links are present;
 - no migration.
+
+## Production cutover
+
+**Status: complete (2026-10-26). Phase 219 is CLOSED.** Deployment only: no migration, no grant
+change, no environment variable change, and no production data written.
+
+- **Releases.** Both from `8a5045e` (*Add Phase 219 work plan setup workflow*):
+  - Render API `peak-consultant-api`, deploy `dep-dbg3e1t9el5s73bpdrag`, **Live**; deployed
+    manually, Auto-Deploy off, environment unchanged;
+  - Vercel web: the Git-connected production deployment, successful.
+- **Health and protection.** `/healthz` returned 200. Logged out, `GET /phase-templates` returned
+  401 (registered, not 404). Every roadmap, phase and task route tried returned 401 (8 reads and
+  10 writes), and an unknown route returned 404. Logged out, the web roadmap, setup, phase and task
+  pages redirected (307) to `/login`.
+- **Authenticated API check (existing Admin, read-only):**
+  - login 200, `/auth/me` 200 admin, `/engagements` count 1;
+  - `/phase-templates` 200: `receiving_accuracy` (6 tasks) and `count_adjustment_practice` (4 tasks),
+    **identical to the repository catalogue**, with no trigger categories or task guidance;
+  - the engagement's detail, discovery, roadmap and phases all 200: roadmap `enabled=false`,
+    0 items, 0 superseded, 0 suggestions, 0 phases;
+  - an unknown phase returns 404;
+  - logout 204, then `/auth/me` 401.
+- **The historical anchor.** The only active production engagement is the unstamped Phase 59
+  internal anchor. Its roadmap is `enabled=false` by design (it was not created in the consultant
+  workspace, Phase 215), so the engagement page shows no "Roadmap and phase setup" link and the
+  roadmap page shows only the notice that setup is available for consultant-workspace
+  engagements. This is the expected disabled state, not a Phase 219 defect. The page renders no
+  setup control in that state; the check script's "form present" result counted the sidebar
+  sign-out form.
+- **Web check (signed in, read-only; no setup form submitted):**
+  - the engagement page loads with no application error and its work-plan section is present;
+  - the roadmap page loads with the disabled notice;
+  - no raw internal ids in the rendered text, and no advisory-boundary terms in Phase 219 UI;
+  - the one whole-page "audit" match is the Phase 215 retention copy already reviewed in Phase 218;
+  - a signed-in unknown setup page shows the normal not-found page;
+  - no non-GET requests were made while pages loaded.
+- **Responsive measurements (production).** The engagement page, roadmap page and unknown setup
+  page at 1440×900, 820×1180 and 1180×820: overflow 0px, 0 elements past the edge, 0 controls
+  under 40px.
+- **Runtime database identity.** The process-list probe ran straight after the authenticated
+  checks. API connections were `peak_prod_runtime` on `defaultdb` (5, Sleep). There was no
+  `peak_prod_verify_ro` connection; the only other connection was the MySQL event scheduler.
+- **Preservation.** All read-only:
+  - the Phase 50 gate passes live: runtime session path, required grants present, no excess,
+    global or grant-option privileges;
+  - the verifier is green on MySQL 8.4: head `022_engagement_roadmap_work_plan`, 35 base tables
+    (34 application + `alembic_version`), 394/394 governed columns and 11/11 idempotency
+    boundaries, 0 at risk;
+  - tables match the repository;
+  - `roadmap_items`, `engagement_phases`, `phase_tasks` and `phase_task_records` all have 0 rows;
+  - the 30-table count/checksum baseline (133 rows) is identical to the Phase 218 final snapshot,
+    with no table changed.
+
+**Deferred acceptance.** The full mutation path (roadmap item → phase → template → authorization) was
+intentionally not exercised in production. No roadmap item, phase, task, authorization or task
+record was created solely for acceptance. That workflow is covered by the Phase 219 harness and the
+local browser walkthrough (50/50, temporary SQLite, synthetic data). Populated production acceptance
+waits for the first real consultant-workspace engagement that reaches roadmap work.
 
 ## Limitations
 
