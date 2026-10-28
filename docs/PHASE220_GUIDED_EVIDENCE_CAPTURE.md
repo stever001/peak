@@ -17,10 +17,11 @@ observations, findings, recommendations, governed assessment evidence (`evidence
 reports. Peak does not read, parse or interpret it: no OCR, recognition, metadata extraction,
 scoring or synthesis. A task record is still how a consultant says what they found.
 
-**Status: repository-complete; production schema applied (023); application not yet deployed;
-OPEN.** The Cloudflare R2 adapter is built and was checked against the private development
-bucket. Production still needs the Render variables and the API deploy (see *Production
-sequencing* and *Production schema cutover record*).
+**Status: CLOSED in production (2026-10-28)**, with one deferred acceptance item: the first real
+production evidence upload waits for the first legitimate consultant-workspace task. Migration 023
+is applied, the Phase 220 API and web are deployed, and production R2 is configured. The Cloudflare
+R2 adapter was checked end-to-end against the private development bucket (see *Production
+sequencing*, *Production schema cutover record* and *Production cutover and closure*).
 
 ## What it is not
 
@@ -223,7 +224,7 @@ message now points to "Add photo or document".
 The Phase 218 and 219 "no migration" checks now assert that *that phase* added none, since 023
 belongs to Phase 220.
 
-## Production sequencing (in progress: steps 1–3 done)
+## Production sequencing (complete; step 7's upload deferred)
 
 The one ordering rule: **the Phase 220 API must not run against production before migration 023
 exists** (its evidence listing would fail). The web may go first: without the API's evidence
@@ -295,10 +296,78 @@ returned `verified_safe_no_remediation_required`:
 **Not done.** No Render deploy or environment change, and no Vercel action during the cutover.
 `peak-evidence-prod` was not touched, and no production evidence record was created.
 
-**Phase 220 is not closed and not fully deployed.** Remaining:
-- the Render R2 environment variables;
-- the Phase 220 API deploy;
-- read-only production checks;
-- one approved synthetic upload;
-- the preservation check;
-- closure.
+At the end of the schema cutover, the Render R2 variables, the API deploy, the production checks
+and closure were still to do. All of them were completed later the same day (see the next section).
+
+## Production cutover and closure (2026-10-28)
+
+**Status: complete (2026-10-28). Phase 220 is CLOSED**, with one deferred acceptance item (below).
+No production data was written.
+
+- **Releases.** Both from `deed510` (*Advance verifier to Phase 220 schema*; the verifier pin is at
+  `023_phase_task_evidence`):
+  - Render API `peak-consultant-api`, deploy `dep-dbh7ud59fdbs7387a6j0`, **Live**, at commit
+    `deed510a2129a5f90b0321c2f2649d73f8abc869`;
+  - Vercel web: the Phase 220 production deployment, successful.
+- **R2 configuration.** The production R2 variables are set on Render for the private bucket
+  `peak-evidence-prod`. The API started cleanly. The deploy logs show no `Evidence capture is off:`
+  warning, so the store is configured. No object has been written to `peak-evidence-prod`.
+- **Health.** `/healthz` returned 200.
+- **Authenticated API check (existing Admin, read-only):**
+  - login 200, `/auth/me` 200 admin, `/engagements` 200;
+  - `/phase-templates` 200, matching the repository catalogue;
+  - the engagement's detail, discovery, roadmap and phases all 200;
+  - the Phase 59 anchor's roadmap is still `enabled=false`, as expected (Phase 219);
+  - no production tasks are visible to Admin;
+  - signed in, an unknown task's evidence route returns 404. The route is registered and the task
+    does not exist;
+  - logout 204, then `/auth/me` 401.
+- **Web check (read-only):**
+  - logged out, protected routes redirect to login;
+  - signed in, the engagement and roadmap pages render with no application error;
+  - the roadmap page shows the historical disabled-roadmap notice;
+  - an unknown task page shows the normal not-found page. The task page handles an evidence API
+    or state that is not available;
+  - no raw ids or storage keys are rendered, and Phase 220 surfaces have no advisory-boundary
+    terms;
+  - no non-GET requests were made while pages loaded.
+
+  The check script reported "setup forms rendered: True" on the roadmap page. As in Phase 219,
+  that is the sidebar and top-bar Sign out forms (`web/app/(workspace)/layout.tsx`). In source,
+  the disabled branch of the roadmap page renders only the notice paragraph and no setup control.
+- **Responsive measurements (production).** Every measured desktop and iPad layout: overflow 0px,
+  0 elements past the edge, 0 controls under 40px.
+- **Runtime database identity.** The API pool connects as `peak_prod_runtime` on `defaultdb`. No
+  verify or migrate credential is in the runtime pool.
+- **Preservation.** All read-only:
+  - Alembic head `023_phase_task_evidence`;
+  - 36 base tables (35 application + `alembic_version`);
+  - `phase_task_evidence` has 0 rows;
+  - `roadmap_items`, `engagement_phases`, `phase_tasks` and `phase_task_records` all have 0 rows;
+  - the original 30-table baseline (133 rows) is unchanged, `changed_tables = []`;
+  - the Phase 50 gate passes: required grants present, no excess grants, no global privileges,
+    no grant option;
+  - the verifier returns `verified_safe_no_remediation_required`: head matches, 409/409 governed
+    columns deterministic, 11/11 idempotency boundaries safe, 0 at risk.
+
+**Earlier R2 validation (development).** Before the production deploy, a live smoke test ran
+against `peak-evidence-dev` with the real `R2EvidenceStore` selected:
+- put succeeded;
+- `exists` was correct before and after;
+- the bytes read back were identical and the sha256 matched;
+- an overwrite was refused, and a missing key behaved correctly;
+- no credentials were printed;
+- `peak-evidence-prod` was not touched.
+
+**Deferred acceptance.** Production evidence-upload acceptance is deferred until the first
+legitimate consultant-workspace task exists. No synthetic production roadmap/phase/task/authorization
+chain was created solely for acceptance. The complete upload/storage/retrieval path was validated
+against the real `peak-evidence-dev` R2 bucket before production deployment.
+
+Production has no eligible task. Creating a whole consulting workflow only to test an upload would
+break production-data discipline. This replaces sequencing step 7's synthetic upload and step 5's
+"capture available" check on a task's evidence listing. The first real upload counts as the
+deferred operational acceptance. After it, confirm three things:
+- the R2 object exists;
+- the `phase_task_evidence` row matches it;
+- nothing else changed.
