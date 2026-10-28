@@ -17,9 +17,10 @@ observations, findings, recommendations, governed assessment evidence (`evidence
 reports. Peak does not read, parse or interpret it: no OCR, recognition, metadata extraction,
 scoring or synthesis. A task record is still how a consultant says what they found.
 
-**Status: repository-complete; not yet deployed.** The Cloudflare R2 adapter is built and was
-checked against the private development bucket. Production still needs the Render variables,
-migration 023 and the deploy (see *Production sequencing*).
+**Status: repository-complete; production schema applied (023); application not yet deployed;
+OPEN.** The Cloudflare R2 adapter is built and was checked against the private development
+bucket. Production still needs the Render variables and the API deploy (see *Production
+sequencing* and *Production schema cutover record*).
 
 ## What it is not
 
@@ -222,7 +223,7 @@ message now points to "Add photo or document".
 The Phase 218 and 219 "no migration" checks now assert that *that phase* added none, since 023
 belongs to Phase 220.
 
-## Production sequencing (not started)
+## Production sequencing (in progress: steps 1–3 done)
 
 The one ordering rule: **the Phase 220 API must not run against production before migration 023
 exists** (its evidence listing would fail). The web may go first: without the API's evidence
@@ -243,3 +244,61 @@ so whichever commit that deploy builds is safe.
    the public API origin.
 7. Read-only checks, then one approved synthetic upload, then confirm the R2 object, the row, and
    that nothing else changed.
+
+## Production schema cutover record (2026-10-28)
+
+**Commits.** Implementation `6164f11` `[skip render]`; Vercel deployed the web, which shows evidence
+as unavailable until the API has it. The verifier pin is moved to 023 in the commit that adds this
+record, `[skip render]`.
+
+**Preflight (read-only).** Repository at `6164f11`, clean; one Alembic head, 023 the only pending
+step. As `peak_prod_verify_ro`:
+- head `022_engagement_roadmap_work_plan`;
+- 35 base tables (34 application + `alembic_version`), `phase_task_evidence` absent;
+- the 30-table `COUNT(*)` + `CHECKSUM TABLE` baseline (133 rows) identical to the Phase 219 final
+  snapshot;
+- verifier `verified_safe_no_remediation_required` (394/394, 11/11).
+
+The Phase 50 gate passed as `peak_prod_runtime`.
+
+**Migration.** Migration 023 was re-read just before it ran, identical to the reviewed file. As
+`peak_prod_migrate`, with the target guard (`PEAK_ALEMBIC_TARGET=production`,
+`PEAK_PRODUCTION_MIGRATION_CONFIRM=1`, `PEAK_PRODUCTION_SCHEMA_CONFIRM=defaultdb`):
+`alembic upgrade 023_phase_task_evidence` ran `022 → 023` only.
+
+**Schema check afterwards (read-only):**
+
+| Property | After |
+|---|---|
+| Alembic head | `023_phase_task_evidence`, single row |
+| Base tables | 36 (35 application + `alembic_version`), matching the models |
+| `phase_task_evidence` | InnoDB, 0 rows; 26 columns, nullability and collation as the model; 15 governed columns `utf8mb4_bin` |
+| Constraints | CHECK `ck_phase_task_evidence_{kind,media_type,storage_backend,byte_length}`; UNIQUE `uq_phase_task_evidence_storage_key`, `uq_phase_task_evidence_supersedes`; 11 `ix_*`; no foreign keys |
+| Existing tables | no `CREATE_TIME` changed (no rebuild); the 30-table baseline (133 rows) unchanged |
+| Phase 217 tables | `roadmap_items`, `engagement_phases`, `phase_tasks`, `phase_task_records` all 0 rows |
+
+**Grants.** None changed. `SHOW GRANTS` for `peak_prod_runtime` was identical before and after:
+- USAGE on `*.*`;
+- `SELECT, INSERT` on `defaultdb.*`, which covers append-only evidence creation;
+- table-level UPDATE on the nine Phase 217 tables.
+
+There is no grant on `phase_task_evidence` and no UPDATE on it. The live Phase 50 gate passed.
+
+**Verifier.** `EXPECTED_ALEMBIC_HEAD` was moved to 023 only after the migration. The live run
+returned `verified_safe_no_remediation_required`:
+- head matches;
+- 36 tables;
+- 409/409 governed columns deterministic (394 + 15);
+- 11/11 idempotency boundaries safe;
+- 0 at risk.
+
+**Not done.** No Render deploy or environment change, and no Vercel action during the cutover.
+`peak-evidence-prod` was not touched, and no production evidence record was created.
+
+**Phase 220 is not closed and not fully deployed.** Remaining:
+- the Render R2 environment variables;
+- the Phase 220 API deploy;
+- read-only production checks;
+- one approved synthetic upload;
+- the preservation check;
+- closure.
