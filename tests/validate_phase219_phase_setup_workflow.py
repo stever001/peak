@@ -488,7 +488,10 @@ def static_checks():
           "Suggested by Peak · not saved" in roadmap_page and "On the roadmap" in roadmap_page
           and "border-dashed" in roadmap_page)
     versions = os.listdir(os.path.join(REPO_ROOT, "alembic", "versions"))
-    check("no migration was added (head stays 022)", not any(v.startswith("023") for v in versions))
+    # Phase 220 added 023 (evidence); Phase 219 itself added none.
+    check("Phase 219 added no migration",
+          not any(f"Phase 219" in read(os.path.join("alembic", "versions", v))
+                  for v in versions if v.endswith(".py")))
     check("docs/PHASE219_PHASE_SETUP_WORKFLOW.md exists",
           os.path.exists(os.path.join(REPO_ROOT, "docs/PHASE219_PHASE_SETUP_WORKFLOW.md")))
 

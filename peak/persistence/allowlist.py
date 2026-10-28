@@ -250,6 +250,12 @@ WORKSPACE_WRITE_COLUMNS = {
         frozenset({"id", "client_id", "engagement_id", "phase_id", "task_id", "record_kind",
                    "record_text", "structured", "basis", "supersedes_record_id",
                    "recorded_by_consultant_id"}),
+    # Phase 220: captured evidence metadata. Create-only; a replacement supersedes.
+    ("phase_task_evidence", "create_phase_task_evidence"):
+        frozenset({"id", "client_id", "engagement_id", "phase_id", "task_id", "task_record_id",
+                   "evidence_kind", "caption", "media_type", "byte_length", "content_hash",
+                   "storage_backend", "storage_key", "file_name", "supersedes_evidence_id",
+                   "uploaded_by_consultant_id"}),
 }
 
 #: Columns the workspace path may never write: governance, classification, review/audit, and
@@ -329,6 +335,9 @@ ENGAGEMENT_PHASE_RECORD_TABLES = frozenset(
 )
 assert all(action.startswith("create_")
            for table, action in WORKSPACE_WRITE_COLUMNS if table == "phase_task_records")
+#: Phase 220: captured evidence is create-only, like task records.
+assert all(action.startswith("create_")
+           for table, action in WORKSPACE_WRITE_COLUMNS if table == "phase_task_evidence")
 assert not any(cols & (ROADMAP_ITEM_FRAMING_COLUMNS | PHASE_TASK_FRAMING_COLUMNS)
                for (table, action), cols in WORKSPACE_WRITE_COLUMNS.items()
                if table in ENGAGEMENT_PHASE_RECORD_TABLES and not action.startswith("create_"))

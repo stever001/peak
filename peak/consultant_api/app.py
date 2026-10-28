@@ -25,7 +25,11 @@ Configuration (environment, read once in :func:`create_app`):
 
 - ``PEAK_RUNTIME_DATABASE_URL`` — runtime DB (via ``peak.db.session``; no fallback);
 - ``PEAK_WEB_SECRET_KEY`` — session signing secret (never printed);
-- ``PEAK_WEB_INSECURE_COOKIE=1`` — local HTTP development only: drop the ``Secure`` cookie flag.
+- ``PEAK_WEB_INSECURE_COOKIE=1`` — local HTTP development only: drop the ``Secure`` cookie flag;
+- ``PEAK_EVIDENCE_STORAGE_BACKEND`` (``r2`` with ``PEAK_R2_*``, or ``filesystem`` with
+  ``PEAK_EVIDENCE_FS_ROOT`` locally) — Phase 220 evidence storage
+  (``peak.workspace.evidence_storage``); unset or incomplete means evidence capture is off;
+- ``PEAK_WEB_BASE_URL`` — the web app's origin, where a browser evidence upload is sent back to.
 """
 
 from __future__ import annotations
@@ -36,13 +40,23 @@ import time
 from typing import Dict, List, Literal, Optional, Union
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
+from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel, ConfigDict, Field
+from starlette.concurrency import run_in_threadpool
 
 from peak import accounts, workspace
-from peak.workspace import approvals, discovery, engagement_phases, peak_method_phases
+from peak.workspace import (
+    approvals, discovery, engagement_phases, evidence_storage, peak_method_phases, phase_evidence,
+)
 
 SESSION_COOKIE = "peak_session"
 INSECURE_COOKIE_ENV = "PEAK_WEB_INSECURE_COOKIE"
+WEB_BASE_URL_ENV = "PEAK_WEB_BASE_URL"
+#: Phase 220: status for each evidence refusal a JSON client sees (a browser is redirected).
+_EVIDENCE_STATUS = {"invalid_grant": 401, "upload_expired": 401, "file_too_large": 413,
+                    "unsupported_type": 415, "storage_unavailable": 503,
+                    "content_mismatch": 500}
+_UNSET = object()
 
 
 class LoginIn(BaseModel):
@@ -357,16 +371,24 @@ class LoginThrottle:
 
 def create_app(
     session_factory=None, secret_key: Optional[str] = None, secure_cookie: Optional[bool] = None,
-    login_throttle: Optional[LoginThrottle] = None,
+    login_throttle: Optional[LoginThrottle] = None, evidence_store=_UNSET,
+    web_base_url: Optional[str] = None,
 ) -> FastAPI:
     """Build the app. Arguments override environment configuration (used by tests)."""
+    runtime_url = ""
     if session_factory is None:
         from peak.db.session import (
             create_session_factory, get_runtime_database_url, require_runtime_identity,
         )
 
-        require_runtime_identity(get_runtime_database_url())  # Phase 216 startup guard
+        runtime_url = get_runtime_database_url()
+        require_runtime_identity(runtime_url)  # Phase 216 startup guard
         session_factory = create_session_factory()
+    if evidence_store is _UNSET:
+        evidence_store = evidence_storage.store_from_environment(runtime_url)
+    if web_base_url is None:
+        web_base_url = os.environ.get(WEB_BASE_URL_ENV, "")
+    web_base_url = web_base_url.rstrip("/")
     if secret_key is None:
         secret_key = accounts.get_secret_key()
     if secure_cookie is None:
@@ -678,6 +700,104 @@ def create_app(
     def tasks_record(task_id: str, body: TaskRecordIn, me: dict = Depends(current_consultant)):
         return {"phase": _workspace_call(engagement_phases.record_task_work, session_factory,
                                          task_id, body.model_dump(exclude_unset=True), me["id"])}
+
+    # --- Phase 220: guided evidence capture ---------------------------------------------------
+    # Reading a task's evidence needs a session. The browser then uploads and views directly
+    # against the API with short-lived signed grants (the web tier's request and response size
+    # limits are too small for photos); the grant, not a cookie, authenticates those two routes.
+
+    @app.get("/tasks/{task_id}/evidence")
+    def task_evidence_get(task_id: str, me: dict = Depends(current_consultant)):
+        out = _workspace_call(phase_evidence.task_evidence, session_factory, task_id)
+        for item in out["evidence"]:
+            item["content_path"] = ("/evidence-content/"
+                                    + phase_evidence.content_token(secret_key, item["id"]))
+        closed = out.pop("capture_closed")
+        if evidence_store is None:
+            out["upload"] = {"available": False,
+                             "reason": "Photo and document capture is not available here yet."}
+        elif closed:
+            out["upload"] = {"available": False, "reason": closed["message"]}
+        else:
+            out["upload"] = {"available": True, "path": "/evidence-uploads",
+                             "grant": phase_evidence.upload_grant(secret_key, me["id"], task_id),
+                             "max_bytes": phase_evidence.MAX_BYTES,
+                             "media_types": list(phase_evidence.MEDIA_TYPES)}
+        return {"task_evidence": out}
+
+    @app.post("/evidence-uploads")
+    async def evidence_upload(request: Request):
+        """Multipart: ``grant``, ``file``, ``evidence_kind``, ``caption``, ``task_record_id``,
+        ``supersedes_evidence_id``; ``respond=redirect`` sends a browser back to the task page."""
+        def refuse(code_, message, status_code=None):
+            return JSONResponse({"detail": {"code": code_, "message": message}},
+                                status_code=status_code or _EVIDENCE_STATUS.get(code_, 422))
+
+        length = request.headers.get("content-length")
+        if length and length.isdigit() and int(length) > phase_evidence.MAX_BYTES + 256 * 1024:
+            return refuse("file_too_large", "The file is too large.")
+        try:
+            form = await request.form(max_files=1, max_fields=10)
+        except Exception:  # noqa: BLE001 - malformed body
+            return refuse("invalid_request", "Send the file as a form upload.", 400)
+        redirect = form.get("respond") == "redirect"
+        try:
+            consultant_id, task_id, expired = phase_evidence.read_upload_grant(
+                secret_key, str(form.get("grant") or ""))
+        except workspace.WorkspaceError as exc:
+            return refuse(exc.code, str(exc))
+        if accounts.get_consultant(session_factory, consultant_id) is None:
+            return refuse("invalid_grant", "The upload link is not valid.")
+
+        def back(outcome: str):
+            phase_id = engagement_phases.task_phase_id(session_factory, task_id)
+            if not web_base_url or phase_id is None:
+                return refuse("redirect_not_configured", "The upload finished; reload the task.",
+                              409)
+            return RedirectResponse(f"{web_base_url}/phases/{phase_id}/tasks/{task_id}?{outcome}"
+                                    "#evidence", status_code=status.HTTP_303_SEE_OTHER)
+
+        if expired:
+            return back("evidence_error=upload_expired") if redirect else \
+                refuse("upload_expired", "The upload link expired; reload the task and try again.")
+        upload = form.get("file")
+        content = await upload.read(phase_evidence.MAX_BYTES + 1) \
+            if hasattr(upload, "read") else b""
+        data = {k: str(form.get(k)) for k in ("evidence_kind", "caption", "task_record_id",
+                                              "supersedes_evidence_id") if form.get(k)}
+        try:
+            item = await run_in_threadpool(
+                phase_evidence.add_task_evidence, session_factory, evidence_store, task_id,
+                consultant_id, data, content, getattr(upload, "filename", None))
+        except workspace.WorkspaceError as exc:
+            return back(f"evidence_error={exc.code}") if redirect else refuse(exc.code, str(exc))
+        if item is None:
+            return refuse("not_found", "That task no longer exists.", 404)
+        return back("evidence=added") if redirect else \
+            JSONResponse({"evidence": item}, status_code=status.HTTP_201_CREATED)
+
+    @app.get("/evidence-content/{token}")
+    def evidence_content_get(token: str):
+        evidence_id = phase_evidence.read_content_token(secret_key, token)
+        if evidence_id is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "not_found")
+        try:
+            found = phase_evidence.evidence_content(session_factory, evidence_store, evidence_id)
+        except workspace.WorkspaceError as exc:
+            raise HTTPException(_EVIDENCE_STATUS.get(exc.code, 422),
+                                {"code": exc.code, "message": str(exc)}) from None
+        if found is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "not_found")
+        data, media_type, _ = found
+        name = f"evidence-{evidence_id}.{phase_evidence.file_extension(media_type)}"
+        return Response(data, media_type=media_type, headers={
+            "Content-Disposition": f'inline; filename="{name}"',
+            "Cache-Control": "private, max-age=300",
+            "X-Content-Type-Options": "nosniff",
+            "Content-Security-Policy": "default-src 'none'; sandbox",
+            "Referrer-Policy": "no-referrer",
+            "Cross-Origin-Resource-Policy": "cross-origin",
+        })
 
     # --- Phase 206: internal assessment (read-only, derived; any authenticated consultant) ------
 

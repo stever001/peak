@@ -391,8 +391,10 @@ def static_checks():
     check("no work-plan code calls a discovery observation endpoint",
           not any("/observations" in s for s in ui.values()))
     versions = os.listdir(os.path.join(REPO_ROOT, "alembic", "versions"))
-    check("no migration was added (head stays 022)",
-          not any(v.startswith("023") for v in versions))
+    # Phase 220 added 023 (evidence); Phase 218 itself added none.
+    check("Phase 218 added no migration",
+          not any(f"Phase 218" in read(os.path.join("alembic", "versions", v))
+                  for v in versions if v.endswith(".py")))
     check("docs/PHASE218_GUIDED_EXECUTION_UI.md exists",
           os.path.exists(os.path.join(REPO_ROOT, "docs/PHASE218_GUIDED_EXECUTION_UI.md")))
 

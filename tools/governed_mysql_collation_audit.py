@@ -183,6 +183,13 @@ EXACT_CLASS = {
     "method_version": GOVERNED_ENUM,
     "title": ORDINARY_TEXT,
     "authorization_reference": ORDINARY_TEXT,
+    # Phase 220 captured evidence: the kind and storage backend are closed vocabularies
+    # (CHECK-constrained); ``storage_key`` is the server-generated object key, unique per row, so
+    # it is an identifier (not an idempotency key, as the ``_key`` suffix would suggest).
+    # ``content_hash``, ``media_type`` and ``file_name`` classify as before.
+    "evidence_kind": GOVERNED_ENUM,
+    "storage_backend": GOVERNED_ENUM,
+    "storage_key": GOVERNED_IDENTIFIER,
 }
 
 #: Suffix/substring patterns, applied in order when no exact name matches.

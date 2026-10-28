@@ -11,3 +11,8 @@ argon2-cffi>=23.1
 itsdangerous>=2.2
 # FastAPI TestClient transport, used by tests/validate_phase201_consultant_web_auth.py.
 httpx>=0.27
+# Phase 220: multipart form parsing for evidence uploads (POST /evidence-uploads).
+python-multipart>=0.0.9
+# Phase 220: the private Cloudflare R2 evidence bucket, through its S3-compatible API
+# (peak/workspace/evidence_storage.py). 1.36 adds the checksum settings the adapter sets.
+boto3>=1.36

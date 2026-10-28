@@ -58,6 +58,8 @@ RUNTIME_TABLE_PERSISTENCE = {
     "artifact_final_approver_designations": APPEND_ONLY,
     "artifact_releases": APPEND_ONLY,
     "phase_task_records": APPEND_ONLY,
+    # Captured evidence metadata: create-only, a replacement supersedes (Phase 220).
+    "phase_task_evidence": APPEND_ONLY,
     # Consultant accounts are created by ``peak.accounts``. The only update (an Admin password
     # reset) runs as the migration credential, never the runtime.
     "consultants": APPEND_ONLY,

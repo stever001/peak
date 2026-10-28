@@ -875,6 +875,15 @@ def _task_for_work(session, task_id: str):
     return task, phase
 
 
+def task_phase_id(session_factory, task_id: str) -> Optional[str]:
+    """The phase a task belongs to, or None. Read-only (Phase 220 upload redirect)."""
+    from peak.db.models import PhaseTask
+
+    with session_factory() as session:
+        task = session.get(PhaseTask, task_id)
+        return task.phase_id if task is not None else None
+
+
 def _open_task(task) -> None:
     if task.status == "suggested":
         raise WorkspaceError("task_not_accepted", "Accept the suggested task into the plan first.")
@@ -1021,8 +1030,8 @@ def record_task_work(session_factory, task_id: str, data: dict,
     kind = data.get("record_kind")
     if kind in MEDIA_RECORD_KINDS:
         raise WorkspaceError("evidence_capture_not_available",
-                             "Photo and document capture is not available yet; record a note "
-                             "describing the item and where it is kept.")
+                             "A task record is text. Add photos and document photos with "
+                             "'Add photo or document' on the task.")
     if kind not in STRUCTURED_FIELDS:
         raise WorkspaceError("invalid_field", "Unknown record kind.")
     basis = data.get("basis") or None

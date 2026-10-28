@@ -651,3 +651,65 @@ export type PhaseTemplate = {
   scope_summary: string;
   tasks: { sequence: number; title: string; required: boolean }[];
 };
+
+// --- Phase 220: guided evidence capture ----------------------------------------------------------
+
+export type EvidenceKind = "photo" | "document_photo";
+
+/** A photo or document photo captured on a task. Material only: Peak draws no conclusion from it. */
+export type TaskEvidence = {
+  id: string;
+  task_id: string;
+  phase_id: string;
+  evidence_kind: EvidenceKind;
+  caption: string | null;
+  media_type: string;
+  byte_length: number;
+  content_hash: string;
+  task_record: { id: string; record_kind: RecordKind; created_at: string | null } | null;
+  supersedes_evidence_id: string | null;
+  superseded_by: string | null;
+  uploaded_by: string | null;
+  created_at: string | null;
+  interpreted: false;
+  /** API-relative, short-lived signed path to view the original bytes. */
+  content_path: string;
+};
+
+export type EvidenceUpload =
+  | { available: true; path: string; grant: string; max_bytes: number; media_types: string[] }
+  | { available: false; reason: string };
+
+export type TaskEvidenceResponse = {
+  task_id: string;
+  phase_id: string;
+  evidence: TaskEvidence[];
+  upload: EvidenceUpload;
+};
+
+/**
+ * Phase 220: a task's captured evidence, or null when it cannot be had right now: the API is
+ * unreachable, does not have the evidence route yet (an API deployed before Phase 220), errors, or
+ * answers with something else. Evidence is optional on the task page, so this never calls
+ * notFound() or throws; only a missing session still goes to /login. A plain GET: reads only.
+ */
+export async function getTaskEvidence(taskId: string): Promise<TaskEvidenceResponse | null> {
+  let res: Response;
+  try {
+    res = await apiFetch(`/tasks/${encodeURIComponent(taskId)}/evidence`);
+  } catch {
+    return null;
+  }
+  if (res.status === 401) redirect("/login");
+  if (!res.ok) return null;
+  const ev = (await res.json().catch(() => null))?.task_evidence;
+  return ev && Array.isArray(ev.evidence) && ev.upload ? (ev as TaskEvidenceResponse) : null;
+}
+
+/**
+ * Server-only: the API origin the browser reaches for evidence uploads and views. Photos go straight
+ * to the API because the web tier's request and response size limits are too small for them.
+ */
+export function apiPublicUrl(): string {
+  return (process.env.PEAK_API_PUBLIC_URL ?? apiBaseUrl()).replace(/\/+$/, "");
+}

@@ -1298,6 +1298,79 @@ def _refuse_bulk_task_record_change(state):
             m.class_ is PhaseTaskRecord for m in state.all_mappers):
         raise PermissionError("phase_task_records rows are immutable: no update or delete.")
 
+
+# --- Phase 220: guided evidence capture -----------------------------------------------------------
+#
+# docs/PHASE220_GUIDED_EVIDENCE_CAPTURE.md is the record. A photo or document photo the consultant
+# captured while doing a task. Field evidence material only: never an observation, a finding, a
+# recommendation or governed assessment evidence (``evidence_references`` is a separate chain), and
+# its content is never read or interpreted. Original bytes live in object storage under
+# ``storage_key``; this row holds metadata, linkage and provenance. Written only by
+# ``peak.workspace.phase_evidence``.
+
+#: What the consultant says the capture is. A document photo is a photo of a paper document.
+PHASE_TASK_EVIDENCE_KINDS = ("photo", "document_photo")
+#: Media types accepted, decided from the file's own bytes (never its name or declared type).
+PHASE_TASK_EVIDENCE_MEDIA_TYPES = ("image/jpeg", "image/png", "image/heic", "image/heif")
+#: Where the original bytes are kept (``peak.workspace.evidence_storage``).
+PHASE_TASK_EVIDENCE_STORAGE_BACKENDS = ("filesystem", "r2")
+
+
+class PhaseTaskEvidence(Base, GovernanceMixin, AuditMixin):
+    """One captured photo or document photo for a task. Insert-only; a replacement supersedes.
+
+    Optionally linked to one task record of the same task, when it supports that record.
+    """
+
+    __tablename__ = "phase_task_evidence"
+    __table_args__ = (
+        UniqueConstraint("supersedes_evidence_id", name="uq_phase_task_evidence_supersedes"),
+        UniqueConstraint("storage_key", name="uq_phase_task_evidence_storage_key"),
+        CheckConstraint(_in("evidence_kind", PHASE_TASK_EVIDENCE_KINDS),
+                        name="ck_phase_task_evidence_kind"),
+        CheckConstraint(_in("media_type", PHASE_TASK_EVIDENCE_MEDIA_TYPES),
+                        name="ck_phase_task_evidence_media_type"),
+        CheckConstraint(_in("storage_backend", PHASE_TASK_EVIDENCE_STORAGE_BACKENDS),
+                        name="ck_phase_task_evidence_storage_backend"),
+        CheckConstraint("byte_length > 0", name="ck_phase_task_evidence_byte_length"),
+        MYSQL_TABLE_ARGS,
+    )
+    # id convention: ptevd_<hex>
+    id: Mapped[str] = mapped_column(GovernedString(64), primary_key=True)
+    client_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    engagement_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    phase_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    task_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    task_record_id: Mapped[Optional[str]] = mapped_column(GovernedString(64), index=True)
+    evidence_kind: Mapped[str] = mapped_column(String(24), nullable=False)
+    caption: Mapped[Optional[str]] = mapped_column(Text)
+    media_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    byte_length: Mapped[int] = mapped_column(Integer, nullable=False)
+    # sha256 hex of the original bytes, computed by the API on receipt.
+    content_hash: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    storage_backend: Mapped[str] = mapped_column(String(16), nullable=False)
+    # Server-generated object key; never derived from anything the browser sent.
+    storage_key: Mapped[str] = mapped_column(GovernedString(255), nullable=False)
+    # The file name the device sent, kept for provenance only and never shown or used as a path.
+    file_name: Mapped[Optional[str]] = mapped_column(String(255))
+    supersedes_evidence_id: Mapped[Optional[str]] = mapped_column(GovernedString(64))
+    uploaded_by_consultant_id: Mapped[str] = mapped_column(GovernedString(64), nullable=False)
+
+
+def _refuse_task_evidence_change(mapper, connection, target):
+    raise PermissionError("phase_task_evidence rows are immutable: no update or delete.")
+
+
+event.listen(PhaseTaskEvidence, "before_update", _refuse_task_evidence_change)
+event.listen(PhaseTaskEvidence, "before_delete", _refuse_task_evidence_change)
+
+
+@event.listens_for(Session, "do_orm_execute")
+def _refuse_bulk_task_evidence_change(state):
+    if (state.is_update or state.is_delete) and any(
+            m.class_ is PhaseTaskEvidence for m in state.all_mappers):
+        raise PermissionError("phase_task_evidence rows are immutable: no update or delete.")
+
 # Convenience list of all model classes (used by tooling/validation).
 ALL_MODELS = [
     Client,
@@ -1334,4 +1407,5 @@ ALL_MODELS = [
     EngagementPhase,
     PhaseTask,
     PhaseTaskRecord,
+    PhaseTaskEvidence,
 ]

@@ -5,10 +5,15 @@ import type { ReactNode } from "react";
 import {
   acceptSuggestedTask, completeTask, recordTaskWork, resolveTaskNotApplicable,
 } from "@/app/work-plan-actions";
+import { EvidenceForm } from "@/components/evidence-capture";
+import { EvidenceList } from "@/components/evidence-list";
 import { ActionButton, CompleteTaskForm, NotApplicableForm } from "@/components/work-plan-actions";
 import { Pill, RecordList, TaskStatusPill } from "@/components/work-plan-parts";
 import { RecordForm } from "@/components/work-plan-record-form";
-import { apiGet, requireConsultant, type EngagementPhaseDetail } from "@/lib/api";
+import {
+  apiGet, apiPublicUrl, getTaskEvidence, requireConsultant, type EngagementPhaseDetail,
+} from "@/lib/api";
+import { evidenceError } from "@/lib/evidence";
 import { formatDate } from "@/lib/labels";
 import {
   conditionText, isOpen, MEDIA_KINDS, nextTask, RECORD_KIND_LABELS, splitRecords,
@@ -44,6 +49,15 @@ export default async function TaskPage(props: PageProps<"/phases/[id]/tasks/[tas
   const capturable = t.suggested_evidence.filter((k) => !MEDIA_KINDS.includes(k));
   const deferred = t.suggested_evidence.filter((k) => MEDIA_KINDS.includes(k));
   const condition = conditionText(t);
+  // Optional: null when evidence cannot be loaded; the rest of the page does not depend on it.
+  const ev = await getTaskEvidence(t.id);
+  const apiUrl = apiPublicUrl();
+  const upload = ev?.upload.available ? ev.upload : null;
+  const linkable = current.map((r) => ({
+    id: r.id, label: `${RECORD_KIND_LABELS[r.record_kind]} · ${r.record_text.slice(0, 60)}`,
+  }));
+  const added = search.evidence === "added";
+  const evidenceProblem = typeof search.evidence_error === "string" ? evidenceError(search.evidence_error) : null;
 
   return (
     <>
@@ -139,7 +153,9 @@ export default async function TaskPage(props: PageProps<"/phases/[id]/tasks/[tas
                 </ul>
                 {deferred.length > 0 && (
                   <p className="mt-2 text-sm text-ink-muted">
-                    Photo and document capture is not available yet. Record a note describing the item and where it is kept.
+                    {upload
+                      ? "Add photos and document photos under Photos and documents."
+                      : "Record a note describing the item and where it is kept."}
                   </p>
                 )}
               </Guide>
@@ -193,6 +209,47 @@ export default async function TaskPage(props: PageProps<"/phases/[id]/tasks/[tas
                             correcting={correcting} cancelHref={correcting ? `${here}#records` : undefined} />
               </div>
             )}
+          </section>
+
+          {/* Phase 220: captured material, kept apart from records, observations and findings. */}
+          <section id="evidence" aria-labelledby="your-evidence" className="peak-card">
+            <h2 id="your-evidence" className="mb-1 text-lg font-semibold">Photos and documents</h2>
+            <p className="mb-4 text-sm text-ink-muted">
+              What you captured on site. Peak keeps the original and does not read or interpret it.
+            </p>
+            {added && (
+              <p role="status" className="mb-4 rounded-peak border-l-4 border-accent bg-canvas px-4 py-3 text-sm">
+                Added to this task.
+              </p>
+            )}
+            {evidenceProblem && (
+              <p role="alert" className="mb-4 rounded-peak border-l-4 border-attention bg-canvas px-4 py-3 text-sm">
+                {evidenceProblem}
+              </p>
+            )}
+            {!ev ? (
+              <p className="text-ink-muted">Photos and documents are currently unavailable.</p>
+            ) : ev.evidence.length === 0 ? (
+              <p className="mb-4 text-ink-muted">No photos or documents for this task yet.</p>
+            ) : (
+              <div className="mb-6">
+                <EvidenceList items={ev.evidence} apiUrl={apiUrl}
+                              replaceForm={upload ? (e) => (
+                                <EvidenceForm action={`${apiUrl}${upload.path}`} grant={upload.grant}
+                                              maxBytes={upload.max_bytes} records={linkable}
+                                              replacing={{ id: e.id, kind: e.evidence_kind }} />
+                              ) : undefined} />
+              </div>
+            )}
+            {ev && (upload ? (
+              <div className="border-t border-line pt-5">
+                <h3 className="mb-3 font-semibold">Add a photo or document</h3>
+                <EvidenceForm action={`${apiUrl}${upload.path}`} grant={upload.grant}
+                              maxBytes={upload.max_bytes} records={linkable} />
+              </div>
+            ) : ev.upload.available === false && (
+              <p className="text-sm text-ink-muted">{ev.upload.reason}</p>
+            ))}
           </section>
 
           {workable && w.applies !== false && (
