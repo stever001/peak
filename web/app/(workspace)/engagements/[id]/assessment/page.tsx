@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { AssessmentView } from "@/components/assessment-view";
 import { PageHeader } from "@/components/page-header";
-import { apiGet, requireConsultant, type AssessmentResponse } from "@/lib/api";
+import { apiGet, apiPublicUrl, requireConsultant, type AssessmentResponse } from "@/lib/api";
 
 /**
  * The engagement's internal assessment. Read-only and derived on every request from persisted
@@ -11,7 +11,7 @@ import { apiGet, requireConsultant, type AssessmentResponse } from "@/lib/api";
 export default async function AssessmentPage(props: PageProps<"/engagements/[id]/assessment">) {
   await requireConsultant();
   const { id } = await props.params;
-  const { engagement, assessment } = await apiGet<AssessmentResponse>(
+  const { engagement, assessment, observation_evidence } = await apiGet<AssessmentResponse>(
     `/engagements/${encodeURIComponent(id)}/assessment`,
   );
   return (
@@ -27,7 +27,8 @@ export default async function AssessmentPage(props: PageProps<"/engagements/[id]
           Final report
         </Link>
       </div>
-      <AssessmentView a={assessment} engagementId={engagement.id} />
+      <AssessmentView a={assessment} engagementId={engagement.id}
+                      evidence={observation_evidence ? { links: observation_evidence, apiUrl: apiPublicUrl() } : undefined} />
     </>
   );
 }

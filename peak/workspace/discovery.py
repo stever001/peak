@@ -758,9 +758,19 @@ def get_observation(session_factory, observation_id: str) -> Optional[dict]:
 
 def create_observation(session_factory, engagement_id: str, data: dict,
                        consultant_id: str) -> Optional[dict]:
-    """Record an observation. The recording consultant is the signed-in consultant."""
+    """Record an observation. The recording consultant is the signed-in consultant.
+
+    Phase 221: ``evidence_ids`` optionally links captures of this engagement, in the same
+    transaction (``observation_evidence``). The observation text is only what the consultant wrote.
+    """
+    from sqlalchemy.exc import IntegrityError
+
     from peak.db.models import DiscoveryObservation, DiscoverySession
 
+    from . import observation_evidence
+
+    data = dict(data)
+    evidence_ids = observation_evidence.evidence_ids_from(data)
     values = _observation_values({k: v for k, v in data.items() if k != "session_id"}, creating=True)
     with session_factory() as session:
         engagement = _workspace_engagement(session, engagement_id)
@@ -778,27 +788,48 @@ def create_observation(session_factory, engagement_id: str, data: dict,
         values.setdefault("low_hanging_fruit", False)
         _require_allowed("discovery_observations", "create_discovery_observation", values)
         session.add(DiscoveryObservation(**values, **WORKSPACE_ENGAGEMENT_CREATION_STAMP))
-        session.commit()
+        observation_evidence.add_links(session, values["id"], engagement.client_id, engagement.id,
+                                       evidence_ids, consultant_id)
+        try:
+            session.commit()
+        except IntegrityError:  # a pair is linked at most once
+            raise WorkspaceError("duplicate_link", "That evidence is already linked.") from None
     return get_observation(session_factory, values["id"])
 
 
-def update_observation(session_factory, observation_id: str, data: dict) -> Optional[dict]:
+def update_observation(session_factory, observation_id: str, data: dict,
+                       consultant_id: Optional[str] = None) -> Optional[dict]:
+    """Edit an observation. Phase 221: ``evidence_ids`` adds links (never removes one), linked by
+    the signed-in consultant, in the same transaction."""
     from sqlalchemy import update
+    from sqlalchemy.exc import IntegrityError
 
     from peak.db.models import DiscoveryObservation
 
+    from . import observation_evidence
+
+    data = dict(data)
+    evidence_ids = observation_evidence.evidence_ids_from(data)
     values = _observation_values(data, creating=False)
-    if not values:
+    if not values and not evidence_ids:
         raise WorkspaceError("invalid_field", "Nothing to update.")
-    _require_allowed("discovery_observations", "update_discovery_observation", values)
+    if evidence_ids and consultant_id is None:
+        raise WorkspaceError("invalid_field", "Linking evidence needs the signed-in consultant.")
+    if values:
+        _require_allowed("discovery_observations", "update_discovery_observation", values)
     with session_factory() as session:
         existing = session.get(DiscoveryObservation, observation_id)
-        if existing is not None:
-            _workspace_engagement(session, existing.engagement_id)
-            _require_question(session, values.get("question_id"), existing.engagement_id)
-        result = session.execute(update(DiscoveryObservation)
-                                 .where(DiscoveryObservation.id == observation_id).values(**values))
-        session.commit()
-        if result.rowcount == 0:
+        if existing is None:
             return None
+        _workspace_engagement(session, existing.engagement_id)
+        _require_question(session, values.get("question_id"), existing.engagement_id)
+        if values:
+            session.execute(update(DiscoveryObservation)
+                            .where(DiscoveryObservation.id == observation_id).values(**values))
+        observation_evidence.add_links(session, existing.id, existing.client_id,
+                                       existing.engagement_id, evidence_ids, consultant_id)
+        try:
+            session.commit()
+        except IntegrityError:  # a pair is linked at most once
+            raise WorkspaceError("duplicate_link", "That evidence is already linked.") from None
     return get_observation(session_factory, observation_id)

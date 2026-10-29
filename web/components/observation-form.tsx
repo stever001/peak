@@ -4,9 +4,10 @@ import Link from "next/link";
 import { useActionState } from "react";
 
 import type { FormState } from "@/app/actions";
+import { EvidencePicker } from "@/components/evidence-picker";
 import { Field } from "@/components/field";
 import { FormMessage } from "@/components/form-message";
-import type { Observation, QuestionOption, SessionSummary } from "@/lib/api";
+import type { EvidenceReference, Observation, QuestionOption, SessionSummary } from "@/lib/api";
 import { BASIS_LABELS, FINDING_CLASS_LABELS, LEVEL_LABELS } from "@/lib/labels";
 
 type Action = (prev: FormState, formData: FormData) => Promise<FormState>;
@@ -22,12 +23,14 @@ function LevelSelect({ name, label, value }: { name: string; label: string; valu
   );
 }
 
-export function ObservationForm({ action, observation, sessions, questions, submitLabel, cancelHref }: {
+export function ObservationForm({ action, observation, sessions, questions, evidence, submitLabel, cancelHref }: {
   action: Action;
   observation?: Observation;
   sessions?: SessionSummary[];
   /** Questions this engagement asks, for "Prompted by" (Phase 216). */
   questions: QuestionOption[];
+  /** Phase 221: captures this engagement can link; omitted when linking is unavailable. */
+  evidence?: { available: EvidenceReference[]; linkedIds: string[]; apiUrl: string };
   submitLabel: string;
   cancelHref?: string;
 }) {
@@ -82,6 +85,7 @@ export function ObservationForm({ action, observation, sessions, questions, subm
         <LevelSelect name="estimated_effort" label="Estimated effort" value={observation?.estimated_effort} />
         <LevelSelect name="estimated_value" label="Estimated value" value={observation?.estimated_value} />
       </div>
+      {evidence && <EvidencePicker {...evidence} />}
       <label className="flex min-h-touch items-center gap-3 rounded-peak border border-line bg-surface px-4">
         <input type="checkbox" name="low_hanging_fruit" defaultChecked={observation?.low_hanging_fruit}
                className="size-5 accent-brand" />

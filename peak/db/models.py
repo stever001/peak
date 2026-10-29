@@ -1371,6 +1371,49 @@ def _refuse_bulk_task_evidence_change(state):
             m.class_ is PhaseTaskEvidence for m in state.all_mappers):
         raise PermissionError("phase_task_evidence rows are immutable: no update or delete.")
 
+
+# --- Phase 221: evidence referencing ----------------------------------------------------------------
+#
+# docs/PHASE221_EVIDENCE_REFERENCING.md is the record. A consultant's statement that one captured
+# item (``phase_task_evidence``) supports one of their observations (``discovery_observations``) in
+# the same engagement. The observation stays the consultant's own words and discovery material; the
+# link creates no finding, recommendation or governed evidence and changes no readiness. Insert-only:
+# a link names the exact capture chosen and is never moved to a later replacement. Written only by
+# ``peak.workspace.observation_evidence``.
+
+
+class ObservationEvidenceLink(Base, GovernanceMixin, AuditMixin):
+    """One captured item a consultant linked to one of their observations. Insert-only."""
+
+    __tablename__ = "observation_evidence_links"
+    __table_args__ = (
+        UniqueConstraint("observation_id", "evidence_id", name="uq_observation_evidence_links_pair"),
+        MYSQL_TABLE_ARGS,
+    )
+    # id convention: oevl_<hex>
+    id: Mapped[str] = mapped_column(GovernedString(64), primary_key=True)
+    client_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    engagement_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    observation_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    evidence_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    linked_by_consultant_id: Mapped[str] = mapped_column(GovernedString(64), nullable=False)
+
+
+def _refuse_observation_evidence_link_change(mapper, connection, target):
+    raise PermissionError("observation_evidence_links rows are immutable: no update or delete.")
+
+
+event.listen(ObservationEvidenceLink, "before_update", _refuse_observation_evidence_link_change)
+event.listen(ObservationEvidenceLink, "before_delete", _refuse_observation_evidence_link_change)
+
+
+@event.listens_for(Session, "do_orm_execute")
+def _refuse_bulk_observation_evidence_link_change(state):
+    if (state.is_update or state.is_delete) and any(
+            m.class_ is ObservationEvidenceLink for m in state.all_mappers):
+        raise PermissionError("observation_evidence_links rows are immutable: no update or delete.")
+
+
 # Convenience list of all model classes (used by tooling/validation).
 ALL_MODELS = [
     Client,
@@ -1408,4 +1451,5 @@ ALL_MODELS = [
     PhaseTask,
     PhaseTaskRecord,
     PhaseTaskEvidence,
+    ObservationEvidenceLink,
 ]

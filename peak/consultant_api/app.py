@@ -46,7 +46,8 @@ from starlette.concurrency import run_in_threadpool
 
 from peak import accounts, workspace
 from peak.workspace import (
-    approvals, discovery, engagement_phases, evidence_storage, peak_method_phases, phase_evidence,
+    approvals, discovery, engagement_phases, evidence_storage, observation_evidence,
+    peak_method_phases, phase_evidence,
 )
 
 SESSION_COOKIE = "peak_session"
@@ -181,6 +182,8 @@ class ObservationUpdateIn(BaseModel):
     # Phase 216: the prompting question and the observation's basis; null clears either.
     question_id: Optional[str] = None
     basis: Optional[Literal["testimony", "observed", "document", "measured", "inferred"]] = None
+    # Phase 221: captures of this engagement to link (adds links; nothing is ever unlinked).
+    evidence_ids: Optional[List[str]] = None
 
 
 class ObservationCreateIn(ObservationUpdateIn):
@@ -593,9 +596,10 @@ def create_app(
 
     @app.patch("/observations/{observation_id}")
     def observations_update(observation_id: str, body: ObservationUpdateIn,
-                            _: dict = Depends(current_consultant)):
+                            me: dict = Depends(current_consultant)):
         return {"observation": _workspace_call(discovery.update_observation, session_factory,
-                                               observation_id, body.model_dump(exclude_unset=True))}
+                                               observation_id, body.model_dump(exclude_unset=True),
+                                               me["id"])}
 
     # --- Phase 217: engagement roadmap, phases, guided work plans (any authenticated consultant;
     # recording a phase authorization is Lead or Admin only) -----------------------------------
@@ -799,6 +803,21 @@ def create_app(
             "Cross-Origin-Resource-Policy": "cross-origin",
         })
 
+    # --- Phase 221: evidence referencing ---------------------------------------------------------
+
+    def _with_content_paths(ev: dict) -> dict:
+        """Add a short-lived content path to each capture (Phase 220 content tokens)."""
+        for item in ev["available"] + [i for items in ev["links"].values() for i in items]:
+            item["content_path"] = ("/evidence-content/"
+                                    + phase_evidence.content_token(secret_key, item["id"]))
+        return ev
+
+    @app.get("/engagements/{engagement_id}/evidence")
+    def engagement_evidence_get(engagement_id: str, _: dict = Depends(current_consultant)):
+        """Captures an observation can link, and each observation's links. Reads only."""
+        return {"engagement_evidence": _with_content_paths(_workspace_call(
+            observation_evidence.engagement_evidence, session_factory, engagement_id))}
+
     # --- Phase 206: internal assessment (read-only, derived; any authenticated consultant) ------
 
     @app.get("/engagements/{engagement_id}/assessment")
@@ -828,10 +847,14 @@ def create_app(
                     **workspace.service.assessment_read_options(session_factory, engagement_id))
             except (LookupError, EngagementNotVisible):
                 raise HTTPException(status.HTTP_404_NOT_FOUND, "not_found") from None
+        # Phase 221: the captures each observation's consultant linked, beside the assessment and
+        # outside it. The assessment, its findings and the Final Report are unchanged by links.
+        linked = observation_evidence.engagement_evidence(session_factory, engagement_id)
         return {
             "engagement": engagement,
             "assessment": dataclasses.asdict(result.assessment),
             "markdown": result.markdown,
+            "observation_evidence": _with_content_paths(linked)["links"] if linked else {},
         }
 
     # --- Phase 208: final report foundation (read-only, derived; any authenticated consultant) --

@@ -1,16 +1,20 @@
 import Link from "next/link";
 
 import { createObservation, saveNorthStar } from "@/app/discovery-actions";
+import { LinkedEvidenceList } from "@/components/linked-evidence";
 import { NorthStarForm } from "@/components/north-star-form";
 import { ObservationForm } from "@/components/observation-form";
-import type { Discovery, Observation } from "@/lib/api";
+import type { Discovery, EngagementEvidence, Observation } from "@/lib/api";
 import { BASIS_LABELS, formatDate, LEVEL_LABELS } from "@/lib/labels";
 
 function Pill({ children, tone = "bg-line" }: { children: React.ReactNode; tone?: string }) {
   return <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold text-ink ${tone}`}>{children}</span>;
 }
 
-function ObservationCard({ o }: { o: Observation }) {
+/** Phase 221: the engagement's captures and links, and the API origin that serves them. */
+type Evidence = { ev: EngagementEvidence; apiUrl: string } | null;
+
+function ObservationCard({ o, evidence }: { o: Observation; evidence: Evidence }) {
   return (
     <li className="rounded-peak border border-line bg-surface p-4">
       <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -25,6 +29,7 @@ function ObservationCard({ o }: { o: Observation }) {
           o.question ? `Prompted by: "${o.question.prompt ?? "a question no longer active"}"` : null,
         ].filter(Boolean).join(" · ")}
       </p>
+      {evidence && <LinkedEvidenceList items={evidence.ev.links[o.id] ?? []} apiUrl={evidence.apiUrl} />}
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm text-ink-muted">
         <span>
           {[o.recorded_by, formatDate(o.created_at),
@@ -39,7 +44,12 @@ function ObservationCard({ o }: { o: Observation }) {
 }
 
 /** Engagement Discovery: North Star, interviews, low-hanging fruit and observations. */
-export function DiscoverySection({ engagementId, d }: { engagementId: string; d: Discovery }) {
+export function DiscoverySection({ engagementId, d, evidence = null }: {
+  engagementId: string;
+  d: Discovery;
+  /** Phase 221: null when linking is unavailable; observations then show and save as before. */
+  evidence?: Evidence;
+}) {
   if (!d.discovery_enabled) {
     return (
       <section id="discovery" className="peak-card mt-6 text-ink-muted">
@@ -107,7 +117,7 @@ export function DiscoverySection({ engagementId, d }: { engagementId: string; d:
         <h3 className="mb-4 text-lg font-semibold">Low-hanging fruit ({lhf.length})</h3>
         {lhf.length === 0 ? (
           <p className="text-ink-muted">Flag an observation as low-hanging fruit to list it here.</p>
-        ) : <ul className="grid gap-3 lg:grid-cols-2">{lhf.map((o) => <ObservationCard key={o.id} o={o} />)}</ul>}
+        ) : <ul className="grid gap-3 lg:grid-cols-2">{lhf.map((o) => <ObservationCard key={o.id} o={o} evidence={evidence} />)}</ul>}
       </div>
 
       <div className="peak-card">
@@ -118,11 +128,12 @@ export function DiscoverySection({ engagementId, d }: { engagementId: string; d:
           </summary>
           <div className="mt-3">
             <ObservationForm action={createObservation.bind(null, engagementId)} sessions={d.sessions}
-                             questions={d.questions} submitLabel="Record observation" />
+                             questions={d.questions} submitLabel="Record observation"
+                             evidence={evidence ? { available: evidence.ev.available, linkedIds: [], apiUrl: evidence.apiUrl } : undefined} />
           </div>
         </details>
         {d.observations.length > 0 && (
-          <ul className="grid gap-3 lg:grid-cols-2">{d.observations.map((o) => <ObservationCard key={o.id} o={o} />)}</ul>
+          <ul className="grid gap-3 lg:grid-cols-2">{d.observations.map((o) => <ObservationCard key={o.id} o={o} evidence={evidence} />)}</ul>
         )}
       </div>
     </section>

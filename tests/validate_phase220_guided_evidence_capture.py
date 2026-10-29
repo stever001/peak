@@ -568,8 +568,10 @@ def app_checks(tmp):
     evidence_routes = [(sorted(r.methods or []), r.path) for r in app.routes
                        if "evidence" in getattr(r, "path", "")]
     check("evidence routes are only list, upload and content (no edit or delete)",
+          # Phase 221 adds one read: an engagement's captures and observation links.
           sorted(p for _, p in evidence_routes)
-          == ["/evidence-content/{token}", "/evidence-uploads", "/tasks/{task_id}/evidence"]
+          == ["/engagements/{engagement_id}/evidence", "/evidence-content/{token}",
+              "/evidence-uploads", "/tasks/{task_id}/evidence"]
           and not any(m in ("DELETE", "PUT", "PATCH") for ms, _ in evidence_routes for m in ms))
     refused = []
     for change in (lambda s, e: setattr(e, "caption", "edited"), lambda s, e: s.delete(e)):

@@ -1,11 +1,13 @@
 import Link from "next/link";
 
+import { LinkedEvidenceList } from "@/components/linked-evidence";
 import type {
   AssessmentFinding,
   DiscoveryFinding,
   DiscoveryTrace,
   InternalAssessment,
   InterviewCoverage,
+  LinkedEvidence,
   LowHangingFruitCandidate,
 } from "@/lib/api";
 import { BASIS_LABELS, LEVEL_LABELS } from "@/lib/labels";
@@ -103,7 +105,11 @@ export function Basis({ basis }: { basis: string | null }) {
   return <p className="mt-2 text-sm text-ink-muted">Basis: {basis ? BASIS_LABELS[basis] ?? basis : "not recorded"}</p>;
 }
 
-function DiscoveryFindingCard({ f }: { f: DiscoveryFinding }) {
+/** Phase 221: captures linked to each observation, by observation id, and the API origin. */
+type ObservationEvidence = { links: Record<string, LinkedEvidence[]>; apiUrl: string };
+
+function DiscoveryFindingCard({ f, evidence }: { f: DiscoveryFinding; evidence?: ObservationEvidence }) {
+  const linked = (evidence && f.trace.observation_id && evidence.links[f.trace.observation_id]) || [];
   return (
     <li className="rounded-peak border border-line bg-surface p-4">
       <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -117,6 +123,7 @@ function DiscoveryFindingCard({ f }: { f: DiscoveryFinding }) {
       </p>
       <Basis basis={f.basis} />
       <Trace trace={f.trace} />
+      {evidence && <LinkedEvidenceList items={linked} apiUrl={evidence.apiUrl} />}
     </li>
   );
 }
@@ -221,7 +228,12 @@ export function Coverage({ c }: { c: InterviewCoverage }) {
  * The internal assessment: discovery material and evidence-backed material side by side, each
  * under its own label. It is a working document, not a client deliverable and not a final report.
  */
-export function AssessmentView({ a, engagementId }: { a: InternalAssessment; engagementId: string }) {
+export function AssessmentView({ a, engagementId, evidence }: {
+  a: InternalAssessment;
+  engagementId: string;
+  /** Phase 221: shown beside discovery findings; never part of the assessment or its logic. */
+  evidence?: ObservationEvidence;
+}) {
   const d = a.discovery;
   return (
     <div className="space-y-6">
@@ -261,7 +273,7 @@ export function AssessmentView({ a, engagementId }: { a: InternalAssessment; eng
       <Section title="Discovery-derived findings" kind="discovery" count={d?.findings.length ?? 0}>
         {d && d.findings.length > 0 ? (
           <ul className="grid gap-3 lg:grid-cols-2">
-            {d.findings.map((f) => <DiscoveryFindingCard key={f.finding_id} f={f} />)}
+            {d.findings.map((f) => <DiscoveryFindingCard key={f.finding_id} f={f} evidence={evidence} />)}
           </ul>
         ) : (
           <p className="text-ink-muted">

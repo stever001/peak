@@ -324,6 +324,8 @@ export type AssessmentResponse = {
   engagement: Engagement;
   assessment: InternalAssessment;
   markdown: string;
+  /** Phase 221: captures each observation's consultant linked, by observation id. Absent before 221. */
+  observation_evidence?: Record<string, LinkedEvidence[]>;
 };
 
 // --- Phase 208: final report foundation (internal, derived, read-only) -------------------------
@@ -712,4 +714,51 @@ export async function getTaskEvidence(taskId: string): Promise<TaskEvidenceRespo
  */
 export function apiPublicUrl(): string {
   return (process.env.PEAK_API_PUBLIC_URL ?? apiBaseUrl()).replace(/\/+$/, "");
+}
+
+// --- Phase 221: evidence referencing -------------------------------------------------------------
+
+/** A capture as a reference from an observation: what it is and where it came from. */
+export type EvidenceReference = {
+  id: string;
+  evidence_kind: EvidenceKind;
+  caption: string | null;
+  media_type: string;
+  task: { id: string; title: string | null; phase_id: string };
+  uploaded_by: string | null;
+  created_at: string | null;
+  /** True once the capture was replaced on its task. A link stays on the capture chosen. */
+  superseded: boolean;
+  superseded_by: string | null;
+  interpreted: false;
+  /** API-relative, short-lived signed path to view the original bytes. */
+  content_path: string;
+};
+
+export type LinkedEvidence = EvidenceReference & { linked_by: string | null; linked_at: string | null };
+
+export type EngagementEvidence = {
+  engagement_id: string;
+  /** Current captures (not replaced) an observation can link, newest first. */
+  available: EvidenceReference[];
+  /** Each observation's linked captures, by when linked, then when captured. */
+  links: Record<string, LinkedEvidence[]>;
+};
+
+/**
+ * Phase 221: an engagement's linkable captures and observation links, or null when they cannot be
+ * had right now (an API before Phase 221, an error, or no answer). Linking is optional on every
+ * page that uses it, so this never calls notFound() or throws; a missing session goes to /login.
+ */
+export async function getEngagementEvidence(engagementId: string): Promise<EngagementEvidence | null> {
+  let res: Response;
+  try {
+    res = await apiFetch(`/engagements/${encodeURIComponent(engagementId)}/evidence`);
+  } catch {
+    return null;
+  }
+  if (res.status === 401) redirect("/login");
+  if (!res.ok) return null;
+  const ev = (await res.json().catch(() => null))?.engagement_evidence;
+  return ev && Array.isArray(ev.available) && ev.links ? (ev as EngagementEvidence) : null;
 }

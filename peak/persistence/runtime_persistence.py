@@ -60,6 +60,8 @@ RUNTIME_TABLE_PERSISTENCE = {
     "phase_task_records": APPEND_ONLY,
     # Captured evidence metadata: create-only, a replacement supersedes (Phase 220).
     "phase_task_evidence": APPEND_ONLY,
+    # Observation ↔ captured evidence links: create-only, never moved or removed (Phase 221).
+    "observation_evidence_links": APPEND_ONLY,
     # Consultant accounts are created by ``peak.accounts``. The only update (an Admin password
     # reset) runs as the migration credential, never the runtime.
     "consultants": APPEND_ONLY,

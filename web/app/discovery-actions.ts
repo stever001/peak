@@ -87,7 +87,14 @@ function observationBody(formData: FormData) {
     // Phase 216: the prompting question and the basis; empty clears either.
     question_id: text(formData, "question_id") || null,
     basis: text(formData, "basis") || null,
+    // Phase 221: captures to link. Sent only when chosen, so an API before 221 is never sent it.
+    ...evidenceIds(formData),
   };
+}
+
+function evidenceIds(formData: FormData) {
+  const ids = formData.getAll("evidence_ids").map(String).filter(Boolean);
+  return ids.length > 0 ? { evidence_ids: ids } : {};
 }
 
 export async function createObservation(

@@ -256,6 +256,10 @@ WORKSPACE_WRITE_COLUMNS = {
                    "evidence_kind", "caption", "media_type", "byte_length", "content_hash",
                    "storage_backend", "storage_key", "file_name", "supersedes_evidence_id",
                    "uploaded_by_consultant_id"}),
+    # Phase 221: a consultant links captured evidence to their observation. Create-only.
+    ("observation_evidence_links", "create_observation_evidence_link"):
+        frozenset({"id", "client_id", "engagement_id", "observation_id", "evidence_id",
+                   "linked_by_consultant_id"}),
 }
 
 #: Columns the workspace path may never write: governance, classification, review/audit, and
@@ -338,6 +342,9 @@ assert all(action.startswith("create_")
 #: Phase 220: captured evidence is create-only, like task records.
 assert all(action.startswith("create_")
            for table, action in WORKSPACE_WRITE_COLUMNS if table == "phase_task_evidence")
+#: Phase 221: an observation's evidence links are create-only; there is no unlink.
+assert all(action.startswith("create_")
+           for table, action in WORKSPACE_WRITE_COLUMNS if table == "observation_evidence_links")
 assert not any(cols & (ROADMAP_ITEM_FRAMING_COLUMNS | PHASE_TASK_FRAMING_COLUMNS)
                for (table, action), cols in WORKSPACE_WRITE_COLUMNS.items()
                if table in ENGAGEMENT_PHASE_RECORD_TABLES and not action.startswith("create_"))

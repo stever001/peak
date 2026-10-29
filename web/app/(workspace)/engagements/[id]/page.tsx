@@ -9,17 +9,18 @@ import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
 import { WorkPlanSection } from "@/components/work-plan-section";
 import {
-  apiGet, requireConsultant, type Discovery, type Engagement, type EngagementPhaseSummary, type Roadmap,
+  apiGet, apiPublicUrl, getEngagementEvidence, requireConsultant, type Discovery, type Engagement, type EngagementPhaseSummary, type Roadmap,
 } from "@/lib/api";
 
 export default async function EngagementPage(props: PageProps<"/engagements/[id]">) {
   const me = await requireConsultant();
   const { id } = await props.params;
-  const [{ engagement: e }, { discovery }, { phases }, { roadmap }] = await Promise.all([
+  const [{ engagement: e }, { discovery }, { phases }, { roadmap }, ev] = await Promise.all([
     apiGet<{ engagement: Engagement }>(`/engagements/${encodeURIComponent(id)}`),
     apiGet<{ discovery: Discovery }>(`/engagements/${encodeURIComponent(id)}/discovery`),
     apiGet<{ phases: EngagementPhaseSummary[] }>(`/engagements/${encodeURIComponent(id)}/phases`),
     apiGet<{ roadmap: Roadmap }>(`/engagements/${encodeURIComponent(id)}/roadmap`),
+    getEngagementEvidence(id),
   ]);
   return (
     <>
@@ -65,7 +66,7 @@ export default async function EngagementPage(props: PageProps<"/engagements/[id]
         </dl>
       </section>
       <WorkPlanSection engagementId={e.id} phases={phases} roadmap={roadmap} />
-      <DiscoverySection engagementId={e.id} d={discovery} />
+      <DiscoverySection engagementId={e.id} d={discovery} evidence={ev && { ev, apiUrl: apiPublicUrl() }} />
       {me.role === "admin" && e.engagement_classification === "internal_test" && e.source_status === "active" && (
         <InternalTestDeleteForm action={deleteInternalTestEngagement.bind(null, e.id)}
                                 label={e.engagement_label ?? ""} />
