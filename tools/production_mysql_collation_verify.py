@@ -110,11 +110,11 @@ _SAFE_IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9_]{1,64}$")
 
 #: The head expected **in production**. Moved to 014 in Phase 58, to 016 in Phase 203, to 017 in
 #: Phase 205, to 019 in Phase 214, to 020 in Phase 215, to 021 in Phase 216, to 022 in Phase 217,
-#: to 023 in Phase 220, and to 024 in Phase 221, each time only after the migration was actually
-#: applied to production by the migration credential.
+#: to 023 in Phase 220, to 024 in Phase 221, and to 025 in Phase 222, each time only after the
+#: migration was actually applied to production by the migration credential.
 #: It tracks the live production head, not the repository head: move it only when a later
 #: migration has genuinely been applied to production, never merely written.
-EXPECTED_ALEMBIC_HEAD = "024_observation_evidence_links"
+EXPECTED_ALEMBIC_HEAD = "025_observation_task_origins"
 #: Tables that existed at 014 and must still exist. The *current* expected table set is derived
 #: from the declared models (``_expected_tables``) rather than frozen as a count (Phase 203).
 HISTORICAL_REQUIRED_TABLES = (
