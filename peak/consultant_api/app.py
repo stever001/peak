@@ -47,7 +47,7 @@ from starlette.concurrency import run_in_threadpool
 from peak import accounts, workspace
 from peak.workspace import (
     approvals, discovery, engagement_phases, evidence_storage, observation_evidence,
-    peak_method_phases, phase_evidence, task_observations,
+    peak_method_phases, phase_evidence, phase_work_record, task_observations,
 )
 
 SESSION_COOKIE = "peak_session"
@@ -750,6 +750,19 @@ def create_app(
         return {"observation": _workspace_call(discovery.create_observation, session_factory,
                                                engagement_id, body.model_dump(exclude_unset=True),
                                                me["id"], task_id)}
+
+    # --- Phase 223: phase work record (read-only, composed; any authenticated consultant) -------
+
+    @app.get("/phases/{phase_id}/work-record")
+    def phase_work_record_get(phase_id: str, _: dict = Depends(current_consultant)):
+        """Everything recorded during one phase, composed on request. Reads only; stores nothing."""
+        record = _workspace_call(phase_work_record.phase_work_record, session_factory, phase_id)
+        items = [e for t in record["tasks"] for e in t["captures"]]
+        items += [e for links in record["evidence_links"].values() for e in links]
+        for item in items:
+            item["content_path"] = ("/evidence-content/"
+                                    + phase_evidence.content_token(secret_key, item["id"]))
+        return {"work_record": record}
 
     @app.post("/evidence-uploads")
     async def evidence_upload(request: Request):

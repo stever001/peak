@@ -104,6 +104,15 @@ export default async function PhasePage(props: PageProps<"/phases/[id]">) {
         </section>
 
         <aside className="space-y-4 xl:sticky xl:top-6">
+          {/* Phase 223: everything recorded during this phase in one place. Read-only. */}
+          {p.status !== "planned" && (
+            <Link href={`/phases/${p.id}/record`}
+                  className="flex min-h-touch items-center justify-between gap-3 rounded-peak border border-brand bg-surface px-5 py-4 hover:bg-canvas">
+              <span><span className="block text-sm text-ink-muted">Everything recorded so far</span>
+                <span className="font-semibold text-brand">Phase work record</span></span>
+              <span aria-hidden="true" className="text-brand">→</span>
+            </Link>
+          )}
           <ReadinessPanel phase={p} />
           {p.status === "authorized" && p.readiness.ready && (
             <div className="peak-card">

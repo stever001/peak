@@ -4459,6 +4459,30 @@ Product methodology; implementation `3025614`, schema in production. Baseline `3
   present; rows, content and grants unchanged. Verifier pin at 021 and green (345/345).
 - [ ] Render API and Vercel web deploys, then seeding the instrument and its read-only check.
 
+Phases 217–222 (guided work: roadmap, phases, tasks, records, evidence capture, evidence links,
+work observations) are recorded in their phase documents and [`PHASE_INDEX.md`](PHASE_INDEX.md).
+
+### Phase 223 — Phase work record
+
+Product UI; repository and local only. Baseline `14ed1f9`. Record:
+[`PHASE223_PHASE_WORK_RECORD.md`](PHASE223_PHASE_WORK_RECORD.md).
+
+- [x] One read-only page per engagement phase, showing everything recorded during it, task by task:
+  - outcome: the result summary, the not-applicable reason, or that a condition was not met;
+  - records, with their corrections;
+  - current captures, with replaced ones counted;
+  - observations written during the task, with their linked captures;
+  - totals and the Phase 217 readiness.
+- [x] Composed on each request by `GET /phases/{id}/work-record`. Nothing is stored, generated,
+  summarized or interpreted. No migration, table, allowlist action or write path.
+- [x] Scoped by phase and engagement. Suggested tasks and engagement-level observations are left
+  out. No storage key, file name or hash is returned.
+- [x] Not read by the assessment, Final Report, artifacts or AgentNet. No change to task, phase,
+  readiness, finding or recommendation.
+- [x] `tests/validate_phase223_phase_work_record.py` in `make validate`.
+- [ ] Production (when separately approved): a manual API deploy only, with no schema, grant or
+  environment change. A populated read waits for the first real phase.
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

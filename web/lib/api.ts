@@ -798,3 +798,66 @@ export async function getEngagementEvidence(engagementId: string): Promise<Engag
   const ev = (await res.json().catch(() => null))?.engagement_evidence;
   return ev && Array.isArray(ev.available) && ev.links ? (ev as EngagementEvidence) : null;
 }
+
+// --- Phase 223: phase work record ----------------------------------------------------------------
+
+export type WorkOutcome = "completed" | "not_applicable" | "does_not_apply" | "open";
+
+/** One agreed task as recorded: its outcome and what was recorded, captured and observed on it. */
+export type WorkRecordTask = {
+  id: string;
+  sequence: number;
+  title: string;
+  required: boolean;
+  status: TaskStatus;
+  outcome: WorkOutcome;
+  added_after_authorization: boolean;
+  result_summary: string | null;
+  not_applicable_reason: string | null;
+  completed_by: string | null;
+  completed_at: string | null;
+  /** Every record, corrections included; earlier versions carry ``superseded_by``. */
+  records: TaskRecord[];
+  /** Current captures (not replaced), oldest first. */
+  captures: EvidenceReference[];
+  replaced_captures: number;
+  /** Observations written during this task, oldest first. */
+  observations: Observation[];
+};
+
+/**
+ * Phase 223: everything recorded during one phase, composed by the API on request from the Phase
+ * 217–222 records. Nothing in it is generated, summarized or stored.
+ */
+export type PhaseWorkRecord = {
+  phase: EngagementPhaseSummary & {
+    completed_by: string | null;
+    roadmap_item: { id: string; title: string } | null;
+  };
+  engagement: { id: string; engagement_label: string | null; client_name: string | null };
+  readiness: PhaseReadiness;
+  totals: {
+    tasks: number; completed: number; not_applicable: number; does_not_apply: number; open: number;
+    records: number; corrected_records: number; captures: number; replaced_captures: number;
+    observations: number; linked_captures: number;
+  };
+  tasks: WorkRecordTask[];
+  suggested_not_accepted: number;
+  /** Each observation's linked captures, as in Phase 221. */
+  evidence_links: Record<string, LinkedEvidence[]>;
+  composition: { rule: string; stored: false; interpreted: false };
+};
+
+/** Optional: null when the API cannot compose it (for example an API before Phase 223). */
+export async function getPhaseWorkRecord(phaseId: string): Promise<PhaseWorkRecord | null> {
+  let res: Response;
+  try {
+    res = await apiFetch(`/phases/${encodeURIComponent(phaseId)}/work-record`);
+  } catch {
+    return null;
+  }
+  if (res.status === 401) redirect("/login");
+  if (!res.ok) return null;
+  const out = (await res.json().catch(() => null))?.work_record;
+  return out && Array.isArray(out.tasks) && out.totals ? (out as PhaseWorkRecord) : null;
+}
