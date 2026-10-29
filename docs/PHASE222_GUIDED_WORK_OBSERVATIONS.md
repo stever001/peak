@@ -12,8 +12,8 @@ assessment path as every other observation:
 Phase task → zero or more consultant-authored observations → (optional) linked evidence
 ```
 
-**Status: OPEN.** Committed at `bb53b17`. Migration 025 is applied to production (2026-10-29).
-The API is not yet deployed and production is not yet verified.
+**Status: CLOSED in production (2026-10-29)**, with one deferred acceptance item: the first real
+work observation (see *Production cutover and closure*). Implementation `bb53b17`.
 
 ## Rule
 
@@ -169,8 +169,7 @@ task section reads as unavailable and every other page is unchanged.
 
 ## Production schema cutover (2026-10-29)
 
-**Status: schema cutover complete. Phase 222 remains OPEN** until the API is deployed and
-production is verified.
+**Status: schema cutover complete.** The API deploy and production checks followed the same day.
 
 **Preflight (read-only).** The repository was at `bb53b17`, clean, with one Alembic head; 025 was
 the only pending step. The migration file was identical to the committed one. As
@@ -215,4 +214,60 @@ returned `verified_safe_no_remediation_required`:
 **Not done.** No Render deploy or environment change, no Vercel action and no R2 action during the
 schema cutover. No production data was created.
 
-Still to do: deploy the API, then verify production.
+At the end of the schema cutover, the API deploy and the production checks were still to do. Both
+were completed the same day (see the next section).
+
+## Production cutover and closure (2026-10-29)
+
+**Status: complete (2026-10-29). Phase 222 is CLOSED**, with one deferred acceptance item (below).
+No production data was written.
+
+- **Schema.** Migration 025 applied and verified (previous section). The verifier pin was moved to
+  025 in `b632b8a`.
+- **Releases.**
+  - Render API `peak-consultant-api`, deploy `dep-dbhq3vqfngtc73caanpg`, **Live**, at commit
+    `b632b8a10cb9d5a9ac919448346b90966e4ba29b`; startup was clean;
+  - Vercel web: the production deployment of `b632b8a`, successful.
+
+  No environment variable, grant or R2 change was needed.
+- **API check (read-only, logged out):**
+  - `/healthz` returned 200;
+  - `GET` and `POST /tasks/{id}/observations` return 401. A route that does not exist returns 404, so
+    the Phase 222 route is deployed and requires a session;
+  - the Phase 221 evidence route and the assessment also return 401.
+- **No signed-in check.** A signed-in read would have shown only empty state, because there is no
+  task. Phase 221's signed-in checks already cover the engagement, discovery and assessment pages
+  on the same production data.
+- **Preservation (read-only, at closure):**
+  - head `025_observation_task_origins`, 38 base tables;
+  - `observation_task_origins`, `observation_evidence_links` and `phase_task_evidence` 0 rows;
+  - `roadmap_items`, `engagement_phases`, `phase_tasks` and `phase_task_records` 0 rows;
+  - the 30-table baseline unchanged at 133 rows, `changed_tables = []`;
+  - runtime grants identical to the pre-migration record, with no UPDATE or DELETE on the new table;
+  - the Phase 50 gate PASS: required grants present, no excess grants, no global privileges and no
+    grant option;
+  - the verifier `verified_safe_no_remediation_required`: head matches, 431/431 governed columns
+    deterministic, 11/11 idempotency boundaries safe, 0 at risk, no warnings, no schema change or
+    data write.
+
+**Deferred acceptance.** Production has no engagement phase and no phase task. Four
+consultant-workspace internal-test engagements exist, but all are logically deleted. The one active
+engagement is the legacy internal-test anchor, which cannot have phases or tasks. So there is no
+legitimate task to record a work observation against.
+
+A synthetic client, engagement, phase, task and authorization chain was deliberately not created
+only for acceptance. The first production work observation is deferred until the first legitimate
+authorized production task exists. This is an operational acceptance checkpoint, not unfinished
+implementation: the full write and read path is covered by the Phase 222 harness and the local
+walkthrough.
+
+When the first real work observation is recorded, confirm:
+- the POST through the task page (`POST /tasks/{id}/observations`) returns 201;
+- exactly one `discovery_observations` row is created;
+- exactly one `observation_task_origins` row is created for it;
+- its client, engagement, phase and task match the task;
+- its `session_id` is null;
+- its recorder is the signed-in consultant;
+- the task, engagement discovery, observation and assessment reads show the expected origin;
+- task status, phase status, readiness and recommendations do not change;
+- the verifier and the Phase 50 gate remain clean afterwards.
