@@ -417,7 +417,7 @@ def _question_refs(session, ids) -> dict:
                                              .where(DiscoveryQuestion.id.in_(ids)))} if ids else {}
 
 
-def _observation_dict(o, names, sessions, questions=None) -> dict:
+def _observation_dict(o, names, sessions, questions=None, origins=None) -> dict:
     s = sessions.get(o.session_id)
     q = (questions or {}).get(o.question_id)
     return {
@@ -429,6 +429,8 @@ def _observation_dict(o, names, sessions, questions=None) -> dict:
                      else ({"id": o.question_id, "prompt": None, "category": None}
                            if o.question_id else None)),
         "session": ({"id": s.id, "interviewee_name": s.interviewee_name} if s else None),
+        # Phase 222: the phase task it was recorded during, when it is a work observation.
+        "origin": (origins or {}).get(o.id),
         "recorded_by": names.get(o.recorded_by_consultant_id),
         "created_at": o.created_at.isoformat() if o.created_at else None,
     }
@@ -442,6 +444,8 @@ def get_discovery(session_factory, engagement_id: str) -> Optional[dict]:
         Client, DiscoveryAnswer, DiscoveryObservation, DiscoveryQuestion, DiscoverySession,
         Engagement,
     )
+
+    from . import task_observations
 
     with session_factory() as session:
         engagement = session.get(Engagement, engagement_id)
@@ -465,6 +469,7 @@ def get_discovery(session_factory, engagement_id: str) -> Optional[dict]:
                        + [o.recorded_by_consultant_id for o in observations])
         by_id = {s.id: s for s in sessions}
         linked = _question_refs(session, [o.question_id for o in observations])
+        found = task_observations.origins(session, [o.id for o in observations])
         active = session.scalars(select(DiscoveryQuestion).where(DiscoveryQuestion.active.is_(True))
                                  .order_by(DiscoveryQuestion.display_order,
                                            DiscoveryQuestion.id)).all()
@@ -481,7 +486,8 @@ def get_discovery(session_factory, engagement_id: str) -> Optional[dict]:
                 "conducted_by": names.get(s.conducted_by_consultant_id),
                 "started_at": s.started_at.isoformat(), "answered_count": answered.get(s.id, 0),
             } for s in sessions],
-            "observations": [_observation_dict(o, names, by_id, linked) for o in observations],
+            "observations": [_observation_dict(o, names, by_id, linked, found)
+                             for o in observations],
             # For the observation form's "prompted by" choice (Phase 216).
             "questions": [{"id": q.id, "prompt": q.prompt, "category": q.category}
                           for q in active if _in_scope(q.engagement_id, engagement.id)],
@@ -747,27 +753,33 @@ def _require_question(session, question_id: Optional[str], engagement_id: str) -
 def get_observation(session_factory, observation_id: str) -> Optional[dict]:
     from peak.db.models import DiscoveryObservation, DiscoverySession
 
+    from . import task_observations
+
     with session_factory() as session:
         o = session.get(DiscoveryObservation, observation_id)
         if o is None:
             return None
         s = session.get(DiscoverySession, o.session_id) if o.session_id else None
         return _observation_dict(o, _names(session, [o.recorded_by_consultant_id]),
-                                 {s.id: s} if s else {}, _question_refs(session, [o.question_id]))
+                                 {s.id: s} if s else {}, _question_refs(session, [o.question_id]),
+                                 task_observations.origins(session, [o.id]))
 
 
 def create_observation(session_factory, engagement_id: str, data: dict,
-                       consultant_id: str) -> Optional[dict]:
+                       consultant_id: str, task_id: Optional[str] = None) -> Optional[dict]:
     """Record an observation. The recording consultant is the signed-in consultant.
 
     Phase 221: ``evidence_ids`` optionally links captures of this engagement, in the same
     transaction (``observation_evidence``). The observation text is only what the consultant wrote.
+    Phase 222: ``task_id`` records it as made during that phase task of this engagement
+    (``task_observations``), in the same transaction. A work observation is not tied to an
+    interview.
     """
     from sqlalchemy.exc import IntegrityError
 
     from peak.db.models import DiscoveryObservation, DiscoverySession
 
-    from . import observation_evidence
+    from . import observation_evidence, task_observations
 
     data = dict(data)
     evidence_ids = observation_evidence.evidence_ids_from(data)
@@ -777,6 +789,12 @@ def create_observation(session_factory, engagement_id: str, data: dict,
         if engagement is None:
             return None
         session_id = data.get("session_id") or None
+        task = None
+        if task_id is not None:
+            if session_id is not None:
+                raise WorkspaceError("invalid_field", "A work observation is not part of an "
+                                                      "interview.")
+            task = task_observations.require_task(session, task_id, engagement.id)
         if session_id is not None:
             linked = session.get(DiscoverySession, session_id)
             if linked is None or linked.engagement_id != engagement.id:
@@ -788,6 +806,8 @@ def create_observation(session_factory, engagement_id: str, data: dict,
         values.setdefault("low_hanging_fruit", False)
         _require_allowed("discovery_observations", "create_discovery_observation", values)
         session.add(DiscoveryObservation(**values, **WORKSPACE_ENGAGEMENT_CREATION_STAMP))
+        if task is not None:
+            task_observations.add_origin(session, values["id"], task)
         observation_evidence.add_links(session, values["id"], engagement.client_id, engagement.id,
                                        evidence_ids, consultant_id)
         try:

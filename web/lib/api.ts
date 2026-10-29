@@ -158,8 +158,19 @@ export type Observation = {
   basis: ObservationBasis | null;
   question: { id: string; prompt: string | null; category: string | null } | null;
   session: { id: string; interviewee_name: string } | null;
+  /** Phase 222: the phase task it was recorded during; null or absent for other observations. */
+  origin?: ObservationOrigin | null;
   recorded_by: string | null;
   created_at: string | null;
+};
+
+/** Phase 222: where a work observation was made. Titles are null if the record cannot be read. */
+export type ObservationOrigin = {
+  phase_id: string;
+  phase_title: string | null;
+  task_id: string;
+  task_title: string | null;
+  task_sequence: number | null;
 };
 
 export type QuestionOption = { id: string; prompt: string; category: string };
@@ -326,6 +337,8 @@ export type AssessmentResponse = {
   markdown: string;
   /** Phase 221: captures each observation's consultant linked, by observation id. Absent before 221. */
   observation_evidence?: Record<string, LinkedEvidence[]>;
+  /** Phase 222: the phase task each work observation was recorded during. Absent before 222. */
+  observation_origins?: Record<string, ObservationOrigin>;
 };
 
 // --- Phase 208: final report foundation (internal, derived, read-only) -------------------------
@@ -706,6 +719,29 @@ export async function getTaskEvidence(taskId: string): Promise<TaskEvidenceRespo
   if (!res.ok) return null;
   const ev = (await res.json().catch(() => null))?.task_evidence;
   return ev && Array.isArray(ev.evidence) && ev.upload ? (ev as TaskEvidenceResponse) : null;
+}
+
+/** Phase 222: the observations recorded during one task, and whether recording is open now. */
+export type TaskObservations = {
+  task_id: string;
+  phase_id: string;
+  engagement_id: string;
+  observations: Observation[];
+  recording_closed: { code: string; message: string } | null;
+};
+
+/** Optional: null when the API cannot list them (for example an API before Phase 222). */
+export async function getTaskObservations(taskId: string): Promise<TaskObservations | null> {
+  let res: Response;
+  try {
+    res = await apiFetch(`/tasks/${encodeURIComponent(taskId)}/observations`);
+  } catch {
+    return null;
+  }
+  if (res.status === 401) redirect("/login");
+  if (!res.ok) return null;
+  const out = (await res.json().catch(() => null))?.task_observations;
+  return out && Array.isArray(out.observations) ? (out as TaskObservations) : null;
 }
 
 /**

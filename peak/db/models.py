@@ -1414,6 +1414,48 @@ def _refuse_bulk_observation_evidence_link_change(state):
         raise PermissionError("observation_evidence_links rows are immutable: no update or delete.")
 
 
+# --- Phase 222: guided work observations -----------------------------------------------------------
+#
+# docs/PHASE222_GUIDED_WORK_OBSERVATIONS.md is the record. Where an observation was made: the phase
+# task the consultant was doing when they wrote it. The observation itself is an ordinary
+# ``discovery_observations`` row (the consultant's own words, edited in place as before); this row
+# only records its origin, once, at creation. It creates no finding or recommendation, and changes
+# no task status or readiness. Insert-only: an origin is provenance and never moves. Written only by
+# ``peak.workspace.task_observations``.
+
+
+class ObservationTaskOrigin(Base, GovernanceMixin, AuditMixin):
+    """The phase task an observation was recorded during. At most one per observation. Insert-only."""
+
+    __tablename__ = "observation_task_origins"
+    __table_args__ = (
+        UniqueConstraint("observation_id", name="uq_observation_task_origins_observation"),
+        MYSQL_TABLE_ARGS,
+    )
+    # id convention: otor_<hex>
+    id: Mapped[str] = mapped_column(GovernedString(64), primary_key=True)
+    client_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    engagement_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    observation_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    phase_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    task_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+
+
+def _refuse_observation_task_origin_change(mapper, connection, target):
+    raise PermissionError("observation_task_origins rows are immutable: no update or delete.")
+
+
+event.listen(ObservationTaskOrigin, "before_update", _refuse_observation_task_origin_change)
+event.listen(ObservationTaskOrigin, "before_delete", _refuse_observation_task_origin_change)
+
+
+@event.listens_for(Session, "do_orm_execute")
+def _refuse_bulk_observation_task_origin_change(state):
+    if (state.is_update or state.is_delete) and any(
+            m.class_ is ObservationTaskOrigin for m in state.all_mappers):
+        raise PermissionError("observation_task_origins rows are immutable: no update or delete.")
+
+
 # Convenience list of all model classes (used by tooling/validation).
 ALL_MODELS = [
     Client,
@@ -1452,4 +1494,5 @@ ALL_MODELS = [
     PhaseTaskRecord,
     PhaseTaskEvidence,
     ObservationEvidenceLink,
+    ObservationTaskOrigin,
 ]

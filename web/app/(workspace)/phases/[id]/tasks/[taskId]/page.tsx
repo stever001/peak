@@ -2,16 +2,20 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 
+import { createTaskObservation } from "@/app/discovery-actions";
 import {
   acceptSuggestedTask, completeTask, recordTaskWork, resolveTaskNotApplicable,
 } from "@/app/work-plan-actions";
+import { ObservationCard } from "@/components/discovery-section";
 import { EvidenceForm } from "@/components/evidence-capture";
 import { EvidenceList } from "@/components/evidence-list";
 import { ActionButton, CompleteTaskForm, NotApplicableForm } from "@/components/work-plan-actions";
 import { Pill, RecordList, TaskStatusPill } from "@/components/work-plan-parts";
+import { ObservationForm } from "@/components/observation-form";
 import { RecordForm } from "@/components/work-plan-record-form";
 import {
-  apiGet, apiPublicUrl, getTaskEvidence, requireConsultant, type EngagementPhaseDetail,
+  apiGet, apiPublicUrl, getEngagementEvidence, getTaskEvidence, getTaskObservations, requireConsultant,
+  type EngagementPhaseDetail,
 } from "@/lib/api";
 import { evidenceError } from "@/lib/evidence";
 import { formatDate } from "@/lib/labels";
@@ -56,6 +60,14 @@ export default async function TaskPage(props: PageProps<"/phases/[id]/tasks/[tas
   const linkable = current.map((r) => ({
     id: r.id, label: `${RECORD_KIND_LABELS[r.record_kind]} · ${r.record_text.slice(0, 60)}`,
   }));
+  // Phase 222: optional in the same way; null when the API cannot list them.
+  const obs = await getTaskObservations(t.id);
+  const engEv = obs ? await getEngagementEvidence(obs.engagement_id) : null;
+  const linkedEvidence = engEv ? { ev: engEv, apiUrl } : null;
+  // Any current capture of the engagement can support it; this task's captures come first.
+  const taskFirstEvidence = engEv
+    ? [...engEv.available.filter((e) => e.task.id === t.id), ...engEv.available.filter((e) => e.task.id !== t.id)]
+    : null;
   const added = search.evidence === "added";
   const evidenceProblem = typeof search.evidence_error === "string" ? evidenceError(search.evidence_error) : null;
 
@@ -250,6 +262,38 @@ export default async function TaskPage(props: PageProps<"/phases/[id]/tasks/[tas
             ) : ev.upload.available === false && (
               <p className="text-sm text-ink-muted">{ev.upload.reason}</p>
             ))}
+          </section>
+
+          {/* Phase 222: what the consultant noticed while doing this task, in their own words. */}
+          <section id="observations" aria-labelledby="work-observations" className="peak-card">
+            <h2 id="work-observations" className="mb-1 text-lg font-semibold">Observations</h2>
+            <p className="mb-4 text-sm text-ink-muted">
+              What you noticed while doing this task, in your own words. Each one is also listed with the
+              engagement&apos;s observations and in the internal assessment.
+            </p>
+            {!obs ? (
+              <p className="text-ink-muted">Observations are currently unavailable here.</p>
+            ) : obs.observations.length === 0 ? (
+              <p className="mb-4 text-ink-muted">No observations recorded during this task yet.</p>
+            ) : (
+              <ul className="mb-6 grid gap-3">
+                {obs.observations.map((o) => (
+                  <ObservationCard key={o.id} o={o} evidence={linkedEvidence} hereTask={t.id} />
+                ))}
+              </ul>
+            )}
+            {obs && !obs.recording_closed && (
+              <details className="border-t border-line pt-5" open={obs.observations.length === 0}>
+                <summary className="inline-flex min-h-touch cursor-pointer items-center font-medium text-brand">
+                  Add observation
+                </summary>
+                <div className="mt-3">
+                  <ObservationForm action={createTaskObservation.bind(null, p.id, t.id, obs.engagement_id)}
+                                   submitLabel="Record observation"
+                                   evidence={taskFirstEvidence ? { available: taskFirstEvidence, linkedIds: [], apiUrl } : undefined} />
+                </div>
+              </details>
+            )}
           </section>
 
           {workable && w.applies !== false && (

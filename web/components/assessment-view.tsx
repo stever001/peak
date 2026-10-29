@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { LinkedEvidenceList } from "@/components/linked-evidence";
+import { ObservedDuring } from "@/components/observed-during";
 import type {
   AssessmentFinding,
   DiscoveryFinding,
@@ -9,6 +10,7 @@ import type {
   InterviewCoverage,
   LinkedEvidence,
   LowHangingFruitCandidate,
+  ObservationOrigin,
 } from "@/lib/api";
 import { BASIS_LABELS, LEVEL_LABELS } from "@/lib/labels";
 
@@ -49,8 +51,11 @@ export function Section({
   );
 }
 
-/** "Where did this come from?" — the person and interview first, identifiers in the details. */
-export function Trace({ trace }: { trace: DiscoveryTrace }) {
+/**
+ * "Where did this come from?" — the person and interview first, identifiers in the details.
+ * Phase 222: ``origin`` names the phase task a work observation was recorded during.
+ */
+export function Trace({ trace, origin }: { trace: DiscoveryTrace; origin?: ObservationOrigin }) {
   const ids = [
     trace.observation_id && `observation ${trace.observation_id}`,
     trace.session_id && `session ${trace.session_id}`,
@@ -63,10 +68,12 @@ export function Trace({ trace }: { trace: DiscoveryTrace }) {
         {trace.session_id && trace.interviewee_name ? (
           <>
             From the interview with{" "}
-            <Link href={`/interviews/${trace.session_id}`} className="font-medium text-brand">
+            <Link href={`/interviews/${trace.session_id}`} className="inline-flex min-h-touch items-center font-medium text-brand">
               {trace.interviewee_name}
             </Link>
           </>
+        ) : origin ? (
+          "Work observation"
         ) : (
           "Recorded outside an interview"
         )}
@@ -74,12 +81,13 @@ export function Trace({ trace }: { trace: DiscoveryTrace }) {
         {trace.observation_id && (
           <>
             {" · "}
-            <Link href={`/observations/${trace.observation_id}/edit`} className="font-medium text-brand">
+            <Link href={`/observations/${trace.observation_id}/edit`} className="inline-flex min-h-touch items-center font-medium text-brand">
               Open observation
             </Link>
           </>
         )}
       </p>
+      {origin && <ObservedDuring origin={origin} />}
       {trace.question_prompt && <p className="mt-1">Question: “{trace.question_prompt}”</p>}
       {ids.length > 0 && (
         <details className="mt-1">
@@ -108,8 +116,13 @@ export function Basis({ basis }: { basis: string | null }) {
 /** Phase 221: captures linked to each observation, by observation id, and the API origin. */
 type ObservationEvidence = { links: Record<string, LinkedEvidence[]>; apiUrl: string };
 
-function DiscoveryFindingCard({ f, evidence }: { f: DiscoveryFinding; evidence?: ObservationEvidence }) {
+function DiscoveryFindingCard({ f, evidence, origins }: {
+  f: DiscoveryFinding;
+  evidence?: ObservationEvidence;
+  origins?: Record<string, ObservationOrigin>;
+}) {
   const linked = (evidence && f.trace.observation_id && evidence.links[f.trace.observation_id]) || [];
+  const origin = (f.trace.observation_id && origins?.[f.trace.observation_id]) || undefined;
   return (
     <li className="rounded-peak border border-line bg-surface p-4">
       <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -122,7 +135,7 @@ function DiscoveryFindingCard({ f, evidence }: { f: DiscoveryFinding; evidence?:
         Not reviewed evidence — this does not support a formal recommendation on its own.
       </p>
       <Basis basis={f.basis} />
-      <Trace trace={f.trace} />
+      <Trace trace={f.trace} origin={origin} />
       {evidence && <LinkedEvidenceList items={linked} apiUrl={evidence.apiUrl} />}
     </li>
   );
@@ -228,11 +241,13 @@ export function Coverage({ c }: { c: InterviewCoverage }) {
  * The internal assessment: discovery material and evidence-backed material side by side, each
  * under its own label. It is a working document, not a client deliverable and not a final report.
  */
-export function AssessmentView({ a, engagementId, evidence }: {
+export function AssessmentView({ a, engagementId, evidence, origins }: {
   a: InternalAssessment;
   engagementId: string;
   /** Phase 221: shown beside discovery findings; never part of the assessment or its logic. */
   evidence?: ObservationEvidence;
+  /** Phase 222: the phase task each work observation was recorded during, also only beside it. */
+  origins?: Record<string, ObservationOrigin>;
 }) {
   const d = a.discovery;
   return (
@@ -256,7 +271,7 @@ export function AssessmentView({ a, engagementId, evidence }: {
         ) : (
           <p className="text-ink-muted">
             No North Star recorded.{" "}
-            <Link href={`/engagements/${engagementId}#discovery`} className="font-medium text-brand">Set one in Discovery</Link>.
+            <Link href={`/engagements/${engagementId}#discovery`} className="inline-flex min-h-touch items-center font-medium text-brand">Set one in Discovery</Link>.
           </p>
         )}
       </Section>
@@ -265,7 +280,7 @@ export function AssessmentView({ a, engagementId, evidence }: {
         {d?.available ? <Coverage c={d.coverage} /> : (
           <p className="text-ink-muted">
             No discovery material recorded.{" "}
-            <Link href={`/engagements/${engagementId}#discovery`} className="font-medium text-brand">Start an interview</Link>.
+            <Link href={`/engagements/${engagementId}#discovery`} className="inline-flex min-h-touch items-center font-medium text-brand">Start an interview</Link>.
           </p>
         )}
       </Section>
@@ -273,7 +288,9 @@ export function AssessmentView({ a, engagementId, evidence }: {
       <Section title="Discovery-derived findings" kind="discovery" count={d?.findings.length ?? 0}>
         {d && d.findings.length > 0 ? (
           <ul className="grid gap-3 lg:grid-cols-2">
-            {d.findings.map((f) => <DiscoveryFindingCard key={f.finding_id} f={f} evidence={evidence} />)}
+            {d.findings.map((f) => (
+              <DiscoveryFindingCard key={f.finding_id} f={f} evidence={evidence} origins={origins} />
+            ))}
           </ul>
         ) : (
           <p className="text-ink-muted">

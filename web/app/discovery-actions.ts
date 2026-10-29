@@ -109,6 +109,18 @@ export async function createObservation(
   return { success: "Observation recorded." };
 }
 
+/** Phase 222: an observation the consultant writes while doing a phase task. */
+export async function createTaskObservation(
+  phaseId: string, taskId: string, engagementId: string, _prev: FormState, formData: FormData,
+): Promise<FormState> {
+  const res = await send(`/tasks/${encodeURIComponent(taskId)}/observations`, "POST",
+                         observationBody(formData));
+  if (!res.ok) return refusal(res);
+  revalidatePath(`/phases/${phaseId}/tasks/${taskId}`);
+  revalidatePath(`/engagements/${engagementId}`);
+  return { success: "Observation recorded." };
+}
+
 export async function updateObservation(
   observationId: string, engagementId: string, _prev: FormState, formData: FormData,
 ): Promise<FormState> {

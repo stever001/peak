@@ -11,7 +11,7 @@ import { apiGet, apiPublicUrl, requireConsultant, type AssessmentResponse } from
 export default async function AssessmentPage(props: PageProps<"/engagements/[id]/assessment">) {
   await requireConsultant();
   const { id } = await props.params;
-  const { engagement, assessment, observation_evidence } = await apiGet<AssessmentResponse>(
+  const { engagement, assessment, observation_evidence, observation_origins } = await apiGet<AssessmentResponse>(
     `/engagements/${encodeURIComponent(id)}/assessment`,
   );
   return (
@@ -28,7 +28,8 @@ export default async function AssessmentPage(props: PageProps<"/engagements/[id]
         </Link>
       </div>
       <AssessmentView a={assessment} engagementId={engagement.id}
-                      evidence={observation_evidence ? { links: observation_evidence, apiUrl: apiPublicUrl() } : undefined} />
+                      evidence={observation_evidence ? { links: observation_evidence, apiUrl: apiPublicUrl() } : undefined}
+                      origins={observation_origins} />
     </>
   );
 }

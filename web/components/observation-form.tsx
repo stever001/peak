@@ -27,15 +27,15 @@ export function ObservationForm({ action, observation, sessions, questions, evid
   action: Action;
   observation?: Observation;
   sessions?: SessionSummary[];
-  /** Questions this engagement asks, for "Prompted by" (Phase 216). */
-  questions: QuestionOption[];
+  /** Questions this engagement asks, for "Prompted by" (Phase 216); omitted on a task page. */
+  questions?: QuestionOption[];
   /** Phase 221: captures this engagement can link; omitted when linking is unavailable. */
   evidence?: { available: EvidenceReference[]; linkedIds: string[]; apiUrl: string };
   submitLabel: string;
   cancelHref?: string;
 }) {
   const [state, formAction, pending] = useActionState<FormState, FormData>(action, {});
-  const categories = [...new Set(questions.map((q) => q.category))];
+  const categories = [...new Set((questions ?? []).map((q) => q.category))];
   const linked = observation?.question;
   return (
     // Keyed on the success message so the form clears after each new observation.
@@ -59,7 +59,7 @@ export function ObservationForm({ action, observation, sessions, questions, evid
             {Object.entries(BASIS_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
         </Field>
-        <Field label="Prompted by question (optional)" htmlFor="question_id" wide>
+        {questions && <Field label="Prompted by question (optional)" htmlFor="question_id" wide>
           <select id="question_id" name="question_id" defaultValue={linked?.id ?? ""} className="peak-input">
             <option value="">Not linked to a question</option>
             {linked && !questions.some((q) => q.id === linked.id) && (
@@ -73,7 +73,7 @@ export function ObservationForm({ action, observation, sessions, questions, evid
               </optgroup>
             ))}
           </select>
-        </Field>
+        </Field>}
         {sessions && (
           <Field label="From interview (optional)" htmlFor="session_id">
             <select id="session_id" name="session_id" defaultValue="" className="peak-input">

@@ -7,14 +7,12 @@ import { formatDate } from "@/lib/labels";
 /** Phase 221: a capture's provenance line: kind, originating task and date. */
 export function EvidenceProvenance({ e }: { e: EvidenceReference }) {
   return (
-    <p className="text-sm text-ink-muted">
-      {EVIDENCE_KIND_LABELS[e.evidence_kind]}
-      {" · "}
-      <Link href={`/phases/${e.task.phase_id}/tasks/${e.task.id}#evidence`} className="font-medium text-brand">
+    <span className="block text-sm text-ink-muted">
+      <span className="block">{[EVIDENCE_KIND_LABELS[e.evidence_kind], e.created_at && formatDate(e.created_at)].filter(Boolean).join(" · ")}</span>
+      <Link href={`/phases/${e.task.phase_id}/tasks/${e.task.id}#evidence`} className="inline-flex min-h-touch items-center font-medium text-brand">
         {e.task.title ?? "Task"}
       </Link>
-      {e.created_at && ` · ${formatDate(e.created_at)}`}
-    </p>
+    </span>
   );
 }
 

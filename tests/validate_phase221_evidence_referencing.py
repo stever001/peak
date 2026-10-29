@@ -44,6 +44,7 @@ for p in (REPO_ROOT, TESTS):
         sys.path.insert(0, p)
 
 import validate_phase220_guided_evidence_capture as p220  # noqa: E402  (shared fixtures)
+from _schema_history import head_descends_from  # noqa: E402
 
 TABLE = "observation_evidence_links"
 UI_FILES = (
@@ -88,8 +89,8 @@ def migration_checks(tmp):
     up = alembic(db, "upgrade", "024_observation_evidence_links")
     check("upgrade to 024 creates exactly observation_evidence_links",
           up.returncode == 0 and set(inspector().get_table_names()) - before == {TABLE})
-    check("024 is the single head", alembic(db, "heads").stdout.split()[0]
-          == "024_observation_evidence_links")
+    check("the head is 024 or descends from it",
+          head_descends_from(REPO_ROOT, "024_observation_evidence_links"))
     migrated = {c["name"] for c in inspector().get_columns(TABLE)}
     check("the migrated columns match the model",
           migrated == set(m.Base.metadata.tables[TABLE].columns.keys()))

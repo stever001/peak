@@ -47,7 +47,7 @@ from starlette.concurrency import run_in_threadpool
 from peak import accounts, workspace
 from peak.workspace import (
     approvals, discovery, engagement_phases, evidence_storage, observation_evidence,
-    peak_method_phases, phase_evidence,
+    peak_method_phases, phase_evidence, task_observations,
 )
 
 SESSION_COOKIE = "peak_session"
@@ -188,6 +188,10 @@ class ObservationUpdateIn(BaseModel):
 
 class ObservationCreateIn(ObservationUpdateIn):
     session_id: Optional[str] = None
+
+
+class TaskObservationIn(ObservationUpdateIn):
+    """Phase 222: an observation recorded during a phase task. Never part of an interview."""
 
 
 class DecisionIn(BaseModel):
@@ -729,6 +733,24 @@ def create_app(
                              "media_types": list(phase_evidence.MEDIA_TYPES)}
         return {"task_evidence": out}
 
+    # --- Phase 222: guided work observations (any authenticated consultant) -------------------
+
+    @app.get("/tasks/{task_id}/observations")
+    def task_observations_get(task_id: str, _: dict = Depends(current_consultant)):
+        """The observations recorded during this task, and whether recording is open. Reads only."""
+        return {"task_observations": _workspace_call(task_observations.task_observations,
+                                                     session_factory, task_id)}
+
+    @app.post("/tasks/{task_id}/observations", status_code=status.HTTP_201_CREATED)
+    def task_observations_create(task_id: str, body: TaskObservationIn,
+                                 me: dict = Depends(current_consultant)):
+        """The signed-in consultant records an observation, in their own words, during this task."""
+        engagement_id = _workspace_call(task_observations.task_engagement_id, session_factory,
+                                        task_id)
+        return {"observation": _workspace_call(discovery.create_observation, session_factory,
+                                               engagement_id, body.model_dump(exclude_unset=True),
+                                               me["id"], task_id)}
+
     @app.post("/evidence-uploads")
     async def evidence_upload(request: Request):
         """Multipart: ``grant``, ``file``, ``evidence_kind``, ``caption``, ``task_record_id``,
@@ -855,6 +877,9 @@ def create_app(
             "assessment": dataclasses.asdict(result.assessment),
             "markdown": result.markdown,
             "observation_evidence": _with_content_paths(linked)["links"] if linked else {},
+            # Phase 222: the phase task each work observation was recorded during, also beside it.
+            "observation_origins": task_observations.engagement_origins(session_factory,
+                                                                        engagement_id),
         }
 
     # --- Phase 208: final report foundation (read-only, derived; any authenticated consultant) --

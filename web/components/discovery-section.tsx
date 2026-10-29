@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createObservation, saveNorthStar } from "@/app/discovery-actions";
 import { LinkedEvidenceList } from "@/components/linked-evidence";
 import { NorthStarForm } from "@/components/north-star-form";
+import { ObservedDuring } from "@/components/observed-during";
 import { ObservationForm } from "@/components/observation-form";
 import type { Discovery, EngagementEvidence, Observation } from "@/lib/api";
 import { BASIS_LABELS, formatDate, LEVEL_LABELS } from "@/lib/labels";
@@ -14,16 +15,21 @@ function Pill({ children, tone = "bg-line" }: { children: React.ReactNode; tone?
 /** Phase 221: the engagement's captures and links, and the API origin that serves them. */
 type Evidence = { ev: EngagementEvidence; apiUrl: string } | null;
 
-function ObservationCard({ o, evidence }: { o: Observation; evidence: Evidence }) {
+/** One observation. ``hereTask`` is the task page it is shown on, which needs no "Observed during". */
+export function ObservationCard({ o, evidence, hereTask }: { o: Observation; evidence: Evidence; hereTask?: string }) {
   return (
     <li className="rounded-peak border border-line bg-surface p-4">
       <div className="mb-2 flex flex-wrap items-center gap-2">
+        {o.origin && <Pill tone="bg-canvas border border-line">Work observation</Pill>}
         {o.low_hanging_fruit && <Pill tone="bg-highlight">Low-hanging fruit</Pill>}
         {o.estimated_value && <Pill>Value: {LEVEL_LABELS[o.estimated_value]}</Pill>}
         {o.estimated_effort && <Pill>Effort: {LEVEL_LABELS[o.estimated_effort]}</Pill>}
         {o.category && <span className="text-sm text-ink-muted">{o.category}</span>}
       </div>
       <p className="whitespace-pre-line">{o.observation_text}</p>
+      {o.origin && o.origin.task_id !== hereTask && (
+        <div className="mt-2 text-sm text-ink-muted"><ObservedDuring origin={o.origin} /></div>
+      )}
       <p className="mt-2 text-sm text-ink-muted">
         {[`Basis: ${o.basis ? BASIS_LABELS[o.basis] : "not recorded"}`,
           o.question ? `Prompted by: "${o.question.prompt ?? "a question no longer active"}"` : null,

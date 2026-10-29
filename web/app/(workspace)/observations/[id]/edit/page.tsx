@@ -1,6 +1,7 @@
 import { updateObservation } from "@/app/discovery-actions";
 import { LinkedEvidenceList } from "@/components/linked-evidence";
 import { ObservationForm } from "@/components/observation-form";
+import { ObservedDuring } from "@/components/observed-during";
 import { PageHeader } from "@/components/page-header";
 import {
   apiGet, apiPublicUrl, getEngagementEvidence, requireConsultant, type Observation, type Question,
@@ -19,6 +20,12 @@ export default async function EditObservationPage(props: PageProps<"/observation
   return (
     <>
       <PageHeader title="Edit observation" />
+      {o.origin && (
+        <div className="mb-6 text-sm text-ink-muted">
+          <p className="font-medium text-ink">Work observation</p>
+          <ObservedDuring origin={o.origin} />
+        </div>
+      )}
       {linked.length > 0 && (
         <div className="peak-card mb-6">
           <LinkedEvidenceList items={linked} apiUrl={apiUrl} />
