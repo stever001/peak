@@ -12,7 +12,8 @@ later in the internal assessment:
 Observation (consultant's own words) → zero or more captured items of the same engagement
 ```
 
-**Status: implemented, not yet committed or deployed.**
+**Status: OPEN.** Committed at `0fd8bd1`. Migration 024 is applied to production (2026-10-29).
+The API is not yet deployed and production is not yet verified.
 
 ## Rule
 
@@ -147,3 +148,53 @@ evidence read would fail. The web may go first: without the route, linking is hi
 3. Move `EXPECTED_ALEMBIC_HEAD` to `024_observation_evidence_links` in a follow-up commit. Run the
    verifier and the Phase 50 gate.
 4. Deploy the API, then confirm the web.
+
+## Production schema cutover (2026-10-29)
+
+**Status: schema cutover complete. Phase 221 remains OPEN** until the API is deployed and
+production is verified.
+
+**Preflight (read-only).** The repository was at `0fd8bd1`, clean, with one Alembic head; 024 was
+the only pending step. The migration file was identical to the committed one. As
+`peak_prod_verify_ro`:
+- head `023_phase_task_evidence`;
+- 36 base tables, `observation_evidence_links` absent;
+- the 30-table `COUNT(*)` + `CHECKSUM TABLE` baseline (133 rows) identical to the Phase 220 final
+  snapshot;
+- verifier `verified_safe_no_remediation_required` (409/409, 11/11).
+
+The Phase 50 gate passed as `peak_prod_runtime`.
+
+**Migration.** Migration 024 was re-read just before it ran, identical to the reviewed file. As
+`peak_prod_migrate`, with the target guard (`PEAK_ALEMBIC_TARGET=production`,
+`PEAK_PRODUCTION_MIGRATION_CONFIRM=1`, `PEAK_PRODUCTION_SCHEMA_CONFIRM=defaultdb`):
+`alembic upgrade 024_observation_evidence_links` ran `023 → 024` only.
+
+**Schema check afterwards (read-only):**
+
+| Property | After |
+|---|---|
+| Alembic head | `024_observation_evidence_links`, single row |
+| Base tables | 37 (36 application + `alembic_version`), matching the models |
+| `observation_evidence_links` | InnoDB, 0 rows; 16 columns, nullability and collation as the model; 11 governed columns `utf8mb4_bin` |
+| Constraints | primary key; UNIQUE `uq_observation_evidence_links_pair (observation_id, evidence_id)`; 9 `ix_*`; no CHECK, trigger or foreign key |
+| Existing tables | no `CREATE_TIME` changed (no rebuild); the 30-table baseline (133 rows) unchanged |
+| `phase_task_evidence` | 0 rows |
+| Phase 217 tables | `roadmap_items`, `engagement_phases`, `phase_tasks`, `phase_task_records` all 0 rows |
+
+**Grants.** None changed. `SHOW GRANTS` for `peak_prod_runtime` was identical before and after.
+The schema-wide `SELECT, INSERT` on `defaultdb.*` covers the append-only link table. There is no
+grant naming `observation_evidence_links`, and no UPDATE or DELETE on it. The Phase 50 gate passed.
+
+**Verifier.** `EXPECTED_ALEMBIC_HEAD` was moved to 024 only after the migration. The live run
+returned `verified_safe_no_remediation_required`:
+- head matches;
+- 37 tables;
+- 420/420 governed columns deterministic (409 + 11);
+- 11/11 idempotency boundaries safe;
+- 0 at risk.
+
+**Not done.** No Render deploy or environment change, no Vercel action and no R2 action during the
+schema cutover. No production data was created.
+
+Still to do: deploy the API, then verify production.
