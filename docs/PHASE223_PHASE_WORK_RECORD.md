@@ -2,7 +2,8 @@
 
 Back to [`PHASE_INDEX.md`](PHASE_INDEX.md). Baseline `14ed1f9`.
 
-**Status: repository and local only.** No migration, no production action. Not deployed.
+**Status: CLOSED in production (2026-10-29)**, with one deferred acceptance item: the first
+populated production read (see *Production cutover and closure*). Implementation `f20bd5b`.
 
 ## Purpose
 
@@ -172,7 +173,7 @@ is shown as written, as in Phases 217–222.
 | Planned phase | 200, with nothing recorded and readiness `phase_not_authorized`. It is not an error: the plan is readable before authorization, as in Phase 218 |
 | Row naming this phase with another engagement | left out |
 
-## Production sequencing (when separately approved)
+## Production sequencing (complete)
 
 No migration, grant, environment or R2 change.
 1. The commit is `[skip render]`. Vercel may build the web first: without the API route, the record
@@ -203,3 +204,77 @@ covers:
 - the `getPhaseWorkRecord` degrade path under Node;
 - static checks: no form or action, touch-sized links, no ids as text, the boundary scan, and no
   report or artifact code reading the record.
+
+## Production cutover and closure (2026-10-29)
+
+**Status: complete (2026-10-29). Phase 223 is CLOSED**, with one deferred acceptance item (below).
+Deployment only: no migration, grant, environment, R2 or data change. No production data was written.
+
+**Preflight (read-only).** The repository was clean at `f20bd5b`, with HEAD equal to `origin/main`.
+As `peak_prod_verify_ro`:
+- head `025_observation_task_origins`, single row;
+- 38 base tables, matching the repository;
+- `engagement_phases` and `phase_tasks` 0 rows, and every other Phase 217–222 table also 0 rows;
+- the 30-table `COUNT(*)` + `CHECKSUM TABLE` baseline (133 rows) identical to the Phase 222 closure
+  snapshot;
+- verifier `verified_safe_no_remediation_required`: head matches, 431/431 governed columns
+  deterministic, 11/11 idempotency boundaries safe, 0 at risk, no warnings.
+
+Also before the deploy:
+- the Phase 50 gate passed as `peak_prod_runtime`;
+- `/healthz` returned 200;
+- logged out, `GET` and `POST /phases/nonexistent/work-record` returned FastAPI's `Not Found`
+  (404), while `GET /phases/nonexistent` returned 401. So the route was not yet deployed.
+
+**Release.**
+- Render API `peak-consultant-api`, manual deploy `dep-dbhs0qvb9u1s73aqi6eg` of
+  `f20bd5bd4e977684b3a6f521602af287289ca2f4`.
+- Started 2026-10-29T21:53:47Z, finished 21:54:57Z, status **Live**.
+- It replaced `dep-dbhq3vqfngtc73caanpg` (`b632b8a`), now deactivated.
+- Auto-Deploy stayed Off. No service setting, environment variable, instance count, region, or
+  build or start command changed.
+- Startup was normal ("Application startup complete"). The new instance logged 0 errors, 0
+  critical events and 0 warnings. The only build notices were routine pip notices.
+
+**Production checks (read-only, logged out):**
+- `/healthz` returned 200 on five consecutive requests;
+- `GET /phases/nonexistent/work-record` changed from 404 to **401** `not_authenticated`. The route is
+  deployed and requires a session;
+- `POST`, `PUT`, `PATCH` and `DELETE` on the route return **405** `Method Not Allowed`. FastAPI
+  matches the method before the session dependency runs, so a write method is refused before
+  authentication;
+- the existing phase, readiness, task evidence, task observations, engagement evidence, assessment,
+  engagement phases, `/auth/me` and `/engagements` routes all return 401. A route that does not
+  exist still returns 404.
+
+**No signed-in check.** There is no production phase, so a signed-in read could show only the 404
+for an unknown phase. Phase 221's signed-in checks already cover the same session path.
+
+**Preservation (read-only, after the deploy):**
+- head `025_observation_task_origins`, 38 base tables;
+- `roadmap_items`, `engagement_phases`, `phase_tasks`, `phase_task_records`,
+  `phase_task_evidence`, `observation_evidence_links` and `observation_task_origins` all 0 rows;
+- the 30-table baseline unchanged at 133 rows, `changed_tables = []`;
+- runtime grants identical to the Phase 222 record:
+  - `SELECT, INSERT` on `defaultdb.*`;
+  - table-level UPDATE on the same nine tables;
+  - USAGE;
+  - no DELETE, no global privilege and no grant option;
+- the Phase 50 gate PASS, with no excess grants and no global privileges;
+- the verifier `verified_safe_no_remediation_required`: head matches, 431/431 governed columns
+  deterministic, 11/11 idempotency boundaries safe, 0 at risk, no warnings;
+- the verifier pin stays at `025`: Phase 223 has no migration.
+
+**Deferred acceptance.** Production has no engagement phase or phase task, so there is no record to
+read. A synthetic phase, task or authorization chain was deliberately not created for acceptance.
+The first populated production read is deferred until the first legitimate authorized phase
+exists. This is an operational checkpoint, not unfinished implementation: the populated path is
+covered by the Phase 223 harness and the local walkthrough.
+
+When the first real phase exists, confirm:
+- `/phases/{id}/record` renders, signed in, with the phase's tasks, outcomes, records, captures and
+  observations as on the task pages;
+- loading it creates no row: the 30-table baseline and the Phase 217–222 counts are unchanged by the
+  read;
+- no storage key, file name or id appears as page text;
+- the verifier and the Phase 50 gate remain clean.

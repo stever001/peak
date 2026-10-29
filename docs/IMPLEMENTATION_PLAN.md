@@ -4464,7 +4464,7 @@ work observations) are recorded in their phase documents and [`PHASE_INDEX.md`](
 
 ### Phase 223 — Phase work record
 
-Product UI; repository and local only. Baseline `14ed1f9`. Record:
+Product UI; CLOSED in production (2026-10-29). Implementation `f20bd5b`; baseline `14ed1f9`. Record:
 [`PHASE223_PHASE_WORK_RECORD.md`](PHASE223_PHASE_WORK_RECORD.md).
 
 - [x] One read-only page per engagement phase, showing everything recorded during it, task by task:
@@ -4480,8 +4480,12 @@ Product UI; repository and local only. Baseline `14ed1f9`. Record:
 - [x] Not read by the assessment, Final Report, artifacts or AgentNet. No change to task, phase,
   readiness, finding or recommendation.
 - [x] `tests/validate_phase223_phase_work_record.py` in `make validate`.
-- [ ] Production (when separately approved): a manual API deploy only, with no schema, grant or
-  environment change. A populated read waits for the first real phase.
+- [x] Production cutover (2026-10-29): a manual Render API deploy only (`dep-dbhs0qvb9u1s73aqi6eg`
+  at `f20bd5b`), with no schema, grant, environment or data change. The route moved from 404 to 401
+  logged out. The verifier (431/431, 11/11), the Phase 50 gate and the 30-table baseline are
+  unchanged.
+- [ ] First populated production read, deferred until the first legitimate authorized phase exists.
+  No synthetic workflow is created for acceptance.
 
 **Still to do:**
 
