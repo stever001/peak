@@ -12,8 +12,8 @@ later in the internal assessment:
 Observation (consultant's own words) → zero or more captured items of the same engagement
 ```
 
-**Status: OPEN.** Committed at `0fd8bd1`. Migration 024 is applied to production (2026-10-29).
-The API is not yet deployed and production is not yet verified.
+**Status: CLOSED in production (2026-10-29)**, with one deferred acceptance item: the first real
+observation→evidence link (see *Production cutover and closure*). Implementation `0fd8bd1`.
 
 ## Rule
 
@@ -151,8 +151,7 @@ evidence read would fail. The web may go first: without the route, linking is hi
 
 ## Production schema cutover (2026-10-29)
 
-**Status: schema cutover complete. Phase 221 remains OPEN** until the API is deployed and
-production is verified.
+**Status: schema cutover complete.** The API deploy and production checks followed the same day.
 
 **Preflight (read-only).** The repository was at `0fd8bd1`, clean, with one Alembic head; 024 was
 the only pending step. The migration file was identical to the committed one. As
@@ -197,4 +196,72 @@ returned `verified_safe_no_remediation_required`:
 **Not done.** No Render deploy or environment change, no Vercel action and no R2 action during the
 schema cutover. No production data was created.
 
-Still to do: deploy the API, then verify production.
+At the end of the schema cutover, the API deploy and the production checks were still to do. Both
+were completed the same day (see the next section).
+
+## Production cutover and closure (2026-10-29)
+
+**Status: complete (2026-10-29). Phase 221 is CLOSED**, with one deferred acceptance item (below).
+No production data was written.
+
+- **Releases.** Both from `6c1fbfb` (*Advance verifier to Phase 221 schema*; the verifier pin is at
+  `024_observation_evidence_links`):
+  - Render API `peak-consultant-api`, deploy `dep-dbhov2g8v5cc73925ag0`, **Live**, at commit
+    `6c1fbfbbed9749caccbedf1b3fa37ddcd5151cc9`;
+  - Vercel web: the production deployment of `6c1fbfb`, successful.
+- **Health.** `/healthz` returned 200.
+- **Authenticated API check (existing Admin, read-only):**
+  - logged out, the Phase 221 evidence route, the assessment, discovery and observation reads all
+    return 401;
+  - login 200, `/auth/me` 200 admin, `/engagements` 200;
+  - signed in, the unknown-engagement evidence and assessment routes and an unknown observation
+    return the application's 404 `not_found`. A route that does not exist returns FastAPI's
+    `Not Found`, so the Phase 221 route is registered;
+  - the engagement and its discovery read 200. Its evidence read returned 200, with 0 available
+    captures and 0 linked observations;
+  - the assessment route returns 404 for the existing engagement: it has no assessment yet. The
+    route has returned 404 for this since Phase 206, so this is not a Phase 221 failure;
+  - no storage key, file name or hash appears in any response;
+  - logout 204, then `/auth/me` 401.
+- **Web check (read-only):**
+  - logged out, the engagement, assessment and observation-edit pages redirect to login;
+  - signed in, the engagement page renders with no application error. The only production
+    engagement is the legacy internal-test anchor. Its Discovery card shows the existing notice
+    "Discovery is available for engagements created in the consultant workspace", so it has no
+    Add observation form. That is why no evidence picker appears. The picker's empty state ("No
+    photos or documents have been captured…") was verified in the local walkthrough, not in
+    production;
+  - the assessment page handles the API's 404 without an application error and shows no linked
+    evidence;
+  - an unknown observation's edit page shows the normal not-found page;
+  - no raw ids, storage keys or file names appear in page text or HTML;
+  - Phase 221 wording contains no audit or compliance terms. The only whole-page boundary term is
+    the existing delete-card copy ("kept for audit"), as in Phase 220;
+  - no non-GET request was made during page loads.
+- **Responsive.** The engagement, assessment and unknown observation-edit pages were measured at
+  1440×900, 820×1180 and 1180×820. Every result was `overflow_px=0`, `elements_past_edge=0` and
+  `controls_under_40px=0`.
+- **Runtime identity.** The API pool connects as `peak_prod_runtime` on `defaultdb`. No verify or
+  migrate credential is in the runtime pool.
+- **Preservation (read-only, after the checks):**
+  - head `024_observation_evidence_links`, 37 base tables;
+  - `observation_evidence_links` and `phase_task_evidence` 0 rows;
+  - the four Phase 217 tables 0 rows;
+  - the 30-table baseline unchanged at 133 rows, `changed_tables = []`;
+  - the Phase 50 gate PASS: required grants present, no excess grants, no global privileges and no
+    grant option;
+  - the verifier `verified_safe_no_remediation_required`: head matches, 420/420 governed columns
+    deterministic, 11/11 idempotency boundaries safe, 0 at risk.
+
+**Deferred acceptance.** Production creation of the first observation→evidence link is deferred
+until legitimate production evidence and a consultant-authored observation exist. No synthetic
+production consulting workflow or evidence was created solely for acceptance. Phase 221 production
+API, schema, zero-state behavior, authorization, persistence boundaries and assessment integration
+paths were verified without production writes.
+
+When the first real link is saved, confirm three things:
+- the `observation_evidence_links` row names that observation and capture;
+- the observation and the assessment show the link;
+- nothing else changed.
+
+No production evidence or link row was created during the cutover, and R2 was not touched.
