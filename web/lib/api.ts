@@ -171,6 +171,8 @@ export type ObservationOrigin = {
   task_id: string;
   task_title: string | null;
   task_sequence: number | null;
+  /** Phase 224: written after the task resolved or the phase completed. Derived on each read. */
+  written_after_work?: boolean;
 };
 
 export type QuestionOption = { id: string; prompt: string; category: string };
@@ -825,6 +827,17 @@ export type WorkRecordTask = {
   observations: Observation[];
 };
 
+/** Phase 224: what has and has not been written as an observation. Derived; never a state. */
+export type AssessmentHandoff = {
+  open: boolean;
+  observations: number;
+  written_after_work: number;
+  without_observation: { task_id: string; sequence: number; title: string }[];
+  rule: string;
+  stored: false;
+  interpreted: false;
+};
+
 /**
  * Phase 223: everything recorded during one phase, composed by the API on request from the Phase
  * 217–222 records. Nothing in it is generated, summarized or stored.
@@ -846,6 +859,8 @@ export type PhaseWorkRecord = {
   /** Each observation's linked captures, as in Phase 221. */
   evidence_links: Record<string, LinkedEvidence[]>;
   composition: { rule: string; stored: false; interpreted: false };
+  /** Absent from an API before Phase 224. */
+  assessment_handoff?: AssessmentHandoff;
 };
 
 /** Optional: null when the API cannot compose it (for example an API before Phase 223). */

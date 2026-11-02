@@ -111,6 +111,9 @@ Response `work_record`:
 No storage key, file name or content hash is returned. Ordering is deterministic: tasks by sequence,
 then rows by creation time and id.
 
+*Phase 224 added a derived `assessment_handoff`. See
+[`PHASE224_PHASE_ASSESSMENT_HANDOFF.md`](PHASE224_PHASE_ASSESSMENT_HANDOFF.md).*
+
 ## UI
 
 `/phases/{id}/record`, linked from the phase workspace ("Phase work record") once the phase is

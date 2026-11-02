@@ -117,6 +117,8 @@ export async function createTaskObservation(
                          observationBody(formData));
   if (!res.ok) return refusal(res);
   revalidatePath(`/phases/${phaseId}/tasks/${taskId}`);
+  revalidatePath(`/phases/${phaseId}/record`);
+  revalidatePath(`/phases/${phaseId}`);
   revalidatePath(`/engagements/${engagementId}`);
   return { success: "Observation recorded." };
 }

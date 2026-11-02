@@ -28,12 +28,39 @@ COMPOSITION_RULE = (
     "consultant's records, captured photos and documents, and observations written during the "
     "task. Nothing is summarized, inferred or saved, and Peak does not read the captures.")
 
+#: What reaches the assessment from this phase (Phase 224), shown with the handoff.
+HANDOFF_RULE = (
+    "Only observations reach the internal assessment. Records, result summaries and captures do "
+    "not reach it on their own. An observation can be written on any agreed task of this phase, "
+    "including after the work is finished. Peak does not write or suggest one, and no task needs "
+    "one.")
+
 
 def _outcome(task, by_id, records) -> str:
     """``completed``, ``not_applicable``, ``does_not_apply`` (its condition was not met) or ``open``."""
     if task.status in ("completed", "not_applicable"):
         return task.status
     return "does_not_apply" if _applies(task, by_id, records) is False else "open"
+
+
+def _handoff(phase, out_tasks: list, observations: list, found: dict) -> dict:
+    """Phase 224: what has and has not been written as an observation. Derived; never a state.
+
+    A task has recorded work when it is completed or holds a current record or capture.
+    """
+    def has_work(t):
+        return (t["outcome"] == "completed" or t["captures"]
+                or any(not r["superseded_by"] for r in t["records"]))
+
+    return {
+        "open": phase.status != "planned",
+        "observations": len(observations),
+        "written_after_work": sum(1 for o in observations
+                                  if found.get(o.id, {}).get("written_after_work")),
+        "without_observation": [{"task_id": t["id"], "sequence": t["sequence"], "title": t["title"]}
+                                for t in out_tasks if has_work(t) and not t["observations"]],
+        "rule": HANDOFF_RULE, "stored": False, "interpreted": False,
+    }
 
 
 def phase_work_record(session_factory, phase_id: str) -> Optional[dict]:
@@ -171,4 +198,5 @@ def phase_work_record(session_factory, phase_id: str) -> Optional[dict]:
             "suggested_not_accepted": len(tasks) - len(plan),
             "evidence_links": evidence_links,
             "composition": {"rule": COMPOSITION_RULE, "stored": False, "interpreted": False},
+            "assessment_handoff": _handoff(phase, out_tasks, observations, found),
         }

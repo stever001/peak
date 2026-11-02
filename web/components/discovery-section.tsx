@@ -21,6 +21,7 @@ export function ObservationCard({ o, evidence, hereTask }: { o: Observation; evi
     <li className="rounded-peak border border-line bg-surface p-4">
       <div className="mb-2 flex flex-wrap items-center gap-2">
         {o.origin && <Pill tone="bg-canvas border border-line">Work observation</Pill>}
+        {o.origin?.written_after_work && <Pill tone="bg-canvas border border-line">Written after the work</Pill>}
         {o.low_hanging_fruit && <Pill tone="bg-highlight">Low-hanging fruit</Pill>}
         {o.estimated_value && <Pill>Value: {LEVEL_LABELS[o.estimated_value]}</Pill>}
         {o.estimated_effort && <Pill>Effort: {LEVEL_LABELS[o.estimated_effort]}</Pill>}

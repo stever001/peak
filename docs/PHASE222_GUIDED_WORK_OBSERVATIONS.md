@@ -70,6 +70,9 @@ observation to the work. A record can be cited in the observation text if it mat
 
 ## Rules on saving
 
+*Phase 224 narrowed one rule below: a resolved task and a completed phase no longer refuse a new
+observation. See [`PHASE224_PHASE_ASSESSMENT_HANDOFF.md`](PHASE224_PHASE_ASSESSMENT_HANDOFF.md).*
+
 `POST /tasks/{task_id}/observations` takes the same fields as an observation edit:
 - text, category, basis, low-hanging fruit, effort and value;
 - an optional prompting question;

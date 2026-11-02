@@ -45,6 +45,8 @@ export default async function TaskPage(props: PageProps<"/phases/[id]/tasks/[tas
   const w = t.work_state;
   const authorized = p.status === "authorized";
   const workable = authorized && isOpen(t);
+  // Phase 224: observations stay open once the work is finished; records and captures do not.
+  const finished = p.status === "completed" || t.status === "completed" || t.status === "not_applicable";
   const here = `/phases/${p.id}/tasks/${t.id}`;
   const { current } = splitRecords(t.records);
   const correcting = typeof search.correct === "string" && workable
@@ -268,13 +270,15 @@ export default async function TaskPage(props: PageProps<"/phases/[id]/tasks/[tas
           <section id="observations" aria-labelledby="work-observations" className="peak-card">
             <h2 id="work-observations" className="mb-1 text-lg font-semibold">Observations</h2>
             <p className="mb-4 text-sm text-ink-muted">
-              What you noticed while doing this task, in your own words. Each one is also listed with the
-              engagement&apos;s observations and in the internal assessment.
+              {finished && obs && !obs.recording_closed
+                ? "The work on this task is finished, and its records stay as they are. You can still write what it showed, in your own words. It will be marked as written after the work."
+                : "What you noticed while doing this task, in your own words."}{" "}
+              Each one is also listed with the engagement&apos;s observations and in the internal assessment.
             </p>
             {!obs ? (
               <p className="text-ink-muted">Observations are currently unavailable here.</p>
             ) : obs.observations.length === 0 ? (
-              <p className="mb-4 text-ink-muted">No observations recorded during this task yet.</p>
+              <p className="mb-4 text-ink-muted">No observations written on this task yet.</p>
             ) : (
               <ul className="mb-6 grid gap-3">
                 {obs.observations.map((o) => (
@@ -283,7 +287,8 @@ export default async function TaskPage(props: PageProps<"/phases/[id]/tasks/[tas
               </ul>
             )}
             {obs && !obs.recording_closed && (
-              <details className="border-t border-line pt-5" open={obs.observations.length === 0}>
+              <details className="border-t border-line pt-5"
+                       open={search.observe === "1" || (!finished && obs.observations.length === 0)}>
                 <summary className="inline-flex min-h-touch cursor-pointer items-center font-medium text-brand">
                   Add observation
                 </summary>

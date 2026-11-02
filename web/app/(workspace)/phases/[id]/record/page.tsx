@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { AssessmentHandoffSection } from "@/components/assessment-handoff";
 import { ObservationCard } from "@/components/discovery-section";
 import { EvidenceThumb } from "@/components/linked-evidence";
 import { PageHeader } from "@/components/page-header";
@@ -100,6 +101,7 @@ export default async function PhaseRecordPage(props: PageProps<"/phases/[id]/rec
   const a = ph.authorization;
   const n = rec.totals;
   const links = { ev: { engagement_id: rec.engagement.id, available: [], links: rec.evidence_links }, apiUrl };
+  const handoff = rec.assessment_handoff;
 
   return (
     <>
@@ -183,6 +185,8 @@ export default async function PhaseRecordPage(props: PageProps<"/phases/[id]/rec
         )}
       </section>
 
+      {handoff?.open && <AssessmentHandoffSection phaseId={p.id} engagementId={rec.engagement.id} h={handoff} />}
+
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_24rem] xl:items-start">
         <section aria-labelledby="by-task" className="space-y-4">
           <h2 id="by-task" className="text-xl font-semibold text-brand">Task by task</h2>
@@ -243,6 +247,12 @@ export default async function PhaseRecordPage(props: PageProps<"/phases/[id]/rec
                   <ul className="grid gap-3">
                     {t.observations.map((o) => <ObservationCard key={o.id} o={o} evidence={links} hereTask={t.id} />)}
                   </ul>
+                )}
+                {handoff?.open && (
+                  <Link href={`/phases/${p.id}/tasks/${t.id}?observe=1#observations`}
+                        className="mt-2 inline-flex min-h-touch items-center text-sm font-medium text-brand">
+                    Write an observation
+                  </Link>
                 )}
               </Part>
             </article>

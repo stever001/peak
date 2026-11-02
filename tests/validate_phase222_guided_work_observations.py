@@ -242,7 +242,8 @@ def app_checks(tmp):
           o_one["observation_text"] == text_one and o_one["basis"] == "observed")
     check("its origin names the phase and task it was recorded during",
           origin == {"phase_id": pid, "phase_title": phase["title"], "task_id": tid,
-                     "task_title": task["title"], "task_sequence": task["sequence"]})
+                     "task_title": task["title"], "task_sequence": task["sequence"],
+                     "written_after_work": False})
     r_ev = observe("Pallet labels and the receiving log disagree on location.", [e1, e2])
     o_ev = r_ev.json()["observation"]
     ev_links = cam.get(f"/engagements/{eid}/evidence").json()["engagement_evidence"]["links"]
@@ -346,9 +347,12 @@ def app_checks(tmp):
           p220._counts(db) == reads)
 
     r_na = lee.post(f"/tasks/{other['id']}/not-applicable", json={"reason": "No second dock here."})
-    check("a resolved task is closed for new observations (task_resolved)",
-          r_na.status_code == 200 and code(observe("Too late.", task_id=other["id"])) == "task_resolved"
-          and listed(other["id"])["recording_closed"]["code"] == "task_resolved")
+    # Phase 224 narrowed this rule deliberately; its harness covers the new behaviour in full.
+    check("a resolved task stays open for observations (Phase 224) and closed for records",
+          r_na.status_code == 200 and listed(other["id"])["recording_closed"] is None
+          and code(cam.post(f"/tasks/{other['id']}/records",
+                            json={"record_kind": "note", "record_text": "Too late."}))
+          == "task_resolved")
 
     # No leaks.
     con = sqlite3.connect(db)

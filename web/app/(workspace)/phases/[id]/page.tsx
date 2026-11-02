@@ -1,10 +1,11 @@
 import Link from "next/link";
 
 import { completePhase } from "@/app/work-plan-actions";
+import { AssessmentHandoffNote } from "@/components/assessment-handoff";
 import { ActionButton } from "@/components/work-plan-actions";
 import { PhaseStatusPill, ReadinessPanel, TaskCard } from "@/components/work-plan-parts";
 import { PageHeader } from "@/components/page-header";
-import { apiGet, requireConsultant, type EngagementPhaseDetail } from "@/lib/api";
+import { apiGet, getPhaseWorkRecord, requireConsultant, type EngagementPhaseDetail } from "@/lib/api";
 import { formatDate } from "@/lib/labels";
 import { setupFinished } from "@/lib/phase-setup";
 import { nextTask } from "@/lib/work-plan";
@@ -18,6 +19,8 @@ export default async function PhasePage(props: PageProps<"/phases/[id]">) {
   const suggested = p.tasks.filter((t) => t.status === "suggested");
   const next = p.status === "authorized" ? nextTask(plan) : null;
   const a = p.authorization;
+  // Phase 224: optional; without it the page is as before.
+  const handoff = p.status === "planned" ? null : (await getPhaseWorkRecord(p.id))?.assessment_handoff;
 
   return (
     <>
@@ -113,6 +116,7 @@ export default async function PhasePage(props: PageProps<"/phases/[id]">) {
               <span aria-hidden="true" className="text-brand">→</span>
             </Link>
           )}
+          {handoff && <AssessmentHandoffNote phaseId={p.id} h={handoff} />}
           <ReadinessPanel phase={p} />
           {p.status === "authorized" && p.readiness.ready && (
             <div className="peak-card">

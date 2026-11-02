@@ -4487,6 +4487,29 @@ Product UI; CLOSED in production (2026-10-29). Implementation `f20bd5b`; baselin
 - [ ] First populated production read, deferred until the first legitimate authorized phase exists.
   No synthetic workflow is created for acceptance.
 
+### Phase 224 — Phase-to-assessment handoff
+
+Product workflow; **repository/local only, not deployed**. Baseline `534aeac`. Record:
+[`PHASE224_PHASE_ASSESSMENT_HANDOFF.md`](PHASE224_PHASE_ASSESSMENT_HANDOFF.md).
+
+- [x] Established the gap by running it: a fully documented, ready phase could complete with nothing
+  in the assessment, and the only observation route that keeps provenance closed once a task resolved.
+- [x] A work observation can be written on any agreed task of an authorized or completed phase.
+  Refusals for a planned phase and a suggested task stay. Records, captures, task outcomes and phase
+  status stay frozen.
+- [x] `written_after_work` on an origin, derived on each read, so "Observed during" stays true.
+- [x] `assessment_handoff` on the work record, derived on each read: counts and the tasks with
+  recorded work and no observation. It gates nothing.
+- [x] Web: a read-only section on the work record, a note on the phase workspace, the observation form
+  on a finished task. The work record still has no form.
+- [x] No migration, table, column, allowlist action, grant, new route, new authority or model use. No
+  change to readiness, completion, the assessment or Final Report composers, recommendation
+  eligibility or artifacts.
+- [x] `tests/validate_phase224_phase_assessment_handoff.py` in `make validate`. The Phase 222 harness's
+  resolved-task check and origin shape were updated deliberately.
+- [ ] Production cutover: a separate decision. A manual Render API deploy only, with no schema, grant,
+  environment or data change.
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing

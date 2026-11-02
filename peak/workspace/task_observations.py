@@ -12,8 +12,11 @@ the same transaction as the observation and never moved.
 no wording is suggested. Recording one changes no task status, completion rule or phase readiness,
 and creates no finding or recommendation beyond what any observation already feeds.
 
-**Where.** Only on a task of an authorized phase that is accepted and not yet resolved, the same
-rule as task records and evidence capture, and only in that task's engagement.
+**Where.** On an agreed task of an authorized or completed phase, in that task's engagement. Phase
+224: this includes a resolved task and a completed phase, because a consultant often sees what the
+work showed only once it is finished. Task records and captures stay closed then, and nothing about
+the task or phase changes. Such an observation is shown as written after the work, never as observed
+during it (``written_after_work``, derived on each read).
 """
 
 from __future__ import annotations
@@ -23,17 +26,37 @@ from typing import Optional
 
 from peak.persistence.allowlist import WORKSPACE_ENGAGEMENT_CREATION_STAMP
 
-from .engagement_phases import _open_task, _require_allowed, _task_for_work
+from .engagement_phases import RESOLVED_TASK_STATUSES, _phase_for_work, _require_allowed
 from .service import WorkspaceError
 
 
 def require_task(session, task_id: str, engagement_id: str):
-    """The task an observation is being recorded during, if work on it is open now; else refuse."""
-    task, _ = _task_for_work(session, task_id)
+    """The task an observation is being written on, if it is agreed work of a phase that was
+    authorized; else refuse."""
+    from peak.db.models import PhaseTask
+
+    task = session.get(PhaseTask, task_id)
     if task is None or task.engagement_id != engagement_id:
         raise WorkspaceError("invalid_link", "That task is not part of this engagement.")
-    _open_task(task)
+    _phase_for_work(session, task.phase_id, allowed=("authorized", "completed"))
+    if task.status == "suggested":
+        raise WorkspaceError("task_not_accepted", "Accept the suggested task into the plan first.")
     return task
+
+
+def _written_after_work(origin, task, phase) -> bool:
+    """Was this origin created after its task resolved or its phase completed?
+
+    Read from ``updated_at``, not ``completed_at``: a resolved task and a completed phase are never
+    updated again, so ``updated_at`` is when that happened, on the same database clock as the
+    origin's ``created_at``. ``completed_at`` comes from the API host's clock.
+    """
+    finished = []
+    if task is not None and task.status in RESOLVED_TASK_STATUSES:
+        finished.append(task.updated_at)
+    if phase is not None and phase.status == "completed":
+        finished.append(phase.updated_at)
+    return any(origin.created_at > at for at in finished if at and origin.created_at)
 
 
 def add_origin(session, observation_id: str, task) -> None:
@@ -71,6 +94,7 @@ def origins(session, observation_ids) -> dict:
             "phase_id": r.phase_id, "phase_title": phase.title if phase is not None else None,
             "task_id": r.task_id, "task_title": task.title if task is not None else None,
             "task_sequence": task.sequence if task is not None else None,
+            "written_after_work": _written_after_work(r, task, phase),
         }
     return out
 
@@ -97,7 +121,7 @@ def task_engagement_id(session_factory, task_id: str) -> Optional[str]:
 
 
 def task_observations(session_factory, task_id: str) -> Optional[dict]:
-    """The observations recorded during one task, newest first, and whether recording is open.
+    """The observations written on one task, newest first, and whether writing one is possible.
 
     Reads only; creates nothing.
     """
