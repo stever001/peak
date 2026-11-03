@@ -39,13 +39,14 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
 from .discovery_assessment import (
-    DISCOVERY_NOT_EVIDENCE_TEXT,
     LOW_HANGING_FRUIT_GROUPING_TEXT,
     NO_DISCOVERY_TEXT,
     DiscoveryFinding,
     basis_label,
+    discovery_not_evidence_text,
     InterviewCoverage,
     LowHangingFruitCandidate,
+    recorded_outside_interviews,
 )
 from .internal_assessment import (
     EVIDENCE_MATERIAL_LABEL,
@@ -112,6 +113,10 @@ BOUNDARY_STATEMENTS = (
     "This report is internal. It has not been approved for client use and requires consultant "
     "review.",
 )
+
+#: Phase 225: the first statement when some discovery material was not recorded in an interview.
+BOUNDARY_STATEMENT_WIDER = BOUNDARY_STATEMENTS[0].replace(
+    "during interviews.", "during interviews or other consulting work.")
 
 _LEVEL_LABELS = {"low": "Low", "medium": "Medium", "high": "High"}
 
@@ -324,7 +329,10 @@ def compose_final_report(assessment: InternalAssessment,
             blocked_reasons=list(assessment.recommendation_blocked_reasons),
         ),
         limitations=LimitationsSection(
-            boundary_statements=list(BOUNDARY_STATEMENTS),
+            boundary_statements=[
+                BOUNDARY_STATEMENT_WIDER
+                if discovery and recorded_outside_interviews(discovery.findings)
+                else BOUNDARY_STATEMENTS[0], *BOUNDARY_STATEMENTS[1:]],
             assessment_limitations=list(assessment.limitations),
             discovery_limitations=list(discovery_limitations),
         ),
@@ -352,8 +360,8 @@ def _render_overview(report: FinalReport) -> List[str]:
 
 def _render_discovery(report: FinalReport) -> List[str]:
     s = report.discovery_summary
-    lines = [f"## {SECTION_TITLES[SECTION_DISCOVERY_SUMMARY]}", "", DISCOVERY_NOT_EVIDENCE_TEXT, "",
-             "### Interview coverage", ""]
+    lines = [f"## {SECTION_TITLES[SECTION_DISCOVERY_SUMMARY]}", "",
+             discovery_not_evidence_text(s.findings), "", "### Interview coverage", ""]
     if s.coverage is None:
         lines += [f"_{NO_DISCOVERY_TEXT}_", ""]
     else:

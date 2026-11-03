@@ -73,6 +73,10 @@ DISCOVERY_NOT_EVIDENCE_TEXT = (
     "no review status, no reliability rating, and no recommendation eligibility. It informs the "
     "assessment; it does not support a formal recommendation on its own.")
 
+#: Phase 225: the same statement when some of the material was not recorded in an interview.
+DISCOVERY_NOT_EVIDENCE_WIDER_TEXT = DISCOVERY_NOT_EVIDENCE_TEXT.replace(
+    "during interviews,", "during interviews or other consulting work,")
+
 LOW_HANGING_FRUIT_GROUPING_TEXT = (
     "Grouped for reading by the effort and value the consultant entered. This is a display "
     "grouping, not a score, a ranking, or a priority order, and no ROI is calculated.")
@@ -292,6 +296,17 @@ def build_discovery_findings(observations: List[dict], sessions: List[dict],
             basis=observation.get("basis"),
         ))
     return findings
+
+
+def recorded_outside_interviews(findings) -> bool:
+    """Phase 225: whether any finding has no interview session. A fixed test on the trace."""
+    return any(not f.trace.session_id for f in findings or [])
+
+
+def discovery_not_evidence_text(findings) -> str:
+    """The discovery boundary sentence that is true of ``findings``. A pure function of them."""
+    return (DISCOVERY_NOT_EVIDENCE_WIDER_TEXT if recorded_outside_interviews(findings)
+            else DISCOVERY_NOT_EVIDENCE_TEXT)
 
 
 def _display_group(candidate: LowHangingFruitCandidate):

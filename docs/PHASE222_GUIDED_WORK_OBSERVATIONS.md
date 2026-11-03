@@ -135,7 +135,8 @@ the interview with …". Linked evidence shows below it (Phase 221).
 The origin is returned beside the assessment, not inside it:
 - the assessment dataclasses and Markdown are unchanged;
 - the Final Report (JSON, Markdown, DOCX, stored versions) is unchanged. A work observation appears
-  there as any observation does, with the existing "Recorded outside an interview" trace.
+  there as any observation does, with the existing "Recorded outside an interview" trace. (Phase 225
+  corrects the report's section-level sentences, which still said "during interviews".)
 
 ## Validation
 

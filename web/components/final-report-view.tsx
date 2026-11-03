@@ -68,8 +68,8 @@ function Discovery({ r }: { r: FinalReport }) {
   return (
     <>
       <p className="mb-4 text-sm text-ink-muted">
-        Recorded during interviews. Not reviewed evidence — no review status, reliability rating, or recommendation
-        eligibility.
+        {s.findings.some((f) => !f.trace.session_id) ? "Recorded during interviews or other consulting work." : "Recorded during interviews."}{" "}
+        Not reviewed evidence — no review status, reliability rating, or recommendation eligibility.
       </p>
       {s.coverage ? <Coverage c={s.coverage} /> : (
         <p className="text-ink-muted">No discovery material has been recorded for this engagement.</p>

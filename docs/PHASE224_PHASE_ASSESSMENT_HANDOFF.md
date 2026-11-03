@@ -243,7 +243,8 @@ Records, result summaries and captures still never become findings on their own.
 ## Final Report
 
 The composer is unchanged. Such an observation appears as any observation does, with the existing
-"Recorded outside an interview" trace. No phase content is added. C5 and C7 are untouched.
+"Recorded outside an interview" trace. No phase content is added. C5 and C7 are untouched. (Phase 225
+corrects the report's section-level sentences, which still said "during interviews".)
 
 ## Artifacts
 

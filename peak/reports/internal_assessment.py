@@ -45,7 +45,7 @@ from typing import Dict, List, Optional
 
 from .contracts import AUDIENCE_INTERNAL, SECTION_OPERATIONAL_FINDINGS, SECTION_TITLES
 from .discovery_assessment import (
-    DISCOVERY_NOT_EVIDENCE_TEXT,
+    discovery_not_evidence_text,
     LOW_HANGING_FRUIT_GROUPING_TEXT,
     NO_DISCOVERY_TEXT,
     DiscoveryAssessmentContext,
@@ -291,7 +291,8 @@ def _render_north_star(discovery: Optional[DiscoveryAssessmentContext]) -> List[
 
 def _render_discovery_summary(discovery: Optional[DiscoveryAssessmentContext]) -> List[str]:
     """Interview coverage as counts. No completeness percentage over an ambiguous denominator."""
-    lines = [f"## {DISCOVERY_SECTION_TITLE}", "", DISCOVERY_NOT_EVIDENCE_TEXT, ""]
+    lines = [f"## {DISCOVERY_SECTION_TITLE}", "",
+             discovery_not_evidence_text(discovery.findings if discovery else None), ""]
     if discovery is None or not discovery.available:
         return lines + [f"_{NO_DISCOVERY_TEXT}_", ""]
     coverage = discovery.coverage

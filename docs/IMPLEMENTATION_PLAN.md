@@ -4515,6 +4515,26 @@ Product workflow; CLOSED in production (2026-11-03). Implementation `177fea8`; b
   operational acceptance item, not unfinished implementation. No synthetic workflow is created for
   acceptance.
 
+### Phase 225 — Truthful report discovery provenance
+
+Product workflow; implemented in the repository, not deployed. Baseline `bd3c6bb`. Record:
+[`PHASE225_REPORT_DISCOVERY_PROVENANCE.md`](PHASE225_REPORT_DISCOVERY_PROVENANCE.md).
+
+- [x] Established the gap by running it: with no interview at all, a phase observation reached the
+  client package under "Recorded during interviews", beside a trace saying "recorded outside an
+  interview".
+- [x] One deterministic rule: if any discovery finding has no interview session, the two sentences read
+  "during interviews or other consulting work". It is used by the composer, every renderer and the
+  assessment Markdown. The internal draft page's opening line applies the same test.
+- [x] Reports from interviews only stay byte-identical to the baseline's output (pinned), so their
+  packages still match. Stored versions and packages are never rewritten.
+- [x] No migration, table, column, allowlist action, grant, route, authority or model use. No origin,
+  phase or task name in the report. No change to findings, traces, eligibility or readiness.
+- [x] `tests/validate_phase225_report_discovery_provenance.py` in `make validate`.
+- [ ] Production cutover, not performed: a manual Render API deploy only, with no schema, grant,
+  environment, R2, verifier-pin or data change. The preflight counts the engagements whose live draft
+  will differ from their latest package.
+
 **Still to do:**
 
 - Persistence model and data retention/privacy strategy (prerequisite for storing
