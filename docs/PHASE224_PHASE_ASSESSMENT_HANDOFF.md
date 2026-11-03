@@ -2,8 +2,8 @@
 
 Back to [`PHASE_INDEX.md`](PHASE_INDEX.md). Baseline `534aeac`.
 
-**Status: repository/local only.** Not deployed. Production cutover is a separate decision (see
-*Production sequencing*).
+**Status: CLOSED in production (2026-11-03)**, with one deferred acceptance item: the first real
+write on a finished task (see *Production cutover and closure*). Implementation `177fea8`.
 
 ## Purpose
 
@@ -158,6 +158,22 @@ completed phase are never updated again, so `updated_at` is when that happened, 
 database clock with the origin's `created_at`. `completed_at` comes from the API host's clock, and
 comparing across the two clocks would depend on the database's time zone.
 
+**Known operational limit.** `written_after_work` assumes the database's time zone stays the same
+between the two writes it compares. Both values are `NOW()`, stored as zone-free `DATETIME`, so they
+share one wall clock only while that zone holds.
+
+A one-off pre-cutover test on MySQL 8.4.8 showed:
+- correct classification with a chain written under any one zone;
+- no change when stored rows are read under another server or session zone;
+- a wrong result, in either direction, when the server's zone changed between the two writes.
+
+Production is `SYSTEM` = UTC with no offset and the application never sets a session zone, so this
+needs someone to change the server's zone while a phase is in progress. A zone with daylight saving
+would be expected to behave the same at a clock change (reasoned, not tested). The effect is
+limited to the "Observed during" / "Written after the work" label on the observations involved. No
+task, phase, readiness or finding is affected. **Do not change the production database's time zone
+without reviewing this.** The test was not kept in the repository.
+
 ## Persistence
 
 **No schema change.** No migration (the head stays `025_observation_task_origins`), table, column,
@@ -255,7 +271,7 @@ compliance language (harness scan). Consultant text is shown as written.
 | Upload on a resolved task or completed phase | Refused, unchanged |
 | Task progress or a second completion on a resolved task | Refused, unchanged |
 
-## Production sequencing (when separately approved)
+## Production sequencing (complete)
 
 Deployment only: no migration, grant, environment, R2 or data change, and no verifier pin move.
 
@@ -290,3 +306,83 @@ covers:
 - static UI checks.
 
 The Phase 222 harness's resolved-task check and origin shape were updated deliberately for this rule.
+
+## Production cutover and closure (2026-11-03)
+
+**Status: complete (2026-11-03). Phase 224 is CLOSED**, with one deferred acceptance item (below).
+Deployment only: no migration, grant, environment, R2, verifier-pin or data change. No production
+data was written.
+
+**Preflight (read-only).** The repository was clean at `177fea8`, with HEAD equal to `origin/main`.
+As `peak_prod_verify_ro`:
+- head `025_observation_task_origins`, single row;
+- 38 base tables, matching the repository;
+- `roadmap_items`, `engagement_phases`, `phase_tasks`, `phase_task_records`, `phase_task_evidence`,
+  `observation_evidence_links` and `observation_task_origins` all 0 rows;
+- the 30-table `COUNT(*)` + `CHECKSUM TABLE` baseline (133 rows) identical to the Phase 223 closure
+  snapshot;
+- verifier `verified_safe_no_remediation_required`: head matches, 431/431 governed columns
+  deterministic, 11/11 idempotency boundaries safe, 0 at risk, no warnings.
+
+The Phase 50 gate passed as `peak_prod_runtime`, and `/healthz` returned 200.
+
+**Web.** The Git-connected Vercel production deployment of `177fea8`
+(`dpl_H9WZLmhHY9YTmBA9mUH5Rnc3WJdq`) was already Ready before the API deploy. No extra deployment was
+triggered. While the API was still pre-224, logged-out pages behaved normally: `/login` returned 200
+and phase pages redirected (307). The current web against the deployed API code (`f20bd5b`), run
+locally with synthetic data, showed no panel, no form on a finished task, and no page error or 5xx.
+
+**Release (as read from Render by the operator).**
+- Render API `peak-consultant-api`, deploy `dep-dbl2bdp42hec73dlmq4g` of
+  `177fea882e6794cfa3736dfa0a7b631b9e0b1842`, trigger API/manual.
+- Started 2026-11-03T18:19:35Z, finished 18:20:45Z, status **Live**, instance
+  `srv-dan03c3tqb8s73a39tgg-7jrh7`.
+- It replaced `dep-dbhs0qvb9u1s73aqi6eg` (`f20bd5b`).
+- Auto-Deploy stayed Off. No service setting changed.
+- Startup was normal ("Application startup complete", Uvicorn running). The new instance logged 0
+  errors, 0 critical events and 0 warnings.
+
+**Production checks (read-only, logged out):**
+- `/healthz` returned 200 on eight consecutive requests;
+- `POST` and `GET /tasks/nonexistent/observations` return **401** `not_authenticated`;
+- `GET /phases/nonexistent/work-record` returns **401**;
+- the task evidence, engagement evidence, assessment, engagement phases, phase, readiness,
+  `/auth/me` and `/engagements` routes all return 401. A route that does not exist returns 404;
+- unsupported methods return **405** `Method Not Allowed`: `POST`, `PUT`, `PATCH` and `DELETE` on the
+  work record, and `PUT`, `PATCH` and `DELETE` on task observations. FastAPI matches the method before
+  the session dependency runs, so these are refused before authentication.
+
+Phase 224 adds no route, so logged-out checks cannot tell the new code from the old. That the new
+code is live rests on the Render deploy record above.
+
+**No signed-in check.** There is no production phase, so a signed-in read could show only the 404
+for an unknown phase.
+
+**Preservation (read-only, after the deploy):**
+- head `025_observation_task_origins`, 38 base tables, no table's `CREATE_TIME` changed;
+- the seven Phase 217–222 tables all 0 rows;
+- the 30-table baseline unchanged at 133 rows, `changed_tables = []`;
+- runtime grants identical to the preflight and to the Phase 222 record;
+- the Phase 50 gate PASS;
+- the verifier `verified_safe_no_remediation_required`: head matches, 431/431 governed columns
+  deterministic, 11/11 idempotency boundaries safe, 0 at risk, no warnings;
+- the verifier pin stays at `025`: Phase 224 has no migration.
+
+**Deferred acceptance.** Production has no engagement phase or phase task, so there is no finished
+task to write on. A synthetic client, engagement, phase, task or authorization chain was deliberately
+not created for acceptance. The first real Phase 224 write is deferred until a legitimate finished
+agreed task exists. This is an operational acceptance item, not unfinished implementation: the path
+is covered by the Phase 224 harness and the local walkthrough.
+
+When the first real one exists, confirm:
+- the consultant can write an observation on that finished agreed task;
+- exactly one `discovery_observations` row is created;
+- exactly one `observation_task_origins` row is created;
+- its client, engagement, phase and task match the task;
+- `written_after_work` is true where applicable;
+- the observation appears in the Phase 223 work record;
+- `assessment_handoff` counts it, and the task leaves the list of tasks with no observation;
+- it enters the assessment only through the ordinary observation path;
+- task status, phase status and readiness do not change;
+- recommendation eligibility does not change;
+- the verifier and the Phase 50 gate remain clean afterwards.

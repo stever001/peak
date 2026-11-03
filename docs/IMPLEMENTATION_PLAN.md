@@ -4489,7 +4489,7 @@ Product UI; CLOSED in production (2026-10-29). Implementation `f20bd5b`; baselin
 
 ### Phase 224 — Phase-to-assessment handoff
 
-Product workflow; **repository/local only, not deployed**. Baseline `534aeac`. Record:
+Product workflow; CLOSED in production (2026-11-03). Implementation `177fea8`; baseline `534aeac`. Record:
 [`PHASE224_PHASE_ASSESSMENT_HANDOFF.md`](PHASE224_PHASE_ASSESSMENT_HANDOFF.md).
 
 - [x] Established the gap by running it: a fully documented, ready phase could complete with nothing
@@ -4507,8 +4507,13 @@ Product workflow; **repository/local only, not deployed**. Baseline `534aeac`. R
   eligibility or artifacts.
 - [x] `tests/validate_phase224_phase_assessment_handoff.py` in `make validate`. The Phase 222 harness's
   resolved-task check and origin shape were updated deliberately.
-- [ ] Production cutover: a separate decision. A manual Render API deploy only, with no schema, grant,
-  environment or data change.
+- [x] Production cutover (2026-11-03): a manual Render API deploy only (`dep-dbl2bdp42hec73dlmq4g` at
+  `177fea8`, replacing `dep-dbhs0qvb9u1s73aqi6eg`), with no schema, grant, environment, R2, verifier-pin
+  or data change. The verifier (431/431, 11/11), the Phase 50 gate and the 30-table baseline are
+  unchanged.
+- [ ] First real write on a finished task, deferred until a legitimate finished agreed task exists. An
+  operational acceptance item, not unfinished implementation. No synthetic workflow is created for
+  acceptance.
 
 **Still to do:**
 
