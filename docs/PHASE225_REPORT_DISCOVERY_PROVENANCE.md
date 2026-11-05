@@ -2,7 +2,8 @@
 
 Back to [`PHASE_INDEX.md`](PHASE_INDEX.md). Baseline `bd3c6bb`.
 
-**Status: implemented in the repository; not deployed.** Production stays on Phase 224 (`177fea8`).
+**Status: CLOSED in production (2026-11-05); the first live corrected sentence is deferred** (see
+*Production cutover and closure*). Implementation `e86ae6f`.
 
 ## Purpose
 
@@ -140,7 +141,7 @@ covers:
   nothing;
 - static UI checks, including the Phase 222 rule that origins stay off this view.
 
-## Production sequencing (proposed, not performed)
+## Production sequencing (as planned; performed below)
 
 Deployment only: no migration, grant, environment, R2 or data change, and no verifier-pin move.
 
@@ -154,3 +155,72 @@ Deployment only: no migration, grant, environment, R2 or data change, and no ver
 
 No synthetic data is created for acceptance. If the preflight count is above zero, a signed-in read of
 one such draft can confirm the sentence. Otherwise acceptance waits for the first real phase's package.
+
+## Production cutover and closure (2026-11-05)
+
+**Status: complete (2026-11-05). Phase 225 is CLOSED**, with one deferred acceptance item (below).
+Deployment only: no migration, grant, environment, R2, verifier-pin or data change. No production
+data was written.
+
+**Preflight (read-only).** The repository was clean at `e86ae6f`, with HEAD equal to `origin/main`.
+As `peak_prod_verify_ro`:
+- head `025_observation_task_origins`, single row;
+- 38 base tables, matching the repository;
+- `roadmap_items`, `engagement_phases`, `phase_tasks`, `phase_task_records`, `phase_task_evidence`,
+  `observation_evidence_links` and `observation_task_origins` all 0 rows;
+- the 30-table `COUNT(*)` + `CHECKSUM TABLE` baseline (133 rows) identical to the Phase 224 closure
+  snapshot;
+- verifier `verified_safe_no_remediation_required`: head matches, 431/431 governed columns
+  deterministic, 11/11 idempotency boundaries safe, 0 at risk, no warnings.
+
+The Phase 50 gate passed as `peak_prod_runtime`, and `/healthz` returned 200.
+
+**Affected engagements (read-only count, none modified).** 2 engagements hold both a stored package
+and an observation with no interview session. Both are retired (`deleted_at` set), and 1 of them has a
+released package. **0 live engagements are affected**, so no active reviewer's draft now differs from
+its package because of this phase.
+
+**Web.** GitHub reports the Git-connected Vercel production deployment of `e86ae6f`
+(`dpl_Da9ExV6LMme7S3x5xiWoBfSq1BoS`) as `success`. No extra deployment was triggered. `/login` returned
+200 after the API deploy.
+
+**Release (as read from Render by the operator).**
+- Render API `peak-consultant-api`, deploy `dep-dbmc2k3bc2fs738ssrp0` of
+  `e86ae6fb34b2f4ed782dc34791f8f1454cc42dab`, trigger manual.
+- Started 2026-11-05T17:48:00Z, finished 17:49:07Z, status **Live**, instance
+  `srv-dan03c3tqb8s73a39tgg-pcp67`.
+- It replaced `dep-dbl2bdp42hec73dlmq4g` (`177fea8`).
+- Auto-Deploy stayed Off.
+- Startup was normal ("Application startup complete", Uvicorn running). The new deployment logged 0
+  errors, 0 critical events and 0 warnings.
+
+**Production checks (read-only, logged out):**
+- `/healthz` returned 200 on six consecutive requests;
+- `GET` on `final-report`, `final-report.docx`, `final-report/packages` and `assessment` under
+  `/engagements/nonexistent/` returns **401**;
+- `GET /engagements/nonexistent/phases`, `/phases/nonexistent/work-record`,
+  `/tasks/nonexistent/observations`, `/auth/me` and `/engagements` return **401**;
+- a route that does not exist returns **404**.
+
+Phase 225 adds no route, so logged-out checks cannot tell the new code from the old. That the new code
+is live rests on the Render deploy record above.
+
+**Preservation (read-only, after the deploy):**
+- head `025_observation_task_origins`, 38 base tables, no table's `CREATE_TIME` changed;
+- the seven Phase 217–222 tables all 0 rows;
+- the 30-table baseline unchanged at 133 rows, `changed_tables = []`;
+- runtime grants identical to the preflight;
+- the Phase 50 gate PASS;
+- the verifier `verified_safe_no_remediation_required`: head matches, 431/431 governed columns
+  deterministic, 11/11 idempotency boundaries safe, 0 at risk, no warnings;
+- the verifier pin stays at `025`: Phase 225 has no migration.
+
+**Deferred acceptance.** The corrected sentence has **not been observed live**. The only affected
+engagements are retired, so there is no live qualifying engagement, and no synthetic report or
+observation was created for acceptance. This is an operational acceptance item, not unfinished
+implementation: the behaviour is covered by the Phase 225 harness.
+
+When the first real qualifying engagement exists, confirm with a signed-in read that:
+- its live draft says "during interviews or other consulting work";
+- any package prepared before that observation is unchanged, and its panel shows that the live draft
+  has changed.

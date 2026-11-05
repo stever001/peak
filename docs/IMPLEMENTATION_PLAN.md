@@ -4517,7 +4517,7 @@ Product workflow; CLOSED in production (2026-11-03). Implementation `177fea8`; b
 
 ### Phase 225 — Truthful report discovery provenance
 
-Product workflow; implemented in the repository, not deployed. Baseline `bd3c6bb`. Record:
+Product workflow; CLOSED in production (2026-11-05). Implementation `e86ae6f`; baseline `bd3c6bb`. Record:
 [`PHASE225_REPORT_DISCOVERY_PROVENANCE.md`](PHASE225_REPORT_DISCOVERY_PROVENANCE.md).
 
 - [x] Established the gap by running it: with no interview at all, a phase observation reached the
@@ -4531,9 +4531,13 @@ Product workflow; implemented in the repository, not deployed. Baseline `bd3c6bb
 - [x] No migration, table, column, allowlist action, grant, route, authority or model use. No origin,
   phase or task name in the report. No change to findings, traces, eligibility or readiness.
 - [x] `tests/validate_phase225_report_discovery_provenance.py` in `make validate`.
-- [ ] Production cutover, not performed: a manual Render API deploy only, with no schema, grant,
-  environment, R2, verifier-pin or data change. The preflight counts the engagements whose live draft
-  will differ from their latest package.
+- [x] Production cutover (2026-11-05): a manual Render API deploy only (`dep-dbmc2k3bc2fs738ssrp0` at
+  `e86ae6f`, replacing `dep-dbl2bdp42hec73dlmq4g`), with no schema, grant, environment, R2, verifier-pin
+  or data change. The verifier (431/431, 11/11), the Phase 50 gate and the 30-table baseline are
+  unchanged. The preflight found 2 affected engagements, both retired, and 0 live.
+- [ ] First live corrected sentence, deferred until a real qualifying engagement exists. An operational
+  acceptance item, not unfinished implementation. No synthetic report or observation is created for
+  acceptance.
 
 **Still to do:**
 
