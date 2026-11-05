@@ -81,8 +81,9 @@ def schema_checks():
 
     versions = [v for v in os.listdir(os.path.join(REPO_ROOT, "alembic", "versions"))
                 if v.endswith(".py")]
-    check("Phase 225 adds no migration (no 026; the newest stays 025)",
-          not any(v.startswith("026") for v in versions) and f"{HEAD}.py" in versions)
+    check("Phase 225 adds no migration (025 stays; the only later one is Phase 226's 026)",
+          {v for v in versions if v[:3] > "025"} <= {"026_observation_lead_reviews.py"}
+          and f"{HEAD}.py" in versions)
     check("the production verifier pin does not move",
           f'EXPECTED_ALEMBIC_HEAD = "{HEAD}"' in read("tools/production_mysql_collation_verify.py"))
     check("no model, policy or allowlist entry names the rule",

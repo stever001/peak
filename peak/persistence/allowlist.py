@@ -263,6 +263,10 @@ WORKSPACE_WRITE_COLUMNS = {
     # Phase 222: the phase task an observation was recorded during. Create-only.
     ("observation_task_origins", "create_observation_task_origin"):
         frozenset({"id", "client_id", "engagement_id", "observation_id", "phase_id", "task_id"}),
+    # Phase 226: the Lead's review of an observation as worded. Create-only; a new one supersedes.
+    ("observation_lead_reviews", "create_observation_lead_review"):
+        frozenset({"id", "client_id", "engagement_id", "observation_id", "reviewer_consultant_id",
+                   "decision", "reliability", "reviewed_statement", "review_number"}),
 }
 
 #: Columns the workspace path may never write: governance, classification, review/audit, and
@@ -351,6 +355,9 @@ assert all(action.startswith("create_")
 #: Phase 222: an observation's task origin is create-only; it never moves.
 assert all(action.startswith("create_")
            for table, action in WORKSPACE_WRITE_COLUMNS if table == "observation_task_origins")
+#: Phase 226: a Lead review is create-only; a newer review supersedes it, nothing edits it.
+assert all(action.startswith("create_")
+           for table, action in WORKSPACE_WRITE_COLUMNS if table == "observation_lead_reviews")
 assert not any(cols & (ROADMAP_ITEM_FRAMING_COLUMNS | PHASE_TASK_FRAMING_COLUMNS)
                for (table, action), cols in WORKSPACE_WRITE_COLUMNS.items()
                if table in ENGAGEMENT_PHASE_RECORD_TABLES and not action.startswith("create_"))

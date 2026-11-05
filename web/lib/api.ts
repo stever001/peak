@@ -280,10 +280,64 @@ export type DiscoveryAssessmentContext = {
   coverage: InterviewCoverage;
   findings: DiscoveryFinding[];
   low_hanging_fruit: LowHangingFruitCandidate[];
+  /** Phase 226: one per finding, derived from the Lead's reviews. Absent before the Phase 226 API. */
+  recommendation_eligibility?: DiscoveryRecommendationEligibility[];
   status: string;
   internal_only: boolean;
   requires_human_review: boolean;
 };
+
+// --- Phase 226: Lead review of an observation ---------------------------------------------------
+
+export type LeadReviewDecision = "approve_internal" | "decline";
+
+export type LeadReviewView = {
+  review_id: string;
+  review_number: number;
+  decision: LeadReviewDecision;
+  reliability: Level | null;
+  reviewer: string | null;
+  reviewer_consultant_id: string | null;
+  statement_matches: boolean;
+};
+
+/** Whether a discovery-derived finding may support a recommendation. Derived; drafts nothing. */
+export type DiscoveryRecommendationEligibility = {
+  finding_id: string;
+  observation_id: string | null;
+  recommendation_eligible: boolean;
+  recommendation_blocked_reasons: string[];
+  lead_review: LeadReviewView | null;
+  reviewed_by_author: boolean;
+  internal_only: boolean;
+};
+
+export type LeadReviewState = {
+  observation_id: string;
+  engagement_id: string;
+  statement_hash: string;
+  lead: { id: string; name: string | null } | null;
+  you_are_lead: boolean;
+  history: {
+    review_id: string; review_number: number; decision: LeadReviewDecision; reliability: Level | null;
+    reviewer: string | null; statement_matches: boolean; created_at: string | null;
+  }[];
+  eligibility: DiscoveryRecommendationEligibility | null;
+};
+
+/** An observation's Lead reviews, or null when the API predates Phase 226 or cannot be read. */
+export async function getLeadReview(observationId: string): Promise<LeadReviewState | null> {
+  let res: Response;
+  try {
+    res = await apiFetch(`/observations/${encodeURIComponent(observationId)}/lead-review`);
+  } catch {
+    return null;
+  }
+  if (res.status === 401) redirect("/login");
+  if (!res.ok) return null;
+  const state = (await res.json().catch(() => null))?.lead_review;
+  return state && typeof state.statement_hash === "string" ? (state as LeadReviewState) : null;
+}
 
 /** An evidence-backed finding. This is the governed side: it carries review and eligibility. */
 export type AssessmentFinding = {

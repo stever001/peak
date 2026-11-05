@@ -46,6 +46,8 @@ from typing import Dict, List, Optional
 from .contracts import AUDIENCE_INTERNAL, SECTION_OPERATIONAL_FINDINGS, SECTION_TITLES
 from .discovery_assessment import (
     discovery_not_evidence_text,
+    lead_reviewed,
+    LEAD_APPROVE,
     LOW_HANGING_FRUIT_GROUPING_TEXT,
     NO_DISCOVERY_TEXT,
     DiscoveryAssessmentContext,
@@ -292,7 +294,8 @@ def _render_north_star(discovery: Optional[DiscoveryAssessmentContext]) -> List[
 def _render_discovery_summary(discovery: Optional[DiscoveryAssessmentContext]) -> List[str]:
     """Interview coverage as counts. No completeness percentage over an ambiguous denominator."""
     lines = [f"## {DISCOVERY_SECTION_TITLE}", "",
-             discovery_not_evidence_text(discovery.findings if discovery else None), ""]
+             discovery_not_evidence_text(discovery.findings if discovery else None,
+                                         lead_reviewed(discovery)), ""]
     if discovery is None or not discovery.available:
         return lines + [f"_{NO_DISCOVERY_TEXT}_", ""]
     coverage = discovery.coverage
@@ -328,6 +331,7 @@ def _render_discovery_findings(discovery: Optional[DiscoveryAssessmentContext]) 
     findings = discovery.findings if discovery else []
     if not findings:
         return lines + [f"_{NO_DISCOVERY_FINDINGS_TEXT}_", ""]
+    eligibility = {e.finding_id: e for e in discovery.recommendation_eligibility}
     for index, finding in enumerate(findings, start=1):
         lines += [f"### Discovery finding {index} — {finding.finding_id}", "", finding.statement, ""]
         lines.append(f"- Category: {finding.category or 'none recorded'}")
@@ -343,7 +347,28 @@ def _render_discovery_findings(discovery: Optional[DiscoveryAssessmentContext]) 
                   "recommendation.",
                   f"- Internal only: {'yes' if finding.internal_only else 'no'}",
                   f"- Requires human review: "
-                  f"{'yes' if finding.requires_human_review else 'no'}", ""]
+                  f"{'yes' if finding.requires_human_review else 'no'}"]
+        lines += _lead_review_lines(eligibility.get(finding.finding_id)) + [""]
+    return lines
+
+
+def _lead_review_lines(e) -> List[str]:
+    """Phase 226: a reviewed observation's Lead review and derived eligibility. Nothing otherwise,
+    so an assessment with no Lead review reads exactly as before."""
+    r = e.lead_review if e is not None else None
+    if r is None:
+        return []
+    author = ", who recorded it" if e.reviewed_by_author else ""
+    if r.decision == LEAD_APPROVE:
+        lines = [f"- Lead review: approved for internal reliance, reliability {r.reliability}, by "
+                 f"{r.reviewer or 'an unnamed consultant'}{author}"]
+    else:
+        lines = [f"- Lead review: declined by {r.reviewer or 'an unnamed consultant'}{author}"]
+    lines.append(f"- Recommendation eligibility: "
+                 f"{'eligible' if e.recommendation_eligible else 'blocked'}")
+    lines += [f"  - {reason}" for reason in e.recommendation_blocked_reasons]
+    if e.recommendation_eligible:
+        lines.append("  - No recommendation is drafted from discovery material.")
     return lines
 
 

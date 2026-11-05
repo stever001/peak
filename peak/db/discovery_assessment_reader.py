@@ -16,7 +16,8 @@ the Phase 204 consultant workspace, not by a controlled writer, and nothing here
 module reads them so they can be *displayed beside* evidence-backed material under their own
 labels. It grants no review status, no reliability, no claim scope, and no recommendation
 eligibility, and it touches no governance column beyond reading the stamp that says which workspace
-created the record.
+created the record. Phase 226: it also reads the Lead's stored reviews of observations, unchanged,
+so the projection can derive eligibility from them.
 
 **The Phase 202 workspace stamp is reported, not enforced here.** A discovery record is written only
 under a stamped engagement (Phase 204), so this module reports whether the engagement carries the
@@ -36,6 +37,7 @@ from sqlalchemy import select
 
 from .models import (
     DiscoveryAnswer, DiscoveryObservation, DiscoveryQuestion, DiscoverySession, Engagement,
+    ObservationLeadReview,
 )
 
 #: The stamp every Phase 202 workspace engagement carries, and which every Phase 204 discovery
@@ -187,21 +189,45 @@ def fetch_consultant_names(connection, consultant_ids) -> Dict[str, str]:
     return {row[0]: row[1] for row in connection.execute(statement)}
 
 
+def fetch_lead_review_summaries(connection, engagement_id: str) -> List[Dict[str, object]]:
+    """The engagement's Lead reviews of observations (Phase 226), in a stable order.
+
+    ``reviewed_statement`` is selected only so the projection can compare it with the observation as
+    it now stands; it is never shown as a finding. ``created_at`` is not selected: which review is
+    current comes from ``review_number``, not from a clock.
+    """
+    statement = select(
+        ObservationLeadReview.id.label("review_id"),
+        ObservationLeadReview.engagement_id,
+        ObservationLeadReview.observation_id,
+        ObservationLeadReview.reviewer_consultant_id,
+        ObservationLeadReview.decision,
+        ObservationLeadReview.reliability,
+        ObservationLeadReview.reviewed_statement,
+        ObservationLeadReview.review_number,
+    ).where(ObservationLeadReview.engagement_id == engagement_id
+            ).order_by(ObservationLeadReview.observation_id, ObservationLeadReview.review_number)
+    return _rows(connection, statement)
+
+
 def fetch_discovery_summaries(connection, engagement_id: str) -> Dict[str, object]:
     """Fetch every discovery summary the assessment projection needs for one engagement.
 
     Returns ``{"north_star": {...}, "sessions": [...], "answers": [...], "observations": [...],
-    "active_questions": [...], "question_prompts": {...}, "consultant_names": {...}}``. Visibility is **not** re-decided here:
+    "active_questions": [...], "question_prompts": {...}, "lead_reviews": [...],
+    "consultant_names": {...}}``. Visibility is **not** re-decided here:
     the caller has already passed the Phase 57 engagement check through
     :mod:`peak.db.engagement_packet_reader`, and an engagement with no discovery records simply
     returns empty lists.
     """
     sessions = fetch_session_summaries(connection, engagement_id)
     observations = fetch_observation_summaries(connection, engagement_id)
+    reviews = fetch_lead_review_summaries(connection, engagement_id)
     names = fetch_consultant_names(
         connection,
         [s.get("conducted_by_consultant_id") for s in sessions]
-        + [o.get("recorded_by_consultant_id") for o in observations])
+        + [o.get("recorded_by_consultant_id") for o in observations]
+        + [r.get("reviewer_consultant_id") for r in reviews])
     return {
         "north_star": fetch_north_star(connection, engagement_id),
         "sessions": sessions,
@@ -210,5 +236,6 @@ def fetch_discovery_summaries(connection, engagement_id: str) -> Dict[str, objec
         "active_questions": fetch_active_question_summaries(connection, engagement_id),
         "question_prompts": fetch_question_prompts(
             connection, [o.get("question_id") for o in observations]),
+        "lead_reviews": reviews,
         "consultant_names": names,
     }

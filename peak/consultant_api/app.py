@@ -47,7 +47,7 @@ from starlette.concurrency import run_in_threadpool
 from peak import accounts, workspace
 from peak.workspace import (
     approvals, discovery, engagement_phases, evidence_storage, observation_evidence,
-    peak_method_phases, phase_evidence, phase_work_record, task_observations,
+    observation_reviews, peak_method_phases, phase_evidence, phase_work_record, task_observations,
 )
 
 SESSION_COOKIE = "peak_session"
@@ -192,6 +192,15 @@ class ObservationCreateIn(ObservationUpdateIn):
 
 class TaskObservationIn(ObservationUpdateIn):
     """Phase 222: an observation recorded during a phase task. Never part of an interview."""
+
+
+class LeadReviewIn(BaseModel):
+    """Phase 226: the Lead's review of the observation text and current review they were shown."""
+    model_config = ConfigDict(extra="forbid")
+    decision: Literal["approve_internal", "decline"]
+    reliability: Optional[Literal["low", "medium", "high"]] = None
+    statement_hash: str = Field(max_length=64)
+    current_review_id: Optional[str] = Field(max_length=64)
 
 
 class DecisionIn(BaseModel):
@@ -603,6 +612,25 @@ def create_app(
                             me: dict = Depends(current_consultant)):
         return {"observation": _workspace_call(discovery.update_observation, session_factory,
                                                observation_id, body.model_dump(exclude_unset=True),
+                                               me["id"])}
+
+    # --- Phase 226: Lead review of an observation (reads: any consultant; review: the Lead) ----
+
+    @app.get("/observations/{observation_id}/lead-review")
+    def observation_lead_review_get(observation_id: str, me: dict = Depends(current_consultant)):
+        """The observation's Lead reviews and derived recommendation eligibility. Reads only."""
+        return {"lead_review": _workspace_call(observation_reviews.get_lead_review,
+                                               session_factory, observation_id, me["id"])}
+
+    @app.post("/observations/{observation_id}/lead-review")
+    def observation_lead_review_post(observation_id: str, body: LeadReviewIn,
+                                     me: dict = Depends(current_consultant)):
+        """The engagement's Lead approves the observation for internal reliance, or declines it.
+
+        It drafts no recommendation and changes no observation, finding, report or package.
+        """
+        return {"lead_review": _workspace_call(observation_reviews.record_lead_review,
+                                               session_factory, observation_id, body.model_dump(),
                                                me["id"])}
 
     # --- Phase 217: engagement roadmap, phases, guided work plans (any authenticated consultant;

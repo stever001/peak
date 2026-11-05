@@ -5,6 +5,7 @@ import { ObservedDuring } from "@/components/observed-during";
 import type {
   AssessmentFinding,
   DiscoveryFinding,
+  DiscoveryRecommendationEligibility,
   DiscoveryTrace,
   InternalAssessment,
   InterviewCoverage,
@@ -116,10 +117,24 @@ export function Basis({ basis }: { basis: string | null }) {
 /** Phase 221: captures linked to each observation, by observation id, and the API origin. */
 type ObservationEvidence = { links: Record<string, LinkedEvidence[]>; apiUrl: string };
 
-function DiscoveryFindingCard({ f, evidence, origins }: {
+/** Phase 226: a reviewed finding's Lead review and eligibility. Nothing for an unreviewed one. */
+function LeadReviewLine({ e }: { e?: DiscoveryRecommendationEligibility }) {
+  const r = e?.lead_review;
+  if (!e || !r) return null;
+  return (
+    <p className="mt-2 text-sm">
+      Lead review: {r.decision === "approve_internal" ? `approved for internal reliance, reliability ${r.reliability}` : "declined"}
+      {" "}by {r.reviewer ?? "an unnamed consultant"}{e.reviewed_by_author ? ", who recorded it" : ""}.{" "}
+      Recommendation eligibility: {e.recommendation_eligible ? "eligible (no recommendation is drafted from it)" : `not eligible — ${e.recommendation_blocked_reasons.join("; ")}`}.
+    </p>
+  );
+}
+
+function DiscoveryFindingCard({ f, evidence, origins, eligibility }: {
   f: DiscoveryFinding;
   evidence?: ObservationEvidence;
   origins?: Record<string, ObservationOrigin>;
+  eligibility?: DiscoveryRecommendationEligibility;
 }) {
   const linked = (evidence && f.trace.observation_id && evidence.links[f.trace.observation_id]) || [];
   const origin = (f.trace.observation_id && origins?.[f.trace.observation_id]) || undefined;
@@ -134,6 +149,7 @@ function DiscoveryFindingCard({ f, evidence, origins }: {
       <p className="mt-2 text-sm text-ink-muted">
         Not reviewed evidence — this does not support a formal recommendation on its own.
       </p>
+      <LeadReviewLine e={eligibility} />
       <Basis basis={f.basis} />
       <Trace trace={f.trace} origin={origin} />
       {evidence && <LinkedEvidenceList items={linked} apiUrl={evidence.apiUrl} />}
@@ -289,7 +305,8 @@ export function AssessmentView({ a, engagementId, evidence, origins }: {
         {d && d.findings.length > 0 ? (
           <ul className="grid gap-3 lg:grid-cols-2">
             {d.findings.map((f) => (
-              <DiscoveryFindingCard key={f.finding_id} f={f} evidence={evidence} origins={origins} />
+              <DiscoveryFindingCard key={f.finding_id} f={f} evidence={evidence} origins={origins}
+                                    eligibility={d.recommendation_eligibility?.find((e) => e.finding_id === f.finding_id)} />
             ))}
           </ul>
         ) : (

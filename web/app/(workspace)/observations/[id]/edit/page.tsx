@@ -1,10 +1,12 @@
-import { updateObservation } from "@/app/discovery-actions";
+import { recordLeadReview, updateObservation } from "@/app/discovery-actions";
 import { LinkedEvidenceList } from "@/components/linked-evidence";
 import { ObservationForm } from "@/components/observation-form";
+import { ObservationLeadReview } from "@/components/observation-lead-review";
 import { ObservedDuring } from "@/components/observed-during";
 import { PageHeader } from "@/components/page-header";
 import {
-  apiGet, apiPublicUrl, getEngagementEvidence, requireConsultant, type Observation, type Question,
+  apiGet, apiPublicUrl, getEngagementEvidence, getLeadReview, requireConsultant, type Observation,
+  type Question,
 } from "@/lib/api";
 
 export default async function EditObservationPage(props: PageProps<"/observations/[id]/edit">) {
@@ -14,6 +16,7 @@ export default async function EditObservationPage(props: PageProps<"/observation
   const { questions } = await apiGet<{ questions: Question[] }>(
     `/questions?engagement_id=${encodeURIComponent(o.engagement_id)}`);
   const ev = await getEngagementEvidence(o.engagement_id);
+  const review = await getLeadReview(o.id);
   const linked = ev?.links[o.id] ?? [];
   const apiUrl = apiPublicUrl();
   const options = questions.filter((q) => q.active).map(({ id: qid, prompt, category }) => ({ id: qid, prompt, category }));
@@ -30,6 +33,9 @@ export default async function EditObservationPage(props: PageProps<"/observation
         <div className="peak-card mb-6">
           <LinkedEvidenceList items={linked} apiUrl={apiUrl} />
         </div>
+      )}
+      {review && (
+        <ObservationLeadReview state={review} action={recordLeadReview.bind(null, o.id, o.engagement_id)} />
       )}
       <div className="peak-card">
         <ObservationForm action={updateObservation.bind(null, o.id, o.engagement_id)} observation={o}

@@ -64,6 +64,8 @@ RUNTIME_TABLE_PERSISTENCE = {
     "observation_evidence_links": APPEND_ONLY,
     # The phase task an observation was recorded during: create-only, never moved (Phase 222).
     "observation_task_origins": APPEND_ONLY,
+    # The Lead's review of an observation: create-only, a newer review supersedes (Phase 226).
+    "observation_lead_reviews": APPEND_ONLY,
     # Consultant accounts are created by ``peak.accounts``. The only update (an Admin password
     # reset) runs as the migration credential, never the runtime.
     "consultants": APPEND_ONLY,

@@ -1456,6 +1456,65 @@ def _refuse_bulk_observation_task_origin_change(state):
         raise PermissionError("observation_task_origins rows are immutable: no update or delete.")
 
 
+# --- Phase 226: Lead review of an observation ------------------------------------------------------
+#
+# docs/PHASE226_OBSERVATION_LEAD_REVIEW.md is the record. The engagement's Lead Consultant's decision
+# on one ``discovery_observations`` row, exactly as it was worded when reviewed: approve it for
+# internal reliance as an operational finding at a stated reliability, or decline. The observation is
+# never changed; a newer, higher-numbered review supersedes the current one, and earlier ones stay. A review
+# creates no finding, recommendation or report content: recommendation eligibility is derived from it
+# on each read (``peak.reports.discovery_assessment``). Insert-only. Written only by
+# ``peak.workspace.observation_reviews``.
+
+#: Mirrors the Phase 117 reliability vocabulary on evidence references.
+OBSERVATION_LEAD_REVIEW_DECISIONS = ("approve_internal", "decline")
+OBSERVATION_LEAD_REVIEW_RELIABILITY = ("low", "medium", "high")
+
+
+class ObservationLeadReview(Base, GovernanceMixin, AuditMixin):
+    """The Lead's review of one observation as worded at that moment. Insert-only."""
+
+    __tablename__ = "observation_lead_reviews"
+    __table_args__ = (
+        CheckConstraint("decision IN ('approve_internal', 'decline')",
+                        name="ck_observation_lead_reviews_decision"),
+        CheckConstraint("(decision = 'approve_internal' AND reliability IN ('low', 'medium', "
+                        "'high')) OR (decision = 'decline' AND reliability IS NULL)",
+                        name="ck_observation_lead_reviews_reliability"),
+        CheckConstraint("review_number >= 1", name="ck_observation_lead_reviews_number"),
+        UniqueConstraint("observation_id", "review_number", name="uq_observation_lead_reviews_number"),
+        MYSQL_TABLE_ARGS,
+    )
+    # id convention: olr_<hex>
+    id: Mapped[str] = mapped_column(GovernedString(64), primary_key=True)
+    client_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    engagement_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    observation_id: Mapped[str] = mapped_column(GovernedString(64), index=True, nullable=False)
+    reviewer_consultant_id: Mapped[str] = mapped_column(GovernedString(64), nullable=False)
+    decision: Mapped[str] = mapped_column(String(24), nullable=False)
+    reliability: Mapped[Optional[str]] = mapped_column(String(8))
+    # The observation text the Lead was shown, exactly. A later edit leaves the review behind.
+    reviewed_statement: Mapped[str] = mapped_column(Text, nullable=False)
+    # 1, 2, 3 per observation. The highest is the current review; the unique pair means two Leads
+    # acting at once cannot both become current.
+    review_number: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+def _refuse_observation_lead_review_change(mapper, connection, target):
+    raise PermissionError("observation_lead_reviews rows are immutable: no update or delete.")
+
+
+event.listen(ObservationLeadReview, "before_update", _refuse_observation_lead_review_change)
+event.listen(ObservationLeadReview, "before_delete", _refuse_observation_lead_review_change)
+
+
+@event.listens_for(Session, "do_orm_execute")
+def _refuse_bulk_observation_lead_review_change(state):
+    if (state.is_update or state.is_delete) and any(
+            m.class_ is ObservationLeadReview for m in state.all_mappers):
+        raise PermissionError("observation_lead_reviews rows are immutable: no update or delete.")
+
+
 # Convenience list of all model classes (used by tooling/validation).
 ALL_MODELS = [
     Client,
@@ -1495,4 +1554,5 @@ ALL_MODELS = [
     PhaseTaskEvidence,
     ObservationEvidenceLink,
     ObservationTaskOrigin,
+    ObservationLeadReview,
 ]

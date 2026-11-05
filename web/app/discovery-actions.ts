@@ -123,6 +123,23 @@ export async function createTaskObservation(
   return { success: "Observation recorded." };
 }
 
+/** Phase 226: the Lead approves the observation they were shown for internal reliance, or declines. */
+export async function recordLeadReview(
+  observationId: string, engagementId: string, _prev: FormState, formData: FormData,
+): Promise<FormState> {
+  const decision = text(formData, "decision");
+  const res = await send(`/observations/${encodeURIComponent(observationId)}/lead-review`, "POST", {
+    decision,
+    reliability: decision === "approve_internal" ? level(formData, "reliability") : null,
+    statement_hash: text(formData, "statement_hash"),
+    current_review_id: text(formData, "current_review_id") || null,
+  });
+  if (!res.ok) return refusal(res);
+  revalidatePath(`/observations/${observationId}/edit`);
+  revalidatePath(`/engagements/${engagementId}/assessment`);
+  return { success: decision === "decline" ? "Review recorded: declined." : "Review recorded: approved for internal reliance." };
+}
+
 export async function updateObservation(
   observationId: string, engagementId: string, _prev: FormState, formData: FormData,
 ): Promise<FormState> {

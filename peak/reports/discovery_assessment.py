@@ -8,9 +8,17 @@ from?".
 **Discovery is not evidence, and this module never lets it become evidence.** A discovery-derived
 finding is consultant working material. It carries no review status, no reliability, no claim
 scope, and — deliberately — no ``recommendation_eligible`` field at all, so there is no attribute
-for a later caller to flip. The Phase 117/118 eligibility rules are untouched and are not consulted
-here: they decide the fate of evidence-backed findings only. Every object this module produces is
+for a later caller to flip. The Phase 117/118 eligibility rules are untouched: they decide the fate
+of evidence-backed findings only. Every object this module produces is
 ``internal_only`` and ``requires_human_review``.
+
+**Phase 226: a Lead review is the one route to recommendation eligibility.** The engagement's Lead
+Consultant may review an observation as worded (``observation_lead_reviews``). Eligibility is then
+*derived* by :func:`observation_recommendation_block_reasons`, a fixed rule over that stored review
+and the finding, and held apart from the finding in
+:attr:`DiscoveryAssessmentContext.recommendation_eligibility`. The finding itself still has no
+eligibility, review or reliability field, so nothing that renders a finding can carry one, and
+nothing here drafts a recommendation.
 
 **A low-hanging-fruit flag is not an approved recommendation.** It is the consultant's own mark on
 their own observation. It is displayed, grouped for readability, and never scored.
@@ -37,6 +45,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
+
+from .packet_view_report import RECOMMENDATION_RELIABILITY
 
 #: Where a discovery-derived finding came from. Only the first is produced today: a consultant
 #: observation is an explicit, deliberate statement, whereas turning every answer into a finding
@@ -77,11 +87,33 @@ DISCOVERY_NOT_EVIDENCE_TEXT = (
 DISCOVERY_NOT_EVIDENCE_WIDER_TEXT = DISCOVERY_NOT_EVIDENCE_TEXT.replace(
     "during interviews,", "during interviews or other consulting work,")
 
+#: Phase 226: the internal assessment's ending for that sentence once any observation has a Lead
+#: review, because "no reliability rating, and no recommendation eligibility" is then untrue.
+_NO_STANDING_TAIL = ("it carries no review status, no reliability rating, and no recommendation "
+                     "eligibility. It informs the assessment; it does not support a formal "
+                     "recommendation on its own.")
+LEAD_REVIEWED_TAIL = (
+    "it carries no evidence review status. Only an observation shown with an approving Lead review "
+    "carries a reliability rating and can be eligible to support a recommendation. None of it "
+    "supports a formal recommendation on its own, and no recommendation is drafted from it.")
+assert _NO_STANDING_TAIL in DISCOVERY_NOT_EVIDENCE_TEXT
+
 LOW_HANGING_FRUIT_GROUPING_TEXT = (
     "Grouped for reading by the effort and value the consultant entered. This is a display "
     "grouping, not a score, a ranking, or a priority order, and no ROI is calculated.")
 
 NO_DISCOVERY_TEXT = "No discovery material has been recorded for this engagement."
+
+#: Phase 226: why a discovery-derived finding cannot support a recommendation; none means eligible.
+#: Each mirrors a Phase 117 control: a targeted approving review, its reliability, and the exact
+#: persisted statement it approved.
+OBS_BLOCK_NO_LEAD_REVIEW = "no Lead review of this observation"
+OBS_BLOCK_NOT_APPROVED = "the current Lead review does not approve it for internal reliance"
+OBS_BLOCK_RELIABILITY_LOW = "the Lead rated its reliability low"
+OBS_BLOCK_RELIABILITY_UNSPECIFIED = "its reliability is unspecified or unrecognised"
+OBS_BLOCK_STATEMENT_CHANGED = "the observation has changed since the Lead reviewed it"
+
+LEAD_APPROVE = "approve_internal"
 
 
 @dataclass
@@ -138,6 +170,35 @@ class LowHangingFruitCandidate:
 
 
 @dataclass
+class LeadReviewView:
+    """The current Lead review of one observation, as stored. Phase 226."""
+
+    review_id: str
+    review_number: int
+    decision: str
+    reliability: Optional[str] = None
+    reviewer: Optional[str] = None  # consultant name where known
+    reviewer_consultant_id: Optional[str] = None
+    statement_matches: bool = False  # the observation still reads exactly as reviewed
+
+
+@dataclass
+class DiscoveryRecommendationEligibility:
+    """Whether one discovery-derived finding may support a recommendation. Derived, never stored.
+
+    Eligibility drafts nothing: no recommendation exists until a separate, governed step writes one.
+    """
+
+    finding_id: str
+    observation_id: Optional[str] = None
+    recommendation_eligible: bool = False
+    recommendation_blocked_reasons: List[str] = field(default_factory=list)
+    lead_review: Optional[LeadReviewView] = None
+    reviewed_by_author: bool = False
+    internal_only: bool = True
+
+
+@dataclass
 class InterviewSummary:
     """One interview, for the coverage list."""
 
@@ -182,6 +243,8 @@ class DiscoveryAssessmentContext:
     coverage: InterviewCoverage = field(default_factory=InterviewCoverage)
     findings: List[DiscoveryFinding] = field(default_factory=list)
     low_hanging_fruit: List[LowHangingFruitCandidate] = field(default_factory=list)
+    #: Phase 226: one per finding, in finding order. Beside the findings, never inside them.
+    recommendation_eligibility: List[DiscoveryRecommendationEligibility] = field(default_factory=list)
     status: str = DISCOVERY_STATUS_CONSULTANT_WORKING_MATERIAL
     internal_only: bool = True
     requires_human_review: bool = True
@@ -303,10 +366,82 @@ def recorded_outside_interviews(findings) -> bool:
     return any(not f.trace.session_id for f in findings or [])
 
 
-def discovery_not_evidence_text(findings) -> str:
-    """The discovery boundary sentence that is true of ``findings``. A pure function of them."""
-    return (DISCOVERY_NOT_EVIDENCE_WIDER_TEXT if recorded_outside_interviews(findings)
+def discovery_not_evidence_text(findings, lead_reviewed: bool = False) -> str:
+    """The discovery boundary sentence that is true of ``findings``. A pure function of them.
+
+    Phase 226: ``lead_reviewed`` is passed only by the internal assessment, which shows Lead reviews.
+    The Final Report shows none and never passes it, so its sentence is unchanged.
+    """
+    text = (DISCOVERY_NOT_EVIDENCE_WIDER_TEXT if recorded_outside_interviews(findings)
             else DISCOVERY_NOT_EVIDENCE_TEXT)
+    return text.replace(_NO_STANDING_TAIL, LEAD_REVIEWED_TAIL) if lead_reviewed else text
+
+
+def current_lead_review(reviews: List[dict], engagement_id: Optional[str],
+                        observation_id: Optional[str]) -> Optional[dict]:
+    """The highest-numbered review of this observation in this engagement, or ``None``.
+
+    A review of another observation or engagement never counts, whatever it says.
+    """
+    mine = [r for r in reviews if observation_id and r.get("observation_id") == observation_id
+            and r.get("engagement_id") == engagement_id]
+    return max(mine, key=lambda r: r.get("review_number") or 0) if mine else None
+
+
+def observation_recommendation_block_reasons(finding: DiscoveryFinding,
+                                             review: Optional[dict]) -> List[str]:
+    """Stable reasons ``finding`` cannot support a recommendation; empty means eligible (Phase 226).
+
+    The Phase 117 controls, applied to a consultant observation: a Lead review targets it, the
+    current one approves it for internal reliance, its reliability is medium or high, and it approved
+    the statement exactly as it now stands. Nothing is inferred, and the order is fixed.
+    """
+    if review is None:
+        return [OBS_BLOCK_NO_LEAD_REVIEW]
+    reasons = []
+    if review.get("decision") != LEAD_APPROVE:
+        reasons.append(OBS_BLOCK_NOT_APPROVED)
+    elif review.get("reliability") == "low":
+        reasons.append(OBS_BLOCK_RELIABILITY_LOW)
+    elif review.get("reliability") not in RECOMMENDATION_RELIABILITY:
+        reasons.append(OBS_BLOCK_RELIABILITY_UNSPECIFIED)
+    if (review.get("reviewed_statement") or "").strip() != finding.statement:
+        reasons.append(OBS_BLOCK_STATEMENT_CHANGED)
+    return reasons
+
+
+def build_recommendation_eligibility(findings: List[DiscoveryFinding], reviews: List[dict],
+                                     engagement_id: Optional[str],
+                                     consultant_names: Optional[Dict[str, str]] = None
+                                     ) -> List[DiscoveryRecommendationEligibility]:
+    """One eligibility decision per finding, from the stored Lead reviews. Pure and deterministic."""
+    names = consultant_names or {}
+    out = []
+    for f in findings:
+        r = current_lead_review(reviews, engagement_id, f.trace.observation_id)
+        reasons = observation_recommendation_block_reasons(f, r)
+        view = None
+        if r is not None:
+            view = LeadReviewView(
+                review_id=r.get("review_id"), review_number=r.get("review_number"),
+                decision=r.get("decision"),
+                reliability=r.get("reliability"),
+                reviewer=names.get(r.get("reviewer_consultant_id")),
+                reviewer_consultant_id=r.get("reviewer_consultant_id"),
+                statement_matches=(r.get("reviewed_statement") or "").strip() == f.statement)
+        out.append(DiscoveryRecommendationEligibility(
+            finding_id=f.finding_id, observation_id=f.trace.observation_id,
+            recommendation_eligible=not reasons, recommendation_blocked_reasons=reasons,
+            lead_review=view,
+            reviewed_by_author=bool(view and view.reviewer_consultant_id
+                                    and view.reviewer_consultant_id
+                                    == f.trace.recorded_by_consultant_id)))
+    return out
+
+
+def lead_reviewed(context: Optional[DiscoveryAssessmentContext]) -> bool:
+    """Whether any finding in ``context`` has a Lead review. Phase 226."""
+    return bool(context and any(e.lead_review for e in context.recommendation_eligibility))
 
 
 def _display_group(candidate: LowHangingFruitCandidate):
@@ -363,6 +498,9 @@ def build_discovery_assessment_context(summaries: Optional[dict]) -> DiscoveryAs
         coverage=build_interview_coverage(sessions, answers, active_questions, names),
         findings=findings,
         low_hanging_fruit=build_low_hanging_fruit(findings),
+        recommendation_eligibility=build_recommendation_eligibility(
+            findings, list(summaries.get("lead_reviews") or []), north_star.get("engagement_id"),
+            names),
     )
     context.available = bool(context.north_star or sessions or observations)
     return context
