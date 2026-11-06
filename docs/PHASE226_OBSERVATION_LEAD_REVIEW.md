@@ -2,8 +2,8 @@
 
 Back to [`PHASE_INDEX.md`](PHASE_INDEX.md). Baseline `c18e317`.
 
-**Status: implemented in the repository; not deployed.** Production stays on Phase 225 (`e86ae6f`,
-head `025`). Migration 026 is not applied.
+**Status: CLOSED in production (2026-11-06); the first real Lead review is deferred** (see
+*Production cutover and closure*). Implementation `3f18d46`; verifier pin `55e0dd2`.
 
 ## Purpose
 
@@ -87,8 +87,8 @@ control exactly as before.
 
 ## Persistence and schema
 
-Migration **`026_observation_lead_reviews`**: additive, creating one table and altering none. Not
-applied to production.
+Migration **`026_observation_lead_reviews`**: additive, creating one table and altering none. Applied
+to production on 2026-11-06 (below).
 
 - Columns: `id`, `client_id`, `engagement_id`, `observation_id`, `reviewer_consultant_id`,
   `decision`, `reliability`, `reviewed_statement`, `review_number`, plus the governance and audit
@@ -102,7 +102,7 @@ applied to production.
   UPDATE is needed. The Phase 50 gate would fail on one.
 - **Collation**: the identifiers are `GovernedString` (`utf8mb4_bin` on MySQL), so the verifier's
   governed-column count rises once 026 is applied.
-- **Verifier pin**: stays at `025`. It moves only after 026 is applied in production.
+- **Verifier pin**: moved to `026` in `55e0dd2`, only after 026 was applied in production.
 
 ## Eligibility, recommendation and report impact
 
@@ -176,7 +176,7 @@ Final Report.
 Phases 224 and 225 now accept a single later migration, Phase 226's 026. Phase 11 lists the new
 table.
 
-## Production sequencing (proposed, not performed)
+## Production sequencing (as planned; performed below)
 
 1. The commit is `[skip render]`. Vercel may build the web first (degrade path above).
 2. Read-only preflight: head 025, 38 base tables, the verifier, the Phase 50 gate and the 30-table
@@ -191,3 +191,88 @@ table.
 
 No synthetic review is created for acceptance. The first real Lead review is deferred until a Lead
 reviews a real observation.
+
+## Production cutover and closure (2026-11-06)
+
+**Status: complete (2026-11-06). Phase 226 is CLOSED**, with one deferred acceptance item (below).
+One additive migration, a verifier-pin commit and a manual API deploy. No grant, environment, R2,
+artifact, report, package or data change. No observation or Lead review was created.
+
+**Preflight (read-only).** The repository was clean at `3f18d46`, with HEAD equal to `origin/main`.
+As `peak_prod_verify_ro`:
+- head `025_observation_task_origins`, 38 base tables, matching the repository at `c18e317`;
+- the seven Phase 217–222 tables all 0 rows;
+- the 30-table `COUNT(*)` + `CHECKSUM TABLE` baseline (133 rows) and every `CREATE_TIME` identical to
+  the Phase 225 closure snapshot;
+- verifier at 025 (run from a `c18e317` worktree) `verified_safe_no_remediation_required`, no warnings.
+
+Runtime grants were identical to the Phase 225 closure, the Phase 50 gate passed as
+`peak_prod_runtime`, and `/healthz` returned 200.
+
+**Migration.** `025_observation_task_origins` → `026_observation_lead_reviews`, applied with the
+migration credential (`peak_prod_migrate`) under the production guard. The runtime credential was not
+used. Afterwards, read-only:
+- head `026_observation_lead_reviews`, 39 base tables;
+- `observation_lead_reviews`: InnoDB, 0 rows; its 10 governed identifier columns `utf8mb4_bin`;
+  primary key, `uq_observation_lead_reviews_number (observation_id, review_number)`, 8 indexes, the
+  3 checks; no trigger and no foreign key;
+- the 30 existing tables unchanged (133 rows, checksums identical), and no existing table's
+  `CREATE_TIME` changed.
+
+**Grants.** Unchanged. No grant names the new table, and the runtime role holds no DELETE, ALL
+PRIVILEGES or GRANT OPTION. The schema-wide SELECT and INSERT cover it. The Phase 50 gate PASS
+(required present, no excess, no global).
+
+**Verifier pin.** `55e0dd2` moves `EXPECTED_ALEMBIC_HEAD` to `026_observation_lead_reviews`. The
+Phase 224/225 harnesses now accept a head at or after their own. Verifier at 026:
+`verified_safe_no_remediation_required`, 39 base tables, head matches, 441/441 governed columns
+deterministic, 11/11 idempotency boundaries safe, 0 at risk, no warnings. Full `make validate` exit 0
+on `55e0dd2` before the deploy.
+
+**Web.** GitHub reports the Git-connected Vercel production deployments of `3f18d46` and `55e0dd2` as
+`success`. No extra deployment was triggered. `/login` returned 200 after the API deploy.
+
+**Release (as read from Render by the operator).**
+- Render API `peak-consultant-api`, deploy `dep-dbn5717f3r2c73edh4eg` of
+  `55e0dd2d55dd8272a3263c538c72314e2f8c4c53` (contains `3f18d46`), trigger API/manual. Render
+  checked out that exact SHA.
+- Started 2026-11-06T22:24:04Z, finished 22:25:08Z, status **Live**, instance
+  `srv-dan03c3tqb8s73a39tgg-t6svr`.
+- It replaced `dep-dbmc2k3bc2fs738ssrp0` (`e86ae6f`).
+- Auto-Deploy stayed Off. No cache clear and no environment, command or setting change.
+- Startup was normal ("Application startup complete", Uvicorn running on port 10000). The new
+  instance logged 0 errors, 0 critical events and 0 warnings.
+
+**Production checks (read-only, logged out):**
+- `/healthz` returned 200 on three consecutive requests;
+- `GET` and `POST /observations/nonexistent/lead-review` returned **404 before the deploy and 401
+  after** (`not_authenticated`). The flip confirms the Phase 226 routes are live and protected;
+- `GET /auth/me`, `/engagements`, `/clients`, `/observations/nonexistent`, and `assessment` and
+  `final-report` under `/engagements/nonexistent/` return **401**;
+- a route that does not exist returns **404**.
+
+No signed-in request was made, and no review data was created.
+
+**Preservation (read-only, after the deploy):**
+- head `026_observation_lead_reviews`, 39 base tables; no table's `CREATE_TIME` changed since the
+  migration, and none of the original 38 since the preflight;
+- `observation_lead_reviews` 0 rows; the seven Phase 217–222 tables all 0 rows;
+- the 30-table/133-row baseline unchanged (with the new table, 31 tables), `changed_tables = []`;
+- runtime grants identical to the preflight and to after the migration; no UPDATE or DELETE on the
+  new table;
+- the Phase 50 gate PASS;
+- the verifier as after the migration: 441/441, 11/11, 0 at risk, no warnings.
+
+**Deferred acceptance.** No Lead review has been recorded in production. Production has no live
+engagement with an assigned Lead and a real observation to review, and no synthetic observation or
+review was created. This is an operational acceptance item, not unfinished implementation: the
+behaviour is covered by the Phase 226 harness.
+
+When a Lead first reviews a real observation, confirm with a signed-in read that:
+- the review row records the reviewer, decision, reliability, exact text and review number 1;
+- the observation and its finding are unchanged, and the assessment shows the review line and the
+  derived eligibility;
+- no recommendation is drafted, and the Final Report and any package are unchanged.
+
+The Final Report sentence boundary (above) remains open for the phase that lets an eligible
+observation support a recommendation.

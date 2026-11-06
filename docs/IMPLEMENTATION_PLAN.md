@@ -4541,7 +4541,7 @@ Product workflow; CLOSED in production (2026-11-05). Implementation `e86ae6f`; b
 
 ### Phase 226 — Lead review of an observation
 
-Governance; implemented in the repository, not deployed. Baseline `c18e317`. Record:
+Governance; CLOSED in production (2026-11-06). Implementation `3f18d46`; baseline `c18e317`. Record:
 [`PHASE226_OBSERVATION_LEAD_REVIEW.md`](PHASE226_OBSERVATION_LEAD_REVIEW.md).
 
 - [x] Established the gap: Phase 117 eligibility needs a targeted approving review and a reliability,
@@ -4551,13 +4551,17 @@ Governance; implemented in the repository, not deployed. Baseline `c18e317`. Rec
   reliability, or declines it, through `POST /observations/{id}/lead-review`. The request names the
   text and the current review shown. A repeat writes nothing.
 - [x] Migration `026_observation_lead_reviews`: one append-only table, numbered reviews, no grant change.
-  The verifier pin stays at 025.
 - [x] Eligibility is derived beside the finding by a fixed rule mirroring every Phase 117 control. An
   edit after review blocks. The observation, the Phase 117/118 rule, the Final Report and packages are
   unchanged. No recommendation is drafted.
 - [x] `tests/validate_phase226_observation_lead_review.py` in `make validate`.
-- [ ] Production cutover, not performed: apply 026 under the migration credential, move the verifier
-  pin, then a manual Render API deploy. No synthetic review for acceptance.
+- [x] Production cutover (2026-11-06): 026 applied under the migration credential (39 base tables,
+  the new table empty, grants unchanged, Phase 50 PASS); verifier pin moved to 026 in `55e0dd2`
+  (441/441, 11/11); manual Render API deploy `dep-dbn5717f3r2c73edh4eg` of `55e0dd2`, replacing
+  `dep-dbmc2k3bc2fs738ssrp0` (`e86ae6f`), Auto-Deploy off, clean startup. The Lead-review routes went
+  from 404 to 401 logged out; preservation unchanged.
+- [ ] First real Lead review, deferred until a live engagement has an assigned Lead and a real
+  observation. An operational acceptance item; no synthetic observation or review was created.
 - [ ] Before an eligible observation can support a recommendation in the Final Report, the report's
   discovery sentence must stop saying the material carries no reliability rating or eligibility.
 
