@@ -115,8 +115,8 @@ def schema_checks(tmp):
     body = read(f"alembic/versions/{REVISION}.py").split('"""', 2)[2].lower()
     check("the migration writes no data", "insert" not in body and "bulk_insert" not in body
           and "execute(" not in body)
-    check("the production verifier pin stays at 025",
-          'EXPECTED_ALEMBIC_HEAD = "025_observation_task_origins"'
+    check("the production verifier pin is 026, moved only after 026 was applied to production",
+          'EXPECTED_ALEMBIC_HEAD = "026_observation_lead_reviews"'
           in read("tools/production_mysql_collation_verify.py"))
     actions = [(t, a) for (t, a) in allowlist.WORKSPACE_WRITE_COLUMNS if t == TABLE]
     check("one create action with exactly the review's columns",

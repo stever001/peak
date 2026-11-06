@@ -42,6 +42,7 @@ for p in (REPO_ROOT, TESTS):
         sys.path.insert(0, p)
 
 import validate_phase220_guided_evidence_capture as p220  # noqa: E402  (shared fixtures)
+from _schema_history import verifier_head_at_or_after  # noqa: E402
 import validate_phase223_phase_work_record as p223  # noqa: E402  (shared fixtures)
 
 HEAD = "025_observation_task_origins"
@@ -82,8 +83,8 @@ def schema_checks():
     check("Phase 224 adds no migration (025 stays; the only later one is Phase 226's 026)",
           {v for v in versions if v[:3] > "025"} <= {"026_observation_lead_reviews.py"}
           and f"{HEAD}.py" in versions)
-    check("the production verifier pin does not move",
-          f'EXPECTED_ALEMBIC_HEAD = "{HEAD}"' in read("tools/production_mysql_collation_verify.py"))
+    check("the production verifier pin is 025 or a later applied head (it moved to 026 in Phase 226)",
+          verifier_head_at_or_after(REPO_ROOT, read("tools/production_mysql_collation_verify.py"), HEAD))
     check("no model, table, policy or allowlist entry names a handoff",
           "handoff" not in read("peak/db/models.py").lower()
           and not any("handoff" in t for t in rp.RUNTIME_TABLE_PERSISTENCE)
