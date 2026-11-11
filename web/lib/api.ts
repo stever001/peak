@@ -365,6 +365,9 @@ export type InternalRecommendation = {
   supporting_review_ids: string[];
   internal_only: boolean;
   requires_human_review: boolean;
+  /** Phase 227: set only for a recommendation resting on a Lead-reviewed observation (not evidence). */
+  supporting_observation_ids?: string[];
+  supporting_lead_review_ids?: string[];
 };
 
 export type InternalAssessment = {

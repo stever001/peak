@@ -4,7 +4,7 @@
 Proves:
 
 1. **Schema.** One additive migration (026) creating exactly ``observation_lead_reviews``; append-only
-   in the model, the allowlist and the persistence policy; the production verifier pin stays at 025.
+   in the model, the allowlist and the persistence policy; the production verifier pin is 026.
 2. **The rule.** Eligibility of a discovery-derived finding is a fixed function of the current Lead
    review: it needs one, it must approve, its reliability must be medium or high, and it must have
    approved the statement exactly as it stands. A review of another observation or engagement never
@@ -15,9 +15,13 @@ Proves:
 4. **What stays unchanged.** The observation, evidence and review records of the governed evidence
    path, tasks, phases, readiness, artifacts, packages, the Final Report and every recommendation.
    Reads write nothing.
-5. **Assessment.** The eligibility appears beside the finding, never inside it, and no recommendation
-   is drafted. An assessment with no Lead review is byte-identical to the baseline's.
-6. **Static UI.** The panel says what the action means and that it creates no recommendation.
+5. **Assessment.** The eligibility appears beside the finding, never inside it. An assessment with no
+   Lead review is byte-identical to the baseline's.
+6. **Static UI.** The panel says what the action means.
+
+Phase 227 gives an eligible observation the Phase 118 bounded recommendation, so the Final Report and
+packages now change on an eligible review. The checks that said otherwise now assert that only an
+eligible review changes them; ``validate-phase227`` covers the recommendation itself.
 
 Exit status: 0 all checks passed; 1 a check failed.
 """
@@ -44,6 +48,7 @@ from _schema_history import head_descends_from  # noqa: E402
 REVISION = "026_observation_lead_reviews"
 TABLE = "observation_lead_reviews"
 BASELINE = "c18e317"
+IMPLEMENTATION = "3f18d46"  # Phase 226's own commit; Phase 227 changes some files below after it
 PANEL = "web/components/observation-lead-review.tsx"
 OBSERVATION_PAGE = "web/app/(workspace)/observations/[id]/edit/page.tsx"
 #: Files whose bytes must equal the baseline: the Phase 117/118 evidence rule and recommendation,
@@ -241,13 +246,14 @@ def rule_checks():
           and recommendation_block_reasons(ev(finding_statement_persisted=False))
           and recommendation_block_reasons(ev(schema_item={}))
           and recommendation_block_reasons(ev(source_resolved=False)))
-    same = []
-    for path in UNCHANGED:
-        base = subprocess.run(["git", "show", f"{BASELINE}:{path}"], cwd=REPO_ROOT,
-                              capture_output=True, text=True)
-        same.append(base.returncode == 0 and base.stdout == read(path))
-    check("the evidence rule, recommendation, report, reader and approval modules are unchanged",
-          all(same))
+    def show(rev, path):
+        r = subprocess.run(["git", "show", f"{rev}:{path}"], cwd=REPO_ROOT, capture_output=True,
+                           text=True)
+        return r.stdout if r.returncode == 0 else None
+
+    check("Phase 226 changed none of the evidence rule, report, reader and approval modules",
+          all(show(BASELINE, p) is not None and show(BASELINE, p) == show(IMPLEMENTATION, p)
+              for p in UNCHANGED))
 
     for outside in (False, True):
         assessment = InternalAssessment(
@@ -260,23 +266,29 @@ def rule_checks():
         check(f"no Lead review ({'some outside interviews' if outside else 'interviews only'}): "
               f"assessment and report byte-identical to the baseline's", got == BASELINE_HASHES[outside])
 
-    reviewed = InternalAssessment(engagement_id="e1", discovery=da.build_discovery_assessment_context(
-        _summaries(True, [_review()])))
-    unreviewed = InternalAssessment(engagement_id="e1", discovery=da.build_discovery_assessment_context(
-        _summaries(True, [])))
-    r1 = compose_final_report(reviewed, {"id": "e1", "engagement_label": "L"})
+    def ctx(reviews):
+        return da.build_discovery_assessment_context(_summaries(True, reviews))
+
+    reviewed = InternalAssessment(engagement_id="e1", discovery=ctx([_review()]))
+    unreviewed = InternalAssessment(engagement_id="e1", discovery=ctx([]))
     r0 = compose_final_report(unreviewed, {"id": "e1", "engagement_label": "L"})
-    check("a Lead review leaves the Final Report and its content hash unchanged",
-          report_content_hash(r1) == report_content_hash(r0)
-          and render_final_report_markdown(r1) == render_final_report_markdown(r0))
+    blocked = [compose_final_report(InternalAssessment(engagement_id="e1", discovery=ctx([rv])),
+                                    {"id": "e1", "engagement_label": "L"})
+               for rv in (_review(decision="decline", reliability=None), _review(reliability="low"))]
+    check("a Lead review that leaves it blocked changes neither the Final Report nor its hash "
+          "(Phase 227: only an eligible one adds a recommendation)",
+          all(report_content_hash(r) == report_content_hash(r0)
+              and render_final_report_markdown(r) == render_final_report_markdown(r0)
+              for r in blocked))
     md = render_internal_assessment_markdown(reviewed)
-    check("the assessment shows the review and eligibility beside the finding, and drafts nothing",
+    check("the assessment shows the review and eligibility beside the finding",
           "- Lead review: approved for internal reliance, reliability medium, by Cam, who recorded it"
           in md and "- Recommendation eligibility: eligible" in md
-          and "No recommendation is drafted from discovery material." in md
-          and reviewed.recommendations == [] and reviewed.recommendation_status == "blocked")
+          and "recommendation_eligible" not in str(dataclasses.asdict(reviewed.discovery.findings[0])))
     check("its discovery sentence no longer claims no reliability rating or eligibility",
-          da.LEAD_REVIEWED_TAIL in md and "no reliability rating, and no recommendation" not in md)
+          # Phase 227: an eligible observation's assessment uses RECOMMENDED_TAIL instead.
+          (da.LEAD_REVIEWED_TAIL in md or da.RECOMMENDED_TAIL in md)
+          and "no reliability rating, and no recommendation" not in md)
     from peak.workspace.advisory_boundary import framing_violations
     check("the new wording crosses no advisory boundary",
           not framing_violations(da.LEAD_REVIEWED_TAIL)
@@ -401,14 +413,13 @@ def app_checks(tmp):
     check("the assessment carries the derived eligibility beside the finding",
           len(elig) == 1 and elig[0]["recommendation_eligible"] is True
           and "recommendation_eligible" not in a["assessment"]["discovery"]["findings"][0])
-    check("no recommendation is drafted and no evidence-backed finding appears",
-          a["assessment"]["recommendations"] == [] and a["assessment"]["findings"] == []
-          and a["assessment"]["recommendation_status"] == "blocked")
-    check("the Final Report is unchanged: same content, no review, no eligibility",
-          report_after == report_before and "Lead review" not in report_after["markdown"]
-          and "recommendation_eligibility" not in str(report_after["report"]))
-    check("the earlier package is unchanged and still matches the draft",
-          packages_after["draft_matches_latest"] is True
+    check("no evidence-backed finding appears (Phase 227: one bounded recommendation does)",
+          a["assessment"]["findings"] == [] and len(a["assessment"]["recommendations"]) == 1)
+    check("the Final Report shows no review or eligibility detail (Phase 227: it gains the "
+          "recommendation)",
+          report_after != report_before and "recommendation_eligibility" not in str(report_after["report"]))
+    check("the earlier package is unchanged; the draft no longer matches it (Phase 227)",
+          packages_after["draft_matches_latest"] is False
           and packages_after["packages"] == packages_before["packages"])
     check("readiness, task and phase are unchanged",
           cam.get(f"/phases/{pid}/readiness").json() == readiness_before)
@@ -461,8 +472,8 @@ def static_checks():
     panel = read(PANEL)
     check("the panel says what is reviewed and what it means",
           "exactly as it reads now" in panel and "internal" in panel and "reliability" in panel)
-    check("the panel says it creates no recommendation and the Final Report does not change",
-          "It does not create a" in panel and "the Final Report does not change" in panel)
+    check("the panel says the review writes no recommendation itself and the observation is not evidence",
+          "The review writes no" in panel and "still is not evidence" in panel)
     check("the panel says what still applies after an edit",
           "no longer applies until the Lead reviews it again" in panel)
     check("only the Lead sees the form; nothing is prefilled",
@@ -471,8 +482,8 @@ def static_checks():
     check("the page degrades before the API: no panel when the review cannot be read",
           "{review && (" in read(OBSERVATION_PAGE)
           and "if (!res.ok) return null;" in read("web/lib/api.ts"))
-    check("no report, artifact or publication code reads Lead reviews",
-          not any("lead_review" in read(p) or "ObservationLeadReview" in read(p)
+    check("no report, artifact or publication code reads the Lead-review table",
+          not any("ObservationLeadReview" in read(p) or "observation_lead_reviews" in read(p)
                   for p in ("peak/reports/final_report.py", "peak/reports/release_presentation.py",
                             "peak/workspace/artifacts.py", "peak/workspace/approvals.py",
                             "web/components/final-report-view.tsx")))

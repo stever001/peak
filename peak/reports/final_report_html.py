@@ -22,7 +22,7 @@ from __future__ import annotations
 from html import escape
 from typing import Iterable, List, Optional, Sequence
 
-from .discovery_assessment import NO_DISCOVERY_TEXT, basis_label, discovery_not_evidence_text
+from .discovery_assessment import NO_DISCOVERY_TEXT, basis_label
 from .final_report import (
     NO_RECOMMENDATIONS_TEXT,
     REPORT_STATUS_TEXT,
@@ -35,6 +35,7 @@ from .final_report import (
     SECTION_RECOMMENDATIONS,
     FinalReport,
     _level,
+    report_discovery_text,
 )
 from .final_report_docx import MATERIAL_LABELS
 from .internal_assessment import (
@@ -149,7 +150,7 @@ def _overview(report: FinalReport, pres: Presentation) -> List[str]:
 def _discovery(report: FinalReport, pres: Presentation) -> List[str]:
     s = report.discovery_summary
     out = _section_heading(report, SECTION_DISCOVERY_SUMMARY, pres, s.material)
-    out += [_p(discovery_not_evidence_text(s.findings)), "<h3>Interview coverage</h3>"]
+    out += [_p(report_discovery_text(report)), "<h3>Interview coverage</h3>"]
     if s.coverage is None:
         out.append(_p(NO_DISCOVERY_TEXT, "detail"))
     else:

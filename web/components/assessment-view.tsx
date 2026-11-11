@@ -13,7 +13,7 @@ import type {
   LowHangingFruitCandidate,
   ObservationOrigin,
 } from "@/lib/api";
-import { BASIS_LABELS, LEVEL_LABELS } from "@/lib/labels";
+import { BASIS_LABELS, fromLeadReviewedObservation, LEVEL_LABELS } from "@/lib/labels";
 
 export function Pill({ children, tone = "bg-line" }: { children: React.ReactNode; tone?: string }) {
   return <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold text-ink ${tone}`}>{children}</span>;
@@ -25,6 +25,7 @@ export function Pill({ children, tone = "bg-line" }: { children: React.ReactNode
  */
 function MaterialLabel({ kind }: { kind: MaterialKind }) {
   if (kind === "report") return null;
+  if (kind === "governed") return <Pill tone="bg-accent">Governed · evidence-backed or Lead-reviewed</Pill>;
   return kind === "discovery" ? (
     <Pill tone="bg-highlight">Consultant working material</Pill>
   ) : (
@@ -33,7 +34,7 @@ function MaterialLabel({ kind }: { kind: MaterialKind }) {
 }
 
 /** "report" sections restate counts and fixed text only, so they carry no material label. */
-export type MaterialKind = "discovery" | "evidence" | "report";
+export type MaterialKind = "discovery" | "evidence" | "report" | "governed";
 
 export function Section({
   title, kind, count, id, children,
@@ -125,7 +126,7 @@ function LeadReviewLine({ e }: { e?: DiscoveryRecommendationEligibility }) {
     <p className="mt-2 text-sm">
       Lead review: {r.decision === "approve_internal" ? `approved for internal reliance, reliability ${r.reliability}` : "declined"}
       {" "}by {r.reviewer ?? "an unnamed consultant"}{e.reviewed_by_author ? ", who recorded it" : ""}.{" "}
-      Recommendation eligibility: {e.recommendation_eligible ? "eligible (no recommendation is drafted from it)" : `not eligible — ${e.recommendation_blocked_reasons.join("; ")}`}.
+      Recommendation eligibility: {e.recommendation_eligible ? "eligible (one bounded internal recommendation, below; still not evidence)" : `not eligible — ${e.recommendation_blocked_reasons.join("; ")}`}.
     </p>
   );
 }
@@ -344,7 +345,7 @@ export function AssessmentView({ a, engagementId, evidence, origins }: {
         )}
       </Section>
 
-      <Section title="Internal recommendations" kind="evidence" count={a.recommendations.length}>
+      <Section title="Internal recommendations" kind={a.recommendations.some(fromLeadReviewedObservation) ? "governed" : "evidence"} count={a.recommendations.length}>
         {a.recommendations.length > 0 ? (
           <ul className="space-y-3">
             {a.recommendations.map((r) => (
@@ -352,6 +353,7 @@ export function AssessmentView({ a, engagementId, evidence, origins }: {
                 <p>{r.text}</p>
                 <p className="mt-2 text-sm text-ink-muted">
                   Internal only · requires human review · for finding {r.finding_id}
+                  {fromLeadReviewedObservation(r) && " · a Lead-reviewed consultant observation, not evidence"}
                 </p>
               </li>
             ))}

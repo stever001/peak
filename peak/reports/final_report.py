@@ -24,6 +24,12 @@ recommendations the assessment already produced for Phase 117-eligible findings 
 creates none, and defensively drops any whose finding is not eligible. A low-hanging-fruit flag is
 never turned into a recommendation.
 
+**Phase 227.** The assessment's recommendation for a Phase 226-eligible observation is kept too. Only
+when the report holds one does its wording change: the recommendations heading and material, the
+first and third boundary statements, and the discovery sentence then say that an observation the
+Lead approved can support the bounded recommendation and is still not evidence. Every other report
+is unchanged.
+
 **Low-hanging fruit keeps its Phase 206 display grouping.** Candidates arrive already in display
 order (value, then effort, as the consultant entered them); this module only splits that order into
 labelled groups. No group, candidate, or position carries a rank, score, or priority.
@@ -60,6 +66,7 @@ from .internal_assessment import (
     InternalAssessment,
     InternalRecommendation,
     _trace_line,
+    from_lead_reviewed_observation,
 )
 
 REPORT_KIND = "final_report_foundation"
@@ -78,6 +85,8 @@ SECTION_ORDER = (SECTION_EXECUTIVE_OVERVIEW, SECTION_DISCOVERY_SUMMARY, SECTION_
 MATERIAL_REPORT = "report"
 MATERIAL_DISCOVERY = "consultant_working_material"
 MATERIAL_EVIDENCE = "evidence_backed_governed"
+#: Phase 227: the recommendations section when one rests on a Lead-reviewed observation.
+MATERIAL_GOVERNED_RECOMMENDATIONS = "evidence_backed_or_lead_reviewed"
 
 SECTION_TITLES: Dict[str, str] = {
     SECTION_EXECUTIVE_OVERVIEW: "Executive overview",
@@ -117,6 +126,21 @@ BOUNDARY_STATEMENTS = (
 #: Phase 225: the first statement when some discovery material was not recorded in an interview.
 BOUNDARY_STATEMENT_WIDER = BOUNDARY_STATEMENTS[0].replace(
     "during interviews.", "during interviews or other consulting work.")
+
+#: Phase 227: the wording that becomes untrue once the report holds a recommendation resting on a
+#: Lead-reviewed observation, and its replacement. Used only then.
+_NO_STANDING_BOUNDARY = ("It is not reviewed evidence and carries no review status, reliability "
+                         "rating, or recommendation eligibility.")
+LEAD_REVIEWED_BOUNDARY = (
+    "It is not reviewed evidence. Only an observation the engagement's Lead approved, exactly as "
+    "worded, at medium or high reliability is eligible to support a recommendation, and it remains "
+    "an observation, not evidence.")
+assert _NO_STANDING_BOUNDARY in BOUNDARY_STATEMENTS[0]
+RECOMMENDATIONS_BOUNDARY_LEAD_REVIEWED = (
+    "Internal recommendations appear only for evidence-backed findings already eligible under the "
+    "Phase 117/118 rules, and for consultant observations eligible under the Phase 226 Lead-review "
+    "rule, which use the same bounded wording.")
+RECOMMENDATIONS_TITLE_LEAD_REVIEWED = "Internal recommendations (evidence-backed or Lead-reviewed)"
 
 _LEVEL_LABELS = {"low": "Low", "medium": "Medium", "high": "High"}
 
@@ -228,10 +252,30 @@ def group_low_hanging_fruit(candidates: List[LowHangingFruitCandidate]
 
 
 def _eligible_recommendations(assessment: InternalAssessment) -> List[InternalRecommendation]:
-    """The assessment's recommendations whose finding is Phase 117-eligible. None are created."""
+    """The assessment's recommendations whose finding is Phase 117-eligible, or (Phase 227) whose
+    observation is Phase 226-eligible. None are created."""
     eligible = {f.finding_id for f in assessment.findings
                 if f.recommendation_eligible and f.statement_available}
-    return [r for r in assessment.recommendations if r.finding_id in eligible]
+    discovery = assessment.discovery
+    observations = {e.finding_id for e in (discovery.recommendation_eligibility if discovery else [])
+                    if e.recommendation_eligible}
+    return [r for r in assessment.recommendations
+            if (r.finding_id in observations if from_lead_reviewed_observation(r)
+                else r.finding_id in eligible)]
+
+
+def has_lead_reviewed_recommendation(report: "FinalReport") -> bool:
+    """Phase 227: whether the report holds a recommendation resting on a Lead-reviewed observation.
+
+    Read from the report's own content, so a version rebuilt from storage answers the same way.
+    """
+    return any(from_lead_reviewed_observation(r) for r in report.recommendations.recommendations)
+
+
+def report_discovery_text(report: "FinalReport") -> str:
+    """The discovery boundary sentence that is true of this report."""
+    return discovery_not_evidence_text(report.discovery_summary.findings,
+                                       recommended=has_lead_reviewed_recommendation(report))
 
 
 def _plural(count: int, noun: str) -> str:
@@ -299,7 +343,15 @@ def compose_final_report(assessment: InternalAssessment,
     discovery = assessment.discovery
     recommendations = _eligible_recommendations(assessment)
     discovery_limitations = _discovery_limitations(assessment)
+    lead_reviewed = any(from_lead_reviewed_observation(r) for r in recommendations)
+    boundary = (BOUNDARY_STATEMENT_WIDER if discovery and recorded_outside_interviews(discovery.findings)
+                else BOUNDARY_STATEMENTS[0])
+    titles = dict(SECTION_TITLES)
+    if lead_reviewed:
+        boundary = boundary.replace(_NO_STANDING_BOUNDARY, LEAD_REVIEWED_BOUNDARY)
+        titles[SECTION_RECOMMENDATIONS] = RECOMMENDATIONS_TITLE_LEAD_REVIEWED
     return FinalReport(
+        section_titles=titles,
         audience=assessment.audience,
         executive_overview=ExecutiveOverview(
             engagement_id=assessment.engagement_id or engagement.get("id"),
@@ -324,15 +376,16 @@ def compose_final_report(assessment: InternalAssessment,
             excluded_evidence=list(assessment.excluded_evidence),
         ),
         recommendations=RecommendationsSection(
+            material=MATERIAL_GOVERNED_RECOMMENDATIONS if lead_reviewed else MATERIAL_EVIDENCE,
             status=assessment.recommendation_status,
             recommendations=recommendations,
             blocked_reasons=list(assessment.recommendation_blocked_reasons),
         ),
         limitations=LimitationsSection(
             boundary_statements=[
-                BOUNDARY_STATEMENT_WIDER
-                if discovery and recorded_outside_interviews(discovery.findings)
-                else BOUNDARY_STATEMENTS[0], *BOUNDARY_STATEMENTS[1:]],
+                boundary, BOUNDARY_STATEMENTS[1],
+                RECOMMENDATIONS_BOUNDARY_LEAD_REVIEWED if lead_reviewed else BOUNDARY_STATEMENTS[2],
+                *BOUNDARY_STATEMENTS[3:]],
             assessment_limitations=list(assessment.limitations),
             discovery_limitations=list(discovery_limitations),
         ),
@@ -361,7 +414,7 @@ def _render_overview(report: FinalReport) -> List[str]:
 def _render_discovery(report: FinalReport) -> List[str]:
     s = report.discovery_summary
     lines = [f"## {SECTION_TITLES[SECTION_DISCOVERY_SUMMARY]}", "",
-             discovery_not_evidence_text(s.findings), "", "### Interview coverage", ""]
+             report_discovery_text(report), "", "### Interview coverage", ""]
     if s.coverage is None:
         lines += [f"_{NO_DISCOVERY_TEXT}_", ""]
     else:
@@ -436,17 +489,24 @@ def _render_evidence(report: FinalReport) -> List[str]:
 
 def _render_recommendations(report: FinalReport) -> List[str]:
     s = report.recommendations
-    lines = [f"## {SECTION_TITLES[SECTION_RECOMMENDATIONS]}", ""]
+    lines = [f"## {report.section_titles[SECTION_RECOMMENDATIONS]}", ""]
     if not s.recommendations:
         lines += [f"**{s.status.capitalize()}.** {NO_RECOMMENDATIONS_TEXT}", ""]
         lines += [f"- {reason}" for reason in s.blocked_reasons]
         return lines + [""] if s.blocked_reasons else lines
     for rec in s.recommendations:
-        lines += [f"- {rec.text}",
-                  f"  - For finding {rec.finding_id}; evidence "
-                  f"{', '.join(rec.supporting_evidence_ids)}",
+        lines += [f"- {rec.text}", f"  - {recommendation_source_line(rec)}",
                   "  - Internal only; requires human review"]
     return lines + [""]
+
+
+def recommendation_source_line(rec: InternalRecommendation) -> str:
+    """What one recommendation rests on, by identifier. Phase 227: an observation is named as one."""
+    if from_lead_reviewed_observation(rec):
+        return (f"For finding {rec.finding_id}; consultant observation "
+                f"{', '.join(rec.supporting_observation_ids)} (not evidence), Lead review "
+                f"{', '.join(rec.supporting_lead_review_ids)}")
+    return f"For finding {rec.finding_id}; evidence {', '.join(rec.supporting_evidence_ids)}"
 
 
 def _render_limitations(report: FinalReport) -> List[str]:

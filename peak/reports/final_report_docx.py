@@ -28,10 +28,11 @@ import zipfile
 from typing import Iterable, List, Optional, Sequence
 from xml.sax.saxutils import escape
 
-from .discovery_assessment import NO_DISCOVERY_TEXT, basis_label, discovery_not_evidence_text
+from .discovery_assessment import NO_DISCOVERY_TEXT, basis_label
 from .final_report import (
     MATERIAL_DISCOVERY,
     MATERIAL_EVIDENCE,
+    MATERIAL_GOVERNED_RECOMMENDATIONS,
     NO_RECOMMENDATIONS_TEXT,
     REPORT_STATUS_TEXT,
     SECTION_DISCOVERY_SUMMARY,
@@ -43,6 +44,7 @@ from .final_report import (
     SECTION_RECOMMENDATIONS,
     FinalReport,
     _level,
+    report_discovery_text,
 )
 from .internal_assessment import (
     EVIDENCE_MATERIAL_LABEL,
@@ -60,6 +62,9 @@ DOCX_MEDIA_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingm
 MATERIAL_LABELS = {
     MATERIAL_DISCOVERY: "Material: consultant working material — not reviewed evidence",
     MATERIAL_EVIDENCE: "Material: evidence-backed, governed",
+    # Phase 227: recommendations resting on evidence or a Lead-reviewed observation.
+    MATERIAL_GOVERNED_RECOMMENDATIONS: ("Material: governed — evidence-backed, or a Lead-reviewed "
+                                        "consultant observation that is not evidence"),
 }
 
 FOOTER_TEXT = INTERNAL_FOOTER_TEXT
@@ -171,7 +176,7 @@ def _overview(report: FinalReport, pres: Presentation) -> List[str]:
 def _discovery(report: FinalReport, pres: Presentation) -> List[str]:
     s = report.discovery_summary
     out = _section_heading(report, SECTION_DISCOVERY_SUMMARY, pres, s.material)
-    out += [_p(discovery_not_evidence_text(s.findings)), _p("Interview coverage", "Heading2")]
+    out += [_p(report_discovery_text(report)), _p("Interview coverage", "Heading2")]
     if s.coverage is None:
         out.append(_p(NO_DISCOVERY_TEXT, "Detail"))
     else:

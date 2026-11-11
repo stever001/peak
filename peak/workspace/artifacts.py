@@ -62,10 +62,20 @@ def _require_allowed(table: str, action: str, values: dict) -> None:
 
 
 def final_report_content(report) -> dict:
-    """The canonical business content of a ``FinalReport``: every field except draft state."""
+    """The canonical business content of a ``FinalReport``: every field except draft state.
+
+    Phase 227: a recommendation's observation provenance fields are left out when empty, so an
+    evidence-backed recommendation, and every version stored before them, keep their exact content.
+    """
+    from peak.reports.internal_assessment import OBSERVATION_PROVENANCE_FIELDS
+
     content = dataclasses.asdict(report)
     for name in _DRAFT_STATE_FIELDS:
         content.pop(name, None)
+    for rec in (content.get("recommendations") or {}).get("recommendations") or []:
+        for name in OBSERVATION_PROVENANCE_FIELDS:
+            if not rec.get(name):
+                rec.pop(name, None)
     return content
 
 
@@ -118,6 +128,7 @@ def content_hash(canonical: str) -> str:
 def _source_references(report) -> dict:
     """Which composer produced the content, and the working-state records it referenced."""
     evidence, sources, reviews, observations, sessions, answers = (set() for _ in range(6))
+    lead_reviews = set()
     for f in report.evidence_findings.findings:
         evidence.add(f.evidence_id)
         sources.update(f.source_reference_ids)
@@ -126,12 +137,17 @@ def _source_references(report) -> dict:
         evidence.update(r.supporting_evidence_ids)
         sources.update(r.supporting_source_ids)
         reviews.update(r.supporting_review_ids)
+        observations.update(r.supporting_observation_ids)
+        lead_reviews.update(r.supporting_lead_review_ids)
     for f in report.discovery_summary.findings:
         for value, bucket in ((f.trace.observation_id, observations),
                               (f.trace.session_id, sessions), (f.trace.answer_id, answers)):
             if value:
                 bucket.add(value)
+    # Phase 227: named only when a recommendation rests on a Lead-reviewed observation.
+    extra = {"lead_review_ids": sorted(lead_reviews)} if lead_reviews else {}
     return {
+        **extra,
         "composer": COMPOSER,
         "report_kind": report.kind,
         "evidence_ids": sorted(evidence),

@@ -32,12 +32,15 @@ from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
 from .final_report import (
     BOUNDARY_STATEMENTS,
+    RECOMMENDATIONS_BOUNDARY_LEAD_REVIEWED,
+    RECOMMENDATIONS_TITLE_LEAD_REVIEWED,
     REPORT_STATUS_TEXT,
     SECTION_RECOMMENDATIONS,
     SECTION_TITLES,
     FinalReport,
+    recommendation_source_line,
 )
-from .internal_assessment import _trace_line
+from .internal_assessment import _trace_line, from_lead_reviewed_observation
 
 INTERNAL_FOOTER_TEXT = "Internal draft · Not client-facing · Requires consultant review"
 INTERNAL_TITLE = "Final report"
@@ -50,7 +53,16 @@ CLIENT_TEXT: Dict[str, Optional[str]] = {
     BOUNDARY_STATEMENTS[2]: ("Recommendations appear only for evidence-backed findings that meet "
                              "the recommendation eligibility rules."),
     BOUNDARY_STATEMENTS[3]: None,
+    # Phase 227: the same sentence when a recommendation rests on a Lead-reviewed observation.
+    RECOMMENDATIONS_BOUNDARY_LEAD_REVIEWED: (
+        "Recommendations appear only for evidence-backed findings that meet the recommendation "
+        "eligibility rules, and for consultant observations the engagement lead approved for "
+        "reliance. Those observations are not evidence."),
 }
+
+#: Phase 227: the client line under a recommendation resting on a Lead-reviewed observation.
+CLIENT_OBSERVATION_RECOMMENDATION_LINE = (
+    "For a consultant observation approved by the engagement lead; not evidence")
 
 #: The composer's fixed count sentences that name recommendations "internal".
 _CLIENT_PATTERNS: Tuple[Tuple["re.Pattern[str]", str], ...] = (
@@ -61,6 +73,8 @@ _CLIENT_PATTERNS: Tuple[Tuple["re.Pattern[str]", str], ...] = (
 )
 
 CLIENT_SECTION_TITLES = {SECTION_RECOMMENDATIONS: "Recommendations (evidence-backed only)"}
+#: Phase 227: the internal heading for a report with a Lead-reviewed recommendation, as a client sees it.
+CLIENT_TITLE_FOR = {RECOMMENDATIONS_TITLE_LEAD_REVIEWED: "Recommendations (evidence-backed or lead-reviewed)"}
 
 #: Peak-owned internal presentation material: exact fixed text that only Peak's composer or the
 #: internal presentation emits (AL36, AL50). The check looks for these, never for ordinary words, so
@@ -72,6 +86,8 @@ PEAK_INTERNAL_MARKERS: Tuple[str, ...] = (
     BOUNDARY_STATEMENTS[2],
     BOUNDARY_STATEMENTS[3],
     SECTION_TITLES[SECTION_RECOMMENDATIONS],
+    RECOMMENDATIONS_BOUNDARY_LEAD_REVIEWED,
+    RECOMMENDATIONS_TITLE_LEAD_REVIEWED,
 )
 #: The composer's own count templates that name recommendations "internal".
 PEAK_INTERNAL_PATTERNS: Tuple["re.Pattern[str]", ...] = tuple(
@@ -124,6 +140,8 @@ class Presentation:
     # --- structure ---------------------------------------------------------------------------
 
     def section_title(self, report: FinalReport, key: str) -> str:
+        if self.client and report.section_titles[key] in CLIENT_TITLE_FOR:
+            return CLIENT_TITLE_FOR[report.section_titles[key]]
         if self.client and key in CLIENT_SECTION_TITLES:
             return CLIENT_SECTION_TITLES[key]
         return report.section_titles[key]
@@ -195,8 +213,9 @@ class Presentation:
 
     def recommendation_details(self, rec) -> List[str]:
         if not self.client:
-            return [f"For finding {rec.finding_id}; evidence {', '.join(rec.supporting_evidence_ids)}",
-                    INTERNAL_RECOMMENDATION_LINE]
+            return [recommendation_source_line(rec), INTERNAL_RECOMMENDATION_LINE]
+        if from_lead_reviewed_observation(rec):
+            return [CLIENT_OBSERVATION_RECOMMENDATION_LINE]
         evidence = [self.label(e) for e in rec.supporting_evidence_ids if self.label(e)]
         line = f"For {self.label(rec.finding_id) or 'its finding'}"
         return [line + (f"; {', '.join(evidence).lower()}" if evidence else "")]

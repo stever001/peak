@@ -1,3 +1,5 @@
+import type { InternalRecommendation } from "@/lib/api";
+
 /** Display labels shared by the discovery screens. */
 export const ANSWER_TYPE_LABELS: Record<string, string> = {
   short_text: "Short text",
@@ -41,3 +43,8 @@ export const FINDING_CLASS_LABELS: Record<string, string> = {
   TRACE: "Lot / serial / expiry traceability",
   IMPACT: "Business consequence",
 };
+
+/** Phase 227: whether a recommendation rests on a Lead-reviewed consultant observation, not evidence. */
+export function fromLeadReviewedObservation(r: InternalRecommendation): boolean {
+  return (r.supporting_observation_ids?.length ?? 0) > 0;
+}

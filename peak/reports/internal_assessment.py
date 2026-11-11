@@ -19,15 +19,20 @@ current evidence posture, so none appear.
 persisted statement, quoted verbatim — no root cause, no prescribed fix, no LLM. A blocked finding
 receives none. Recommendations are internal-only and always require human review.
 
+**Phase 227: a Lead-reviewed observation enters the same path.** A discovery-derived finding whose
+Phase 226 eligibility has no blocker receives one recommendation from the same template, quoting its
+statement. Its provenance is the observation and the Lead review, never evidence, a source record
+or a review record. Every other discovery finding receives none.
+
 **Internal only.** ``audience`` is internal, ``status`` is internal draft, ``client_facing`` is
 always false, and human review is always required.
 
 **Discovery material sits beside evidence, never inside it (Phase 206).** An optional
 :class:`~peak.reports.discovery_assessment.DiscoveryAssessmentContext` adds the engagement's North
 Star, interview coverage, consultant-recorded discovery findings, and low-hanging-fruit candidates
-under their own clearly labelled headings. It is additive and inert: discovery never enters
-``findings``, never produces an :class:`InternalRecommendation`, and never changes a review status,
-reliability, claim scope, or the Phase 117 eligibility of any evidence-backed finding. An
+under their own clearly labelled headings. Discovery never enters ``findings``, and never changes a
+review status, reliability, claim scope, or the Phase 117 eligibility of any evidence-backed finding;
+only a Phase 226-eligible observation produces an :class:`InternalRecommendation` (Phase 227). An
 assessment built without it renders exactly as before, minus a short line saying no discovery
 material was recorded.
 
@@ -80,6 +85,11 @@ NO_NORTH_STAR_TEXT = "No North Star has been recorded for this engagement."
 NO_DISCOVERY_FINDINGS_TEXT = "No consultant observation has been recorded for this engagement."
 NO_LOW_HANGING_FRUIT_TEXT = "The consultant has flagged no low-hanging fruit for this engagement."
 
+#: Phase 227: the evidence-status line of a discovery finding with no Phase 226 blocker.
+OBSERVATION_ELIGIBLE_EVIDENCE_LINE = (
+    "- Evidence status: none. This is not reviewed evidence; its Lead review makes it eligible for "
+    "one bounded internal recommendation.")
+
 NO_STATEMENT_TEXT = "No persisted finding statement is available for this evidence."
 NO_FINDINGS_TEXT = "No evidence currently supports an operational finding for this engagement."
 NOT_CLIENT_FACING_TEXT = (
@@ -108,7 +118,12 @@ class AssessmentFinding:
 
 @dataclass
 class InternalRecommendation:
-    """One bounded internal recommendation for one eligible finding (Phase 118). Never client-facing."""
+    """One bounded internal recommendation for one eligible finding (Phase 118). Never client-facing.
+
+    Phase 227: a recommendation for a Lead-reviewed observation names that observation and its Lead
+    review in the last two fields and has no evidence, source or review-record ids. They are empty
+    for an evidence-backed recommendation, and a stored version omits them then.
+    """
 
     recommendation_id: str
     finding_id: str
@@ -118,6 +133,23 @@ class InternalRecommendation:
     supporting_review_ids: List[str] = field(default_factory=list)
     internal_only: bool = True
     requires_human_review: bool = True
+    supporting_observation_ids: List[str] = field(default_factory=list)
+    supporting_lead_review_ids: List[str] = field(default_factory=list)
+
+
+#: Phase 227: the provenance fields a stored version omits when empty, so evidence-backed content
+#: and every version stored before them keep their exact canonical form.
+OBSERVATION_PROVENANCE_FIELDS = ("supporting_observation_ids", "supporting_lead_review_ids")
+
+
+def recommendation_id_for(finding_id: str) -> str:
+    """The deterministic id of the one recommendation a finding can have."""
+    return f"rec_{finding_id}"
+
+
+def from_lead_reviewed_observation(rec: InternalRecommendation) -> bool:
+    """Whether ``rec`` rests on a Lead-reviewed consultant observation rather than evidence."""
+    return bool(rec.supporting_observation_ids)
 
 
 @dataclass
@@ -149,13 +181,39 @@ def _recommendation_for(finding: AssessmentFinding) -> Optional[InternalRecommen
     if not finding.recommendation_eligible or not finding.statement_available:
         return None
     return InternalRecommendation(
-        recommendation_id=f"rec_{finding.finding_id}",
+        recommendation_id=recommendation_id_for(finding.finding_id),
         finding_id=finding.finding_id,
         text=RECOMMENDATION_TEMPLATE.format(statement=finding.statement),
         supporting_evidence_ids=[finding.evidence_id],
         supporting_source_ids=list(finding.source_reference_ids),
         supporting_review_ids=list(finding.supporting_review_ids),
     )
+
+
+def _observation_recommendations(discovery: Optional[DiscoveryAssessmentContext]
+                                 ) -> List[InternalRecommendation]:
+    """Phase 227: the bounded recommendation for each discovery finding with no Phase 226 blocker.
+
+    Same template, same id rule. Provenance is the observation and its current Lead review only.
+    """
+    if discovery is None:
+        return []
+    eligibility = {e.finding_id: e for e in discovery.recommendation_eligibility}
+    out = []
+    for finding in discovery.findings:
+        e = eligibility.get(finding.finding_id)
+        if (e is None or not e.recommendation_eligible or e.recommendation_blocked_reasons
+                or e.lead_review is None or not e.lead_review.statement_matches
+                or not e.observation_id):
+            continue
+        out.append(InternalRecommendation(
+            recommendation_id=recommendation_id_for(finding.finding_id),
+            finding_id=finding.finding_id,
+            text=RECOMMENDATION_TEMPLATE.format(statement=finding.statement),
+            supporting_observation_ids=[e.observation_id],
+            supporting_lead_review_ids=[e.lead_review.review_id],
+        ))
+    return out
 
 
 def _confidence_notes(findings: List[AssessmentFinding]) -> List[str]:
@@ -186,10 +244,10 @@ def build_internal_assessment(report_inputs,
     Findings keep the order the bridge produced, so the same inputs always yield the same document.
     Nothing is added that the inputs did not already carry.
 
-    ``discovery`` (Phase 206) is attached as-is and takes no part in any decision below: it does not
-    reach ``findings``, ``recommendations``, ``confidence_notes``, or ``limitations``, and the
-    recommendation status is computed before it is attached. Passing ``None`` — or a context with
-    no material — leaves the assessment exactly as Phases 116–118 produced it.
+    ``discovery`` (Phase 206) is attached as-is. It never reaches ``findings``,
+    ``confidence_notes``, or ``limitations``. Phase 227: each of its findings with no Phase 226
+    blocker adds one recommendation after the evidence-backed ones. Passing ``None`` — or a context
+    with no eligible observation — leaves the assessment exactly as Phases 116–118 produced it.
     """
     engagement = report_inputs.engagement or {}
     assessment = InternalAssessment(
@@ -225,6 +283,7 @@ def build_internal_assessment(report_inputs,
         if recommendation is not None:
             finding.recommendation_id = recommendation.recommendation_id
             assessment.recommendations.append(recommendation)
+    assessment.recommendations += _observation_recommendations(discovery)
     if assessment.recommendations:
         assessment.recommendation_status = RECOMMENDATIONS_INTERNAL_DRAFT
 
@@ -249,7 +308,8 @@ def build_internal_assessment(report_inputs,
     assessment.limitations = limitations
 
     # Attached last, and only after every evidence decision above is final, so there is no order in
-    # which discovery material could influence one.
+    # which discovery material could influence one. Its recommendations were added above from its own
+    # Phase 226 eligibility only.
     assessment.discovery = discovery
     return assessment
 
@@ -291,11 +351,12 @@ def _render_north_star(discovery: Optional[DiscoveryAssessmentContext]) -> List[
     return lines
 
 
-def _render_discovery_summary(discovery: Optional[DiscoveryAssessmentContext]) -> List[str]:
+def _render_discovery_summary(discovery: Optional[DiscoveryAssessmentContext],
+                              recommended: bool = False) -> List[str]:
     """Interview coverage as counts. No completeness percentage over an ambiguous denominator."""
     lines = [f"## {DISCOVERY_SECTION_TITLE}", "",
              discovery_not_evidence_text(discovery.findings if discovery else None,
-                                         lead_reviewed(discovery)), ""]
+                                         lead_reviewed(discovery), recommended), ""]
     if discovery is None or not discovery.available:
         return lines + [f"_{NO_DISCOVERY_TEXT}_", ""]
     coverage = discovery.coverage
@@ -342,13 +403,15 @@ def _render_discovery_findings(discovery: Optional[DiscoveryAssessmentContext]) 
             lines.append(f"- Consultant flagged as low-hanging fruit: effort "
                          f"{finding.estimated_effort or 'not stated'}, value "
                          f"{finding.estimated_value or 'not stated'}")
+        e = eligibility.get(finding.finding_id)
         lines += [f"- Status: {finding.status}",
-                  "- Evidence status: none. This is not reviewed evidence and supports no formal "
-                  "recommendation.",
+                  OBSERVATION_ELIGIBLE_EVIDENCE_LINE if e is not None and e.recommendation_eligible
+                  else "- Evidence status: none. This is not reviewed evidence and supports no "
+                  "formal recommendation.",
                   f"- Internal only: {'yes' if finding.internal_only else 'no'}",
                   f"- Requires human review: "
                   f"{'yes' if finding.requires_human_review else 'no'}"]
-        lines += _lead_review_lines(eligibility.get(finding.finding_id)) + [""]
+        lines += _lead_review_lines(e) + [""]
     return lines
 
 
@@ -368,7 +431,7 @@ def _lead_review_lines(e) -> List[str]:
                  f"{'eligible' if e.recommendation_eligible else 'blocked'}")
     lines += [f"  - {reason}" for reason in e.recommendation_blocked_reasons]
     if e.recommendation_eligible:
-        lines.append("  - No recommendation is drafted from discovery material.")
+        lines.append(f"- Internal recommendation: {recommendation_id_for(e.finding_id)}")
     return lines
 
 
@@ -414,7 +477,9 @@ def render_internal_assessment_markdown(assessment: InternalAssessment) -> str:
     # Phase 206: discovery material first, for orientation, each section labelled as consultant
     # working material. Everything after this point is the evidence-backed document, unchanged.
     lines += _render_north_star(assessment.discovery)
-    lines += _render_discovery_summary(assessment.discovery)
+    lines += _render_discovery_summary(
+        assessment.discovery,
+        any(from_lead_reviewed_observation(r) for r in assessment.recommendations))
     lines += _render_discovery_findings(assessment.discovery)
     lines += _render_low_hanging_fruit(assessment.discovery)
 
@@ -465,10 +530,15 @@ def render_internal_assessment_markdown(assessment: InternalAssessment) -> str:
                   f"recommendation(s), only for recommendation-eligible findings. Internal only; each "
                   f"requires human review.", ""]
     for rec in assessment.recommendations:
-        lines += [f"### {rec.recommendation_id} — for {rec.finding_id}", "", rec.text, "",
-                  f"- Evidence: {', '.join(rec.supporting_evidence_ids)}",
-                  f"- Source: {', '.join(rec.supporting_source_ids) or 'none recorded'}",
-                  f"- Supporting reviews: {', '.join(rec.supporting_review_ids) or 'none'}",
-                  f"- Internal only: {'yes' if rec.internal_only else 'no'}",
+        lines += [f"### {rec.recommendation_id} — for {rec.finding_id}", "", rec.text, ""]
+        if from_lead_reviewed_observation(rec):
+            lines += [f"- Consultant observation: {', '.join(rec.supporting_observation_ids)} "
+                      f"(not evidence)",
+                      f"- Lead review: {', '.join(rec.supporting_lead_review_ids)}"]
+        else:
+            lines += [f"- Evidence: {', '.join(rec.supporting_evidence_ids)}",
+                      f"- Source: {', '.join(rec.supporting_source_ids) or 'none recorded'}",
+                      f"- Supporting reviews: {', '.join(rec.supporting_review_ids) or 'none'}"]
+        lines += [f"- Internal only: {'yes' if rec.internal_only else 'no'}",
                   f"- Requires human review: {'yes' if rec.requires_human_review else 'no'}", ""]
     return "\n".join(lines)

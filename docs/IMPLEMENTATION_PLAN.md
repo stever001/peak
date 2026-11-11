@@ -4562,8 +4562,28 @@ Governance; CLOSED in production (2026-11-06). Implementation `3f18d46`; baselin
   from 404 to 401 logged out; preservation unchanged.
 - [ ] First real Lead review, deferred until a live engagement has an assigned Lead and a real
   observation. An operational acceptance item; no synthetic observation or review was created.
-- [ ] Before an eligible observation can support a recommendation in the Final Report, the report's
+- [x] Before an eligible observation can support a recommendation in the Final Report, the report's
   discovery sentence must stop saying the material carries no reliability rating or eligibility.
+  Done in Phase 227.
+
+### Phase 227 — Lead-reviewed observation recommendation
+
+Recommendation; implemented in the repository, not deployed. Baseline `ea1a629`. Record:
+[`PHASE227_LEAD_REVIEWED_OBSERVATION_RECOMMENDATION.md`](PHASE227_LEAD_REVIEWED_OBSERVATION_RECOMMENDATION.md).
+
+- [x] Established the gap: Phase 118 reads only evidence-shaped findings, and the assessment never read
+  Phase 226 eligibility. The missing piece is one adapter, not a new architecture.
+- [x] A discovery finding with no Phase 226 blocker gets one recommendation from the Phase 118 template
+  and id rule, derived on each read. Provenance is the observation and the Lead review only.
+- [x] No migration, table, grant, authority or approval action. Stored content omits the empty new
+  fields, so earlier versions rebuild exactly; no package is rewritten, and the draft goes stale.
+- [x] The Final Report's recommendations heading, material, first and third boundary statements and
+  discovery sentence are corrected only when such a recommendation exists; client wording to match.
+- [x] `tests/validate_phase227_lead_reviewed_recommendation.py` in `make validate`. Phase 225 and 226
+  harness checks that this phase supersedes were narrowed.
+- [ ] Production cutover, not performed: a manual Render API deploy only. No synthetic data.
+- [ ] First live observation recommendation, deferred until a Lead approves a real observation at
+  medium or high reliability.
 
 **Still to do:**
 

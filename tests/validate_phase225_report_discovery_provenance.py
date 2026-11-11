@@ -337,8 +337,10 @@ def static_checks():
     for path in ("peak/reports/final_report.py", "peak/reports/final_report_html.py",
                  "peak/reports/final_report_docx.py", "peak/reports/internal_assessment.py"):
         src = read(path)
+        # Phase 227: the renderers reach the rule through final_report.report_discovery_text.
         check(f"{os.path.basename(path)} takes the sentence from the one rule",
-              "discovery_not_evidence_text" in src and "DISCOVERY_NOT_EVIDENCE_TEXT" not in src)
+              ("discovery_not_evidence_text" in src or "report_discovery_text(report)" in src)
+              and "DISCOVERY_NOT_EVIDENCE_TEXT" not in src)
     trace = re.search(r"class DiscoveryTrace:.*?(?=\n\n\n|\n@dataclass)",
                       read("peak/reports/discovery_assessment.py"), re.S).group(0)
     check("the report's trace gains no field", "phase" not in trace and "task" not in trace

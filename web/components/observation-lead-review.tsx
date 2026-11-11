@@ -27,8 +27,9 @@ export function ObservationLeadReview({ state, action }: { state: LeadReviewStat
         <p className="mt-1 text-sm text-ink-muted">
           The engagement’s Lead Consultant can approve this observation, exactly as it reads now, for internal
           reliance as an operational finding, and rate its reliability. An approval rated medium or high makes
-          it eligible to support a recommendation. <span className="font-medium text-ink">It does not create a
-          recommendation:</span> none is drafted from it, and the Final Report does not change. If the
+          it eligible to support a recommendation. <span className="font-medium text-ink">The review writes no
+          recommendation itself:</span> an eligible observation receives one fixed recommendation worded from its
+          text, in the internal assessment and the draft Final Report, and it still is not evidence. If the
           observation is edited afterwards, the approval no longer applies until the Lead reviews it again.
         </p>
       </div>
@@ -44,7 +45,7 @@ export function ObservationLeadReview({ state, action }: { state: LeadReviewStat
             </ul>
           )}
           {e.recommendation_eligible && (
-            <p className="mt-1 text-sm text-ink-muted">Eligible only. No recommendation exists for it.</p>
+            <p className="mt-1 text-sm text-ink-muted">Eligible. Its one bounded recommendation needs human review.</p>
           )}
         </div>
       )}

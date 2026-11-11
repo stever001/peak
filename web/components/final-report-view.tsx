@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { Basis, Coverage, EvidenceFindingCard, Pill, Section, Trace, type MaterialKind } from "@/components/assessment-view";
 import type { FinalReport, ReportSectionKey } from "@/lib/api";
-import { LEVEL_LABELS } from "@/lib/labels";
+import { fromLeadReviewedObservation, LEVEL_LABELS } from "@/lib/labels";
 
 const SECTION_KIND: Record<ReportSectionKey, MaterialKind> = {
   executive_overview: "report",
@@ -69,7 +69,9 @@ function Discovery({ r }: { r: FinalReport }) {
     <>
       <p className="mb-4 text-sm text-ink-muted">
         {s.findings.some((f) => !f.trace.session_id) ? "Recorded during interviews or other consulting work." : "Recorded during interviews."}{" "}
-        Not reviewed evidence — no review status, reliability rating, or recommendation eligibility.
+        {r.recommendations.recommendations.some(fromLeadReviewedObservation)
+          ? "Not reviewed evidence. Only an observation the Lead approved at medium or high reliability can support the bounded recommendation, and it remains an observation, not evidence."
+          : "Not reviewed evidence — no review status, reliability rating, or recommendation eligibility."}
       </p>
       {s.coverage ? <Coverage c={s.coverage} /> : (
         <p className="text-ink-muted">No discovery material has been recorded for this engagement.</p>
@@ -169,6 +171,7 @@ function Recommendations({ r }: { r: FinalReport }) {
           <p>{rec.text}</p>
           <p className="mt-2 text-sm text-ink-muted">
             Internal only · requires human review · for finding {rec.finding_id}
+            {fromLeadReviewedObservation(rec) && " · a Lead-reviewed consultant observation, not evidence"}
           </p>
         </li>
       ))}
@@ -228,7 +231,9 @@ export function FinalReportView({ r, markdown, engagementId }: { r: FinalReport;
       </nav>
 
       {r.section_order.map((key) => (
-        <Section key={key} id={key} title={shortTitle(r.section_titles[key])} kind={SECTION_KIND[key]} count={counts[key]}>
+        <Section key={key} id={key} title={shortTitle(r.section_titles[key])}
+                 kind={key === "recommendations" && r.recommendations.material === "evidence_backed_or_lead_reviewed" ? "governed" : SECTION_KIND[key]}
+                 count={counts[key]}>
           {body[key]}
         </Section>
       ))}

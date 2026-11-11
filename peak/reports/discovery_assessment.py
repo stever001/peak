@@ -18,7 +18,8 @@ Consultant may review an observation as worded (``observation_lead_reviews``). E
 and the finding, and held apart from the finding in
 :attr:`DiscoveryAssessmentContext.recommendation_eligibility`. The finding itself still has no
 eligibility, review or reliability field, so nothing that renders a finding can carry one, and
-nothing here drafts a recommendation.
+nothing here drafts a recommendation. Phase 227: the internal assessment gives an eligible finding
+the Phase 118 bounded recommendation; the finding itself is unchanged.
 
 **A low-hanging-fruit flag is not an approved recommendation.** It is the consultant's own mark on
 their own observation. It is displayed, grouped for readability, and never scored.
@@ -96,6 +97,13 @@ LEAD_REVIEWED_TAIL = (
     "it carries no evidence review status. Only an observation shown with an approving Lead review "
     "carries a reliability rating and can be eligible to support a recommendation. None of it "
     "supports a formal recommendation on its own, and no recommendation is drafted from it.")
+#: Phase 227: the ending once an eligible observation has the bounded recommendation, since "no
+#: recommendation is drafted from it" is then untrue. Used only then.
+RECOMMENDED_TAIL = (
+    "it carries no evidence review status. Only an observation shown with an approving Lead review "
+    "carries a reliability rating and can be eligible to support a recommendation. None of it "
+    "supports a formal recommendation on its own: an eligible observation supports only the fixed, "
+    "bounded recommendation wording, and it never becomes evidence.")
 assert _NO_STANDING_TAIL in DISCOVERY_NOT_EVIDENCE_TEXT
 
 LOW_HANGING_FRUIT_GROUPING_TEXT = (
@@ -186,7 +194,8 @@ class LeadReviewView:
 class DiscoveryRecommendationEligibility:
     """Whether one discovery-derived finding may support a recommendation. Derived, never stored.
 
-    Eligibility drafts nothing: no recommendation exists until a separate, governed step writes one.
+    Eligibility drafts nothing itself. Phase 227: the internal assessment derives the one bounded
+    recommendation from it on each read.
     """
 
     finding_id: str
@@ -366,14 +375,18 @@ def recorded_outside_interviews(findings) -> bool:
     return any(not f.trace.session_id for f in findings or [])
 
 
-def discovery_not_evidence_text(findings, lead_reviewed: bool = False) -> str:
+def discovery_not_evidence_text(findings, lead_reviewed: bool = False,
+                                recommended: bool = False) -> str:
     """The discovery boundary sentence that is true of ``findings``. A pure function of them.
 
-    Phase 226: ``lead_reviewed`` is passed only by the internal assessment, which shows Lead reviews.
-    The Final Report shows none and never passes it, so its sentence is unchanged.
+    Phase 226: ``lead_reviewed`` is passed by the internal assessment, which shows Lead reviews.
+    Phase 227: ``recommended`` is passed when an eligible observation has the bounded
+    recommendation. The Final Report passes it only then, so every other report is unchanged.
     """
     text = (DISCOVERY_NOT_EVIDENCE_WIDER_TEXT if recorded_outside_interviews(findings)
             else DISCOVERY_NOT_EVIDENCE_TEXT)
+    if recommended:
+        return text.replace(_NO_STANDING_TAIL, RECOMMENDED_TAIL)
     return text.replace(_NO_STANDING_TAIL, LEAD_REVIEWED_TAIL) if lead_reviewed else text
 
 
